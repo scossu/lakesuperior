@@ -1,0 +1,5 @@
+User-defined configuration goes here. Note that this folder is a
+version-controlled template and its contents should not be directly changed.
+Please copy this folder in a safe location outside source control and set the
+FCREPO_CONFIG_DIR environment variable in your web server/reverse proxy to
+point to that folder.

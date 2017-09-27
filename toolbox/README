@@ -1,0 +1,8 @@
+Place various utility scripts here, for example for: bootstrap, migration,
+cleanup, recovery, etc.
+
+This directory can be added to a system user's PATH and used for cron jobs
+where relevant.
+
+While Python is preferred, other languages such as Bash and Perl are possible
+if some functions are best performed with those.
