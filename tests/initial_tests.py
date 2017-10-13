@@ -41,29 +41,21 @@ def clear():
 def insert(report=False):
     '''Add a resource.'''
 
-    res1 = ds.graph(URIRef('urn:res:001'))
-    res1.add((URIRef('urn:lake:12873624'), RDF.type, URIRef('http://example.edu#Blah')))
+    res1 = ds.graph(URIRef('urn:res:12873624'))
+    meta1 = ds.graph(URIRef('urn:meta:12873624'))
+    res1.add((URIRef('urn:state:001'), RDF.type, URIRef('http://example.edu#Blah')))
 
-    # Add to default graph. This allows to do something like:
-    # CONSTRUCT {?s ?p ?o}
-    # WHERE {
-    #   ?g1 a <http://example.edu#Resource>  .
-    #   GRAPH ?g1 {
-    #     ?s ?p ?o .
-    #   }
-    # }
-    ds.add((URIRef('urn:res:001'), RDF.type, URIRef('http://example.edu#Resource')))
+    meta1.add((URIRef('urn:state:001'), RDF.type, URIRef('http://example.edu#ActiveState')))
     store.commit()
 
     if report:
         print('Inserted resource:')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Resource>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#ActiveState> .
                 ?s ?p ?o .
-              }
             }'''
         )
 
@@ -71,34 +63,33 @@ def insert(report=False):
 def update(report=False):
     '''Update resource and create a historic snapshot.'''
 
-    res2 = ds.graph(URIRef('urn:res:002'))
-    res2.add((URIRef('urn:lake:12873624'), RDF.type, URIRef('http://example.edu#Boo')))
+    res1 = ds.graph(URIRef('urn:res:12873624'))
+    meta1 = ds.graph(URIRef('urn:meta:12873624'))
+    res1.add((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#Boo')))
 
-    ds.remove((URIRef('urn:res:001'), RDF.type, URIRef('http://example.edu#Resource')))
-    ds.add((URIRef('urn:res:001'), RDF.type, URIRef('http://example.edu#Snapshot')))
-    ds.add((URIRef('urn:res:002'), RDF.type, URIRef('http://example.edu#Resource')))
-    ds.add((URIRef('urn:res:002'), URIRef('http://example.edu#hasVersion'), URIRef('urn:res:001')))
+    meta1.remove((URIRef('urn:state:001'), RDF.type, URIRef('http://example.edu#ActiveState')))
+    meta1.add((URIRef('urn:state:001'), RDF.type, URIRef('http://example.edu#Snapshot')))
+    meta1.add((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#ActiveState')))
+    meta1.add((URIRef('urn:state:002'), URIRef('http://example.edu#prevState'), URIRef('urn:state:001')))
     store.commit()
 
     if report:
         print('Updated resource:')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Resource>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#ActiveState> .
                 ?s ?p ?o .
-              }
             }'''
         )
         print('Version snapshot:')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Snapshot>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#Snapshot> .
                 ?s ?p ?o .
-              }
             }'''
         )
 
@@ -106,19 +97,19 @@ def update(report=False):
 def delete(report=False):
     '''Delete resource and leave a tombstone.'''
 
-    ds.remove((URIRef('urn:res:002'), RDF.type, URIRef('http://example.edu#Resource')))
-    ds.add((URIRef('urn:res:002'), RDF.type, URIRef('http://example.edu#Tombstone')))
+    meta1 = ds.graph(URIRef('urn:meta:12873624'))
+    meta1.remove((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#ActiveState')))
+    meta1.add((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#Tombstone')))
     store.commit()
 
     if report:
         print('Deleted resource (tombstone):')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Tombstone>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#Tombstone> .
                 ?s ?p ?o .
-              }
             }'''
         )
 
@@ -126,19 +117,19 @@ def delete(report=False):
 def undelete(report=False):
     '''Resurrect resource from a tombstone.'''
 
-    ds.remove((URIRef('urn:res:002'), RDF.type, URIRef('http://example.edu#Tombstone')))
-    ds.add((URIRef('urn:res:002'), RDF.type, URIRef('http://example.edu#Resource')))
+    meta1 = ds.graph(URIRef('urn:meta:12873624'))
+    meta1.remove((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#Tombstone')))
+    meta1.add((URIRef('urn:state:002'), RDF.type, URIRef('http://example.edu#ActiveState')))
     store.commit()
 
     if report:
         print('Undeleted resource:')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Resource>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#ActiveState> .
                 ?s ?p ?o .
-              }
             }'''
         )
 
@@ -147,7 +138,7 @@ def abort_tx(report=False):
     '''Abort an operation in the middle of a transaction and roll back.'''
 
     try:
-        res2 = ds.graph(URIRef('urn:res:002'))
+        res2 = ds.graph(URIRef('urn:state:002'))
         res2.add((URIRef('urn:lake:12873624'), RDF.type, URIRef('http://example.edu#Werp')))
         raise RuntimeError('Something awful happened!')
         store.commit()
@@ -158,12 +149,11 @@ def abort_tx(report=False):
     if report:
         print('Failed operation (no updates):')
         query('''
-            SELECT *
-            WHERE {
-              ?g1 a <http://example.edu#Resource>  .
-              GRAPH ?g1 {
+            SELECT ?s ?p ?o
+            FROM <urn:res:12873624>
+            FROM <urn:meta:12873624> {
+                ?s a <http://example.edu#ActiveState> .
                 ?s ?p ?o .
-              }
             }'''
         )
 

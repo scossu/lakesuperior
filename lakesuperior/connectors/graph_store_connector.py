@@ -1,70 +1,110 @@
 import logging
+import uuid
 
+from flask import request
 from rdflib import Dataset
-from rdflib.plugins.sparql import prepareQuery
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
+from rdflib.term import URIRef
 
 from lakesuperior.config_parser import config
+from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.core.namespaces import ns_mgr as nsm
+
 
 class GraphStoreConnector:
     '''Connector for LDP-RS (RDF Source) resources. Connects to a
-    triplestore.'''
+    triplestore.
+    '''
 
     _conf = config['application']['store']['ldp_rs']
     _logger = logging.getLogger(__module__)
 
+    query_ep = _conf['webroot'] + _conf['query_ep']
+    update_ep = _conf['webroot'] + _conf['update_ep']
+
 
     ## MAGIC METHODS ##
 
-    def __init__(self, method=POST):
-        '''Initialize the graph store.
+    @property
+    def store(self):
+        if not hasattr(self, '_store') or not self._store:
+            self._store = SPARQLUpdateStore(
+                    queryEndpoint=self.query_ep,
+                    update_endpoint=self.update_ep,
+                    autocommit=False)
 
-        @param method (string) HTTP method to use for the query. POST is the
-        default and recommended value since it places virtually no limitation
-        on the query string length.
+        return self._store
+
+
+    def __init__(self):
+        '''Initialize the graph store.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
         for Graph Store HTTP protocol
-        (https://www.w3.org/TR/sparql11-http-rdf-update/). This may not be
-        viable with the current version of Blazegraph. It would with Fuseki,
+        (https://www.w3.org/TR/sparql11-http-rdf-update/). Blazegraph supports
+        this only in the (currently) unreleased 2.2 branch. It works with Jena,
         but other considerations would have to be made (e.g. Jena has no REST
         API for handling transactions).
+
+        In a more advanced development phase it could be possible to extend the
+        SPARQLUpdateStore class to add non-standard interaction with specific
+        SPARQL implementations in order to support ACID features provided
+        by them; e.g. Blazegraph's RESTful transaction handling methods.
         '''
-
-        self._store = SPARQLUpdateStore(queryEnpdpoint=self._conf['query_ep'],
-                update_endpoint=self._conf['update_ep'])
-        try:
-            self._store.open(self._conf['base_url'])
-        except:
-            raise RuntimeError('Error opening remote graph store.')
-        self.dataset = Dataset(self._store)
-
+        self.ds = Dataset(self.store, default_union=True)
+        self.ds.namespace_manager = nsm
 
     def __del__(self):
         '''Commit pending transactions and close connection.'''
-        self._store.close(True)
+        self.store.close(True)
 
 
     ## PUBLIC METHODS ##
 
-    def query(self, q, initNs=None, initBindings=None):
-        '''Query the triplestore.
+    def query(self, q, initBindings=None, nsc=nsc):
+        '''Perform a custom query on the triplestore.
 
         @param q (string) SPARQL query.
 
         @return rdflib.query.Result
         '''
         self._logger.debug('Querying SPARQL endpoint: {}'.format(q))
-        return self.dataset.query(q, initNs=initNs or nsc,
-                initBindings=initBindings)
+        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 
-    def find_by_type(self, type):
-        '''Find all resources by RDF type.
+    ## PROTECTED METHODS ##
 
-        @param type (rdflib.term.URIRef) RDF type to query.
+    def _rdf_cksum(self, g):
+        '''Generate a checksum for a graph.
+
+        This is not straightforward because a graph is derived from an
+        unordered data structure (RDF).
+
+        What this method does is ordering the graph by subject, predicate,
+        object, then creating a pickle string and a checksum of it.
+
+        N.B. The context of the triples is ignored, so isomorphic graphs would
+        have the same checksum regardless of the context(s) they are found in.
+
+        @TODO This can be later reworked to use a custom hashing algorithm.
+
+        @param rdflib.Graph g The graph to be hashed.
+
+        @return string SHA1 checksum.
         '''
-        return self.query('SELECT ?s {{?s a {} . }}'.format(type.n3()))
+        # Remove the messageDigest property, which at this point is very likely
+        # old.
+        g.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
+
+        ord_g = sorted(list(g), key=lambda x : (x[0], x[1], x[2]))
+        hash = sha1(pickle.dumps(ord_g)).hexdigest()
+
+        return hash
 
 
+    def _non_rdf_checksum(self, data):
+        '''Generate a checksum of non-RDF content.
 
+        @TODO This can be later reworked to use a custom hashing algorithm.
+        '''
+        return sha1(data).hexdigest()
