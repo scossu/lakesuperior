@@ -26,7 +26,7 @@ core_namespaces = {
     'rdfs' : rdflib.namespace.RDFS,
     'fcg' : Namespace('urn:fcgraph:'),
     'fcres' : Namespace('urn:fcres:'),
-    'fcstate' : Namespace('urn:fcstate:'),
+    'fcsystem' : Namespace('urn:fcsystem:'),
     'webac' : Namespace('http://www.w3.org/ns/auth/acl#'),
     'xml' : Namespace('http://www.w3.org/XML/1998/namespace'),
     'xsd' : rdflib.namespace.XSD,

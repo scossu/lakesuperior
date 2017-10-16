@@ -31,7 +31,8 @@ class GraphStoreConnector:
             self._store = SPARQLUpdateStore(
                     queryEndpoint=self.query_ep,
                     update_endpoint=self.update_ep,
-                    autocommit=False)
+                    autocommit=False,
+                    dirty_reads=True)
 
         return self._store
 
@@ -54,15 +55,17 @@ class GraphStoreConnector:
         self.ds = Dataset(self.store, default_union=True)
         self.ds.namespace_manager = nsm
 
-    def __del__(self):
-        '''Commit pending transactions and close connection.'''
-        self.store.close(True)
+
+    #def __del__(self):
+    #    '''Commit pending transactions and close connection.'''
+    #    self.store.close(True)
 
 
     ## PUBLIC METHODS ##
 
     def query(self, q, initBindings=None, nsc=nsc):
-        '''Perform a custom query on the triplestore.
+        '''
+        Perform a custom query on the triplestore.
 
         @param q (string) SPARQL query.
 
@@ -75,7 +78,8 @@ class GraphStoreConnector:
     ## PROTECTED METHODS ##
 
     def _rdf_cksum(self, g):
-        '''Generate a checksum for a graph.
+        '''
+        Generate a checksum for a graph.
 
         This is not straightforward because a graph is derived from an
         unordered data structure (RDF).
@@ -103,7 +107,8 @@ class GraphStoreConnector:
 
 
     def _non_rdf_checksum(self, data):
-        '''Generate a checksum of non-RDF content.
+        '''
+        Generate a checksum of non-RDF content.
 
         @TODO This can be later reworked to use a custom hashing algorithm.
         '''

@@ -12,12 +12,6 @@ from lakesuperior.core.namespaces import ns_collection as nsc
 from lakesuperior.core.namespaces import ns_mgr as nsm
 
 
-class ResourceExistsError(RuntimeError):
-    '''Thrown when a resource is being created for an existing URN.'''
-    pass
-
-
-
 class BaseRdfStrategy(metaclass=ABCMeta):
     '''
     This class exposes an interface to build graph store strategies.
@@ -41,10 +35,10 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
     Some method naming conventions:
 
-    - Methods starting with `get_` return a graph.
-    - Methods starting with `list_` return a list, tuple or set of URIs.
-    - Methods starting with `select_` return a list or tuple with table-like
-      data such as from a SELECT statement.
+    - Methods starting with `get_` return a resource.
+    - Methods starting with `list_` return an iterable or generator of URIs.
+    - Methods starting with `select_` return an iterable or generator with
+      table-like data such as from a SELECT statement.
     - Methods starting with `ask_` return a boolean value.
     '''
 
@@ -55,41 +49,52 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self):
+    def __init__(self, urn):
         self.conn = GraphStoreConnector()
         self.ds = self.conn.ds
+        self._base_urn = urn
+
+
+    @property
+    def base_urn(self):
+        '''
+        The base URN for the current resource being handled.
+
+        This value is only here for convenience. It does not preclde from using
+        an instance of this class with more than one subject.
+        '''
+        return self._base_urn
+
+
+    @property
+    def rsrc(self):
+        '''
+        Reference to a live data set that can be updated. This exposes the
+        whole underlying triplestore structure and is used to update a
+        resource.
+        '''
+        return self.ds.resource(self.base_urn)
+
+
+    @property
+    @abstractmethod
+    def out_graph(self):
+        '''
+        Graph obtained by querying the triplestore and adding any abstraction
+        and filtering to make up a graph that can be used for read-only,
+        API-facing results. Different strategies can implement this in very
+        different ways, so it is an abstract method.
+        '''
+        pass
 
 
     ## PUBLIC METHODS ##
 
     @abstractmethod
-    def ask_rsrc_exists(self, urn):
-        '''Return whether the resource exists.
-
-        @param uuid Resource UUID.
-
-        @retrn boolean
-        '''
-        pass
-
-
-    @abstractmethod
-    def get_rsrc(self, urn):
-        '''Get the copy of a resource graph.
-
-        @param uuid Resource UUID.
-
-        @retrn rdflib.resource.Resource
-        '''
-        pass
-
-
-    @abstractmethod
     def create_or_replace_rsrc(self, urn, data, commit=True):
         '''Create a resource graph in the main graph if it does not exist.
 
-        If it exists, replace the existing one retaining some special
-        properties.
+        If it exists, replace the existing one retaining the creation date.
         '''
         pass
 
@@ -114,103 +119,3 @@ class BaseRdfStrategy(metaclass=ABCMeta):
     @abstractmethod
     def delete_rsrc(self, urn, commit=True):
         pass
-
-
-    def list_containment_statements(self, urn):
-        q = '''
-        SELECT ?container ?contained {
-          {
-            ?s ldp:contains ?contained .
-          } UNION {
-            ?container ldp:contains ?s .
-          }
-        }
-        '''
-        return self.ds.query(q, initBindings={'s' : urn})
-
-
-    def uuid_to_uri(self, uuid):
-        '''Convert a UUID to a URI.
-
-        @return URIRef
-        '''
-        return URIRef('{}rest/{}'.format(request.host_url, uuid))
-
-
-    def localize_string(self, s):
-        '''Convert URIs into URNs in a string using the application base URI.
-
-        @param string s Input string.
-
-        @return string
-        '''
-        return s.replace(
-            request.host_url + 'rest/',
-            str(nsc['fcres'])
-        )
-
-
-    def globalize_string(self, s):
-        '''Convert URNs into URIs in a string using the application base URI.
-
-        @param string s Input string.
-
-        @return string
-        '''
-        return s.replace(
-            str(nsc['fcres']),
-            request.host_url + 'rest/'
-        )
-
-
-    def globalize_term(self, urn):
-        '''Convert an URN into an URI using the application base URI.
-
-        @param rdflib.term.URIRef urn Input URN.
-
-        @return rdflib.term.URIRef
-        '''
-        return URIRef(self.globalize_string(str(urn)))
-
-
-    def globalize_triples(self, g):
-        '''Convert all URNs in a resource or graph into URIs using the
-        application base URI.
-
-        @param rdflib.Graph | rdflib.resource.Resource g Input graph.
-
-        @return rdflib.Graph | rdflib.resource.Resource The same class as the
-        input value.
-        '''
-        if isinstance(g, Resource):
-            return self._globalize_graph(g.graph).resource(
-                    self.globalize_term(g.identifier))
-        elif isinstance (g, Graph):
-            return self._globalize_graph(g)
-        else:
-            raise TypeError('Not a valid input type: {}'.format(g))
-
-
-    def _globalize_graph(self, g):
-        '''Globalize a graph.'''
-        q = '''
-        CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
-          ?s ?p ?o .
-          {{ FILTER STRSTARTS(str(?s), "{0}") . }}
-          UNION
-          {{ FILTER STRSTARTS(str(?o), "{0}") . }}
-        }}'''.format(nsc['fcres'])
-        flt_g = g.query(q)
-
-        for t in flt_g:
-            print('Triple: {}'.format(t))
-            global_s = self.globalize_term(t[0])
-            global_o = self.globalize_term(t[2]) \
-                    if isinstance(t[2], URIRef) \
-                    else t[2]
-            g.remove(t)
-            g.add((global_s, t[1], global_o))
-
-        return g
-
-

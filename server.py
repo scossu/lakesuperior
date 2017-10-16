@@ -43,7 +43,8 @@ def get_resource(uuid):
     '''
     Retrieve RDF or binary content.
     '''
-    rsrc = LdpRs(uuid).get()
+    # @TODO Add conditions for LDP-NR
+    rsrc = Ldpc(uuid).get()
     if rsrc:
         headers = {
             #'ETag' : 'W/"{}"'.format(ret.value(nsc['premis

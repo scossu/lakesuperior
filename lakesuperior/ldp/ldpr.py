@@ -1,15 +1,48 @@
+import logging
+
 from abc import ABCMeta
 from importlib import import_module
+from itertools import accumulate
 
 import arrow
 
 from rdflib import Graph
-from rdflib.namespace import XSD
+from rdflib.resource import Resource as RdflibResrouce
+from rdflib.namespace import RDF, XSD
 from rdflib.term import Literal
 
 from lakesuperior.config_parser import config
 from lakesuperior.connectors.filesystem_connector import FilesystemConnector
 from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.util.translator import Translator
+
+
+class ResourceExistsError(RuntimeError):
+    '''
+    Raised in an attempt to create a resource a URN that already exists.
+    '''
+    pass
+
+
+
+def transactional(fn):
+    '''
+    Decorator for methods of the Ldpr class to handle transactions in an RDF
+    store.
+    '''
+    def wrapper(self, *args, **kwargs):
+        try:
+            ret = fn(self, *args, **kwargs)
+            self._logger.info('Committing transaction.')
+            self.gs.conn.store.commit()
+            return ret
+        except:
+            self._logger.info('Rolling back transaction.')
+            self.gs.conn.store.rollback()
+            raise
+
+    return wrapper
+
 
 
 class Ldpr(metaclass=ABCMeta):
@@ -41,8 +74,9 @@ class Ldpr(metaclass=ABCMeta):
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
 
-    store_strategy = config['application']['store']['ldp_rs']['strategy']
+    _logger = logging.getLogger(__module__)
 
+    store_strategy = config['application']['store']['ldp_rs']['strategy']
 
     ## MAGIC METHODS ##
 
@@ -50,39 +84,137 @@ class Ldpr(metaclass=ABCMeta):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
 
+        Persistence is done in this class. None of the operations in the store
+        strategy should commit an open transaction. Methods are wrapped in a
+        transaction by using the `@transactional` decorator.
+
         @param uuid (string) UUID of the resource.
         '''
+        self.uuid = uuid
+
         # Dynamically load the store strategy indicated in the configuration.
         store_mod = import_module(
                 'lakesuperior.store_strategies.rdf.{}'.format(
                         self.store_strategy))
-        store_cls = getattr(store_mod, self._camelcase(self.store_strategy))
-        self.gs = store_cls()
+        self._rdf_store_cls = getattr(store_mod, self._camelcase(
+                self.store_strategy))
+        self.gs = self._rdf_store_cls(self.urn)
 
         # Same thing coud be done for the filesystem store strategy, but we
         # will keep it simple for now.
         self.fs = FilesystemConnector()
 
-        self.uuid = uuid
-
 
     @property
     def urn(self):
+        '''
+        The internal URI (URN) for the resource as stored in the triplestore.
+        This is a URN that needs to be converted to a global URI for the REST
+        API.
+
+        @return rdflib.URIRef
+        '''
         return nsc['fcres'][self.uuid]
 
 
     @property
     def uri(self):
-        return self.gs.uuid_to_uri(self.uuid)
+        '''
+        The URI for the resource as published by the REST API.
+
+        @return rdflib.URIRef
+        '''
+        return self._uuid_to_uri(self.uuid)
+
+
+    @property
+    def rsrc(self):
+        '''
+        The RDFLib resource representing this LDPR. This is a copy of the
+        stored data if present, and what gets passed to most methods of the
+        store strategy methods.
+
+        @return rdflib.resource.Resource
+        '''
+        if not hasattr(self, '_rsrc'):
+            self._rsrc = self.gs.rsrc
+
+        return self._rsrc
+
+
+    @property
+    def is_stored(self):
+        return self.gs.ask_rsrc_exists()
 
 
     @property
     def types(self):
+        '''All RDF types.
+
+        @return generator
+        '''
+        if not hasattr(self, '_types'):
+            self._types = set(self.rsrc[RDF.type])
+        return self._types
+
+
+    @property
+    def ldp_types(self):
         '''The LDP types.
 
-        @return tuple(rdflib.term.URIRef)
+        @return set(rdflib.term.URIRef)
         '''
-        return self.gs.list_types(self.uuid)
+        if not hasattr(self, '_ldp_types'):
+            self._ldp_types = set()
+            for t in self.types:
+                if t.qname[:4] == 'ldp:':
+                    self._ldp_types.add(t)
+        return self._ldp_types
+
+
+    @property
+    def containment(self):
+        if not hasattr(self, '_containment'):
+            q = '''
+            SELECT ?container ?contained {
+              {
+                ?s ldp:contains ?contained .
+              } UNION {
+                ?container ldp:contains ?s .
+              }
+            }
+            '''
+            qres = self.rsrc.graph.query(q, initBindings={'s' : self.urn})
+
+            # There should only be one container.
+            for t in qres:
+                if t[0]:
+                    container = self.gs.ds.resource(t[0])
+
+            contains = ( self.gs.ds.resource(t[1]) for t in qres if t[1] )
+
+            self._containment = {
+                    'container' : container, 'contains' : contains}
+
+        return self._containment
+
+
+    @containment.deleter
+    def containment(self):
+        '''
+        Reset containment variable when changing containment triples.
+        '''
+        del self._containment
+
+
+    @property
+    def container(self):
+        return self.containment['container']
+
+
+    @property
+    def contains(self):
+        return self.containment['contains']
 
 
     ## LDP METHODS ##
@@ -91,76 +223,218 @@ class Ldpr(metaclass=ABCMeta):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        ret = self.gs.get_rsrc(self.uuid)
-
-        return ret
+        return Translator.globalize_rsrc(self.rsrc)
 
 
+    @transactional
     def post(self, data, format='text/turtle'):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
         '''
-        # @TODO Use gunicorn to get request timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+        if self.is_stored:
+            raise ResourceExistsError(
+                'Resource #{} already exists. It cannot be re-created with '
+                'this method.'.format(self.urn))
 
         g = Graph()
         g.parse(data=data, format=format, publicID=self.urn)
 
-        data.add((self.urn, nsc['fedora'].lastUpdated, ts))
-        data.add((self.urn, nsc['fedora'].lastUpdatedBy,
-                Literal('BypassAdmin')))
+        self.gs.create_rsrc(g)
 
-        self.gs.create_rsrc(self.urn, g, ts)
-
-        self.gs.conn.store.commit()
+        self._set_containment_rel()
 
 
+    @transactional
     def put(self, data, format='text/turtle'):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        # @TODO Use gunicorn to get request timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
-
         g = Graph()
         g.parse(data=data, format=format, publicID=self.urn)
 
-        g.add((self.urn, nsc['fedora'].lastUpdated, ts))
-        g.add((self.urn, nsc['fedora'].lastUpdatedBy,
-                Literal('BypassAdmin')))
+        self.gs.create_or_replace_rsrc(g)
 
-        self.gs.create_or_replace_rsrc(self.urn, g, ts)
-
-        self.gs.conn.store.commit()
+        self._set_containment_rel()
 
 
+    @transactional
     def delete(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
         '''
-        self.gs.delete_rsrc(self.urn, commit=True)
+        self.gs.delete_rsrc(self.urn)
 
 
     ## PROTECTED METHODS ##
 
-    def _create_containment_rel(self):
+    def _set_containment_rel(self):
         '''Find the closest parent in the path indicated by the UUID and
         establish a containment triple.
 
-        E.g. If ONLY urn:res:a exist:
+        E.g.
 
-        - If a/b is being created, a becomes container of a/b.
-        - If a/b/c/d is being created, a becomes container of a/b/c/d.
-        - If e is being created, the root node becomes container of e.
-          (verify if this is useful or necessary in any way).
-        - If only a and a/b/c/d exist, and therefore a contains a/b/c/d, and
-        a/b is created:
-          - a ceases to be the container of a/b/c/d
-          - a becomes container of a/b
-          - a/b becomes container of a/b/c/d.
+        - If only urn:fcres:a (short: a) exists:
+          - If a/b/c/d is being created, a becomes container of a/b/c/d. Also,
+            pairtree nodes are created for a/b and a/b/c.
+          - If e is being created, the root node becomes container of e.
         '''
-        if self.gs.list_containment_statements(self.urn):
-            pass
+        if '/' in self.uuid:
+            # Traverse up the hierarchy to find the parent.
+            #candidate_parent_urn = self._find_first_ancestor()
+            #cparent = self.gs.ds.resource(candidate_parent_urn)
+            cparent_uri = self._find_parent_or_create_pairtree(self.uuid)
+
+            # Reroute possible containment relationships between parent and new
+            # resource.
+            #self._splice_in(cparent)
+            if cparent_uri:
+                self.gs.ds.add((cparent_uri, nsc['ldp'].contains,
+                        self.rsrc.identifier))
+        else:
+            self.rsrc.graph.add((nsc['fcsystem'].root, nsc['ldp'].contains,
+                    self.rsrc.identifier))
+        # If a resource has no parent and should be parent of the new resource,
+        # add the relationship.
+        #for child_uri in self.find_lost_children():
+        #    self.rsrc.add(nsc['ldp'].contains, child_uri)
+
+
+    def _find_parent_or_create_pairtree(self, uuid):
+        '''
+        Check the path-wise parent of the new resource. If it exists, return
+        its URI. Otherwise, create pairtree resources up the path until an
+        actual resource or the root node is found.
+
+        @return rdflib.term.URIRef
+        '''
+        path_components = uuid.split('/')
+
+        if len(path_components) < 2:
+            return None
+
+        # Build search list, e.g. for a/b/c/d/e would be a/b/c/d, a/b/c, a/b, a
+        self._logger.info('Path components: {}'.format(path_components))
+        fwd_search_order = accumulate(
+            list(path_components)[:-1],
+            func=lambda x,y : x + '/' + y
+        )
+        rev_search_order = reversed(list(fwd_search_order))
+
+        cur_child_uri = nsc['fcres'].uuid
+        for cparent_uuid in rev_search_order:
+            cparent_uri = nsc['fcres'][cparent_uuid]
+
+            # @FIXME A bit ugly. Maybe we should use a Pairtree class.
+            if self._rdf_store_cls(cparent_uri).ask_rsrc_exists():
+                return cparent_uri
+            else:
+                self._create_pairtree(cparent_uri, cur_child_uri)
+                cur_child_uri = cparent_uri
+
+        return None
+
+
+    #def _find_first_ancestor(self):
+    #    '''
+    #    Find by logic and triplestore queries the first existing resource by
+    #    traversing a path hierarchy upwards.
+
+    #    @return rdflib.term.URIRef
+    #    '''
+    #    path_components = self.uuid.split('/')
+
+    #    if len(path_components) < 2:
+    #        return None
+
+    #    # Build search list, e.g. for a/b/c/d/e would be a/b/c/d, a/b/c, a/b, a
+    #    search_order = accumulate(
+    #        reversed(search_order)[1:],
+    #        func=lambda x,y : x + '/' + y
+    #    )
+
+    #    for cmp in search_order:
+    #        if self.gs.ask_rsrc_exists(ns['fcres'].cmp):
+    #            return urn
+    #        else:
+    #            self._create_pairtree_node(cmp)
+
+    #    return None
+
+
+    def _create_pairtree(self, uri, child_uri):
+        '''
+        Create a pairtree node with a containment statement.
+
+        This is the default fcrepo4 behavior and probably not the best one, but
+        we are following it here.
+
+        If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
+        fcres:a/b exists, we have to create pairtree nodes in order to maintain
+        the containment chain.
+
+        This way, both fcres:a and fcres:a/b become thus containers of
+        fcres:a/b/c, which may be confusing.
+        '''
+        g = Graph()
+        g.add((uri, RDF.type, nsc['fedora'].Pairtree))
+        g.add((uri, RDF.type, nsc['ldp'].Container))
+        g.add((uri, RDF.type, nsc['ldp'].BasicContainer))
+        g.add((uri, RDF.type, nsc['ldp'].RDFSource))
+        g.add((uri, nsc['ldp'].contains, child_uri))
+        if '/' not in str(uri):
+            g.add((nsc['fcsystem'].root, nsc['ldp'].contains, uri))
+
+        self.gs.create_rsrc(g)
+
+
+
+    #def _splice_in(self, parent):
+    #    '''
+    #    Insert the new resource between a container and its child.
+
+    #    If a resource is inserted between two resources that already have a
+    #    containment relationship, e.g. inserting `<a/b>` where
+    #    `<a> ldp:contains <a/b/c>` exists, the existing containment
+    #    relationship must be broken in order to insert the resource in between.
+
+    #    NOTE: This method only removes the containment relationship between the
+    #    old parent (`<a>` in the example above) and old child (`<a/b/c>`) and
+    #    sets a new one between the new parent and child (`<a/b>` and
+    #    `<a/b/c>`). The relationship between `<a>` and `<a/b>` is set
+    #    separately.
+
+    #    @param rdflib.resource.Resource parent The parent resource. This
+    #    includes the root node.
+    #    '''
+    #    # For some reason, initBindings (which adds a VALUES statement in the
+    #    # query) does not work **just for `?new`**. `BIND` is necessary along
+    #    # with a format() function.
+    #    q = '''
+    #    SELECT ?child {{
+    #      ?p ldp:contains ?child .
+    #      FILTER ( ?child != <{}> ) .
+    #      FILTER STRSTARTS(str(?child), "{}") .
+    #    }}
+    #    LIMIT 1
+    #    '''.format(self.urn)
+    #    qres = self.rsrc.graph.query(q, initBindings={'p' : parent.identifier})
+
+    #    if not qres:
+    #        return
+
+    #    child_urn = qres.next()[0]
+
+    #    parent.remove(nsc['ldp'].contains, child_urn)
+    #    self.src.add(nsc['ldp'].contains, child_urn)
+
+
+    #def find_lost_children(self):
+    #    '''
+    #    If the parent was created after its children and has to find them!
+    #    '''
+    #    q = '''
+    #    SELECT ?child {
+
 
 
     def _camelcase(self, word):
@@ -182,6 +456,7 @@ class LdpRs(Ldpr):
         nsc['ldp'].RDFSource
     }
 
+    @transactional
     def patch(self, data):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
@@ -193,8 +468,6 @@ class LdpRs(Ldpr):
         self.gs.ds.add((self.urn, nsc['fedora'].lastUpdated, ts))
         self.gs.ds.add((self.urn, nsc['fedora'].lastUpdatedBy,
                 Literal('BypassAdmin')))
-
-        self.gs.conn.store.commit()
 
 
 class LdpNr(LdpRs):
