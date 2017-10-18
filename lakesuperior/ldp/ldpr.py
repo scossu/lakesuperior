@@ -390,8 +390,9 @@ class Ldpr(metaclass=ABCMeta):
         Perform a POST action after a valid resource URI has been found.
         '''
         g = Graph()
-
         g.parse(data=data, format=format, publicID=self.urn)
+        for t in self.base_types:
+            g.add((self.urn, RDF.type, t))
 
         self.gs.create_rsrc(g)
 
@@ -405,6 +406,8 @@ class Ldpr(metaclass=ABCMeta):
         '''
         g = Graph()
         g.parse(data=data, format=format, publicID=self.urn)
+        for t in self.base_types:
+            g.add((self.urn, RDF.type, t))
 
         self.gs.create_or_replace_rsrc(g)
 
@@ -640,7 +643,11 @@ class Ldpc(LdpRs):
 
 class LdpBc(Ldpc):
     '''LDP-BC (LDP Basic Container).'''
-    pass
+    def __init__(self, uuid):
+        super().__init__(uuid)
+        self.base_types.update({
+            nsc['ldp'].BasicContainer,
+        })
 
 
 
