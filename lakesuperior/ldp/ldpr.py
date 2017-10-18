@@ -3,11 +3,12 @@ import logging
 from abc import ABCMeta
 from importlib import import_module
 from itertools import accumulate
+from uuid import uuid4
 
 import arrow
 
 from rdflib import Graph
-from rdflib.resource import Resource as RdflibResrouce
+from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
 from rdflib.term import Literal
 
@@ -19,7 +20,31 @@ from lakesuperior.util.translator import Translator
 
 class ResourceExistsError(RuntimeError):
     '''
-    Raised in an attempt to create a resource a URN that already exists.
+    Raised in an attempt to create a resource a URN that already exists and is
+    not supposed to.
+
+    This usually surfaces at the HTTP level as a 409.
+    '''
+    pass
+
+
+
+class ResourceNotExistsError(RuntimeError):
+    '''
+    Raised in an attempt to create a resource a URN that does not exist and is
+    supposed to.
+
+    This usually surfaces at the HTTP level as a 404.
+    '''
+    pass
+
+
+
+class InvalidResourceError(RuntimeError):
+    '''
+    Raised when a resource is found.
+
+    This usually surfaces at the HTTP level as a 409 or other error.
     '''
     pass
 
@@ -33,15 +58,44 @@ def transactional(fn):
     def wrapper(self, *args, **kwargs):
         try:
             ret = fn(self, *args, **kwargs)
-            self._logger.info('Committing transaction.')
+            print('Committing transaction.')
             self.gs.conn.store.commit()
             return ret
         except:
-            self._logger.info('Rolling back transaction.')
+            print('Rolling back transaction.')
             self.gs.conn.store.rollback()
             raise
 
     return wrapper
+
+
+def must_exist(fn):
+    '''
+    Ensures that a method is applied to a stored resource.
+    Decorator for methods of the Ldpr class.
+    '''
+    def wrapper(self, *args, **kwargs):
+        if not self.is_stored:
+            raise ResourceNotExistsError(
+                'Resource #{} not found'.format(self.uuid))
+        return fn(self, *args, **kwargs)
+
+    return wrapper
+
+
+def must_not_exist(fn):
+    '''
+    Ensures that a method is applied to a resource that is not stored.
+    Decorator for methods of the Ldpr class.
+    '''
+    def wrapper(self, *args, **kwargs):
+        if self.is_stored:
+            raise ResourceExistsError(
+                'Resource #{} already exists.'.format(self.uuid))
+        return fn(self, *args, **kwargs)
+
+    return wrapper
+
 
 
 
@@ -71,6 +125,7 @@ class Ldpr(metaclass=ABCMeta):
     All conversion from request payload strings is done here.
     '''
 
+    FCREPO_PTREE_TYPE = nsc['fedora'].Pairtree
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
 
@@ -96,7 +151,7 @@ class Ldpr(metaclass=ABCMeta):
         store_mod = import_module(
                 'lakesuperior.store_strategies.rdf.{}'.format(
                         self.store_strategy))
-        self._rdf_store_cls = getattr(store_mod, self._camelcase(
+        self._rdf_store_cls = getattr(store_mod, Translator.camelcase(
                 self.store_strategy))
         self.gs = self._rdf_store_cls(self.urn)
 
@@ -217,6 +272,89 @@ class Ldpr(metaclass=ABCMeta):
         return self.containment['contains']
 
 
+    ## STATIC & CLASS METHODS ##
+
+    @classmethod
+    def inst(cls, uuid):
+        '''
+        Fatory method that creates and returns an instance of an LDPR subclass
+        based on information that needs to be queried from the underlying
+        graph store.
+
+        This is used with retrieval methods for resources that already exist.
+
+        @param uuid UUID of the instance.
+        '''
+        gs = cls.load_gs_static(cls, uuid)
+        rdf_types = gs.rsrc[nsc['res'][uuid] : RDF.type]
+
+        for t in rdf_types:
+            if t == cls.LDP_NR_TYPE:
+                return LdpNr(uuid)
+            if t == cls.LDP_RS_TYPE:
+                return LdpRs(uuid)
+
+        raise ValueError('Resource #{} does not exist or does not have a '
+                'valid LDP type.'.format(uuid))
+
+
+    @classmethod
+    def load_gs_static(cls, uuid=None):
+        '''
+        Dynamically load the store strategy indicated in the configuration.
+        This essentially replicates the init() code in a static context.
+        '''
+        store_mod = import_module(
+                'lakesuperior.store_strategies.rdf.{}'.format(
+                        cls.store_strategy))
+        rdf_store_cls = getattr(store_mod, Translator.camelcase(
+                cls.store_strategy))
+        return rdf_store_cls(uuid)
+
+
+    @classmethod
+    def inst_for_post(cls, parent_uuid=None, slug=None):
+        '''
+        Validate conditions to perform a POST and return an LDP resource
+        instancefor using with the `post` method.
+
+        This may raise an exception resulting in a 404 if the parent is not
+        found or a 409 if the parent is not a valid container.
+        '''
+        # Shortcut!
+        if not slug and not parent_uuid:
+            return cls(str(uuid4()))
+
+        gs = cls.load_gs_static()
+        parent_rsrc = Resource(gs.ds, nsc['fcres'][parent_uuid])
+
+        # Set prefix.
+        if parent_uuid:
+            parent_exists = gs.ask_rsrc_exists(parent_rsrc)
+            if not parent_exists:
+                raise ResourceNotExistsError('Parent not found: {}.'
+                        .format(parent_uuid))
+
+            if nsc['ldp'].Container not in gs.rsrc.values(RDF.type):
+                raise InvalidResourceError('Parent {} is not a container.'
+                       .format(parent_uuid))
+
+            pfx = parent_uuid + '/'
+        else:
+            pfx = ''
+
+        # Create candidate UUID and validate.
+        if slug:
+            cnd_uuid = pfx + slug
+            cnd_rsrc = Resource(gs.ds, nsc['fcres'][cnd_uuid])
+            if gs.ask_rsrc_exists(cnd_rsrc):
+                return cls(pfx + str(uuid4()))
+            else:
+                return cls(cnd_uuid)
+        else:
+            return cls(pfx + str(uuid4()))
+
+
     ## LDP METHODS ##
 
     def get(self):
@@ -230,13 +368,11 @@ class Ldpr(metaclass=ABCMeta):
     def post(self, data, format='text/turtle'):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
-        '''
-        if self.is_stored:
-            raise ResourceExistsError(
-                'Resource #{} already exists. It cannot be re-created with '
-                'this method.'.format(self.urn))
 
+        Perform a POST action after a valid resource URI has been found.
+        '''
         g = Graph()
+
         g.parse(data=data, format=format, publicID=self.urn)
 
         self.gs.create_rsrc(g)
@@ -258,6 +394,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @transactional
+    @must_exist
     def delete(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
@@ -320,7 +457,7 @@ class Ldpr(metaclass=ABCMeta):
         )
         rev_search_order = reversed(list(fwd_search_order))
 
-        cur_child_uri = nsc['fcres'].uuid
+        cur_child_uri = nsc['fcres'][uuid]
         for cparent_uuid in rev_search_order:
             cparent_uri = nsc['fcres'][cparent_uuid]
 
@@ -448,6 +585,7 @@ class LdpRs(Ldpr):
     }
 
     @transactional
+    @must_exist
     def patch(self, data):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH

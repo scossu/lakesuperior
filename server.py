@@ -11,7 +11,8 @@ from uuid import  uuid4
 from flask import Flask, request, url_for
 
 from lakesuperior.config_parser import config
-from lakesuperior.ldp.ldpr import Ldpr, Ldpc, LdpNr
+from lakesuperior.ldp.ldpr import Ldpr, Ldpc, LdpNr, \
+        InvalidResourceError, ResourceNotExistsError
 
 app = Flask(__name__)
 app.config.update(config['flask'])
@@ -45,13 +46,13 @@ def get_resource(uuid):
     '''
     # @TODO Add conditions for LDP-NR
     rsrc = Ldpc(uuid).get()
-    if rsrc:
+    try:
         headers = {
             #'ETag' : 'W/"{}"'.format(ret.value(nsc['premis
         }
         return (rsrc.graph.serialize(format='turtle'), headers)
-    else:
-        return ('Resource not found in repository: {}'.format(uuid), 404)
+    except ResourceNotExistsError:
+        return 'Resource #{} not found.'.format(rsrc.uuid), 404
 
 
 @app.route('/rest/<path:parent>', methods=['POST'])
@@ -60,13 +61,20 @@ def post_resource(parent):
     '''
     Add a new resource in a new URI.
     '''
-    uuid = uuid4()
+    try:
+       rsrc = Ldpc.inst_for_post(parent, request.headers['Slug'] or None)
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    except InvalidResourceError as e:
+        return str(e), 409
 
-    uuid = '{}/{}'.format(parent, uuid) \
-            if path else uuid
-    rsrc = Ldpc(path).post(request.get_data().decode('utf-8'))
+    rsrc.post(request.get_data().decode('utf-8'))
 
-    return rsrc.uri, 201
+    headers = {
+        'Location' : rsrc.uri
+    }
+
+    return rsrc.uri, headers, 201
 
 
 @app.route('/rest/<path:uuid>', methods=['PUT'])
@@ -74,16 +82,24 @@ def put_resource(uuid):
     '''
     Add a new resource at a specified URI.
     '''
-    rsrc = Ldpc(uuid).put(request.get_data().decode('utf-8'))
+    rsrc = Ldpc(uuid)
+
+    rsrc.put(request.get_data().decode('utf-8'))
     return '', 204
 
 
 @app.route('/rest/<path:uuid>', methods=['PATCH'])
 def patch_resource(uuid):
     '''
-    Add a new resource at a specified URI.
+    Update an existing resource with a SPARQL-UPDATE payload.
     '''
-    rsrc = Ldpc(uuid).patch(request.get_data().decode('utf-8'))
+    rsrc = Ldpc(uuid)
+
+    try:
+        rsrc.patch(request.get_data().decode('utf-8'))
+    except ResourceNotExistsError:
+        return 'Resource #{} not found.'.format(rsrc.uuid), 404
+
     return '', 204
 
 
@@ -92,5 +108,11 @@ def delete_resource(uuid):
     '''
     Delete a resource.
     '''
-    rsrc = Ldpc(uuid).delete()
+    rsrc = Ldpc(uuid)
+
+    try:
+        rsrc.delete()
+    except ResourceNotExistsError:
+        return 'Resource #{} not found.'.format(rsrc.uuid), 404
+
     return '', 204
