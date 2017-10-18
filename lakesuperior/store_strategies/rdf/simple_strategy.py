@@ -4,6 +4,7 @@ import arrow
 
 from rdflib import Graph
 from rdflib.namespace import XSD
+from rdflib.resource import Resource
 from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.core.namespaces import ns_collection as nsc
@@ -25,11 +26,42 @@ class SimpleStrategy(BaseRdfStrategy):
     '''
 
     @property
-    def out_graph(self):
+    def headers(self):
+        '''
+        See base_rdf_strategy.headers.
+        '''
+        headers = {
+            'ETag' : 'W/"{}"'.format(
+                self.rsrc.value(nsc['premis'].hasMessageDigest)),
+            'Link' : [],
+        }
+
+        last_updated_term = self.rsrc.value(nsc['fedora'].lastUpdated) or \
+                self.rsrc.value(nsc['fedora'].lastUpdated)
+        if last_updated_term:
+            headers['Last-Modified'] = arrow.get(last_updated_term)\
+                .format('ddd, D MMM YYYY HH:mm:ss Z')
+
+        return headers
+
+
+    def out_graph(self, inbound=False):
         '''
         See base_rdf_strategy.out_graph.
         '''
-        return self.rsrc.graph
+        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
+                if inbound else ''
+        q = '''
+        CONSTRUCT {{
+            {0} ?p ?o .{1}
+        }} WHERE {{
+            {0} ?p ?o .{1}
+        }}
+        '''.format(self.base_urn.n3(), inbound_qry)
+
+        qres = self.rsrc.graph.query(q)
+
+        return Resource(qres.graph, self.base_urn)
 
 
     def ask_rsrc_exists(self, rsrc=None):

@@ -42,7 +42,7 @@ class ResourceNotExistsError(RuntimeError):
 
 class InvalidResourceError(RuntimeError):
     '''
-    Raised when a resource is found.
+    Raised when an invalid resource is found.
 
     This usually surfaces at the HTTP level as a 409 or other error.
     '''
@@ -222,7 +222,7 @@ class Ldpr(metaclass=ABCMeta):
         if not hasattr(self, '_ldp_types'):
             self._ldp_types = set()
             for t in self.types:
-                if t.qname[:4] == 'ldp:':
+                if t.qname()[:4] == 'ldp:':
                     self._ldp_types.add(t)
         return self._ldp_types
 
@@ -357,11 +357,29 @@ class Ldpr(metaclass=ABCMeta):
 
     ## LDP METHODS ##
 
-    def get(self):
+    def head(self):
+        '''
+        Return values for the headers.
+        '''
+        headers = self.gs.headers
+
+        for t in self.ldp_types:
+            headers['Link'].append('{};rel="type"'.format(t.identifier.n3()))
+
+        return headers
+
+
+    def get(self, inbound=False):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        return Translator.globalize_rsrc(self.rsrc)
+        try:
+            g = self.gs.out_graph(inbound)
+        except ResultException:
+            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
+            raise ResourceNotExistsError()
+
+        return Translator.globalize_rsrc(g)
 
 
     @transactional

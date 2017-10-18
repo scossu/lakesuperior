@@ -76,10 +76,15 @@ class Translator:
         '''
         q = '''
         CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
-          ?s ?p ?o .
-          {{ FILTER STRSTARTS(str(?s), "{0}") . }}
+          {{
+            ?s ?p ?o .
+            FILTER STRSTARTS(str(?s), "{0}") .
+          }}
           UNION
-          {{ FILTER STRSTARTS(str(?o), "{0}") . }}
+          {{
+            ?s ?p ?o .
+            FILTER STRSTARTS(str(?o), "{0}") .
+          }}
         }}'''.format(nsc['fcres'])
         flt_g = g.query(q)
 

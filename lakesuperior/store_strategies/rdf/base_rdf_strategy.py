@@ -112,10 +112,20 @@ class BaseRdfStrategy(metaclass=ABCMeta):
         pass
 
 
+    @property
+    @abstractmethod
+    @needs_rsrc
+    def headers(self):
+        '''
+        Return minimal information for generating HTTP headers.
+        '''
+        pass
+
+
     ## PUBLIC METHODS ##
 
     @abstractmethod
-    def ask_rsrc_exists(self, rsrc=None):
+    def ask_rsrc_exists(self):
         '''
         Ask if a resource exists (is stored) in the graph store.
 

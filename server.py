@@ -45,14 +45,14 @@ def get_resource(uuid):
     Retrieve RDF or binary content.
     '''
     # @TODO Add conditions for LDP-NR
-    rsrc = Ldpc(uuid).get()
+    rsrc = Ldpc(uuid)
     try:
-        headers = {
-            #'ETag' : 'W/"{}"'.format(ret.value(nsc['premis
-        }
-        return (rsrc.graph.serialize(format='turtle'), headers)
+        out = rsrc.get()
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    else:
+        headers = rsrc.head()
+        return (out.graph.serialize(format='turtle'), headers)
 
 
 @app.route('/rest/<path:parent>', methods=['POST'])
