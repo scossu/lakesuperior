@@ -11,6 +11,16 @@ class Translator:
     '''
 
     @staticmethod
+    def camelcase(word):
+        '''
+        Convert a string with underscores with a camel-cased one.
+
+        Ripped from https://stackoverflow.com/a/6425628
+        '''
+        return ''.join(x.capitalize() or '_' for x in word.split('_'))
+
+
+    @staticmethod
     def uuid_to_uri(uuid):
         '''Convert a UUID to a URI.
 

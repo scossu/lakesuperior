@@ -124,7 +124,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @return rdflib.URIRef
         '''
-        return self._uuid_to_uri(self.uuid)
+        return Translator.uuid_to_uri(self.uuid)
 
 
     @property
@@ -435,15 +435,6 @@ class Ldpr(metaclass=ABCMeta):
     #    q = '''
     #    SELECT ?child {
 
-
-
-    def _camelcase(self, word):
-        '''
-        Convert a string with underscores with a camel-cased one.
-
-        Ripped from https://stackoverflow.com/a/6425628
-        '''
-        return ''.join(x.capitalize() or '_' for x in word.split('_'))
 
 
 
