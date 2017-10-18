@@ -57,7 +57,8 @@ class BaseRdfStrategy(metaclass=ABCMeta):
     - Methods starting with `ask_` return a boolean value.
     '''
 
-    UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph') # This is Fuseki-specific
+    # N.B. This is Fuseki-specific.
+    UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
     _logger = logging.getLogger(__module__)
 

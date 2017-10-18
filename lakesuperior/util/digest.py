@@ -1,3 +1,12 @@
+import pickle
+
+from hashlib import sha1
+
+from rdflib.term import Literal, URIRef, Variable
+
+from lakesuperior.core.namespaces import ns_collection as nsc
+
+
 class Digest:
     '''
     Various digest functions. May be merged into something more generic later.

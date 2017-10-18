@@ -9,8 +9,8 @@ from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.core.namespaces import ns_collection as nsc
 from lakesuperior.core.namespaces import ns_mgr as nsm
-from lakesuperior.store_strategies.rdf.base_rdf_strategy import \
-        BaseRdfStrategy
+from lakesuperior.store_strategies.rdf.base_rdf_strategy import BaseRdfStrategy
+from lakesuperior.util.digest import Digest
 
 
 class SimpleStrategy(BaseRdfStrategy):
@@ -31,13 +31,15 @@ class SimpleStrategy(BaseRdfStrategy):
         See base_rdf_strategy.headers.
         '''
         headers = {
-            'ETag' : 'W/"{}"'.format(
-                self.rsrc.value(nsc['premis'].hasMessageDigest)),
             'Link' : [],
         }
 
-        last_updated_term = self.rsrc.value(nsc['fedora'].lastUpdated) or \
-                self.rsrc.value(nsc['fedora'].lastUpdated)
+        digest = self.rsrc.value(nsc['premis'].hasMessageDigest)
+        if digest:
+            etag = digest.identifier.split(':')[-1]
+            headers['ETag'] = 'W/"{}"'.format(etag),
+
+        last_updated_term = self.rsrc.value(nsc['fedora'].lastUpdated)
         if last_updated_term:
             headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -119,6 +121,10 @@ class SimpleStrategy(BaseRdfStrategy):
 
         self.rsrc.set(nsc['fedora'].created, ts)
         self.rsrc.set(nsc['fedora'].createdBy, Literal('BypassAdmin'))
+
+        cksum = Digest.rdf_cksum(self.rsrc.graph)
+        self.rsrc.set(nsc['premis'].hasMessageDigest,
+                URIRef('urn:sha1:{}'.format(cksum)))
 
         for s, p, o in g:
             self.ds.add((s, p, o))
