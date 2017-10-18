@@ -39,7 +39,8 @@ def debug():
 ## REST SERVICES ##
 
 @app.route('/rest/<path:uuid>', methods=['GET'])
-@app.route('/rest/', defaults={'uuid': None}, methods=['GET'])
+@app.route('/rest/', defaults={'uuid': None}, methods=['GET'],
+        strict_slashes=False)
 def get_resource(uuid):
     '''
     Retrieve RDF or binary content.
@@ -56,13 +57,19 @@ def get_resource(uuid):
 
 
 @app.route('/rest/<path:parent>', methods=['POST'])
-@app.route('/rest/', defaults={'parent': None}, methods=['POST'])
+@app.route('/rest/', defaults={'parent': None}, methods=['POST'],
+        strict_slashes=False)
 def post_resource(parent):
     '''
     Add a new resource in a new URI.
     '''
     try:
-       rsrc = Ldpc.inst_for_post(parent, request.headers['Slug'] or None)
+        slug = request.headers['Slug']
+    except KeyError:
+        slug = None
+
+    try:
+       rsrc = Ldpc.inst_for_post(parent, slug)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
