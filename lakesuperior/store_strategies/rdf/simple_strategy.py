@@ -17,6 +17,9 @@ class SimpleStrategy(BaseRdfStrategy):
     This is the simplest strategy.
 
     It uses a flat triple structure without named graphs aimed at performance.
+
+    Changes are destructive.
+
     In theory it could be used on top of a triplestore instead of a quad-store
     for (possible) improved speed and reduced storage.
     '''
@@ -29,13 +32,19 @@ class SimpleStrategy(BaseRdfStrategy):
         return self.rsrc.graph
 
 
-    def ask_rsrc_exists(self):
+    def ask_rsrc_exists(self, rsrc=None):
         '''
         See base_rdf_strategy.ask_rsrc_exists.
         '''
-        print('Searching for resource: {}'
-                .format(self.rsrc.identifier))
-        return (self.rsrc.identifier, Variable('p'), Variable('o')) in self.ds
+        if not rsrc:
+            if self.rsrc is not None:
+                rsrc = self.rsrc
+            else:
+                return False
+
+        self._logger.info('Searching for resource: {}'
+                .format(rsrc.identifier))
+        return (rsrc.identifier, Variable('p'), Variable('o')) in self.ds
 
 
     def create_or_replace_rsrc(self, g):

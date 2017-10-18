@@ -12,6 +12,21 @@ from lakesuperior.core.namespaces import ns_collection as nsc
 from lakesuperior.core.namespaces import ns_mgr as nsm
 
 
+def needs_rsrc(fn):
+    '''
+    Decorator for methods that cannot be called without `self.rsrc` set.
+    '''
+    def wrapper(self, *args, **kwargs):
+        if not isset(self, '_rsrc') or self._rsrc is None:
+            raise TypeError(
+                'This method must be called by an instance with `rsrc` set.')
+
+        return fn(self, *args, **kwargs)
+
+    return wrapper
+
+
+
 class BaseRdfStrategy(metaclass=ABCMeta):
     '''
     This class exposes an interface to build graph store strategies.
@@ -49,7 +64,13 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, urn):
+    def __init__(self, urn=None):
+        '''
+        The strategy can be initialized with a URN to make resource-centric
+        operations simpler. However, for generic queries, urn can be None and
+        no `self.rsrc` is assigned. In this case, some methods will not be
+        available.
+        '''
         self.conn = GraphStoreConnector()
         self.ds = self.conn.ds
         self._base_urn = urn
@@ -60,8 +81,8 @@ class BaseRdfStrategy(metaclass=ABCMeta):
         '''
         The base URN for the current resource being handled.
 
-        This value is only here for convenience. It does not preclde from using
-        an instance of this class with more than one subject.
+        This value is only here for convenience. It does not preclude one from
+        using an instance of this class with more than one subject.
         '''
         return self._base_urn
 
@@ -73,11 +94,14 @@ class BaseRdfStrategy(metaclass=ABCMeta):
         whole underlying triplestore structure and is used to update a
         resource.
         '''
+        if self.base_urn is None:
+            return None
         return self.ds.resource(self.base_urn)
 
 
     @property
     @abstractmethod
+    @needs_rsrc
     def out_graph(self):
         '''
         Graph obtained by querying the triplestore and adding any abstraction
@@ -91,6 +115,21 @@ class BaseRdfStrategy(metaclass=ABCMeta):
     ## PUBLIC METHODS ##
 
     @abstractmethod
+    def ask_rsrc_exists(self, rsrc=None):
+        '''
+        Ask if a resource exists (is stored) in the graph store.
+
+        @param rsrc (rdflib.resource.Resource) If this is provided, this method
+        will look for the specified resource. Otherwise, it will look for the
+        default resource. If this latter is not specified, the result is False.
+
+        @return boolean
+        '''
+        pass
+
+
+    @abstractmethod
+    @needs_rsrc
     def create_or_replace_rsrc(self, urn, data, commit=True):
         '''Create a resource graph in the main graph if it does not exist.
 
@@ -100,6 +139,7 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
 
     @abstractmethod
+    @needs_rsrc
     def create_rsrc(self, urn, data, commit=True):
         '''Create a resource graph in the main graph.
 
@@ -109,6 +149,7 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
 
     @abstractmethod
+    @needs_rsrc
     def patch_rsrc(self, urn, data, commit=False):
         '''
         Perform a SPARQL UPDATE on a resource.
@@ -117,5 +158,6 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
 
     @abstractmethod
+    @needs_rsrc
     def delete_rsrc(self, urn, commit=True):
         pass
