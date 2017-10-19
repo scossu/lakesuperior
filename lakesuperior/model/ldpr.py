@@ -60,11 +60,11 @@ def transactional(fn):
         try:
             ret = fn(self, *args, **kwargs)
             print('Committing transaction.')
-            self.gs.conn.store.commit()
+            self.rdfly.conn.store.commit()
             return ret
         except:
             print('Rolling back transaction.')
-            self.gs.conn.store.rollback()
+            self.rdfly.conn.store.rollback()
             raise
 
     return wrapper
@@ -132,7 +132,7 @@ class Ldpr(metaclass=ABCMeta):
 
     _logger = logging.getLogger(__module__)
 
-    store_layout = config['application']['store']['ldp_rs']['layout']
+    rdf_store_layout = config['application']['store']['ldp_rs']['layout']
 
     ## MAGIC METHODS ##
 
@@ -151,10 +151,10 @@ class Ldpr(metaclass=ABCMeta):
         # Dynamically load the store layout indicated in the configuration.
         store_mod = import_module(
                 'lakesuperior.store_layouts.rdf.{}'.format(
-                        self.store_layout))
+                        self.rdf_store_layout))
         self._rdf_store_cls = getattr(store_mod, Translator.camelcase(
-                self.store_layout))
-        self.gs = self._rdf_store_cls(self.urn)
+                self.rdf_store_layout))
+        self.rdfly = self._rdf_store_cls(self.urn)
 
         # Same thing coud be done for the filesystem store layout, but we
         # will keep it simple for now.
@@ -193,14 +193,14 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_rsrc'):
-            self._rsrc = self.gs.rsrc
+            self._rsrc = self.rdfly.rsrc
 
         return self._rsrc
 
 
     @property
     def is_stored(self):
-        return self.gs.ask_rsrc_exists()
+        return self.rdfly.ask_rsrc_exists()
 
 
     @property
@@ -245,9 +245,9 @@ class Ldpr(metaclass=ABCMeta):
             # There should only be one container.
             for t in qres:
                 if t[0]:
-                    container = self.gs.ds.resource(t[0])
+                    container = self.rdfly.ds.resource(t[0])
 
-            contains = ( self.gs.ds.resource(t[1]) for t in qres if t[1] )
+            contains = ( self.rdfly.ds.resource(t[1]) for t in qres if t[1] )
 
             self._containment = {
                     'container' : container, 'contains' : contains}
@@ -276,7 +276,21 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def inst(cls, uuid):
+    def load_rdf_layout(cls, uuid=None):
+        '''
+        Dynamically load the store layout indicated in the configuration.
+        This essentially replicates the init() code in a static context.
+        '''
+        store_mod = import_module(
+                'lakesuperior.store_layouts.rdf.{}'.format(
+                        cls.rdf_store_layout))
+        rdf_layout_cls = getattr(store_mod, Translator.camelcase(
+                cls.rdf_store_layout))
+        return rdf_layout_cls(uuid)
+
+
+    @classmethod
+    def readonly_inst(cls, uuid):
         '''
         Fatory method that creates and returns an instance of an LDPR subclass
         based on information that needs to be queried from the underlying
@@ -286,8 +300,8 @@ class Ldpr(metaclass=ABCMeta):
 
         @param uuid UUID of the instance.
         '''
-        gs = cls.load_gs_static(cls, uuid)
-        rdf_types = gs.rsrc[nsc['res'][uuid] : RDF.type]
+        rdfly = cls.load_rdf_layout(cls, uuid)
+        rdf_types = rdfly.rsrc[nsc['res'][uuid] : RDF.type]
 
         for t in rdf_types:
             if t == cls.LDP_NR_TYPE:
@@ -295,22 +309,8 @@ class Ldpr(metaclass=ABCMeta):
             if t == cls.LDP_RS_TYPE:
                 return LdpRs(uuid)
 
-        raise ValueError('Resource #{} does not exist or does not have a '
-                'valid LDP type.'.format(uuid))
-
-
-    @classmethod
-    def load_gs_static(cls, uuid=None):
-        '''
-        Dynamically load the store layout indicated in the configuration.
-        This essentially replicates the init() code in a static context.
-        '''
-        store_mod = import_module(
-                'lakesuperior.store_layouts.rdf.{}'.format(
-                        cls.store_layout))
-        rdf_store_cls = getattr(store_mod, Translator.camelcase(
-                cls.store_layout))
-        return rdf_store_cls(uuid)
+        raise ResourceNotExistsError('Resource #{} does not exist or does not '
+                'have a valid LDP type.'.format(uuid))
 
 
     @classmethod
@@ -326,17 +326,17 @@ class Ldpr(metaclass=ABCMeta):
         if not slug and not parent_uuid:
             return cls(str(uuid4()))
 
-        gs = cls.load_gs_static()
-        parent_rsrc = Resource(gs.ds, nsc['fcres'][parent_uuid])
+        rdfly = cls.load_rdf_layout()
+        parent_rsrc = Resource(rdfly.ds, nsc['fcres'][parent_uuid])
 
         # Set prefix.
         if parent_uuid:
-            parent_exists = gs.ask_rsrc_exists(parent_rsrc)
+            parent_exists = rdfly.ask_rsrc_exists(parent_rsrc)
             if not parent_exists:
                 raise ResourceNotExistsError('Parent not found: {}.'
                         .format(parent_uuid))
 
-            if nsc['ldp'].Container not in gs.rsrc.values(RDF.type):
+            if nsc['ldp'].Container not in rdfly.rsrc.values(RDF.type):
                 raise InvalidResourceError('Parent {} is not a container.'
                        .format(parent_uuid))
 
@@ -347,8 +347,8 @@ class Ldpr(metaclass=ABCMeta):
         # Create candidate UUID and validate.
         if slug:
             cnd_uuid = pfx + slug
-            cnd_rsrc = Resource(gs.ds, nsc['fcres'][cnd_uuid])
-            if gs.ask_rsrc_exists(cnd_rsrc):
+            cnd_rsrc = Resource(rdfly.ds, nsc['fcres'][cnd_uuid])
+            if rdfly.ask_rsrc_exists(cnd_rsrc):
                 return cls(pfx + str(uuid4()))
             else:
                 return cls(cnd_uuid)
@@ -362,7 +362,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Return values for the headers.
         '''
-        headers = self.gs.headers
+        headers = self.rdfly.headers
 
         for t in self.ldp_types:
             headers['Link'].append('{};rel="type"'.format(t.identifier.n3()))
@@ -375,7 +375,7 @@ class Ldpr(metaclass=ABCMeta):
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
         try:
-            g = self.gs.out_graph(inbound)
+            g = self.rdfly.out_graph(inbound)
         except ResultException:
             # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
             raise ResourceNotExistsError()
@@ -395,7 +395,7 @@ class Ldpr(metaclass=ABCMeta):
         for t in self.base_types:
             g.add((self.urn, RDF.type, t))
 
-        self.gs.create_rsrc(g)
+        self.rdfly.create_rsrc(g)
 
         self._set_containment_rel()
 
@@ -410,7 +410,7 @@ class Ldpr(metaclass=ABCMeta):
         for t in self.base_types:
             g.add((self.urn, RDF.type, t))
 
-        self.gs.create_or_replace_rsrc(g)
+        self.rdfly.create_or_replace_rsrc(g)
 
         self._set_containment_rel()
 
@@ -421,7 +421,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
         '''
-        self.gs.delete_rsrc(self.urn)
+        self.rdfly.delete_rsrc(self.urn)
 
 
     ## PROTECTED METHODS ##
@@ -440,14 +440,14 @@ class Ldpr(metaclass=ABCMeta):
         if '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
             #candidate_parent_urn = self._find_first_ancestor()
-            #cparent = self.gs.ds.resource(candidate_parent_urn)
+            #cparent = self.rdfly.ds.resource(candidate_parent_urn)
             cparent_uri = self._find_parent_or_create_pairtree(self.uuid)
 
             # Reroute possible containment relationships between parent and new
             # resource.
             #self._splice_in(cparent)
             if cparent_uri:
-                self.gs.ds.add((cparent_uri, nsc['ldp'].contains,
+                self.rdfly.ds.add((cparent_uri, nsc['ldp'].contains,
                         self.rsrc.identifier))
         else:
             self.rsrc.graph.add((nsc['fcsystem'].root, nsc['ldp'].contains,
@@ -512,7 +512,7 @@ class Ldpr(metaclass=ABCMeta):
     #    )
 
     #    for cmp in search_order:
-    #        if self.gs.ask_rsrc_exists(ns['fcres'].cmp):
+    #        if self.rdfly.ask_rsrc_exists(ns['fcres'].cmp):
     #            return urn
     #        else:
     #            self._create_pairtree_node(cmp)
@@ -543,7 +543,7 @@ class Ldpr(metaclass=ABCMeta):
         if '/' not in str(uri):
             g.add((nsc['fcsystem'].root, nsc['ldp'].contains, uri))
 
-        self.gs.create_rsrc(g)
+        self.rdfly.create_rsrc(g)
 
 
 
@@ -630,10 +630,10 @@ class LdpRs(Ldpr):
         '''
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
 
-        self.gs.patch_rsrc(self.urn, data, ts)
+        self.rdfly.patch_rsrc(self.urn, data, ts)
 
-        self.gs.ds.add((self.urn, nsc['fedora'].lastUpdated, ts))
-        self.gs.ds.add((self.urn, nsc['fedora'].lastUpdatedBy,
+        self.rdfly.ds.add((self.urn, nsc['fedora'].lastUpdated, ts))
+        self.rdfly.ds.add((self.urn, nsc['fedora'].lastUpdatedBy,
                 Literal('BypassAdmin')))
 
 
