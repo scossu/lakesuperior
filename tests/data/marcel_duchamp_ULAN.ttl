@@ -1,0 +1,1026 @@
+@prefix aat: <http://vocab.getty.edu/aat/> .
+@prefix aat_contrib: <http://vocab.getty.edu/aat/contrib/> .
+@prefix aat_rel: <http://vocab.getty.edu/aat/rel/> .
+@prefix aat_rev: <http://vocab.getty.edu/aat/rev/> .
+@prefix aat_scopeNote: <http://vocab.getty.edu/aat/scopeNote/> .
+@prefix aat_source: <http://vocab.getty.edu/aat/source/> .
+@prefix aat_source_rev: <http://vocab.getty.edu/aat/source/rev/> .
+@prefix aat_term: <http://vocab.getty.edu/aat/term/> .
+@prefix adms: <http://www.w3.org/ns/adms#> .
+@prefix bibo: <http://purl.org/ontology/bibo/> .
+@prefix bio: <http://purl.org/vocab/bio/0.1/> .
+@prefix cc: <http://creativecommons.org/ns#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dctype: <http://purl.org/dc/dcmitype/> .
+@prefix fmt: <http://www.w3.org/ns/formats/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix freq: <http://purl.org/cld/freq/> .
+@prefix gvp: <http://vocab.getty.edu/ontology#> .
+@prefix gvp_lang: <http://vocab.getty.edu/language/> .
+@prefix iso: <http://purl.org/iso25964/skos-thes#> .
+@prefix luc: <http://www.ontotext.com/owlim/lucene#> .
+@prefix ontogeo: <http://www.ontotext.com/owlim/geo#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ptop: <http://www.ontotext.com/proton/protontop#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix rrx: <http://purl.org/r2rml-ext/> .
+@prefix schema: <http://schema.org/> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+@prefix sesame: <http://www.openrdf.org/schema/sesame#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix skosxl: <http://www.w3.org/2008/05/skos-xl#> .
+@prefix tgn: <http://vocab.getty.edu/tgn/> .
+@prefix tgn_contrib: <http://vocab.getty.edu/tgn/contrib/> .
+@prefix tgn_rel: <http://vocab.getty.edu/tgn/rel/> .
+@prefix tgn_rev: <http://vocab.getty.edu/tgn/rev/> .
+@prefix tgn_scopeNote: <http://vocab.getty.edu/tgn/scopeNote/> .
+@prefix tgn_source: <http://vocab.getty.edu/tgn/source/> .
+@prefix tgn_source_rev: <http://vocab.getty.edu/tgn/source/rev/> .
+@prefix tgn_term: <http://vocab.getty.edu/tgn/term/> .
+@prefix ulan: <http://vocab.getty.edu/ulan/> .
+@prefix ulan_bio: <http://vocab.getty.edu/ulan/bio/> .
+@prefix ulan_contrib: <http://vocab.getty.edu/ulan/contrib/> .
+@prefix ulan_event: <http://vocab.getty.edu/ulan/event/> .
+@prefix ulan_rel: <http://vocab.getty.edu/ulan/rel/> .
+@prefix ulan_rev: <http://vocab.getty.edu/ulan/rev/> .
+@prefix ulan_scopeNote: <http://vocab.getty.edu/ulan/scopeNote/> .
+@prefix ulan_source: <http://vocab.getty.edu/ulan/source/> .
+@prefix ulan_source_rev: <http://vocab.getty.edu/ulan/source/rev/> .
+@prefix ulan_term: <http://vocab.getty.edu/ulan/term/> .
+@prefix vaem: <http://www.linkedmodel.org/schema/vaem#> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix vdpp: <http://data.lirmm.fr/ontologies/vdpp#> .
+@prefix voaf: <http://purl.org/vocommons/voaf#> .
+@prefix voag: <http://voag.linkedmodel.org/voag#> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix wdrs: <http://www.w3.org/2007/05/powder-s#> .
+@prefix wgs: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix wv: <http://vocab.org/waiver/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ulan:500115393 a gvp:Subject , skos:Concept , gvp:PersonConcept ;
+	rdfs:label "Duchamp, Marcel" , "Marcel Duchamp" , "Duchamp, Henri-Robert-Marcel" , "Duchamp, Henri Robert Marcel" , "Duchamp-Villon, Marcel" , "Dushan, Marsel" , "Villon, Marcel Duchamp-" , "Sélavy, Rrose" , "Sélavy, Rose" , "דושאן, מרסל" , "デユシヤンマルセル" , "Duxiang" , "Mutt, R." , "R. Mutt" ;
+	rdfs:seeAlso <http://www.getty.edu/vow/ULANFullDisplay?find=&role=&nation=&subjectid=500115393> ;
+	dct:modified "2008-08-16T11:50:37"^^xsd:dateTime , "2003-03-24T09:59:08"^^xsd:dateTime , "2002-06-20T14:58:54"^^xsd:dateTime , "2006-11-30T11:34:43"^^xsd:dateTime , "2007-10-23T16:06:29"^^xsd:dateTime , "2011-02-18T12:50:49"^^xsd:dateTime , "2015-03-11T17:06:04"^^xsd:dateTime , "2009-06-14T14:58:05"^^xsd:dateTime , "2011-02-18T12:50:52"^^xsd:dateTime , "2003-10-03T14:11:24"^^xsd:dateTime , "2002-12-05T10:39:30"^^xsd:dateTime , "2016-09-12T16:20:32"^^xsd:dateTime , "2006-04-12T09:59:32"^^xsd:dateTime , "2016-03-23T17:25:31"^^xsd:dateTime , "2016-04-06T15:47:13"^^xsd:dateTime , "2015-04-16T08:15:43"^^xsd:dateTime , "2016-03-31T14:31:29"^^xsd:dateTime , "2006-04-12T09:48:36"^^xsd:dateTime , "2008-04-28T11:34:06"^^xsd:dateTime , "2014-10-20T12:20:21"^^xsd:dateTime , "2002-06-20T15:00:17"^^xsd:dateTime , "2002-07-30T11:53:19"^^xsd:dateTime , "2002-10-29T15:17:42"^^xsd:dateTime , "2011-09-13T16:29:33"^^xsd:dateTime , "2016-03-23T16:25:40"^^xsd:dateTime , "2016-05-03T17:06:16"^^xsd:dateTime , "2002-06-20T15:00:45"^^xsd:dateTime , "2002-10-01T14:06:53"^^xsd:dateTime , "2002-10-01T14:08:36"^^xsd:dateTime , "2002-10-01T14:22:08"^^xsd:dateTime , "2002-10-02T15:04:52"^^xsd:dateTime , "2003-03-24T10:01:30"^^xsd:dateTime , "2006-04-12T10:04:07"^^xsd:dateTime , "2006-11-30T11:34:42"^^xsd:dateTime , "2006-11-30T13:07:02"^^xsd:dateTime , "2007-08-29T11:53:31"^^xsd:dateTime , "2008-04-28T11:37:26"^^xsd:dateTime , "2010-01-07T12:00:49"^^xsd:dateTime , "2015-02-19T12:09:11"^^xsd:dateTime , "2015-03-11T17:34:20"^^xsd:dateTime , "2015-03-11T17:34:38"^^xsd:dateTime , "2009-06-14T14:58:03"^^xsd:dateTime , "2002-06-20T14:58:58"^^xsd:dateTime , "2008-08-16T22:29:50"^^xsd:dateTime , "2010-11-05T08:45:12"^^xsd:dateTime , "2015-02-19T12:08:44"^^xsd:dateTime , "2015-03-11T17:06:05"^^xsd:dateTime , "2016-11-30T14:46:12"^^xsd:dateTime , "2017-03-21T12:03:40"^^xsd:dateTime ;
+	skos:changeNote ulan_rev:5501238598 , ulan_rev:5501238599 , ulan_rev:5501238600 , ulan_rev:5502832577 , ulan_rev:5502832579 , ulan_rev:5503033110 , ulan_rev:5503033111 , ulan_rev:5503033112 , ulan_rev:5503033113 , ulan_rev:5505529824 , ulan_rev:5505529825 , ulan_rev:5505529826 , ulan_rev:5506788587 , ulan_rev:5506788588 , ulan_rev:5501238601 , ulan_rev:5501238602 , ulan_rev:5501238603 , ulan_rev:5501238613 , ulan_rev:5501466778 , ulan_rev:5501539027 , ulan_rev:5501570505 , ulan_rev:5501627408 , ulan_rev:5501694067 , ulan_rev:5502679517 , ulan_rev:5502679518 , ulan_rev:5502679530 , ulan_rev:5503185111 , ulan_rev:5505880119 , ulan_rev:5506762725 , ulan_rev:5506797239 , ulan_rev:5507214591 , ulan_rev:5507214623 , ulan_rev:5507216140 , ulan_rev:5507218569 , ulan_rev:5507223628 , ulan_rev:5507478879 , ulan_rev:5501238612 , ulan_rev:5501238615 , ulan_rev:5501523125 , ulan_rev:5501523127 , ulan_rev:5501523167 , ulan_rev:5501524349 , ulan_rev:5501627410 , ulan_rev:5502679516 , ulan_rev:5502679529 , ulan_rev:5502679534 , ulan_rev:5502832575 , ulan_rev:5502832601 , ulan_rev:5503023064 , ulan_rev:5503033106 , ulan_rev:5503185113 , ulan_rev:5504721787 , ulan_rev:5506785448 , ulan_rev:5506788606 , ulan_rev:5506788608 , ulan_rev:5501523124 , ulan_rev:5503185112 , ulan_rev:5504085419 , ulan_rev:5504721788 , ulan_rev:5501238611 , ulan_rev:5503239603 , ulan_rev:5503577698 , ulan_rev:5504085421 , ulan_rev:5505277603 , ulan_rev:5505529848 , ulan_rev:5506785447 , ulan_rev:5506788605 , ulan_rev:5507609107 , ulan_rev:5507704846 ;
+	gvp:broader ulan:500000002 ;
+	gvp:broaderInstantialExtended ulan:500000002 ;
+	gvp:broaderExtended ulan:500000002 ;
+	gvp:broaderPreferredExtended ulan:500000002 ;
+	gvp:parentString "Persons, Artists" ;
+	skos:note ulan_scopeNote:52499 , ulan_rev:5501238598 , ulan_rev:5501238599 , ulan_rev:5501238600 , ulan_rev:5502832577 , ulan_rev:5502832579 , ulan_rev:5503033110 , ulan_rev:5503033111 , ulan_rev:5503033112 , ulan_rev:5503033113 , ulan_rev:5505529824 , ulan_rev:5505529825 , ulan_rev:5505529826 , ulan_rev:5506788587 , ulan_rev:5506788588 , ulan_rev:5501238601 , ulan_rev:5501238602 , ulan_rev:5501238603 , ulan_rev:5501238613 , ulan_rev:5501466778 , ulan_rev:5501539027 , ulan_rev:5501570505 , ulan_rev:5501627408 , ulan_rev:5501694067 , ulan_rev:5502679517 , ulan_rev:5502679518 , ulan_rev:5502679530 , ulan_rev:5503185111 , ulan_rev:5505880119 , ulan_rev:5506762725 , ulan_rev:5506797239 , ulan_rev:5507214591 , ulan_rev:5507214623 , ulan_rev:5507216140 , ulan_rev:5507218569 , ulan_rev:5507223628 , ulan_rev:5507478879 , ulan_rev:5501238612 , ulan_rev:5501238615 , ulan_rev:5501523125 , ulan_rev:5501523127 , ulan_rev:5501523167 , ulan_rev:5501524349 , ulan_rev:5501627410 , ulan_rev:5502679516 , ulan_rev:5502679529 , ulan_rev:5502679534 , ulan_rev:5502832575 , ulan_rev:5502832601 , ulan_rev:5503023064 , ulan_rev:5503033106 , ulan_rev:5503185113 , ulan_rev:5504721787 , ulan_rev:5506785448 , ulan_rev:5506788606 , ulan_rev:5506788608 , ulan_rev:5501523124 , ulan_rev:5503185112 , ulan_rev:5504085419 , ulan_rev:5504721788 , ulan_rev:5501238611 , ulan_rev:5503239603 , ulan_rev:5503577698 , ulan_rev:5504085421 , ulan_rev:5505277603 , ulan_rev:5505529848 , ulan_rev:5506785447 , ulan_rev:5506788605 , ulan_rev:5507609107 , ulan_rev:5507704846 ;
+	gvp:parentStringAbbrev "Persons, Artists" ;
+	gvp:displayOrder "47287"^^xsd:positiveInteger ;
+	gvp:agentType aat:300025103 , aat:300025181 , aat:300025136 , aat:300025687 , aat:300154308 , aat:300112172 , aat:300025164 , aat:300386235 , aat:300386233 ;
+	skos:exactMatch ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	dct:replaces ulan:500011982 , ulan:500114549 ;
+	skosxl:prefLabel ulan_term:1500033607 ;
+	skos:prefLabel "Duchamp, Marcel" ;
+	skosxl:altLabel ulan_term:1500033608 , ulan_term:1500322910 , ulan_term:1500337572 , ulan_term:1500337574 , ulan_term:1500337573 , ulan_term:1500337575 , ulan_term:1500033609 , ulan_term:1500322908 , ulan_term:1500771322 , ulan_term:1500771323 , ulan_term:1500771324 , ulan_term:1500795577 , ulan_term:1500796877 ;
+	skos:altLabel "Marcel Duchamp" , "Duchamp, Henri-Robert-Marcel" , "Duchamp, Henri Robert Marcel" , "Duchamp-Villon, Marcel" , "Dushan, Marsel" , "Villon, Marcel Duchamp-" , "Sélavy, Rrose" , "Sélavy, Rose" , "דושאן, מרסל" , "デユシヤンマルセル" , "Duxiang" , "Mutt, R." , "R. Mutt" ;
+	gvp:broaderInstantial ulan:500000002 ;
+	gvp:broaderPreferred ulan:500000002 ;
+	gvp:prefLabelGVP ulan_term:1500033607 ;
+	skos:inScheme <http://vocab.getty.edu/ulan/> ;
+	skos:scopeNote ulan_scopeNote:52499 ;
+	dct:contributor ulan_contrib:2500000002 , ulan_contrib:2500000130 , ulan_contrib:2500000003 , ulan_contrib:2500000001 , ulan_contrib:2500000005 , ulan_contrib:2500000189 , ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000008 , ulan_contrib:2500000012 , ulan_contrib:2500000011 , ulan_contrib:2500000124 , ulan_contrib:2500000256 ;
+	dct:source ulan_source:2100042266 , ulan_source:2100042297 , ulan_source:2100045787 , ulan_source:2100146253 , ulan_source:2100149039 , ulan_source:2100153925 , ulan_source:2100153980 , ulan_source:2100154640 , ulan_source:2100156731 , ulan_source:2100158442 , ulan_source:2100042617-subject-500115393 , ulan_source:2100039584-subject-500115393 , ulan_source:2100156698-subject-500115393 , ulan_source:2100046392-subject-500115393 , ulan_source:2100047116-subject-500115393 , ulan_source:2100156593-subject-500115393 , ulan_source:2100149014-subject-500115393 ;
+	gvp:agentTypePreferred aat:300025103 ;
+	gvp:agentTypeNonPreferred aat:300025181 , aat:300025136 , aat:300025687 , aat:300154308 , aat:300112172 , aat:300025164 , aat:300386235 , aat:300386233 ;
+	skos:related ulan:500067144 , ulan:500060362 , ulan:500010539 , ulan:500372350 , ulan:500092478 , ulan:500117049 , ulan:500004441 , ulan:500020337 , ulan:500030274 , ulan:500029284 , ulan:500115729 , ulan:500126033 , ulan:500199881 , ulan:500015030 , ulan:500006325 , ulan:500196090 , ulan:500003616 , ulan:500009062 ;
+	dc:identifier "500115393" ;
+	gvp:ulan1003_associated_with ulan:500196090 ;
+	gvp:ulan1108_influenced_by ulan:500199881 ;
+	gvp:ulan1301_colleague_of ulan:500020337 ;
+	gvp:ulan1302_associate_of ulan:500126033 ;
+	gvp:ulan1303_collaborated_with ulan:500067144 , ulan:500015030 ;
+	gvp:ulan1305_worked_with ulan:500115729 ;
+	gvp:ulan1317_member_of ulan:500372350 , ulan:500092478 , ulan:500117049 ;
+	gvp:ulan1501_sibling_of ulan:500030274 , ulan:500029284 , ulan:500003616 ;
+	gvp:ulan1541_spouse_of ulan:500060362 ;
+	gvp:ulan1547_romantic_partner_of ulan:500009062 ;
+	gvp:ulan2550_friend_of ulan:500010539 , ulan:500004441 , ulan:500006325 ;
+	skos:mappingRelation ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	skos:closeMatch ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	dct:license <http://opendatacommons.org/licenses/by/1.0/> ;
+	void:inDataset <http://vocab.getty.edu/dataset/ulan> ;
+	cc:license <http://opendatacommons.org/licenses/by/1.0/> ;
+	foaf:focus ulan:500115393-agent .
+
+ulan_rev:5501238598 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (1500033607);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238599 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Marcel Duchamp (1500033608);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238600 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Sélavy, Rrose (1500033609);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502832577 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2006-11-30T11:34:43"^^xsd:dateTime ;
+	dc:description "Duchamp, Henri-Robert-Marcel (1500322910);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502832579 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2006-11-30T11:34:43"^^xsd:dateTime ;
+	dc:description "Sélavy, Rose (1500322908);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503033110 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2007-10-23T16:06:29"^^xsd:dateTime ;
+	dc:description "Duchamp, Henri Robert Marcel (1500337572);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503033111 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2007-10-23T16:06:29"^^xsd:dateTime ;
+	dc:description "Duchamp-Villon, Marcel (1500337574);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503033112 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2007-10-23T16:06:29"^^xsd:dateTime ;
+	dc:description "Dushan, Marsel (1500337573);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503033113 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2007-10-23T16:06:29"^^xsd:dateTime ;
+	dc:description "Villon, Marcel Duchamp- (1500337575);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5505529824 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2011-02-18T12:50:49"^^xsd:dateTime ;
+	dc:description "דושאן, מרסל (1500771322);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5505529825 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2011-02-18T12:50:49"^^xsd:dateTime ;
+	dc:description "デユシヤンマルセル (1500771323);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5505529826 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2011-02-18T12:50:49"^^xsd:dateTime ;
+	dc:description "Duxiang (1500771324);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506788587 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2015-03-11T17:06:04"^^xsd:dateTime ;
+	dc:description "Mutt, R. (1500795577);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506788588 a prov:Activity , prov:Modify ;
+	dc:type "term added" ;
+	prov:startedAtTime "2015-03-11T17:06:04"^^xsd:dateTime ;
+	dc:description "R. Mutt (1500796877);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238601 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'sibling of' Villon, Jacques (500003616);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238602 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Wood, Beatrice (500009062);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238603 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-06-20T14:58:54"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'works with' Ernst, Max (500114683);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238613 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-06-20T15:00:17"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'sibling of' Duchamp-Villon, Raymond (500029284);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501466778 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-07-30T11:53:19"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'member of' Duchamp family (500092478);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501539027 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-10-29T15:17:42"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'works with' Ernst, Max (500115729);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501570505 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2002-12-05T10:39:30"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'sibling of' Duchamp, Suzanne (500030274);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501627408 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2003-03-24T09:59:08"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'spouse of' Duchamp, Alexina (500060362);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501694067 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2003-10-03T14:11:24"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'member of' Society of Independent Artists (500117049);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679517 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2006-04-12T09:48:36"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'collaborated with' Man Ray (500015030);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679518 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2006-04-12T09:48:36"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Man Ray (500015030);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679530 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2006-04-12T09:59:32"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Picabia, Francis (500006325);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503185111 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2008-04-28T11:34:06"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'colleague of' Donati, Enrico (500020337);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5505880119 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2011-09-13T16:29:33"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'associate of' Hamilton, Richard (500126033);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506762725 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2014-10-20T12:20:21"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'associated with' Szeemann, Harald (500196090);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506797239 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2015-04-16T08:15:43"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'romantic partner of' Wood, Beatrice (500009062);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507214591 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2016-03-23T16:25:40"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'collaborated with' Allégret, Marc (500067144);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507214623 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2016-03-23T17:25:31"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Apollinaire, Guillaume (500010539);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507216140 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2016-03-31T14:31:29"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'member of' Collège de 'pataphysique‏ (500372350);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507218569 a prov:Activity , prov:Modify ;
+	dc:type "relation deleted" ;
+	prov:startedAtTime "2016-04-06T15:47:13"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Man Ray (500015030);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507223628 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2016-05-03T17:06:16"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'influenced by' Jarry, Alfred (500199881);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5507478879 a prov:Activity , prov:Modify ;
+	dc:type "relation added" ;
+	prov:startedAtTime "2016-09-12T16:20:32"^^xsd:dateTime ;
+	dc:description "Duchamp, Marcel (500115393) 'friend of' Demuth, Charles (500004441);" ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238612 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-06-20T15:00:17"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501238615 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-06-20T15:00:45"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501523125 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-10-01T14:06:53"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501523127 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-10-01T14:08:36"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501523167 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-10-01T14:22:08"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501524349 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2002-10-02T15:04:52"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501627410 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2003-03-24T10:01:30"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679516 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2006-04-12T09:48:36"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679529 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2006-04-12T09:59:32"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502679534 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2006-04-12T10:04:07"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502832575 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2006-11-30T11:34:42"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5502832601 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2006-11-30T13:07:02"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503023064 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2007-08-29T11:53:31"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503033106 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2007-10-23T16:06:29"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503185113 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2008-04-28T11:37:26"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5504721787 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2010-01-07T12:00:49"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506785448 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2015-02-19T12:09:11"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506788606 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2015-03-11T17:34:20"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5506788608 a prov:Activity , prov:Modify ;
+	dc:type "updated" ;
+	prov:startedAtTime "2015-03-11T17:34:38"^^xsd:dateTime ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5501523124 a prov:Activity , prov:Modify ;
+	dc:type "note created" ;
+	prov:startedAtTime "2002-10-01T14:06:53"^^xsd:dateTime ;
+	dc:description "Language: " ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5503185112 a prov:Activity , prov:Modify ;
+	dc:type "note updated" ;
+	prov:startedAtTime "2008-04-28T11:37:26"^^xsd:dateTime ;
+	dc:description "Language: " ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5504085419 a prov:Activity , prov:Modify ;
+	dc:type "note updated" ;
+	prov:startedAtTime "2009-06-14T14:58:03"^^xsd:dateTime ;
+	dc:description "Language: " ;
+	prov:used ulan:500115393 .
+
+ulan_rev:5504721788 a prov:Activity , prov:Modify ;
+	dc:type "note updated" ;
+	prov:startedAtTime "2010-01-07T12:00:49"^^xsd:dateTime ;
+	dc:description "Language: English (70051)" ;
+	prov:used ulan:500115393 .
+
+ulan_source:2100042617-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100039584-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100039584 ;
+	bibo:locator "155" .
+
+ulan_source:2100156698-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100156698 ;
+	bibo:locator "accessed 24 March 2003" .
+
+ulan_source:2100046392-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100046392 ;
+	bibo:locator "18; 234" .
+
+ulan_source:2100047116-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100047116 ;
+	bibo:locator "353" .
+
+ulan_source:2100156593-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100156593 ;
+	bibo:locator "LOC ID: n80057220" .
+
+ulan_source:2100149014-subject-500115393 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "LOC ID: n80057220" .
+
+ulan_scopeNote:52499 a gvp:ScopeNote ;
+	rdf:value "French painter, sculptor, and theorist whose work and ideas have served as a starting point for a conceptual approach to art. By refusing to accept the standards and practices of the established art world, Duchamp redefined our understanding of what constitutes an art object. Duchamp was born into a family of artists, and by the age of 15, he turned to painting, executing a series of landscapes in the Impressionist style. From 1910, Duchamp emulated the structural compositions and brushstrokes of Cézanne, and used an intense color palette reminiscent of The Fauves. While living with his brother in Puteaux, a suburb of Paris, Duchamp came in contact with a host of avant-garde writers and poets, notably Léger, Apollinaire, and Kupka, and as a result his painting shifted to incorporate the fragmented style of Cubism. This exposure to Cubism, along with his interest in the photographic sequences of Eadweard Muybridge resulted in the work, \"Nude Descending a Staircase No. 2\" (1912). Duchamp tried to show the work at the Salon des Indepéndants in Paris, but the title, inscribed on the canvas, was objected to and he withdrew his submission. When it was shown at the Armory Show in New York in 1913, the work gained critical opposition and his name and reputation became forever associated with it. In 1913, Duchamp began to abandon the traditional tools and techniques of painting, attempting to elevate art and the art making process above the purely visual and commercial. During this time, he came in contact with the writing of obscure German philosopher Max Stirner, who believed that the right of an individual was to be held supreme, considered above and beyond the needs of society. It is believed that Duchamp took that notion and applied it to the art object, investigating the possibility of making works of art that were not motivated by aesthetic conditions. It was during this time that he created \"Bicycle Wheel,\" a work created from an inverted bicycle wheel mounted to the seat of a stool. This was one of the first of what he referred to as a \"ready-made,\" a work of art that is deemed so simply through the selection of the artist. In 1915, Duchamp created \"The Bride Stripped Bare by Her Bachelors, Even\" (1915-1923) comprised of two large sheets of painted glass in two sections. The \"Bride,\" an anthropomorphic shape, is confined to he top section, and \"the bachelors,\" a composite machine made from a glider and a chocolate grinder at the bottom. The work explores themes of sexual opposition, geometry, physics, and the existing factors of chance. Accompanying the \"Glass\" was a large series of notes, to be consulted as a type of guide. During the teens and 1920s, Duchamp continued to create \"ready-mades,\" giving them ambiguous titles. From 1923-1942, excluding brief trips to the USA, he remained in France where his interest in chess became increasingly more important than creating art. He maintained a low profile in the art world, even though he participated in various Dada and Surrealist exhibitions in Paris and New York. From 1942-1968, Duchamp lived in New York. For 22 years he worked on, and kept secret, his final work, \"Etant donnés: 1 La Chute d'Eau, 2 La Gaz d' éclairage,\" a three-dimensional installation. Duchamp exerted little influence on the work of his contemporaries, but following the installation of his work in the Arensberg Collection in the Philadelphia Museum of Art in 1954, he became a cult figure among the avant-garde, both in Europe and the USA. Subsequently, he has been seen as perhaps the most important figure to affect the shift towards conceptual art in the late 20th century."@en ;
+	dct:contributor ulan_contrib:2500000130 , ulan_contrib:2500000013 , ulan_contrib:2500000008 , ulan_contrib:2500000124 ;
+	dct:source ulan_source:2100153925 , ulan_source:2100145531-scopeNote-52499 ;
+	dc:identifier "52499" ;
+	dct:language gvp_lang:en .
+
+ulan_source:2100145531-scopeNote-52499 a bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100145531 ;
+	bibo:locator "v. 9, p. 354" .
+
+ulan_term:1500033607 a skosxl:Label ;
+	gvp:term "Duchamp, Marcel" ;
+	gvp:displayOrder "1"^^xsd:positiveInteger ;
+	skosxl:literalForm "Duchamp, Marcel" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	gvp:termDisplay <http://vocab.getty.edu/term/display/Indexing> ;
+	gvp:contributorPreferred ulan_contrib:2500000002 , ulan_contrib:2500000130 , ulan_contrib:2500000003 , ulan_contrib:2500000001 , ulan_contrib:2500000005 , ulan_contrib:2500000189 , ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000008 , ulan_contrib:2500000012 , ulan_contrib:2500000011 , ulan_contrib:2500000124 ;
+	dct:contributor ulan_contrib:2500000002 , ulan_contrib:2500000130 , ulan_contrib:2500000003 , ulan_contrib:2500000001 , ulan_contrib:2500000005 , ulan_contrib:2500000189 , ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000008 , ulan_contrib:2500000012 , ulan_contrib:2500000011 , ulan_contrib:2500000124 ;
+	gvp:sourcePreferred ulan_source:2100042658 , ulan_source:2100154640 , ulan_source:2100156731 , ulan_source:2100158442 , ulan_source:2100149039-term-1500033607 , ulan_source:2100149014-term-1500033607 , ulan_source:2100039584-term-1500033607 ;
+	dct:source ulan_source:2100042658 , ulan_source:2100045787 , ulan_source:2100153980 , ulan_source:2100154640 , ulan_source:2100156731 , ulan_source:2100158442 , ulan_source:2100149039-term-1500033607 , ulan_source:2100149014-term-1500033607 , ulan_source:2100042617-term-1500033607 , ulan_source:2100039584-term-1500033607 ;
+	gvp:sourceNonPreferred ulan_source:2100042617-term-1500033607 ;
+	dc:identifier "1500033607" .
+
+ulan_source:2100149039-term-1500033607 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149039 ;
+	bibo:locator "890164; 980063" .
+
+ulan_source:2100149014-term-1500033607 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100042617-term-1500033607 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100039584-term-1500033607 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100039584 ;
+	bibo:locator "155" .
+
+ulan_term:1500033608 a skosxl:Label ;
+	gvp:term "Marcel Duchamp" ;
+	gvp:displayOrder "2"^^xsd:positiveInteger ;
+	skosxl:literalForm "Marcel Duchamp" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	gvp:termDisplay <http://vocab.getty.edu/term/display/Display> ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000011 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000011 ;
+	gvp:sourcePreferred ulan_source:2100042266 ;
+	dct:source ulan_source:2100039894 , ulan_source:2100042266 , ulan_source:2100156731 , ulan_source:2100149039-term-1500033608 ;
+	gvp:sourceNonPreferred ulan_source:2100039894 , ulan_source:2100156731 , ulan_source:2100149039-term-1500033608 ;
+	dc:identifier "1500033608" .
+
+ulan_term:1500322910 a skosxl:Label ;
+	gvp:term "Duchamp, Henri-Robert-Marcel" ;
+	gvp:displayOrder "3"^^xsd:positiveInteger ;
+	skosxl:literalForm "Duchamp, Henri-Robert-Marcel" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000189 , ulan_contrib:2500000013 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000189 , ulan_contrib:2500000013 ;
+	dct:source ulan_source:2100154640 , ulan_source:2100046392-term-1500322910 ;
+	gvp:sourceNonPreferred ulan_source:2100154640 , ulan_source:2100046392-term-1500322910 ;
+	dc:identifier "1500322910" .
+
+ulan_term:1500337572 a skosxl:Label ;
+	gvp:term "Duchamp, Henri Robert Marcel" ;
+	gvp:displayOrder "4"^^xsd:positiveInteger ;
+	skosxl:literalForm "Duchamp, Henri Robert Marcel" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500337572 , ulan_source:2100042617-term-1500337572 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500337572 , ulan_source:2100042617-term-1500337572 ;
+	dc:identifier "1500337572" .
+
+ulan_term:1500337574 a skosxl:Label ;
+	gvp:term "Duchamp-Villon, Marcel" ;
+	gvp:displayOrder "5"^^xsd:positiveInteger ;
+	skosxl:literalForm "Duchamp-Villon, Marcel" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500337574 , ulan_source:2100042617-term-1500337574 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500337574 , ulan_source:2100042617-term-1500337574 ;
+	dc:identifier "1500337574" .
+
+ulan_term:1500337573 a skosxl:Label ;
+	gvp:term "Dushan, Marsel" ;
+	gvp:displayOrder "6"^^xsd:positiveInteger ;
+	skosxl:literalForm "Dushan, Marsel" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500337573 , ulan_source:2100042617-term-1500337573 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500337573 , ulan_source:2100042617-term-1500337573 ;
+	dc:identifier "1500337573" .
+
+ulan_term:1500337575 a skosxl:Label ;
+	gvp:term "Villon, Marcel Duchamp-" ;
+	gvp:displayOrder "7"^^xsd:positiveInteger ;
+	skosxl:literalForm "Villon, Marcel Duchamp-" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500337575 , ulan_source:2100042617-term-1500337575 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500337575 , ulan_source:2100042617-term-1500337575 ;
+	dc:identifier "1500337575" .
+
+ulan_term:1500033609 a skosxl:Label ;
+	gvp:term "Sélavy, Rrose" ;
+	gvp:displayOrder "8"^^xsd:positiveInteger ;
+	skosxl:literalForm "Sélavy, Rrose" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000005 , ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000005 , ulan_contrib:2500000013 , ulan_contrib:2500000012 ;
+	gvp:sourcePreferred ulan_source:2100146253 ;
+	dct:source ulan_source:2100046392 , ulan_source:2100146253 , ulan_source:2100149014-term-1500033609 ;
+	gvp:sourceNonPreferred ulan_source:2100046392 , ulan_source:2100149014-term-1500033609 ;
+	dc:identifier "1500033609" .
+
+ulan_term:1500322908 a skosxl:Label ;
+	gvp:term "Sélavy, Rose" ;
+	gvp:displayOrder "9"^^xsd:positiveInteger ;
+	skosxl:literalForm "Sélavy, Rose" ;
+	gvp:termFlag <http://vocab.getty.edu/term/flag/Vernacular> ;
+	dct:contributor ulan_contrib:2500000013 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 ;
+	dct:source ulan_source:2100046392-term-1500322908 ;
+	gvp:sourceNonPreferred ulan_source:2100046392-term-1500322908 ;
+	dc:identifier "1500322908" .
+
+ulan_term:1500771322 a skosxl:Label ;
+	gvp:term "דושאן, מרסל" ;
+	gvp:displayOrder "10"^^xsd:positiveInteger ;
+	skosxl:literalForm "דושאן, מרסל" ;
+	dct:contributor ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500771322 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500771322 ;
+	dc:identifier "1500771322" .
+
+ulan_term:1500771323 a skosxl:Label ;
+	gvp:term "デユシヤンマルセル" ;
+	gvp:displayOrder "11"^^xsd:positiveInteger ;
+	skosxl:literalForm "デユシヤンマルセル" ;
+	dct:contributor ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500771323 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500771323 ;
+	dc:identifier "1500771323" .
+
+ulan_term:1500771324 a skosxl:Label ;
+	gvp:term "Duxiang" ;
+	gvp:displayOrder "12"^^xsd:positiveInteger ;
+	skosxl:literalForm "Duxiang" ;
+	dct:contributor ulan_contrib:2500000012 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000012 ;
+	dct:source ulan_source:2100149014-term-1500771324 ;
+	gvp:sourceNonPreferred ulan_source:2100149014-term-1500771324 ;
+	dc:identifier "1500771324" .
+
+ulan_term:1500795577 a skosxl:Label ;
+	gvp:term "Mutt, R." ;
+	gvp:displayOrder "13"^^xsd:positiveInteger ;
+	skosxl:literalForm "Mutt, R." ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000016 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000016 ;
+	dct:source ulan_source:2100149039-term-1500795577 ;
+	gvp:sourceNonPreferred ulan_source:2100149039-term-1500795577 ;
+	dc:identifier "1500795577" .
+
+ulan_term:1500796877 a skosxl:Label ;
+	gvp:term "R. Mutt" ;
+	gvp:displayOrder "14"^^xsd:positiveInteger ;
+	skosxl:literalForm "R. Mutt" ;
+	dct:contributor ulan_contrib:2500000013 , ulan_contrib:2500000016 ;
+	gvp:contributorNonPreferred ulan_contrib:2500000013 , ulan_contrib:2500000016 ;
+	dct:source ulan_source:2100039894 ;
+	gvp:sourceNonPreferred ulan_source:2100039894 ;
+	dc:identifier "1500796877" .
+
+ulan_source:2100149039-term-1500033608 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149039 ;
+	bibo:locator "890164" .
+
+ulan_source:2100046392-term-1500322910 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100046392 ;
+	bibo:locator "18" .
+
+ulan_source:2100149014-term-1500337572 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100042617-term-1500337572 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100149014-term-1500337574 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100042617-term-1500337574 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100149014-term-1500337573 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100042617-term-1500337573 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100149014-term-1500337575 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100042617-term-1500337575 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100042617 ;
+	bibo:locator "NAFL80057220, accessed 23 October 2007" .
+
+ulan_source:2100149014-term-1500033609 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100046392-term-1500322908 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100046392 ;
+	bibo:locator "234" .
+
+ulan_source:2100149014-term-1500771322 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100149014-term-1500771323 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100149014-term-1500771324 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149014 ;
+	bibo:locator "n 80057220" .
+
+ulan_source:2100149039-term-1500795577 a bibo:Document , bibo:DocumentPart ;
+	dct:isPartOf ulan_source:2100149039 ;
+	bibo:locator "890164" .
+
+ulan_rel:500115393-agentType-300025103 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypePreferred ;
+	rdf:object aat:300025103 ;
+	gvp:displayOrder "1"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300112172 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300112172 ;
+	gvp:displayOrder "2"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300025136 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300025136 ;
+	gvp:displayOrder "3"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300025687 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300025687 ;
+	gvp:displayOrder "4"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300025164 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300025164 ;
+	gvp:displayOrder "5"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300025181 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300025181 ;
+	gvp:displayOrder "6"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300386235 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300386235 ;
+	gvp:displayOrder "7"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300386233 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300386233 ;
+	gvp:displayOrder "8"^^xsd:positiveInteger .
+
+ulan_rel:500115393-agentType-300154308 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:agentTypeNonPreferred ;
+	rdf:object aat:300154308 ;
+	gvp:displayOrder "9"^^xsd:positiveInteger .
+
+ulan_rel:500115393-ulan1317_member_of-500372350 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1317_member_of ;
+	rdf:object ulan:500372350 .
+
+ulan_rel:500115393-ulan1108_influenced_by-500199881 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1108_influenced_by ;
+	rdf:object ulan:500199881 .
+
+ulan_rel:500115393-ulan1003_associated_with-500196090 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1003_associated_with ;
+	rdf:object ulan:500196090 .
+
+ulan_rel:500115393-ulan1302_associate_of-500126033 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1302_associate_of ;
+	rdf:object ulan:500126033 .
+
+ulan_rel:500115393-ulan1317_member_of-500117049 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1317_member_of ;
+	rdf:object ulan:500117049 .
+
+ulan_rel:500115393-ulan1305_worked_with-500115729 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1305_worked_with ;
+	rdf:object ulan:500115729 .
+
+ulan_rel:500115393-ulan1317_member_of-500092478 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1317_member_of ;
+	rdf:object ulan:500092478 .
+
+ulan_rel:500115393-ulan1303_collaborated_with-500067144 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1303_collaborated_with ;
+	rdf:object ulan:500067144 .
+
+ulan_rel:500115393-ulan1541_spouse_of-500060362 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1541_spouse_of ;
+	rdf:object ulan:500060362 .
+
+ulan_rel:500115393-ulan1501_sibling_of-500030274 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1501_sibling_of ;
+	rdf:object ulan:500030274 .
+
+ulan_rel:500115393-ulan1501_sibling_of-500029284 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1501_sibling_of ;
+	rdf:object ulan:500029284 .
+
+ulan_rel:500115393-ulan1301_colleague_of-500020337 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1301_colleague_of ;
+	rdf:object ulan:500020337 .
+
+ulan_rel:500115393-ulan1303_collaborated_with-500015030 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1303_collaborated_with ;
+	rdf:object ulan:500015030 .
+
+ulan_rel:500115393-ulan2550_friend_of-500010539 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan2550_friend_of ;
+	rdf:object ulan:500010539 .
+
+ulan_rel:500115393-ulan1547_romantic_partner_of-500009062 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1547_romantic_partner_of ;
+	rdf:object ulan:500009062 .
+
+ulan_rel:500115393-ulan2550_friend_of-500006325 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan2550_friend_of ;
+	rdf:object ulan:500006325 .
+
+ulan_rel:500115393-ulan2550_friend_of-500004441 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan2550_friend_of ;
+	rdf:object ulan:500004441 .
+
+ulan_rel:500115393-ulan1501_sibling_of-500003616 a rdf:Statement ;
+	rdf:subject ulan:500115393 ;
+	rdf:predicate gvp:ulan1501_sibling_of ;
+	rdf:object ulan:500003616 .
+
+ulan:500115393-agent a schema:Person ;
+	gvp:biography ulan_bio:4000030594 , ulan_bio:4000030595 , ulan_bio:4000030596 , ulan_bio:4000030597 , ulan_bio:4000030598 , ulan_bio:4000030599 , ulan_bio:4000348833 , ulan_bio:4000325534 , ulan_bio:4000268413 , ulan_bio:4000168891 , ulan_bio:4000567792 , ulan_bio:4000541791 , ulan_bio:4000500631 , ulan_bio:4000489618 , ulan_bio:4000465383 ;
+	gvp:biographyPreferred ulan_bio:4000168891 ;
+	gvp:biographyNonPreferred ulan_bio:4000030594 , ulan_bio:4000030595 , ulan_bio:4000030596 , ulan_bio:4000030597 , ulan_bio:4000030598 , ulan_bio:4000030599 , ulan_bio:4000348833 , ulan_bio:4000325534 , ulan_bio:4000268413 , ulan_bio:4000567792 , ulan_bio:4000541791 , ulan_bio:4000500631 , ulan_bio:4000489618 , ulan_bio:4000465383 ;
+	gvp:eventPreferred ulan_event:120263 ;
+	bio:event ulan_event:120264 , ulan_event:120263 ;
+	gvp:eventNonPreferred ulan_event:120264 ;
+	gvp:nationalityPreferred aat:300111188 ;
+	schema:nationality aat:300379012 , aat:300107956 , aat:300111188 , aat:300387719 ;
+	gvp:nationalityNonPreferred aat:300379012 , aat:300107956 , aat:300387719 ;
+	dct:license <http://opendatacommons.org/licenses/by/1.0/> ;
+	void:inDataset <http://vocab.getty.edu/dataset/ulan> ;
+	cc:license <http://opendatacommons.org/licenses/by/1.0/> .
+
+ulan_bio:4000030594 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000008 ;
+	schema:gender aat:300189559 ;
+	schema:description "French artist, 1887-1968" .
+
+ulan_bio:4000030595 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000005 ;
+	schema:gender aat:300189559 ;
+	schema:birthPlace tgn:4001589-place ;
+	schema:description "French artist, 1887-1968" ;
+	schema:deathPlace tgn:7009402-place .
+
+ulan_bio:4000030596 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000003 ;
+	schema:gender aat:300189559 ;
+	schema:description "Paris painter 1887-1968" .
+
+ulan_bio:4000030597 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000011 ;
+	schema:gender aat:300189559 ;
+	schema:description "French painter, 1887-1968" .
+
+ulan_bio:4000030598 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000001 ;
+	schema:gender aat:300189559 ;
+	schema:description "French artist, 1887-1968" .
+
+ulan_bio:4000030599 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000002 ;
+	schema:gender aat:300189559 ;
+	schema:birthPlace tgn:4001589-place ;
+	schema:description "French artist, 1887-1968" ;
+	schema:deathPlace tgn:7008038-place .
+
+ulan_bio:4000348833 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000008 ;
+	schema:gender aat:300400512 ;
+	schema:description "French artist, 1887-1968" .
+
+ulan_bio:4000325534 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000124 ;
+	schema:gender aat:300400512 ;
+	schema:birthPlace tgn:4001589-place ;
+	schema:description "French sculptor, 1887-1968" ;
+	schema:deathPlace tgn:7009402-place .
+
+ulan_bio:4000268413 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000130 ;
+	schema:gender aat:300400512 ;
+	schema:birthPlace tgn:4001589-place ;
+	schema:description "French artist, 1887-1968" ;
+	schema:deathPlace tgn:7008038-place .
+
+ulan_bio:4000168891 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000013 ;
+	schema:gender aat:300189559 ;
+	schema:birthPlace tgn:4001589-place ;
+	schema:description "French painter, sculptor, and writer, 1887-1968" ;
+	schema:deathPlace tgn:7009402-place .
+
+ulan_bio:4000567792 a gvp:Biography ;
+	gvp:estStart "0001"^^xsd:gYear ;
+	gvp:estEnd "2100"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000016 ;
+	schema:gender aat:300400512 ;
+	schema:description "Unknown artist" .
+
+ulan_bio:4000541791 a gvp:Biography ;
+	gvp:estStart "1800"^^xsd:gYear ;
+	gvp:estEnd "2100"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000016 ;
+	schema:gender aat:300400512 ;
+	schema:description "artist, active 20th century" .
+
+ulan_bio:4000500631 a gvp:Biography ;
+	gvp:estStart "1500"^^xsd:gYear ;
+	gvp:estEnd "2050"^^xsd:gYear ;
+	schema:gender aat:300400512 ;
+	schema:description "artist" .
+
+ulan_bio:4000489618 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000012 ;
+	schema:gender aat:300400512 ;
+	schema:description "artist, 1887-1968" .
+
+ulan_bio:4000465383 a gvp:Biography ;
+	gvp:estStart "1887"^^xsd:gYear ;
+	gvp:estEnd "1968"^^xsd:gYear ;
+	dct:contributor ulan_contrib:2500000189 ;
+	schema:gender aat:300400512 ;
+	schema:description "French painter, 1887-1968" .
+
+ulan_event:120264 a bio:Event , schema:Event ;
+	dct:type aat:300393177 ;
+	schema:location tgn:7007567-place .
+
+ulan_event:120263 a bio:Event , schema:Event ;
+	dct:type aat:300393177 ;
+	schema:location tgn:7008038-place .
+
+ulan:500115393-nationality-300107956 a rdf:Statement ;
+	rdf:subject ulan:500115393-agent ;
+	rdf:predicate gvp:nationalityNonPreferred ;
+	rdf:object aat:300107956 ;
+	gvp:displayOrder "3"^^xsd:positiveInteger .
+
+ulan:500115393-nationality-300387719 a rdf:Statement ;
+	rdf:subject ulan:500115393-agent ;
+	rdf:predicate gvp:nationalityNonPreferred ;
+	rdf:object aat:300387719 ;
+	gvp:displayOrder "2"^^xsd:positiveInteger .
+
+ulan:500115393-nationality-300379012 a rdf:Statement ;
+	rdf:subject ulan:500115393-agent ;
+	rdf:predicate gvp:nationalityNonPreferred ;
+	rdf:object aat:300379012 ;
+	gvp:displayOrder "4"^^xsd:positiveInteger .
+
+ulan:500115393-nationality-300111188 a rdf:Statement ;
+	rdf:subject ulan:500115393-agent ;
+	rdf:predicate gvp:nationalityPreferred ;
+	rdf:object aat:300111188 ;
+	gvp:displayOrder "1"^^xsd:positiveInteger .

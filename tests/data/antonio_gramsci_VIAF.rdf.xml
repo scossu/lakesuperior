@@ -1,0 +1,520 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:umbel="http://umbel.org/umbel#"
+    xmlns:ns1="http://viaf.org/viaf/terms#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xmlns:genont="http://www.w3.org/2006/gen/ont#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:pto="http://www.productontology.org/id/"
+    xmlns:dcterms="http://purl.org/dc/terms/"
+    xmlns:re="http://oclcsrw.google.code/redirect"
+    xmlns:void="http://rdfs.org/ns/void#"
+    xmlns:schema="http://schema.org/"
+    xmlns:bgn="http://bibliograph.net/"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" > 
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/EGAXA%7Cvtls002704632#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>غرامشي، أنطونيو، 1891-1937</skos:altLabel>
+    <skos:altLabel>أنطونيو جرامشي، 1891-1937</skos:altLabel>
+    <skos:prefLabel>جرامشي، أنطونيو، 1891-1937</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/EGAXA"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NLI%7C000055903#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>גראמשי, אנטוניו</skos:altLabel>
+    <skos:prefLabel>גרמשי, אנטוניו, 1891-1937</skos:prefLabel>
+    <skos:prefLabel>غرامشي، انطونيو, 1891-1937</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NLI"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/44299576/">
+    <foaf:primaryTopic rdf:resource="http://viaf.org/viaf/44299576"/>
+    <void:inDataset rdf:resource="http://viaf.org/viaf/data"/>
+    <rdf:type rdf:resource="http://www.w3.org/2006/gen/ont#InformationResource"/>
+    <rdf:type rdf:resource="http://xmlns.com/foaf/0.1/Document"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NSK%7C000003940#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramši, Antonio</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NSK"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BIBSYS%7C90078155#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BIBSYS"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BNF%7C11905658#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BNF"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BLBNB%7C000328817#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramsi, Antonije 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, A. (Antonio), | 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BLBNB"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/44299576">
+    <schema:alternateName>Antonio Gramši</schema:alternateName>
+    <schema:alternateName>Antoniu Gramsci</schema:alternateName>
+    <rdf:value rdf:parseType="Literal"><ns1:source xmlns:ns1="http://viaf.org/viaf/terms#" nsid="000328817">BLBNB|000328817</ns1:source></rdf:value>
+    <schema:alternateName>ॲन्तोनिओ ग्राम्सी</schema:alternateName>
+    <schema:familyName>گ‍رام‍ش‍ی</schema:familyName>
+    <schema:givenName>Antonio</schema:givenName>
+    <schema:alternateName>Anṭūnyū Ǧrāmšī</schema:alternateName>
+    <schema:sameAs rdf:resource="http://www.idref.fr/026900068/id"/>
+    <schema:alternateName>Antonio Gramsi</schema:alternateName>
+    <schema:familyName>Gramsi</schema:familyName>
+    <schema:givenName>安东尼奥</schema:givenName>
+    <schema:alternateName>آن‍ت‍ون‍ی‍و گ‍رام‍ش‍ی</schema:alternateName>
+    <schema:alternateName>安东尼奥·葛兰西</schema:alternateName>
+    <schema:alternateName>അന്റോണിയോ ഗ്രാംഷി</schema:alternateName>
+    <schema:alternateName>Antonije Gramši</schema:alternateName>
+    <schema:familyName>Ǧrāmšī</schema:familyName>
+    <rdfs:comment>BCP47 tag for 'ERRR' is undetermined. Name is 'Антонио Грамши'.</rdfs:comment>
+    <schema:sameAs rdf:resource="http://data.bnf.fr/ark:/12148/cb119056581#foaf:Person"/>
+    <schema:birthDate>1891-01-22</schema:birthDate>
+    <schema:familyName>Gkramsi</schema:familyName>
+    <schema:givenName>Āntūnīū</schema:givenName>
+    <schema:alternateName>Грамши</schema:alternateName>
+    <schema:alternateName>أنطونيو غرامشي،</schema:alternateName>
+    <schema:alternateName>Antonio Gramši</schema:alternateName>
+    <schema:name xml:lang="ar-IL">غرامشي، انطونيو</schema:name>
+    <schema:familyName>Грамши</schema:familyName>
+    <rdf:value rdf:parseType="Literal"><ns1:source xmlns:ns1="http://viaf.org/viaf/terms#" nsid="a11558350">ERRR|a11558350</ns1:source></rdf:value>
+    <schema:familyName>Gramshi</schema:familyName>
+    <schema:familyName>גראמשי</schema:familyName>
+    <schema:name xml:lang="he-IL">אנטוניו גרמשי</schema:name>
+    <schema:familyName>Gramši</schema:familyName>
+    <schema:alternateName>أنطونيو غرامشي</schema:alternateName>
+    <schema:alternateName>アントニオ グラムシ</schema:alternateName>
+    <schema:givenName>Anṭūnyū</schema:givenName>
+    <schema:alternateName>اینٹونیؤ گرامشی</schema:alternateName>
+    <schema:sameAs rdf:resource="http://dbpedia.org/resource/Antonio_Gramsci"/>
+    <schema:alternateName>अंतोनियो ग्राम्शी</schema:alternateName>
+    <schema:name xml:lang="no-NO">Antonio Gramsci</schema:name>
+    <schema:name>Antonio Gramsci</schema:name>
+    <schema:name xml:lang="fr-CH">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="hr-HR">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="it-IT">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="fr-FR">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="ja-JP">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="lv-LV">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en-US">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en-CA">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="it-VA">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="fr-CA">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en-KR">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="de-DE">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="es-ES">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="pl-PL">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="cs-CZ">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en-AU">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="en-IL">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="nl-NL">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="sv-SE">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="ca-ES">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="ar-LB">Antonio Gramsci</schema:name>
+    <schema:name xml:lang="pt-PT">Antonio Gramsci</schema:name>
+    <schema:givenName>Antonije</schema:givenName>
+    <schema:alternateName>アントニオ・グラムシ</schema:alternateName>
+    <schema:alternateName>Andongni'ao Gelanxi</schema:alternateName>
+    <schema:sameAs rdf:resource="http://id.loc.gov/authorities/names/n78095485"/>
+    <schema:givenName>Āntunyū</schema:givenName>
+    <schema:givenName>Āntunyū</schema:givenName>
+    <schema:alternateName>أنطونيو جرامشي،</schema:alternateName>
+    <schema:givenName>A.</schema:givenName>
+    <schema:alternateName>安东尼奥 葛兰西</schema:alternateName>
+    <schema:givenName>Andongni'ao</schema:givenName>
+    <schema:familyName>Gelanxi</schema:familyName>
+    <schema:alternateName>Āntunyū Girāmišī</schema:alternateName>
+    <schema:familyName>Girāmišī</schema:familyName>
+    <schema:familyName>Gramši</schema:familyName>
+    <schema:alternateName>Антонио Грамши</schema:alternateName>
+    <schema:givenName>آن‍ت‍ون‍ی‍و</schema:givenName>
+    <schema:alternateName>안토니오 그람시</schema:alternateName>
+    <schema:alternateName>Антоніа Грамшы</schema:alternateName>
+    <rdfs:comment>BCP47 tag for 'NII' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <schema:familyName>Garāmšī</schema:familyName>
+    <schema:familyName>Ǧrāmšī</schema:familyName>
+    <schema:sameAs rdf:resource="http://libris.kb.se/resource/auth/188554"/>
+    <schema:alternateName>อันโตนีโอ กรัมชี</schema:alternateName>
+    <schema:name xml:lang="ar-EG">جرامشي، أنطونيو،</schema:name>
+    <schema:familyName>葛兰西</schema:familyName>
+    <schema:alternateName>Gramsci</schema:alternateName>
+    <schema:gender rdf:resource="http://www.wikidata.org/entity/Q6581097"/>
+    <schema:deathDate>1937-04-27</schema:deathDate>
+    <schema:alternateName>Āntūnīū Garāmšī</schema:alternateName>
+    <schema:alternateName>Antonio Gramsci</schema:alternateName>
+    <schema:alternateName>آنتونیو گرامشی</schema:alternateName>
+    <dcterms:identifier>44299576</dcterms:identifier>
+    <schema:givenName>アントニオ</schema:givenName>
+    <schema:sameAs rdf:resource="http://isni.org/isni/0000000122790742"/>
+    <schema:alternateName>Āntunyū Girāmišī</schema:alternateName>
+    <schema:alternateName>அண்டோனியோ கிராம்ஷி</schema:alternateName>
+    <schema:alternateName>Антоніо Ґрамші</schema:alternateName>
+    <skos:prefLabel xml:lang="ar-EG">جرامشي، أنطونيو،</skos:prefLabel>
+    <rdfs:comment>BCP47 tag for 'BLBNB' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <rdfs:comment>BCP47 tag for 'ERRR|a11558350' is undetermined. Name is 'Антонио Грамши'.</rdfs:comment>
+    <schema:familyName>Girāmišī</schema:familyName>
+    <schema:alternateName>A. Gramshi</schema:alternateName>
+    <rdfs:comment>BCP47 tag for 'ERRR' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <schema:name>Антонио Грамши</schema:name>
+    <schema:alternateName>ئەنتۆنیۆ گرامشی</schema:alternateName>
+    <rdf:value rdf:parseType="Literal"><ns1:source xmlns:ns1="http://viaf.org/viaf/terms#" nsid="a11558349">ERRR|a11558349</ns1:source></rdf:value>
+    <schema:alternateName>A. Gramsci</schema:alternateName>
+    <skos:prefLabel xml:lang="he-IL">אנטוניו גרמשי</skos:prefLabel>
+    <schema:sameAs rdf:resource="http://d-nb.info/gnd/118541463"/>
+    <schema:alternateName>Antonije Gramsi</schema:alternateName>
+    <schema:alternateName>غرامشي، انطونيو</schema:alternateName>
+    <schema:givenName>אנטוניו</schema:givenName>
+    <schema:givenName>آن‍ت‍ون‍ی‍و</schema:givenName>
+    <schema:alternateName>ਐਨਟੋਨੀਓ ਗਰਾਮਸ਼ੀ</schema:alternateName>
+    <schema:sameAs rdf:resource="http://www.wikidata.org/entity/Q83003"/>
+    <schema:familyName>Gramsci</schema:familyName>
+    <schema:sameAs rdf:resource="http://id.ndl.go.jp/auth/entity/00441497"/>
+    <schema:alternateName>Antonije Gramši</schema:alternateName>
+    <schema:alternateName>Antonius Gramsci</schema:alternateName>
+    <schema:givenName>안토니오</schema:givenName>
+    <schema:familyName>그람시</schema:familyName>
+    <skos:prefLabel xml:lang="no-NO">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="hr-HR">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="fr-FR">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="it-IT">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="ja-JP">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="lv-LV">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-US">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="fr-CA">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-CA">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="it-VA">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="fr-CH">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-KR">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="de-DE">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="es-ES">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="pl-PL">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="cs-CZ">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-AU">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-IL">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="nl-NL">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="sv-SE">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="ca-ES">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="ar-LB">Antonio Gramsci</skos:prefLabel>
+    <skos:prefLabel xml:lang="pt-PT">Antonio Gramsci</skos:prefLabel>
+    <schema:givenName>Антонио</schema:givenName>
+    <rdfs:comment>BCP47 tag for 'BLBNB|000328817' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <schema:familyName>グラムシ</schema:familyName>
+    <schema:alternateName>Αντόνιο Γκράμσι</schema:alternateName>
+    <schema:sameAs rdf:resource="http://alpha.bn.org.pl/record=a11863468"/>
+    <rdfs:comment>BCP47 tag for 'NII|DA00506553' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <schema:givenName>Anṭūnyū</schema:givenName>
+    <schema:alternateName>Antonio Gramshi</schema:alternateName>
+    <rdfs:comment xml:lang="en">Warning: skos:prefLabels are not ensured against change!</rdfs:comment>
+    <schema:familyName>גרמשי</schema:familyName>
+    <skos:prefLabel xml:lang="ar-IL">غرامشي، انطونيو</skos:prefLabel>
+    <schema:alternateName>Anṭūnyū Ǧrāmšī</schema:alternateName>
+    <skos:prefLabel xml:lang="ar-LB">غرامشي، أنطونيو،</skos:prefLabel>
+    <schema:alternateName>Անտոնիո Գրամշի</schema:alternateName>
+    <schema:name xml:lang="en">Antonio GRAMSCI</schema:name>
+    <schema:alternateName>אנטוניו גראמשי</schema:alternateName>
+    <schema:alternateName>آن‍ت‍ون‍ی‍و گ‍رام‍ش‍ی</schema:alternateName>
+    <rdfs:comment>BCP47 tag for 'ERRR|a11558349' is undetermined. Name is 'Antonio Gramsci'.</rdfs:comment>
+    <schema:alternateName>Antonio Gkramsi</schema:alternateName>
+    <schema:alternateName>غرامشي، أنطونيو،</schema:alternateName>
+    <rdf:type rdf:resource="http://schema.org/Person"/>
+    <schema:name xml:lang="ar-LB">غرامشي، أنطونيو،</schema:name>
+    <schema:alternateName>אנטוניו גרמשי</schema:alternateName>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NII%7CDA00506553#skos:Concept">
+    <skos:altLabel>Грамши, Антонио</skos:altLabel>
+    <skos:altLabel>Gramši, Antonio</skos:altLabel>
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>グラムシ, アントニオ</skos:altLabel>
+    <skos:altLabel>Gramši, Antonije</skos:altLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NII"/>
+    <skos:altLabel>葛兰西, 安东尼奥</skos:altLabel>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+    <skos:altLabel>Gramshi, A. (Antonio)</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LNB%7CLNC10-000015293#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Грамши, Антонио, 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LNB"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/ERRR%7Ca11558350#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Грамши, Антонио, 1891-1937.</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/ERRR"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/ICCU%7CCFIV008358#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/ICCU"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/SUDOC%7C026900068#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>گ‍رام‍ش‍ی, آن‍ت‍ون‍ی‍و.</skos:altLabel>
+    <skos:altLabel>Грамши, Антонио (1891-1937).</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/SUDOC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LAC%7C0053K2216#skos:Concept">
+    <skos:prefLabel xml:lang="fr-CA">Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-CA">Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LAC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NLA%7C000035139573#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramsi, Antonio, 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci, A. (Antonio), 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NLA"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BNC%7Ca10095214#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramshi, Antonio, 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, A. (Antonio), 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci, Antonio</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BNC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/PTBNP%7C39737#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramsci, Antonio</skos:altLabel>
+    <skos:altLabel>Gramsci, A.</skos:altLabel>
+    <skos:altLabel>Gramsci</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/PTBNP"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BNE%7CXX1163536#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramsci, A. 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BNE"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LC%7Cn++78095485#skos:Concept">
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:altLabel>Gramši, Antonije, 1891-1937</skos:altLabel>
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+    <skos:altLabel>Gramši, Antonio, 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, A. (Antonio), 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio, 1891-1937</skos:altLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LC"/>
+    <skos:altLabel>Gkramsi, Antonio, 1891-1937</skos:altLabel>
+    <skos:altLabel>גרמשי, אנטוניו, 1891-1937</skos:altLabel>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NKC%7Cjn20000602277#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NKC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BAV%7CADV10272119#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BAV"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NTA%7C068682344#skos:Concept">
+    <schema:url>http://opc4.kb.nl/PPN?PPN=068682344</schema:url>
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NTA"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BNCHL%7C10000000000000000011604#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BNCHL"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NUKAT%7Cn++93126571#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramši, Antonio.</skos:altLabel>
+    <skos:altLabel>Gramsci, A.</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NUKAT"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NDL%7C00441497#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>グラムシ, アントニオ</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NDL"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LNL%7C65906#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>أنطونيو غرامشي، 1891-1937</skos:altLabel>
+    <skos:prefLabel>غرامشي، انطونيو, 1891-1937</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LNL"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NLP%7Ca11863468#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NLP"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/RERO%7Cvtls000073819#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Gramši, Antonio</skos:altLabel>
+    <skos:altLabel>Gelanxi, Andongni'ao</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/RERO"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/ERRR%7Ca11558349#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Грамши, Антонио, 1891-1937.</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/ERRR"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/B2Q%7C0000022462#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/B2Q"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/KRNLK%7CKAC199610612#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>그람시, 안토니오 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/KRNLK"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/DNB%7C118541463#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Ǧrāmšī, Anṭūnyū 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramši, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci, A. 1891-1937</skos:altLabel>
+    <skos:altLabel>Girāmišī, Āntunyū 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/DNB"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BIBSYS%7C13013009#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BIBSYS"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/ISNI%7C0000000122790742#skos:Concept">
+    <skos:altLabel>آنتونیو گرامشی ژورنالیست، سیاست‌مدار، نویسنده، و فیلسوف ایتالیایی</skos:altLabel>
+    <skos:altLabel>Gramsci A.</skos:altLabel>
+    <skos:altLabel>グラムシ, アントニオ</skos:altLabel>
+    <skos:altLabel>Gramsci, A.</skos:altLabel>
+    <skos:altLabel>غرامشي، أنطونيو، 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, A. 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramši, Antonije 1891-1937</skos:altLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/ISNI"/>
+    <skos:altLabel>അന്റോണിയോ ഗ്രാംഷി</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci Italiaans filosoof</skos:altLabel>
+    <skos:altLabel>Antonio Gramši</skos:altLabel>
+    <skos:altLabel>ॲन्तोनिओ ग्राम्सी</skos:altLabel>
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>அண்டோனியோ கிராம்ஷி</skos:altLabel>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+    <skos:altLabel>أنطونيو غرامشي</skos:altLabel>
+    <skos:altLabel>Gramši, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Грамши</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>安东尼奥·葛兰西</skos:altLabel>
+    <skos:altLabel>גרמשי, אנטוניו 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsi, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci italienischer Schriftsteller, Politiker und Philosoph sowie ein Theoretiker des Kommunismus</skos:altLabel>
+    <skos:altLabel>Gramsci Antonio</skos:altLabel>
+    <skos:altLabel>גראמשי, אנטוניו</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci italialainen poliitikko</skos:altLabel>
+    <skos:altLabel>アントニオ・グラムシ</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci włoski historyk, dziennikarz i polityk, filozof i teoretyk marksistowski</skos:altLabel>
+    <skos:altLabel>Антоніа Грамшы</skos:altLabel>
+    <skos:altLabel>Անտոնիո Գրամշի</skos:altLabel>
+    <skos:altLabel>ئەنتۆنیۆ گرامشی</skos:altLabel>
+    <skos:altLabel>Ǧrāmšī, Anṭūnyū 1891-1937</skos:altLabel>
+    <skos:altLabel>ਐਨਟੋਨੀਓ ਗਰਾਮਸ਼ੀ</skos:altLabel>
+    <skos:altLabel>अंतोनियो ग्राम्शी</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci Écrivain et théoricien politique italien</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio</skos:prefLabel>
+    <skos:altLabel>Antonius Gramsci</skos:altLabel>
+    <skos:altLabel>Gkramsi, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci</skos:altLabel>
+    <skos:altLabel>غرامشي، انطونيو 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci, A. 1891-1937</skos:altLabel>
+    <skos:altLabel>Gelanxi, Andongni'ao</skos:altLabel>
+    <skos:altLabel>Αντόνιο Γκράμσι</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci Italian writer, politician, theorist, sociologist and linguist</skos:altLabel>
+    <skos:altLabel>Antoniu Gramsci</skos:altLabel>
+    <skos:altLabel>อันโตนีโอ กรัมชี</skos:altLabel>
+    <skos:altLabel>گ‍رام‍ش‍ی, آن‍ت‍ون‍ی‍و</skos:altLabel>
+    <skos:altLabel>Gramši, Antonio</skos:altLabel>
+    <skos:altLabel>Girāmišī, Āntunyū 1891-1937</skos:altLabel>
+    <skos:altLabel>Garāmšī, Āntūnīū 1891-1937</skos:altLabel>
+    <skos:altLabel>Antonio Gramsci italský politik, publicista a marxistický filosof</skos:altLabel>
+    <skos:altLabel>אנטוניו גראמשי</skos:altLabel>
+    <skos:altLabel>안토니오 그람시</skos:altLabel>
+    <skos:altLabel>Грамши, Антонио 1891-1937</skos:altLabel>
+    <skos:altLabel>أنطونيو جرامشي، 1891-1937</skos:altLabel>
+    <skos:altLabel>Антоніо Ґрамші</skos:altLabel>
+    <skos:altLabel>Gramsci, Antonio</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio</skos:altLabel>
+    <skos:altLabel>Антонио Грамши итальянский философ, журналист и политический деятель</skos:altLabel>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LNL%7C49903#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>أنطونيو غرامشي، 1891-1937</skos:altLabel>
+    <skos:prefLabel>غرامشي، انطونيو, 1891-1937</skos:prefLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LNL"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/SWNL%7Cvtls005555278#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Ǧrāmšī, Anṭūnyū 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramši, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramshi, Antonio 1891-1937</skos:altLabel>
+    <skos:altLabel>Gramsci, A. 1891-1937</skos:altLabel>
+    <skos:altLabel>Girāmišī, Āntunyū 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/SWNL"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/SELIBR%7C188554#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/44299576"/>
+    <skos:altLabel>Garāmšī, Āntūnīū, 1891-1937</skos:altLabel>
+    <skos:prefLabel>Gramsci, Antonio, 1891-1937.</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/SELIBR"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+</rdf:RDF>

@@ -1,0 +1,43 @@
+<rdf:RDF
+    xmlns:umbel="http://umbel.org/umbel#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xmlns:genont="http://www.w3.org/2006/gen/ont#"
+    xmlns:pto="http://www.productontology.org/id/"
+    xmlns:dcterms="http://purl.org/dc/terms/"
+    xmlns:re="http://oclcsrw.google.code/redirect"
+    xmlns:void="http://rdfs.org/ns/void#"
+    xmlns:schema="http://schema.org/"
+    xmlns:bgn="http://bibliograph.net/" > 
+  <rdf:Description rdf:about="http://viaf.org/viaf/10145542337396640557">
+    <schema:alternateName>Rrose Sélavy</schema:alternateName>
+    <schema:givenName>Rrose</schema:givenName>
+    <schema:familyName>Sélavy</schema:familyName>
+    <schema:alternateName>Rose Sélavy</schema:alternateName>
+    <dcterms:identifier>10145542337396640557</dcterms:identifier>
+    <schema:name xml:lang="en">Rrose Sélavy</schema:name>
+    <schema:deathDate>1968</schema:deathDate>
+    <schema:sameAs rdf:resource="http://isni.org/isni/0000000368640250"/>
+    <schema:birthDate>1887</schema:birthDate>
+    <rdf:type rdf:resource="http://schema.org/Person"/>
+    <schema:givenName>Rose</schema:givenName>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/10145542337396640557/">
+    <foaf:primaryTopic rdf:resource="http://viaf.org/viaf/10145542337396640557"/>
+    <void:inDataset rdf:resource="http://viaf.org/viaf/data"/>
+    <rdf:type rdf:resource="http://www.w3.org/2006/gen/ont#InformationResource"/>
+    <rdf:type rdf:resource="http://xmlns.com/foaf/0.1/Document"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/ISNI%7C0000000368640250#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/10145542337396640557"/>
+    <skos:altLabel>Sélavy, Rrose 1887-1968</skos:altLabel>
+    <skos:altLabel>Sélavy, Rrose</skos:altLabel>
+    <skos:altLabel>Sélavy, Rose 1887-1968</skos:altLabel>
+    <skos:altLabel>Sélavy, Rose</skos:altLabel>
+    <skos:altLabel>Rrose Sélavy 1887-1968</skos:altLabel>
+    <skos:prefLabel>Rrose Sélavy 1887-1968</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/ISNI"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+</rdf:RDF>

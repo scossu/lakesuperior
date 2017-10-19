@@ -1,0 +1,132 @@
+<rdf:RDF
+    xmlns:umbel="http://umbel.org/umbel#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xmlns:genont="http://www.w3.org/2006/gen/ont#"
+    xmlns:pto="http://www.productontology.org/id/"
+    xmlns:dcterms="http://purl.org/dc/terms/"
+    xmlns:re="http://oclcsrw.google.code/redirect"
+    xmlns:void="http://rdfs.org/ns/void#"
+    xmlns:bgn="http://bibliograph.net/"
+    xmlns:schema="http://schema.org/"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" > 
+  <rdf:Description rdf:about="http://viaf.org/viaf/247705690/#Place/Italy">
+    <schema:name>Italy</schema:name>
+    <rdfs:comment>This is a placeholder URI in need of further matching</rdfs:comment>
+    <rdf:type rdf:resource="http://schema.org/Place"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/LC%7Cn++83216615#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Oristano (Sardinia)</skos:altLabel>
+    <skos:altLabel>Aristanis (Italy)</skos:altLabel>
+    <skos:prefLabel>Oristano (Italy)</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/LC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BNE%7CXX456058#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Oristán</skos:altLabel>
+    <skos:prefLabel>Oristano</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BNE"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/BAV%7CADV11510432#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:prefLabel>Oristano</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/BAV"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/FAST%7Cfst01226479#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Oristano Sardinia</skos:altLabel>
+    <skos:altLabel>Italy Aristanis</skos:altLabel>
+    <skos:prefLabel>Italy Oristano</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/FAST"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/247705690/">
+    <foaf:primaryTopic rdf:resource="http://viaf.org/viaf/247705690"/>
+    <void:inDataset rdf:resource="http://viaf.org/viaf/data"/>
+    <rdf:type rdf:resource="http://www.w3.org/2006/gen/ont#InformationResource"/>
+    <rdf:type rdf:resource="http://xmlns.com/foaf/0.1/Document"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/DNB%7C042166705#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Comune di Oristano</skos:altLabel>
+    <skos:prefLabel>Oristano</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/DNB"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/NLI%7C001001478#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Oristano (Sardinia)</skos:altLabel>
+    <skos:prefLabel>אוריסטנו (איטליה)</skos:prefLabel>
+    <skos:prefLabel>Oristano (Italy)</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/NLI"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/247705690">
+    <schema:name xml:lang="fr-FR">Oristano (Italie)</schema:name>
+    <schema:alternateName>Comune di Oristano (Italie)</schema:alternateName>
+    <schema:alternateName>Oristano (munisipyo)</schema:alternateName>
+    <schema:alternateName>Oristany</schema:alternateName>
+    <skos:prefLabel xml:lang="he-IL">אוריסטנו (איטליה)</skos:prefLabel>
+    <schema:name xml:lang="en-IL">Oristano (Italy)</schema:name>
+    <schema:name xml:lang="en-US">Oristano (Italy)</schema:name>
+    <schema:sameAs rdf:resource="http://id.loc.gov/authorities/names/n83216615"/>
+    <schema:alternateName>Municipio di Oristano (Italie)</schema:alternateName>
+    <schema:sameAs rdf:resource="http://dbpedia.org/resource/Oristano"/>
+    <schema:alternateName>Aristanis (Italy)</schema:alternateName>
+    <schema:alternateName>אוריסטאנו</schema:alternateName>
+    <rdf:type rdf:resource="http://schema.org/Organization"/>
+    <schema:alternateName>Oristano (Sardinia)</schema:alternateName>
+    <schema:alternateName>Oristanas</schema:alternateName>
+    <schema:alternateName>Ористано</schema:alternateName>
+    <rdf:type rdf:resource="http://schema.org/Place"/>
+    <schema:alternateName>Oristan</schema:alternateName>
+    <schema:alternateName>Օրիստանո</schema:alternateName>
+    <schema:alternateName>오리스타노</schema:alternateName>
+    <schema:name xml:lang="es-ES">Oristano</schema:name>
+    <schema:name xml:lang="en">Oristano</schema:name>
+    <schema:name xml:lang="en-US">Oristano</schema:name>
+    <schema:name xml:lang="de-DE">Oristano</schema:name>
+    <schema:name xml:lang="it-VA">Oristano</schema:name>
+    <schema:alternateName>Οριστάνο</schema:alternateName>
+    <schema:alternateName>Oristanu</schema:alternateName>
+    <schema:sameAs rdf:resource="http://d-nb.info/gnd/4216670-6"/>
+    <schema:location rdf:resource="http://viaf.org/viaf/247705690/#Place/Italy"/>
+    <schema:alternateName>奥里斯塔诺</schema:alternateName>
+    <schema:alternateName>اوریستانو</schema:alternateName>
+    <schema:alternateName>Italy</schema:alternateName>
+    <schema:alternateName>Aristianis</schema:alternateName>
+    <schema:alternateName>Comune di Oristano</schema:alternateName>
+    <schema:sameAs rdf:resource="http://www.wikidata.org/entity/Q13652"/>
+    <rdfs:comment xml:lang="en">Warning: skos:prefLabels are not ensured against change!</rdfs:comment>
+    <skos:prefLabel xml:lang="it-VA">Oristano</skos:prefLabel>
+    <skos:prefLabel xml:lang="de-DE">Oristano</skos:prefLabel>
+    <skos:prefLabel xml:lang="es-ES">Oristano</skos:prefLabel>
+    <schema:alternateName>Aristanis</schema:alternateName>
+    <schema:alternateName>オリスターノ</schema:alternateName>
+    <schema:sameAs rdf:resource="http://id.worldcat.org/fast/1226479"/>
+    <schema:alternateName>Арыстана</schema:alternateName>
+    <schema:sameAs rdf:resource="http://www.idref.fr/150241798/id"/>
+    <skos:prefLabel xml:lang="en-IL">Oristano (Italy)</skos:prefLabel>
+    <skos:prefLabel xml:lang="en-US">Oristano (Italy)</skos:prefLabel>
+    <schema:alternateName>Oristano</schema:alternateName>
+    <dcterms:identifier>247705690</dcterms:identifier>
+    <schema:alternateName>Amministrazione comunale di Oristano (Italie)</schema:alternateName>
+    <schema:alternateName>أوريستانو</schema:alternateName>
+    <schema:alternateName>Oristán</schema:alternateName>
+    <schema:name xml:lang="he-IL">אוריסטנו (איטליה)</schema:name>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://viaf.org/viaf/sourceID/SUDOC%7C150241798#skos:Concept">
+    <foaf:focus rdf:resource="http://viaf.org/viaf/247705690"/>
+    <skos:altLabel>Municipio di Oristano (Italie)</skos:altLabel>
+    <skos:altLabel>Comune di Oristano (Italie)</skos:altLabel>
+    <skos:altLabel>Amministrazione comunale di Oristano (Italie)</skos:altLabel>
+    <skos:prefLabel>Oristano (Italie)</skos:prefLabel>
+    <skos:inScheme rdf:resource="http://viaf.org/authorityScheme/SUDOC"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+  </rdf:Description>
+</rdf:RDF>
