@@ -9,13 +9,13 @@ from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.core.namespaces import ns_collection as nsc
 from lakesuperior.core.namespaces import ns_mgr as nsm
-from lakesuperior.store_strategies.rdf.base_rdf_strategy import BaseRdfStrategy
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.digest import Digest
 
 
-class SimpleStrategy(BaseRdfStrategy):
+class SimpleLayout(BaseRdfLayout):
     '''
-    This is the simplest strategy.
+    This is the simplest layout.
 
     It uses a flat triple structure without named graphs aimed at performance.
 
@@ -28,7 +28,7 @@ class SimpleStrategy(BaseRdfStrategy):
     @property
     def headers(self):
         '''
-        See base_rdf_strategy.headers.
+        See base_rdf_layout.headers.
         '''
         headers = {
             'Link' : [],
@@ -51,7 +51,7 @@ class SimpleStrategy(BaseRdfStrategy):
 
     def out_graph(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
-        See base_rdf_strategy.out_graph.
+        See base_rdf_layout.out_graph.
         '''
         inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
                 if inbound else ''
@@ -71,7 +71,7 @@ class SimpleStrategy(BaseRdfStrategy):
 
     def ask_rsrc_exists(self, rsrc=None):
         '''
-        See base_rdf_strategy.ask_rsrc_exists.
+        See base_rdf_layout.ask_rsrc_exists.
         '''
         if not rsrc:
             if self.rsrc is not None:
@@ -86,7 +86,7 @@ class SimpleStrategy(BaseRdfStrategy):
 
     def create_or_replace_rsrc(self, g):
         '''
-        See base_rdf_strategy.create_or_replace_rsrc.
+        See base_rdf_layout.create_or_replace_rsrc.
         '''
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
@@ -117,7 +117,7 @@ class SimpleStrategy(BaseRdfStrategy):
 
     def create_rsrc(self, g):
         '''
-        See base_rdf_strategy.create_rsrc.
+        See base_rdf_layout.create_rsrc.
         '''
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)

@@ -27,26 +27,26 @@ def needs_rsrc(fn):
 
 
 
-class BaseRdfStrategy(metaclass=ABCMeta):
+class BaseRdfLayout(metaclass=ABCMeta):
     '''
-    This class exposes an interface to build graph store strategies.
+    This class exposes an interface to build graph store layouts.
 
-    Some store strategies are provided. New ones aimed at specific uses
+    Some store layouts are provided. New ones aimed at specific uses
     and optimizations of the repository may be developed by extending this
     class and implementing all its abstract methods.
 
-    A strategy is implemented via application configuration. However, once
-    contents are ingested in a repository, changing a strategy will most likely
+    A layout is implemented via application configuration. However, once
+    contents are ingested in a repository, changing a layout will most likely
     require a migration.
 
-    The custom strategy must be in the lakesuperior.store_strategies.rdf
-    package and the class implementing the strategy must be called
-    `StoreStrategy`. The module name is the one defined in the app
+    The custom layout must be in the lakesuperior.store_layouts.rdf
+    package and the class implementing the layout must be called
+    `StoreLayout`. The module name is the one defined in the app
     configuration.
 
-    E.g. if the configuration indicates `simple_strategy` the application will
+    E.g. if the configuration indicates `simple_layout` the application will
     look for
-    `lakesuperior.store_strategies.rdf.simple_strategy.SimpleStrategy`.
+    `lakesuperior.store_layouts.rdf.simple_layout.SimpleLayout`.
 
     Some method naming conventions:
 
@@ -67,7 +67,7 @@ class BaseRdfStrategy(metaclass=ABCMeta):
 
     def __init__(self, urn=None):
         '''
-        The strategy can be initialized with a URN to make resource-centric
+        The layout can be initialized with a URN to make resource-centric
         operations simpler. However, for generic queries, urn can be None and
         no `self.rsrc` is assigned. In this case, some methods will not be
         available.
@@ -121,7 +121,7 @@ class BaseRdfStrategy(metaclass=ABCMeta):
         '''
         Graph obtained by querying the triplestore and adding any abstraction
         and filtering to make up a graph that can be used for read-only,
-        API-facing results. Different strategies can implement this in very
+        API-facing results. Different layouts can implement this in very
         different ways, so it is an abstract method.
         '''
         pass

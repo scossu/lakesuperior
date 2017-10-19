@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from lakesuperior.ldp.ldpr import Ldpr, Ldpc, LdpNr, \
+from lakesuperior.model.ldpr import Ldpr, Ldpc, LdpNr, \
         InvalidResourceError, ResourceNotExistsError
 
 

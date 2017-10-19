@@ -122,7 +122,7 @@ class Ldpr(metaclass=ABCMeta):
     URIs are converted from URNs and passed by these methods to the methods
     handling HTTP negotiation.
 
-    The data passed to the store strategy for processing should be in a graph.
+    The data passed to the store layout for processing should be in a graph.
     All conversion from request payload strings is done here.
     '''
 
@@ -132,7 +132,7 @@ class Ldpr(metaclass=ABCMeta):
 
     _logger = logging.getLogger(__module__)
 
-    store_strategy = config['application']['store']['ldp_rs']['strategy']
+    store_layout = config['application']['store']['ldp_rs']['layout']
 
     ## MAGIC METHODS ##
 
@@ -141,22 +141,22 @@ class Ldpr(metaclass=ABCMeta):
         persisted to storage.
 
         Persistence is done in this class. None of the operations in the store
-        strategy should commit an open transaction. Methods are wrapped in a
+        layout should commit an open transaction. Methods are wrapped in a
         transaction by using the `@transactional` decorator.
 
         @param uuid (string) UUID of the resource.
         '''
         self.uuid = uuid
 
-        # Dynamically load the store strategy indicated in the configuration.
+        # Dynamically load the store layout indicated in the configuration.
         store_mod = import_module(
-                'lakesuperior.store_strategies.rdf.{}'.format(
-                        self.store_strategy))
+                'lakesuperior.store_layouts.rdf.{}'.format(
+                        self.store_layout))
         self._rdf_store_cls = getattr(store_mod, Translator.camelcase(
-                self.store_strategy))
+                self.store_layout))
         self.gs = self._rdf_store_cls(self.urn)
 
-        # Same thing coud be done for the filesystem store strategy, but we
+        # Same thing coud be done for the filesystem store layout, but we
         # will keep it simple for now.
         self.fs = FilesystemConnector()
 
@@ -188,7 +188,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         The RDFLib resource representing this LDPR. This is a copy of the
         stored data if present, and what gets passed to most methods of the
-        store strategy methods.
+        store layout methods.
 
         @return rdflib.resource.Resource
         '''
@@ -302,14 +302,14 @@ class Ldpr(metaclass=ABCMeta):
     @classmethod
     def load_gs_static(cls, uuid=None):
         '''
-        Dynamically load the store strategy indicated in the configuration.
+        Dynamically load the store layout indicated in the configuration.
         This essentially replicates the init() code in a static context.
         '''
         store_mod = import_module(
-                'lakesuperior.store_strategies.rdf.{}'.format(
-                        cls.store_strategy))
+                'lakesuperior.store_layouts.rdf.{}'.format(
+                        cls.store_layout))
         rdf_store_cls = getattr(store_mod, Translator.camelcase(
-                cls.store_strategy))
+                cls.store_layout))
         return rdf_store_cls(uuid)
 
 
