@@ -10,6 +10,7 @@ import arrow
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
+from rdflib.query import ResultException
 from rdflib.term import Literal
 
 from lakesuperior.config_parser import config

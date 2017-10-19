@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 
 from lakesuperior.config_parser import config
 from lakesuperior.endpoints.ldp import ldp
@@ -24,7 +24,7 @@ def index():
     '''
     Homepage.
     '''
-    return u'<h1>Hello. This is LAKEsuperior.</h1><p>Exciting, isn’t it?</p>'
+    return render_template('index.html')
 
 
 @fcrepo.route('/debug', methods=['GET'])
