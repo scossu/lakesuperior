@@ -17,6 +17,40 @@ from lakesuperior.ldp.ldpr import Ldpr, Ldpc, LdpNr, \
 app = Flask(__name__)
 app.config.update(config['flask'])
 
+rest_accept_patch = (
+    'application/sparql-update',
+)
+rest_accept_post = (
+    'application/ld+json',
+    'application/n-triples',
+    'application/rdf+xml',
+    'application/x-turtle',
+    'application/xhtml+xml',
+    'application/xml',
+    'text/html',
+    'text/n3',
+    'text/plain',
+    'text/rdf+n3',
+    'text/turtle',
+)
+#rest_allow = (
+#    'COPY',
+#    'DELETE',
+#    'GET',
+#    'HEAD',
+#    'MOVE',
+#    'OPTIONS',
+#    'PATCH',
+#    'POST',
+#    'PUT',
+#)
+
+rest_std_headers = {
+    'Accept-Patch' : ','.join(rest_accept_patch),
+    'Accept-Post' : ','.join(rest_accept_post),
+    #'Allow' : ','.join(rest_allow),
+}
+
 
 ## ROUTES ##
 
@@ -25,7 +59,7 @@ def index():
     '''
     Homepage.
     '''
-    return 'Hello. This is LAKEsuperior.'
+    return u'<h1>Hello. This is LAKEsuperior.</h1><p>Exciting, isn’t it?</p>'
 
 
 @app.route('/debug', methods=['GET'])
@@ -45,6 +79,7 @@ def get_resource(uuid):
     '''
     Retrieve RDF or binary content.
     '''
+    headers = rest_std_headers
     # @TODO Add conditions for LDP-NR
     rsrc = Ldpc(uuid)
     try:
@@ -63,6 +98,7 @@ def post_resource(parent):
     '''
     Add a new resource in a new URI.
     '''
+    headers = rest_std_headers
     try:
         slug = request.headers['Slug']
     except KeyError:
@@ -77,9 +113,9 @@ def post_resource(parent):
 
     rsrc.post(request.get_data().decode('utf-8'))
 
-    headers = {
-        'Location' : rsrc.uri
-    }
+    headers.update({
+        'Location' : rsrc.uri,
+    })
 
     return rsrc.uri, headers, 201
 
@@ -89,10 +125,11 @@ def put_resource(uuid):
     '''
     Add a new resource at a specified URI.
     '''
+    headers = rest_std_headers
     rsrc = Ldpc(uuid)
 
     rsrc.put(request.get_data().decode('utf-8'))
-    return '', 204
+    return '', 204, headers
 
 
 @app.route('/rest/<path:uuid>', methods=['PATCH'])
@@ -100,6 +137,7 @@ def patch_resource(uuid):
     '''
     Update an existing resource with a SPARQL-UPDATE payload.
     '''
+    headers = rest_std_headers
     rsrc = Ldpc(uuid)
 
     try:
@@ -107,7 +145,7 @@ def patch_resource(uuid):
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
 
-    return '', 204
+    return '', 204, headers
 
 
 @app.route('/rest/<path:uuid>', methods=['DELETE'])
@@ -115,6 +153,7 @@ def delete_resource(uuid):
     '''
     Delete a resource.
     '''
+    headers = rest_std_headers
     rsrc = Ldpc(uuid)
 
     try:
@@ -122,4 +161,4 @@ def delete_resource(uuid):
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
 
-    return '', 204
+    return '', 204, headers

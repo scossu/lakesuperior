@@ -34,6 +34,8 @@ class SimpleStrategy(BaseRdfStrategy):
             'Link' : [],
         }
 
+        # @NOTE: Easy with these one-by-one picks. Each one of them is a call
+        # to the triplestore.
         digest = self.rsrc.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
@@ -47,7 +49,7 @@ class SimpleStrategy(BaseRdfStrategy):
         return headers
 
 
-    def out_graph(self, inbound=False):
+    def out_graph(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
         See base_rdf_strategy.out_graph.
         '''
@@ -58,6 +60,7 @@ class SimpleStrategy(BaseRdfStrategy):
             {0} ?p ?o .{1}
         }} WHERE {{
             {0} ?p ?o .{1}
+            FILTER (?p != premis:hasMessageDigest) .
         }}
         '''.format(self.base_urn.n3(), inbound_qry)
 

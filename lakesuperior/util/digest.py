@@ -31,8 +31,8 @@ class Digest:
 
         @return string SHA1 checksum.
         '''
-        # Remove the messageDigest property, which at this point is very likely
-        # old.
+        # Remove the messageDigest property, which very likely reflects the
+        # previous state of the resource.
         g.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
 
         ord_g = sorted(list(g), key=lambda x : (x[0], x[1], x[2]))

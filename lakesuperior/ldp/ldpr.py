@@ -605,6 +605,22 @@ class LdpRs(Ldpr):
         nsc['ldp'].RDFSource
     }
 
+    std_headers = {
+        'Accept-Post' : {
+            'text/turtle',
+            'text/rdf+n3',
+            'text/n3',
+            'application/rdf+xml',
+            'application/n-triples',
+            'application/ld+json',
+            'multipart/form-data',
+            'application/sparql-update',
+        },
+        'Accept-Patch' : {
+            'application/sparql-update',
+        },
+    }
+
     @transactional
     @must_exist
     def patch(self, data):

@@ -103,7 +103,21 @@ class BaseRdfStrategy(metaclass=ABCMeta):
     @property
     @abstractmethod
     @needs_rsrc
-    def out_graph(self):
+    def headers(self):
+        '''
+        Return a dict with information for generating HTTP headers.
+
+        @retun dict
+        '''
+        pass
+
+
+    ## PUBLIC METHODS ##
+
+
+    @abstractmethod
+    @needs_rsrc
+    def out_graph(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
         Graph obtained by querying the triplestore and adding any abstraction
         and filtering to make up a graph that can be used for read-only,
@@ -113,17 +127,6 @@ class BaseRdfStrategy(metaclass=ABCMeta):
         pass
 
 
-    @property
-    @abstractmethod
-    @needs_rsrc
-    def headers(self):
-        '''
-        Return minimal information for generating HTTP headers.
-        '''
-        pass
-
-
-    ## PUBLIC METHODS ##
 
     @abstractmethod
     def ask_rsrc_exists(self):
