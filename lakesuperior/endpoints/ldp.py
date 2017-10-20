@@ -1,7 +1,9 @@
 from flask import Blueprint, request
 
-from lakesuperior.model.ldpr import Ldpr, Ldpc, LdpNr, \
-        InvalidResourceError, ResourceNotExistsError
+from lakesuperior.model.ldpr import InvalidResourceError, \
+        ResourceNotExistsError
+from lakesuperior.model.ldp_rs import Ldpc, LdpRs
+from lakesuperior.model.ldp_nr import LdpNr
 
 
 # Blueprint for LDP REST API. This is what is usually found under `/rest/` in
