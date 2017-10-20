@@ -125,7 +125,7 @@ class Ldpr(metaclass=ABCMeta):
     All conversion from request payload strings is done here.
     '''
 
-    FCREPO_PTREE_TYPE = nsc['fedora'].Pairtree
+    FCREPO_PTREE_TYPE = nsc['fcrepo'].Pairtree
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
 
@@ -532,7 +532,7 @@ class Ldpr(metaclass=ABCMeta):
         fcres:a/b/c, which may be confusing.
         '''
         g = Graph()
-        g.add((uri, RDF.type, nsc['fedora'].Pairtree))
+        g.add((uri, RDF.type, nsc['fcrepo'].Pairtree))
         g.add((uri, RDF.type, nsc['ldp'].Container))
         g.add((uri, RDF.type, nsc['ldp'].BasicContainer))
         g.add((uri, RDF.type, nsc['ldp'].RDFSource))
@@ -629,8 +629,8 @@ class LdpRs(Ldpr):
 
         self.rdfly.patch_rsrc(self.urn, data, ts)
 
-        self.rdfly.ds.add((self.urn, nsc['fedora'].lastUpdated, ts))
-        self.rdfly.ds.add((self.urn, nsc['fedora'].lastUpdatedBy,
+        self.rdfly.ds.add((self.urn, nsc['fcrepo'].lastUpdated, ts))
+        self.rdfly.ds.add((self.urn, nsc['fcrepo'].lastUpdatedBy,
                 Literal('BypassAdmin')))
 
 

@@ -41,7 +41,7 @@ class SimpleLayout(BaseRdfLayout):
             etag = digest.identifier.split(':')[-1]
             headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = self.rsrc.value(nsc['fedora'].lastUpdated)
+        last_updated_term = self.rsrc.value(nsc['fcrepo'].lastUpdated)
         if last_updated_term:
             headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -88,19 +88,19 @@ class SimpleLayout(BaseRdfLayout):
                     .format(self.rsrc.identifier))
 
             # Delete all triples but keep creation date and creator.
-            created = self.rsrc.value(nsc['fedora'].created)
-            created_by = self.rsrc.value(nsc['fedora'].createdBy)
+            created = self.rsrc.value(nsc['fcrepo'].created)
+            created_by = self.rsrc.value(nsc['fcrepo'].createdBy)
 
             self.delete_rsrc()
         else:
             created = ts
             created_by = Literal('BypassAdmin')
 
-        self.rsrc.set(nsc['fedora'].created, created)
-        self.rsrc.set(nsc['fedora'].createdBy, created_by)
+        self.rsrc.set(nsc['fcrepo'].created, created)
+        self.rsrc.set(nsc['fcrepo'].createdBy, created_by)
 
-        self.rsrc.set(nsc['fedora'].lastUpdated, ts)
-        self.rsrc.set(nsc['fedora'].lastUpdatedBy, Literal('BypassAdmin'))
+        self.rsrc.set(nsc['fcrepo'].lastUpdated, ts)
+        self.rsrc.set(nsc['fcrepo'].lastUpdatedBy, Literal('BypassAdmin'))
 
         for s, p, o in g:
             self.ds.add((s, p, o))
@@ -113,8 +113,8 @@ class SimpleLayout(BaseRdfLayout):
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
 
-        self.rsrc.set(nsc['fedora'].created, ts)
-        self.rsrc.set(nsc['fedora'].createdBy, Literal('BypassAdmin'))
+        self.rsrc.set(nsc['fcrepo'].created, ts)
+        self.rsrc.set(nsc['fcrepo'].createdBy, Literal('BypassAdmin'))
 
         cksum = Digest.rdf_cksum(self.rsrc.graph)
         self.rsrc.set(nsc['premis'].hasMessageDigest,
@@ -134,8 +134,8 @@ class SimpleLayout(BaseRdfLayout):
         q = Translator.localize_string(data).replace(
                 '<>', self.rsrc.identifier.n3())
 
-        self.rsrc.set(nsc['fedora'].lastUpdated, ts)
-        self.rsrc.set(nsc['fedora'].lastUpdatedBy, Literal('BypassAdmin'))
+        self.rsrc.set(nsc['fcrepo'].lastUpdated, ts)
+        self.rsrc.set(nsc['fcrepo'].lastUpdatedBy, Literal('BypassAdmin'))
 
         self.ds.update(q)
 

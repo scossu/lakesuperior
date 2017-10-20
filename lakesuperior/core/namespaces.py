@@ -13,8 +13,8 @@ core_namespaces = {
     'dc' : rdflib.namespace.DC,
     'dcterms' : rdflib.namespace.DCTERMS,
     'ebucore' : Namespace('http://www.ebu.ch/metadata/ontologies/ebucore/ebucore#'),
-    'fedora' : Namespace('http://fedora.info/definitions/v4/repository#'),
-    'fedoraconfig' : Namespace('http://fedora.info/definitions/v4/config#'), # fcrepo =< 4.7
+    'fcrepo' : Namespace('http://fedora.info/definitions/v4/repository#'),
+    'fcrconfig' : Namespace('http://fedora.info/definitions/v4/config#'), # fcrepo =< 4.7
     'gen' : Namespace('http://www.w3.org/2006/gen/ont#'),
     'iana' : Namespace('http://www.iana.org/assignments/relation/'),
     'lake' : Namespace('http://definitions.artic.edu/ontology/lake#'),
@@ -42,8 +42,3 @@ ns_pfx_sparql = dict()
 # Collection of prefixes in a dict.
 for ns,uri in ns_collection.items():
     ns_mgr.bind(ns, uri, override=False)
-    #ns_pfx_sparql[ns] = 'PREFIX {}: <{}>'.format(ns, uri)
-
-# Prefix declarations formatted for SPARQL queries.
-#pfx_decl='\n'.join(ns_pfx_sparql.values())
-
