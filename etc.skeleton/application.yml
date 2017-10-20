@@ -23,7 +23,7 @@ store:
     # MUST support SPARQL 1.1 query and update.
     ldp_rs:
         # Store layout. This corresponds to a sub-class of the
-        # `lakesuperior.connectors.graph_store_connector.BaseGraphStoreConnector`.
+        # `lakesuperior.store_layouts.rdf.base_rdf_layout/BaseRdfLayout`.
         layout: simple_layout
         webroot: http://localhost:9999/namespace/fcrepo/
         query_ep: sparql

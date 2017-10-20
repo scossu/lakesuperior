@@ -49,24 +49,15 @@ class SimpleLayout(BaseRdfLayout):
         return headers
 
 
-    def out_graph(self, srv_mgd=True, inbound=False, embed_children=False):
+    def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
-        See base_rdf_layout.out_graph.
+        See base_rdf_layout.out_rsrc.
         '''
-        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
-                if inbound else ''
-        q = '''
-        CONSTRUCT {{
-            {0} ?p ?o .{1}
-        }} WHERE {{
-            {0} ?p ?o .{1}
-            FILTER (?p != premis:hasMessageDigest) .
-        }}
-        '''.format(self.base_urn.n3(), inbound_qry)
+        im_rsrc = self.extract_rsrc(inbound=inbound)
 
-        qres = self.rsrc.graph.query(q)
+        im_rsrc.remove(nsc['premis'].hasMessageDigest)
 
-        return Resource(qres.graph, self.base_urn)
+        return im_rsrc
 
 
     def ask_rsrc_exists(self, rsrc=None):

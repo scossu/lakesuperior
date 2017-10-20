@@ -2,12 +2,13 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from flask import request
-from rdflib import Graph
+from rdflib import Dataset, Graph
+from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import URIRef
+from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 
-from lakesuperior.connectors.graph_store_connector import GraphStoreConnector
+from lakesuperior.config_parser import config
 from lakesuperior.core.namespaces import ns_collection as nsc
 from lakesuperior.core.namespaces import ns_mgr as nsm
 
@@ -29,7 +30,8 @@ def needs_rsrc(fn):
 
 class BaseRdfLayout(metaclass=ABCMeta):
     '''
-    This class exposes an interface to build graph store layouts.
+    This class exposes an interface to build graph store layouts. It also
+    provides the baics of the triplestore connection.
 
     Some store layouts are provided. New ones aimed at specific uses
     and optimizations of the repository may be developed by extending this
@@ -60,21 +62,50 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # N.B. This is Fuseki-specific.
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
+    _conf = config['application']['store']['ldp_rs']
     _logger = logging.getLogger(__module__)
+
+    query_ep = _conf['webroot'] + _conf['query_ep']
+    update_ep = _conf['webroot'] + _conf['update_ep']
 
 
     ## MAGIC METHODS ##
 
     def __init__(self, urn=None):
-        '''
+        '''Initialize the graph store and a layout.
+
+        NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
+        for Graph Store HTTP protocol
+        (https://www.w3.org/TR/sparql11-http-rdf-update/). Blazegraph supports
+        this only in the (currently) unreleased 2.2 branch. It works with Jena,
+        but other considerations would have to be made (e.g. Jena has no REST
+        API for handling transactions).
+
+        In a more advanced development phase it could be possible to extend the
+        SPARQLUpdateStore class to add non-standard interaction with specific
+        SPARQL implementations in order to support ACID features provided
+        by them; e.g. Blazegraph's RESTful transaction handling methods.
+
         The layout can be initialized with a URN to make resource-centric
         operations simpler. However, for generic queries, urn can be None and
-        no `self.rsrc` is assigned. In this case, some methods will not be
-        available.
+        no `self.rsrc` is assigned. In this case, some methods (the ones
+        decorated by `@needs_rsrc`) will not be available.
         '''
-        self.conn = GraphStoreConnector()
-        self.ds = self.conn.ds
+        self.ds = Dataset(self.store, default_union=True)
+        self.ds.namespace_manager = nsm
         self._base_urn = urn
+
+
+    @property
+    def store(self):
+        if not hasattr(self, '_store') or not self._store:
+            self._store = SPARQLUpdateStore(
+                    queryEndpoint=self.query_ep,
+                    update_endpoint=self.update_ep,
+                    autocommit=False,
+                    dirty_reads=True)
+
+        return self._store
 
 
     @property
@@ -114,15 +145,87 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     ## PUBLIC METHODS ##
 
+    def query(self, q, initBindings=None, nsc=nsc):
+        '''
+        Perform a SPARQL query on the triplestore.
+
+        This should provide non-abstract access, independent from the layout,
+        therefore it should not be overridden by individual layouts.
+
+        @param q (string) SPARQL query.
+
+        @return rdflib.query.Result
+        '''
+        self._logger.debug('Sending SPARQL query: {}'.format(q))
+        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
+
+
+    def update(self, q, initBindings=None, nsc=nsc):
+        '''
+        Perform a SPARQL update on the triplestore.
+
+        This should provide non-abstract access, independent from the layout,
+        therefore it should not be overridden by individual layouts.
+
+        @param q (string) SPARQL-UPDATE query.
+
+        @return None
+        '''
+        self._logger.debug('Sending SPARQL update: {}'.format(q))
+        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
+
+
+    def extract_rsrc(self, uri=None, graph=None, inbound=False):
+        '''
+        Extract an in-memory resource based on the copy of a graph on a subject.
+
+        @param uri (URIRef) Resource URI.
+        @param graph (rdflib.term.URIRef | set(rdflib.graphURIRef)) The graph
+        to extract from. This can be an URI for a single graph, or a list of
+        graph URIs in which case an aggregate graph will be used.
+        @param inbound (boolean) Whether to pull triples that have the resource
+        URI as their object.
+        '''
+        uri = uri or self.base_urn
+
+        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
+                if inbound else ''
+
+        q = '''
+        CONSTRUCT {{
+            {0} ?p ?o .{1}
+        }} WHERE {{
+            {0} ?p ?o .{1}
+            FILTER (?p != premis:hasMessageDigest) .
+        }}
+        '''.format(uri.n3(), inbound_qry)
+
+        try:
+            qres = self.query(q)
+        except ResultException:
+            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
+            g = Graph()
+        else:
+            g = qres.graph
+
+        return Resource(g, uri)
+
+
+    ## INTERFACE METHODS ##
+
+    # Implementers of custom layouts should look into these methods to
+    # implement.
 
     @abstractmethod
     @needs_rsrc
-    def out_graph(self, srv_mgd=True, inbound=False, embed_children=False):
+    def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
         Graph obtained by querying the triplestore and adding any abstraction
         and filtering to make up a graph that can be used for read-only,
         API-facing results. Different layouts can implement this in very
         different ways, so it is an abstract method.
+
+        @return rdflib.resource.Resource
         '''
         pass
 

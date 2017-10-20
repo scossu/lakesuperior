@@ -10,7 +10,6 @@ import arrow
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
-from rdflib.query import ResultException
 from rdflib.term import Literal
 
 from lakesuperior.config_parser import config
@@ -60,11 +59,11 @@ def transactional(fn):
         try:
             ret = fn(self, *args, **kwargs)
             print('Committing transaction.')
-            self.rdfly.conn.store.commit()
+            self.rdfly.store.commit()
             return ret
         except:
             print('Rolling back transaction.')
-            self.rdfly.conn.store.rollback()
+            self.rdfly.store.rollback()
             raise
 
     return wrapper
@@ -374,13 +373,11 @@ class Ldpr(metaclass=ABCMeta):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        try:
-            g = self.rdfly.out_graph(inbound)
-        except ResultException:
-            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
+        im_rsrc = self.rdfly.out_rsrc(inbound)
+        if not len(im_rsrc.graph):
             raise ResourceNotExistsError()
 
-        return Translator.globalize_rsrc(g)
+        return Translator.globalize_rsrc(im_rsrc)
 
 
     @transactional
