@@ -59,6 +59,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
     - Methods starting with `ask_` return a boolean value.
     '''
 
+    ROOT_NODE_URN = nsc['fcsystem'].root
     # N.B. This is Fuseki-specific.
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 

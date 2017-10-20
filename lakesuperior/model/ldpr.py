@@ -151,9 +151,16 @@ class Ldpr(metaclass=ABCMeta):
         store_mod = import_module(
                 'lakesuperior.store_layouts.rdf.{}'.format(
                         self.rdf_store_layout))
+        # Ideally, _rdf_store_cls should not be a class member, but
+        # `_find_parent_or_create_pairtree` is using it at the moment. That
+        # should be fixed some time.
         self._rdf_store_cls = getattr(store_mod, Translator.camelcase(
                 self.rdf_store_layout))
-        self.rdfly = self._rdf_store_cls(self.urn)
+
+        self._urn = nsc['fcres'][uuid] if self.uuid is not None \
+                else self._rdf_store_cls.ROOT_NODE_URN
+
+        self.rdfly = self._rdf_store_cls(self._urn)
 
         # Same thing coud be done for the filesystem store layout, but we
         # will keep it simple for now.
@@ -169,8 +176,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @return rdflib.URIRef
         '''
-        return nsc['fcres'][self.uuid]
-
+        return self._urn
 
     @property
     def uri(self):

@@ -2,6 +2,7 @@ from flask import request
 from rdflib.term import URIRef
 
 from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 
 
 class Translator:
@@ -66,6 +67,8 @@ class Translator:
 
         @return rdflib.term.URIRef
         '''
+        if urn == BaseRdfLayout.ROOT_NODE_URN:
+            urn = nsc['fcres']
         return URIRef(Translator.globalize_string(str(urn)))
 
 
@@ -74,22 +77,25 @@ class Translator:
         '''
         Globalize a graph.
         '''
+        from lakesuperior.model.ldpr import Ldpr
         q = '''
         CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
           {{
             ?s ?p ?o .
-            FILTER STRSTARTS(str(?s), "{0}") .
+            FILTER (
+              STRSTARTS(str(?s), "{0}")
+              ||
+              STRSTARTS(str(?o), "{0}")
+              ||
+              STRSTARTS(str(?s), "{1}")
+              ||
+              STRSTARTS(str(?o), "{1}")
+            ) .
           }}
-          UNION
-          {{
-            ?s ?p ?o .
-            FILTER STRSTARTS(str(?o), "{0}") .
-          }}
-        }}'''.format(nsc['fcres'])
+        }}'''.format(nsc['fcres'], BaseRdfLayout.ROOT_NODE_URN)
         flt_g = g.query(q)
 
         for t in flt_g:
-            print('Triple: {}'.format(t))
             global_s = Translator.globalize_term(t[0])
             global_o = Translator.globalize_term(t[2]) \
                     if isinstance(t[2], URIRef) \
