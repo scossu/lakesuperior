@@ -176,7 +176,13 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 
-    def extract_rsrc(self, uri=None, graph=None, inbound=False):
+    ## INTERFACE METHODS ##
+
+    # Implementers of custom layouts should look into these methods to
+    # implement.
+
+    @abstractmethod
+    def extract_imr(self, uri=None, graph=None, inbound=False):
         '''
         Extract an in-memory resource based on the copy of a graph on a subject.
 
@@ -187,35 +193,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
         @param inbound (boolean) Whether to pull triples that have the resource
         URI as their object.
         '''
-        uri = uri or self.base_urn
+        pass
 
-        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
-                if inbound else ''
-
-        q = '''
-        CONSTRUCT {{
-            {0} ?p ?o .{1}
-        }} WHERE {{
-            {0} ?p ?o .{1}
-            FILTER (?p != premis:hasMessageDigest) .
-        }}
-        '''.format(uri.n3(), inbound_qry)
-
-        try:
-            qres = self.query(q)
-        except ResultException:
-            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
-            g = Graph()
-        else:
-            g = qres.graph
-
-        return Resource(g, uri)
-
-
-    ## INTERFACE METHODS ##
-
-    # Implementers of custom layouts should look into these methods to
-    # implement.
 
     @abstractmethod
     @needs_rsrc
@@ -233,11 +212,11 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def ask_rsrc_exists(self):
+    def ask_rsrc_exists(self, uri=None):
         '''
         Ask if a resource exists (is stored) in the graph store.
 
-        @param rsrc (rdflib.resource.Resource) If this is provided, this method
+        @param uri (rdflib.term.URIRef) If this is provided, this method
         will look for the specified resource. Otherwise, it will look for the
         default resource. If this latter is not specified, the result is False.
 

@@ -4,6 +4,7 @@ import arrow
 
 from rdflib import Graph
 from rdflib.namespace import XSD
+from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import Literal, URIRef, Variable
 
@@ -49,30 +50,58 @@ class SimpleLayout(BaseRdfLayout):
         return headers
 
 
+    def extract_imr(self, uri=None, graph=None, inbound=False):
+        '''
+        See base_rdf_layout.extract_imr.
+        '''
+        uri = uri or self.base_urn
+
+        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
+                if inbound else ''
+
+        q = '''
+        CONSTRUCT {{
+            {0} ?p ?o .{1}
+        }} WHERE {{
+            {0} ?p ?o .{1}
+            #FILTER (?p != premis:hasMessageDigest) .
+        }}
+        '''.format(uri.n3(), inbound_qry)
+
+        try:
+            qres = self.query(q)
+        except ResultException:
+            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
+            g = Graph()
+        else:
+            g = qres.graph
+
+        return Resource(g, uri)
+
+
     def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
         See base_rdf_layout.out_rsrc.
         '''
-        im_rsrc = self.extract_rsrc(inbound=inbound)
+        im_rsrc = self.extract_imr(inbound=inbound)
 
         im_rsrc.remove(nsc['premis'].hasMessageDigest)
 
         return im_rsrc
 
 
-    def ask_rsrc_exists(self, rsrc=None):
+    def ask_rsrc_exists(self, uri=None):
         '''
         See base_rdf_layout.ask_rsrc_exists.
         '''
-        if not rsrc:
+        if not uri:
             if self.rsrc is not None:
-                rsrc = self.rsrc
+                uri = self.rsrc.identifier
             else:
                 return False
 
-        self._logger.info('Searching for resource: {}'
-                .format(rsrc.identifier))
-        return (rsrc.identifier, Variable('p'), Variable('o')) in self.ds
+        self._logger.info('Searching for resource: {}'.format(uri))
+        return (uri, Variable('p'), Variable('o')) in self.ds
 
 
     def create_or_replace_rsrc(self, g):

@@ -1,5 +1,6 @@
 from lakesuperior.core.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
+from lakesuperior.model.ldpr import Ldpr, transactional, must_exist, \
+        ResourceNotExistsError
 from lakesuperior.util.translator import Translator
 
 class LdpRs(Ldpr):

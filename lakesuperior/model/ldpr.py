@@ -5,12 +5,9 @@ from importlib import import_module
 from itertools import accumulate
 from uuid import uuid4
 
-import arrow
-
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
-from rdflib.term import Literal
 
 from lakesuperior.config_parser import config
 from lakesuperior.connectors.filesystem_connector import FilesystemConnector
@@ -151,16 +148,13 @@ class Ldpr(metaclass=ABCMeta):
         store_mod = import_module(
                 'lakesuperior.store_layouts.rdf.{}'.format(
                         self.rdf_store_layout))
-        # Ideally, _rdf_store_cls should not be a class member, but
-        # `_find_parent_or_create_pairtree` is using it at the moment. That
-        # should be fixed some time.
-        self._rdf_store_cls = getattr(store_mod, Translator.camelcase(
+        rdf_store_cls = getattr(store_mod, Translator.camelcase(
                 self.rdf_store_layout))
 
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
-                else self._rdf_store_cls.ROOT_NODE_URN
+                else rdf_store_cls.ROOT_NODE_URN
 
-        self.rdfly = self._rdf_store_cls(self._urn)
+        self.rdfly = rdf_store_cls(self._urn)
 
         # Same thing coud be done for the filesystem store layout, but we
         # will keep it simple for now.
@@ -332,16 +326,20 @@ class Ldpr(metaclass=ABCMeta):
             return cls(str(uuid4()))
 
         rdfly = cls.load_rdf_layout()
-        parent_rsrc = Resource(rdfly.ds, nsc['fcres'][parent_uuid])
+        parent_imr = rdfly.extract_imr(nsc['fcres'][parent_uuid])
 
         # Set prefix.
         if parent_uuid:
-            parent_exists = rdfly.ask_rsrc_exists(parent_rsrc)
+            parent_exists = rdfly.ask_rsrc_exists(parent_imr.identifier)
             if not parent_exists:
                 raise ResourceNotExistsError('Parent not found: {}.'
                         .format(parent_uuid))
 
-            if nsc['ldp'].Container not in rdfly.rsrc.values(RDF.type):
+            parent_types = { t.identifier for t in \
+                    parent_imr.objects(RDF.type) }
+            cls._logger.debug('Parent types: {}'.format(
+                    parent_types))
+            if nsc['ldp'].Container not in parent_types:
                 raise InvalidResourceError('Parent {} is not a container.'
                        .format(parent_uuid))
 
@@ -353,7 +351,7 @@ class Ldpr(metaclass=ABCMeta):
         if slug:
             cnd_uuid = pfx + slug
             cnd_rsrc = Resource(rdfly.ds, nsc['fcres'][cnd_uuid])
-            if rdfly.ask_rsrc_exists(cnd_rsrc):
+            if rdfly.ask_rsrc_exists(cnd_rsrc.identifier):
                 return cls(pfx + str(uuid4()))
             else:
                 return cls(cnd_uuid)
@@ -419,13 +417,12 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
-            #candidate_parent_urn = self._find_first_ancestor()
-            #cparent = self.rdfly.ds.resource(candidate_parent_urn)
             cparent_uri = self._find_parent_or_create_pairtree(self.uuid)
 
             # Reroute possible containment relationships between parent and new
             # resource.
             #self._splice_in(cparent)
+
             if cparent_uri:
                 self.rdfly.ds.add((cparent_uri, nsc['ldp'].contains,
                         self.rsrc.identifier))
@@ -463,38 +460,36 @@ class Ldpr(metaclass=ABCMeta):
         for cparent_uuid in rev_search_order:
             cparent_uri = nsc['fcres'][cparent_uuid]
 
-            # @FIXME A bit ugly. Maybe we should use a Pairtree class.
-            if self._rdf_store_cls(cparent_uri).ask_rsrc_exists():
+            if self.rdfly.ask_rsrc_exists(cparent_uri):
                 return cparent_uri
             else:
-                self._create_pairtree(cparent_uri, cur_child_uri)
+                self._create_path_segment(cparent_uri, cur_child_uri)
                 cur_child_uri = cparent_uri
 
         return None
 
 
-    def _create_pairtree(self, uri, child_uri):
+    def _create_path_segment(self, uri, child_uri):
         '''
-        Create a pairtree node with a containment statement.
+        Create a path segment with a non-LDP containment statement.
 
-        This is the default fcrepo4 behavior and probably not the best one, but
-        we are following it here.
+        This diverges from the default fcrepo4 behavior which creates pairtree
+        resources.
 
         If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
-        fcres:a/b exists, we have to create pairtree nodes in order to maintain
-        the containment chain.
-
-        This way, both fcres:a and fcres:a/b become thus containers of
-        fcres:a/b/c, which may be confusing.
+        fcres:a/b exists, we have to create two "hidden" containment statements
+        between a and a/b and between a/b and a/b/c in order to maintain the
+        `containment chain.
         '''
         g = Graph()
-        g.add((uri, RDF.type, nsc['fcrepo'].Pairtree))
         g.add((uri, RDF.type, nsc['ldp'].Container))
         g.add((uri, RDF.type, nsc['ldp'].BasicContainer))
         g.add((uri, RDF.type, nsc['ldp'].RDFSource))
-        g.add((uri, nsc['ldp'].contains, child_uri))
+        g.add((uri, nsc['fcrepo'].contains, child_uri))
+
+        # If the path segment is just below root
         if '/' not in str(uri):
-            g.add((nsc['fcsystem'].root, nsc['ldp'].contains, uri))
+            g.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
 
         self.rdfly.create_rsrc(g)
 
