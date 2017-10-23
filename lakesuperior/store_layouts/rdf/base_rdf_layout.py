@@ -64,7 +64,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
     _conf = config['application']['store']['ldp_rs']
-    _logger = logging.getLogger(__module__)
+    _logger = logging.getLogger(__name__)
 
     query_ep = _conf['webroot'] + _conf['query_ep']
     update_ep = _conf['webroot'] + _conf['update_ep']

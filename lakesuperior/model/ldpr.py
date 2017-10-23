@@ -126,7 +126,7 @@ class Ldpr(metaclass=ABCMeta):
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
 
-    _logger = logging.getLogger(__module__)
+    _logger = logging.getLogger(__name__)
 
     rdf_store_layout = config['application']['store']['ldp_rs']['layout']
 

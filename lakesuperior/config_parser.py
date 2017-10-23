@@ -2,11 +2,12 @@ import os
 
 import yaml
 
-configs = [
+configs = (
     'application',
+    'logging',
     'namespaces',
     'flask',
-]
+)
 
 # This will hold a dict of all configuration values.
 config = {}
