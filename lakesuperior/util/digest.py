@@ -4,7 +4,7 @@ from hashlib import sha1
 
 from rdflib.term import Literal, URIRef, Variable
 
-from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
 
 class Digest:

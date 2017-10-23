@@ -9,8 +9,8 @@ from rdflib.term import URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 
 from lakesuperior.config_parser import config
-from lakesuperior.core.namespaces import ns_collection as nsc
-from lakesuperior.core.namespaces import ns_mgr as nsm
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 
 
 def needs_rsrc(fn):

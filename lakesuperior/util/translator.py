@@ -1,7 +1,7 @@
 from flask import request
 from rdflib.term import URIRef
 
-from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 
 

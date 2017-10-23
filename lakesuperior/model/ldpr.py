@@ -11,7 +11,7 @@ from rdflib.namespace import RDF, XSD
 
 from lakesuperior.config_parser import config
 from lakesuperior.connectors.filesystem_connector import FilesystemConnector
-from lakesuperior.core.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.util.translator import Translator
 
 

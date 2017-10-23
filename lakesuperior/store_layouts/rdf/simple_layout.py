@@ -8,8 +8,8 @@ from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import Literal, URIRef, Variable
 
-from lakesuperior.core.namespaces import ns_collection as nsc
-from lakesuperior.core.namespaces import ns_mgr as nsm
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.digest import Digest
 

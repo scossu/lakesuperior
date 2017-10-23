@@ -1,3 +1,5 @@
+from logging.config import dictConfig
+
 from flask import Flask, render_template
 
 from lakesuperior.config_parser import config
@@ -8,6 +10,7 @@ from lakesuperior.endpoints.query import query
 fcrepo = Flask(__name__)
 fcrepo.config.update(config['flask'])
 
+dictConfig(config['logging'])
 
 ## Configure enpoint blueprints here. ##
 
