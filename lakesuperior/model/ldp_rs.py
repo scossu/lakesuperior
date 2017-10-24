@@ -1,6 +1,14 @@
+from copy import deepcopy
+
+from rdflib.namespace import RDF, XSD
+from rdflib.plugins.sparql.parser import parseUpdate
+from rdflib.term import URIRef, Literal, Variable
+
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
+        srv_mgd_predicates, srv_mgd_types
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist, \
-        ResourceNotExistsError
+        ResourceNotExistsError, ServerManagedTermError
 from lakesuperior.util.translator import Translator
 
 class LdpRs(Ldpr):
@@ -58,14 +66,49 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
         '''
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+        self._check_mgd_terms(data)
 
-        self.rdfly.patch_rsrc(self.urn, data, ts)
+        self.rdfly.patch_rsrc(data)
 
-        self.rdfly.ds.add((self.urn, nsc['fcrepo'].lastUpdated, ts))
-        self.rdfly.ds.add((self.urn, nsc['fcrepo'].lastUpdatedBy,
-                Literal('BypassAdmin')))
 
+    ## PROTECTED METHODS ##
+
+    def _check_mgd_terms(self, q):
+        '''Parse tokens in update query and verify that none of the terms being
+        modified is server-managed.
+
+        The only reasonable way to do this is to perform the query on a copy
+        and verify if any of the server managed terms is in the delta. If it
+        is, it means that some server-managed term is being modified and
+        an error should be raised.
+
+        NOTE: This only checks if a server-managed term is effectively being
+        modified. If a server-managed term is present in the query but does not
+        cause any change in the updated resource, no error is raised.
+        '''
+
+        before_test = self.rdfly.extract_imr().graph
+        after_test = deepcopy(before_test)
+
+        after_test.update(q)
+
+        delta = before_test ^ after_test
+        self._logger.info('Delta: {}'.format(delta.serialize(format='turtle')
+                .decode('utf8')))
+
+        for s,p,o in delta:
+            if s in srv_mgd_subjects:
+                raise ServerManagedTermError(
+                        'Subject {} is server managed and cannot be modified.'
+                        .format(s))
+            if p in srv_mgd_predicates:
+                raise ServerManagedTermError(
+                        'Predicate {} is server managed and cannot be modified.'
+                        .format(p))
+            if p == RDF.type and o in srv_mgd_types:
+                raise ServerManagedTermError(
+                        'RDF type {} is server managed and cannot be modified.'
+                        .format(o))
 
 
 class Ldpc(LdpRs):

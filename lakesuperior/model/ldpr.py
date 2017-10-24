@@ -47,6 +47,16 @@ class InvalidResourceError(RuntimeError):
 
 
 
+class ServerManagedTermError(RuntimeError):
+    '''
+    Raised in an attempt to change a triple containing a server-managed term.
+
+    This usually surfaces at the HTTP level as a 409 or other error.
+    '''
+    pass
+
+
+
 def transactional(fn):
     '''
     Decorator for methods of the Ldpr class to handle transactions in an RDF

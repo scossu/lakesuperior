@@ -3,7 +3,8 @@ import logging
 from flask import Blueprint, request
 
 from lakesuperior.model.ldpr import InvalidResourceError, \
-        ResourceNotExistsError
+        ResourceNotExistsError, ServerManagedTermError
+
 from lakesuperior.model.ldp_rs import Ldpc, LdpRs
 from lakesuperior.model.ldp_nr import LdpNr
 
@@ -126,6 +127,8 @@ def patch_resource(uuid):
         rsrc.patch(request.get_data().decode('utf-8'))
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    except ServerManagedTermError as e:
+        return str(e), 412
 
     return '', 204, headers
 
