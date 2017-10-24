@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.plugins.sparql.parser import parseUpdate
 from rdflib.term import URIRef, Literal, Variable
@@ -61,20 +62,80 @@ class LdpRs(Ldpr):
 
 
     @transactional
+    def post(self, data, format='text/turtle'):
+        '''
+        https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
+
+        Perform a POST action after a valid resource URI has been found.
+        '''
+        g = Graph()
+        g.parse(data=data, format=format, publicID=self.urn)
+        self._check_mgd_terms_rdf(g)
+
+        for t in self.base_types:
+            g.add((self.urn, RDF.type, t))
+
+        self.rdfly.create_rsrc(g)
+
+        self._set_containment_rel()
+
+
+    @transactional
+    def put(self, data, format='text/turtle'):
+        '''
+        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
+        '''
+        g = Graph()
+        g.parse(data=data, format=format, publicID=self.urn)
+        self._check_mgd_terms_rdf(g)
+
+        for t in self.base_types:
+            g.add((self.urn, RDF.type, t))
+
+        self.rdfly.create_or_replace_rsrc(g)
+
+        self._set_containment_rel()
+
+
+    @transactional
     @must_exist
     def patch(self, data):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
         '''
-        self._check_mgd_terms(data)
+        self._check_mgd_terms_sparql(data)
 
         self.rdfly.patch_rsrc(data)
 
 
     ## PROTECTED METHODS ##
 
-    def _check_mgd_terms(self, q):
-        '''Parse tokens in update query and verify that none of the terms being
+    def _check_mgd_terms_rdf(self, g):
+        '''
+        Check whether server-managed terms are in a RDF payload.
+        '''
+        offending_subjects = set(g.subjects()) & srv_mgd_subjects
+        if offending_subjects:
+            raise ServerManagedTermError('Some subjects in RDF payload '
+                    'are server managed and cannot be modified: {}'
+                    .format(' , '.join(offending_subjects)))
+
+        offending_predicates = set(g.predicates()) & srv_mgd_predicates
+        if offending_predicates:
+            raise ServerManagedTermError('Some predicates in RDF payload '
+                    'are server managed and cannot be modified: {}'
+                    .format(' , '.join(offending_predicates)))
+
+        offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
+        if offending_types:
+            raise ServerManagedTermError('Some RDF types in RDF payload '
+                    'are server managed and cannot be modified: {}'
+                    .format(' , '.join(offending_types)))
+
+
+    def _check_mgd_terms_sparql(self, q):
+        '''
+        Parse tokens in update query and verify that none of the terms being
         modified is server-managed.
 
         The only reasonable way to do this is to perform the query on a copy

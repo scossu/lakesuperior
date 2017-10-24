@@ -94,7 +94,10 @@ def post_resource(parent):
     except InvalidResourceError as e:
         return str(e), 409
 
-    rsrc.post(request.get_data().decode('utf-8'))
+    try:
+        rsrc.post(request.get_data().decode('utf-8'))
+    except ServerManagedTermError as e:
+        return str(e), 412
 
     headers.update({
         'Location' : rsrc.uri,
@@ -111,7 +114,10 @@ def put_resource(uuid):
     headers = std_headers
     rsrc = Ldpc(uuid)
 
-    rsrc.put(request.get_data().decode('utf-8'))
+    try:
+        rsrc.put(request.get_data().decode('utf-8'))
+    except ServerManagedTermError as e:
+        return str(e), 412
     return '', 204, headers
 
 

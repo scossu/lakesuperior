@@ -372,38 +372,6 @@ class Ldpr(metaclass=ABCMeta):
     ## LDP METHODS ##
 
     @transactional
-    def post(self, data, format='text/turtle'):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
-
-        Perform a POST action after a valid resource URI has been found.
-        '''
-        g = Graph()
-        g.parse(data=data, format=format, publicID=self.urn)
-        for t in self.base_types:
-            g.add((self.urn, RDF.type, t))
-
-        self.rdfly.create_rsrc(g)
-
-        self._set_containment_rel()
-
-
-    @transactional
-    def put(self, data, format='text/turtle'):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
-        '''
-        g = Graph()
-        g.parse(data=data, format=format, publicID=self.urn)
-        for t in self.base_types:
-            g.add((self.urn, RDF.type, t))
-
-        self.rdfly.create_or_replace_rsrc(g)
-
-        self._set_containment_rel()
-
-
-    @transactional
     @must_exist
     def delete(self):
         '''
