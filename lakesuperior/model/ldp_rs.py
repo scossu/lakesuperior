@@ -68,9 +68,10 @@ class LdpRs(Ldpr):
 
         Perform a POST action after a valid resource URI has been found.
         '''
-        g = Graph()
-        g.parse(data=data, format=format, publicID=self.urn)
+        g = Graph().parse(data=data, format=format, publicID=self.urn)
+
         self._check_mgd_terms_rdf(g)
+        self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
             g.add((self.urn, RDF.type, t))
@@ -85,9 +86,10 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        g = Graph()
-        g.parse(data=data, format=format, publicID=self.urn)
+        g = Graph().parse(data=data, format=format, publicID=self.urn)
+
         self._check_mgd_terms_rdf(g)
+        self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
             g.add((self.urn, RDF.type, t))
@@ -104,6 +106,7 @@ class LdpRs(Ldpr):
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
         '''
         self._check_mgd_terms_sparql(data)
+        self._ensure_single_subject_sparql_update(data)
 
         self.rdfly.patch_rsrc(data)
 
@@ -170,6 +173,37 @@ class LdpRs(Ldpr):
                 raise ServerManagedTermError(
                         'RDF type {} is server managed and cannot be modified.'
                         .format(o))
+
+
+    def _ensure_single_subject_sparql_update(self, qs):
+        '''
+        Ensure that a SPARQL update query only affects the current resource.
+
+        This prevents a query such as
+
+        DELETE {
+          ?s a ns:Class .
+        }
+        INSERT {
+          ?s a ns:OtherClass .
+        }
+        WHERE {
+          ?s a ns:Class .
+        }
+
+        from affecting multiple resources.
+        '''
+        # @TODO This requires some quirky algebra parsing and manipulation.
+        # Will need to investigate.
+        pass
+
+
+    def _ensure_single_subject_rdf(self, g):
+        '''
+        Ensure that a RDF payload for a POST or PUT has a single resource.
+        '''
+        if not all(s == self.uri for s in set(g.subjects())):
+            return SingleSubjectError(self.uri)
 
 
 class Ldpc(LdpRs):
