@@ -2,7 +2,7 @@ import logging
 
 from flask import Blueprint, request
 
-from lakesuperior.model.ldpr import InvalidResourceError, \
+from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
 
 from lakesuperior.model.ldp_rs import Ldpc, LdpRs

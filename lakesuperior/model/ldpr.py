@@ -12,49 +12,9 @@ from rdflib.namespace import RDF, XSD
 from lakesuperior.config_parser import config
 from lakesuperior.connectors.filesystem_connector import FilesystemConnector
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.exceptions import InvalidResourceError, \
+        ResourceNotExistsError, ServerManagedTermError
 from lakesuperior.util.translator import Translator
-
-
-class ResourceExistsError(RuntimeError):
-    '''
-    Raised in an attempt to create a resource a URN that already exists and is
-    not supposed to.
-
-    This usually surfaces at the HTTP level as a 409.
-    '''
-    pass
-
-
-
-class ResourceNotExistsError(RuntimeError):
-    '''
-    Raised in an attempt to create a resource a URN that does not exist and is
-    supposed to.
-
-    This usually surfaces at the HTTP level as a 404.
-    '''
-    pass
-
-
-
-class InvalidResourceError(RuntimeError):
-    '''
-    Raised when an invalid resource is found.
-
-    This usually surfaces at the HTTP level as a 409 or other error.
-    '''
-    pass
-
-
-
-class ServerManagedTermError(RuntimeError):
-    '''
-    Raised in an attempt to change a triple containing a server-managed term.
-
-    This usually surfaces at the HTTP level as a 409 or other error.
-    '''
-    pass
-
 
 
 def transactional(fn):
@@ -83,8 +43,7 @@ def must_exist(fn):
     '''
     def wrapper(self, *args, **kwargs):
         if not self.is_stored:
-            raise ResourceNotExistsError(
-                'Resource #{} not found'.format(self.uuid))
+            raise ResourceNotExistsError(self.uuid)
         return fn(self, *args, **kwargs)
 
     return wrapper
@@ -97,8 +56,7 @@ def must_not_exist(fn):
     '''
     def wrapper(self, *args, **kwargs):
         if self.is_stored:
-            raise ResourceExistsError(
-                'Resource #{} already exists.'.format(self.uuid))
+            raise ResourceExistsError(self.uuid)
         return fn(self, *args, **kwargs)
 
     return wrapper
@@ -318,8 +276,7 @@ class Ldpr(metaclass=ABCMeta):
             if t == cls.LDP_RS_TYPE:
                 return LdpRs(uuid)
 
-        raise ResourceNotExistsError('Resource #{} does not exist or does not '
-                'have a valid LDP type.'.format(uuid))
+        raise ResourceNotExistsError(uuid)
 
 
     @classmethod
@@ -342,8 +299,7 @@ class Ldpr(metaclass=ABCMeta):
         if parent_uuid:
             parent_exists = rdfly.ask_rsrc_exists(parent_imr.identifier)
             if not parent_exists:
-                raise ResourceNotExistsError('Parent not found: {}.'
-                        .format(parent_uuid))
+                raise ResourceNotExistsError(parent_uuid)
 
             parent_types = { t.identifier for t in \
                     parent_imr.objects(RDF.type) }

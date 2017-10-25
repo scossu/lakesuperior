@@ -8,8 +8,9 @@ from rdflib.term import URIRef, Literal, Variable
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.model.ldpr import Ldpr, transactional, must_exist, \
-        ResourceNotExistsError, ServerManagedTermError
+from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
+from lakesuperior.exceptions import ResourceNotExistsError, \
+        ServerManagedTermError, SingleSubjectError
 from lakesuperior.util.translator import Translator
 
 class LdpRs(Ldpr):
@@ -56,7 +57,7 @@ class LdpRs(Ldpr):
         '''
         im_rsrc = self.rdfly.out_rsrc(inbound)
         if not len(im_rsrc.graph):
-            raise ResourceNotExistsError()
+            raise ResourceNotExistsError(im_rsrc.uuid)
 
         return Translator.globalize_rsrc(im_rsrc)
 
@@ -119,21 +120,15 @@ class LdpRs(Ldpr):
         '''
         offending_subjects = set(g.subjects()) & srv_mgd_subjects
         if offending_subjects:
-            raise ServerManagedTermError('Some subjects in RDF payload '
-                    'are server managed and cannot be modified: {}'
-                    .format(' , '.join(offending_subjects)))
+            raise ServerManagedTermError(offending_subjects, 's')
 
         offending_predicates = set(g.predicates()) & srv_mgd_predicates
         if offending_predicates:
-            raise ServerManagedTermError('Some predicates in RDF payload '
-                    'are server managed and cannot be modified: {}'
-                    .format(' , '.join(offending_predicates)))
+            raise ServerManagedTermError(offending_predicates, 'p')
 
         offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
         if offending_types:
-            raise ServerManagedTermError('Some RDF types in RDF payload '
-                    'are server managed and cannot be modified: {}'
-                    .format(' , '.join(offending_types)))
+            raise ServerManagedTermError(offending_types, 't')
 
 
     def _check_mgd_terms_sparql(self, q):
@@ -162,17 +157,11 @@ class LdpRs(Ldpr):
 
         for s,p,o in delta:
             if s in srv_mgd_subjects:
-                raise ServerManagedTermError(
-                        'Subject {} is server managed and cannot be modified.'
-                        .format(s))
+                raise ServerManagedTermError(s, 's')
             if p in srv_mgd_predicates:
-                raise ServerManagedTermError(
-                        'Predicate {} is server managed and cannot be modified.'
-                        .format(p))
+                raise ServerManagedTermError(p, 'p')
             if p == RDF.type and o in srv_mgd_types:
-                raise ServerManagedTermError(
-                        'RDF type {} is server managed and cannot be modified.'
-                        .format(o))
+                raise ServerManagedTermError(o, 't')
 
 
     def _ensure_single_subject_sparql_update(self, qs):
