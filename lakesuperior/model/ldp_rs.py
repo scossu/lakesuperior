@@ -71,7 +71,7 @@ class LdpRs(Ldpr):
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
-        self._check_mgd_terms_rdf(g)
+        self._check_mgd_terms(g)
         self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
@@ -89,7 +89,7 @@ class LdpRs(Ldpr):
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
-        self._check_mgd_terms_rdf(g)
+        self._check_mgd_terms(g)
         self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
@@ -106,15 +106,14 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
         '''
-        self._check_mgd_terms_sparql(data)
-        self._ensure_single_subject_sparql_update(data)
+        remove, add = self._sparql_delta(data)
 
-        self.rdfly.patch_rsrc(data)
+        self.rdfly.modify_rsrc(remove, add)
 
 
     ## PROTECTED METHODS ##
 
-    def _check_mgd_terms_rdf(self, g):
+    def _check_mgd_terms(self, g):
         '''
         Check whether server-managed terms are in a RDF payload.
         '''
@@ -131,68 +130,53 @@ class LdpRs(Ldpr):
             raise ServerManagedTermError(offending_types, 't')
 
 
-    def _check_mgd_terms_sparql(self, q):
+    def _sparql_delta(self, q):
         '''
-        Parse tokens in update query and verify that none of the terms being
-        modified is server-managed.
+        Calculate the delta obtained by a SPARQL Update operation.
 
-        The only reasonable way to do this is to perform the query on a copy
-        and verify if any of the server managed terms is in the delta. If it
-        is, it means that some server-managed term is being modified and
-        an error should be raised.
+        This does a couple of extra things:
+
+        1. It ensures that no resources outside of the subject of the request
+        are modified (e.g. by variable subjects)
+        2. It verifies that none of the terms being modified is server-managed.
+
+        This method extracts an in-memory copy of the resource and performs the
+        query on that once it has checked if any of the server managed terms is
+        in the delta. If it is, it raises an exception.
 
         NOTE: This only checks if a server-managed term is effectively being
         modified. If a server-managed term is present in the query but does not
         cause any change in the updated resource, no error is raised.
+
+        @return tuple Remove and add triples. These can be used with
+        `BaseStoreLayout.update_resource`.
         '''
 
-        before_test = self.rdfly.extract_imr().graph
-        after_test = deepcopy(before_test)
+        pre_g = self.rdfly.extract_imr().graph
 
-        after_test.update(q)
+        post_g = deepcopy(pre_g)
+        post_g.update(q)
 
-        delta = before_test ^ after_test
-        self._logger.info('Delta: {}'.format(delta.serialize(format='turtle')
-                .decode('utf8')))
+        remove = pre_g - post_g
+        add = post_g - pre_g
 
-        for s,p,o in delta:
-            if s in srv_mgd_subjects:
-                raise ServerManagedTermError(s, 's')
-            if p in srv_mgd_predicates:
-                raise ServerManagedTermError(p, 'p')
-            if p == RDF.type and o in srv_mgd_types:
-                raise ServerManagedTermError(o, 't')
+        self._logger.info('Removing: {}'.format(
+            remove.serialize(format='turtle').decode('utf8')))
+        self._logger.info('Adding: {}'.format(
+            add.serialize(format='turtle').decode('utf8')))
 
+        self._check_mgd_terms(remove + add)
 
-    def _ensure_single_subject_sparql_update(self, qs):
-        '''
-        Ensure that a SPARQL update query only affects the current resource.
-
-        This prevents a query such as
-
-        DELETE {
-          ?s a ns:Class .
-        }
-        INSERT {
-          ?s a ns:OtherClass .
-        }
-        WHERE {
-          ?s a ns:Class .
-        }
-
-        from affecting multiple resources.
-        '''
-        # @TODO This requires some quirky algebra parsing and manipulation.
-        # Will need to investigate.
-        pass
+        return remove, add
 
 
     def _ensure_single_subject_rdf(self, g):
         '''
         Ensure that a RDF payload for a POST or PUT has a single resource.
         '''
-        if not all(s == self.uri for s in set(g.subjects())):
-            return SingleSubjectError(self.uri)
+        for s in set(g.subjects()):
+            if not s == self.uri:
+                return SingleSubjectError(s, self.uri)
 
 
 class Ldpc(LdpRs):

@@ -1,0 +1,11 @@
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+
+DELETE {
+  <> dc:title ?t .
+}
+INSERT {
+}
+WHERE {
+  <> dc:title ?t .
+}
+

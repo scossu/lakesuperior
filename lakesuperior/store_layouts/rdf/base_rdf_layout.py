@@ -18,7 +18,7 @@ def needs_rsrc(fn):
     Decorator for methods that cannot be called without `self.rsrc` set.
     '''
     def wrapper(self, *args, **kwargs):
-        if not isset(self, '_rsrc') or self._rsrc is None:
+        if not hasattr(self, 'rsrc') or self.rsrc is None:
             raise TypeError(
                 'This method must be called by an instance with `rsrc` set.')
 
@@ -250,6 +250,18 @@ class BaseRdfLayout(metaclass=ABCMeta):
     def patch_rsrc(self, urn, data, commit=False):
         '''
         Perform a SPARQL UPDATE on a resource.
+        '''
+        pass
+
+
+    @abstractmethod
+    @needs_rsrc
+    def modify_rsrc(self, remove, add):
+        '''
+        Adds and/or removes triples from a graph.
+
+        @param remove (rdflib.Graph) Triples to be removed.
+        @param add (rdflib.Graph) Triples to be added.
         '''
         pass
 

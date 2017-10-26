@@ -10,7 +10,8 @@ from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout, \
+        needs_rsrc
 from lakesuperior.util.digest import Digest
 from lakesuperior.util.translator import Translator
 
@@ -80,6 +81,7 @@ class SimpleLayout(BaseRdfLayout):
         return Resource(g, uri)
 
 
+    @needs_rsrc
     def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
         '''
         See base_rdf_layout.out_rsrc.
@@ -105,6 +107,7 @@ class SimpleLayout(BaseRdfLayout):
         return (uri, Variable('p'), Variable('o')) in self.ds
 
 
+    @needs_rsrc
     def create_or_replace_rsrc(self, g):
         '''
         See base_rdf_layout.create_or_replace_rsrc.
@@ -136,6 +139,7 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.add((s, p, o))
 
 
+    @needs_rsrc
     def create_rsrc(self, g):
         '''
         See base_rdf_layout.create_rsrc.
@@ -154,9 +158,12 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.add((s, p, o))
 
 
+    @needs_rsrc
     def patch_rsrc(self, data):
         '''
         Perform a SPARQL UPDATE on a resource.
+
+        @TODO deprecate.
         '''
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
@@ -168,6 +175,18 @@ class SimpleLayout(BaseRdfLayout):
         self.rsrc.set(nsc['fcrepo'].lastUpdatedBy, Literal('BypassAdmin'))
 
         self.ds.update(q)
+
+
+    @needs_rsrc
+    def modify_rsrc(self, remove, add):
+        '''
+        See base_rdf_layout.update_rsrc.
+        '''
+        for t in remove.predicate_objects():
+            self.rsrc.remove(t[0], t[1])
+
+        for t in add.predicate_objects():
+            self.rsrc.add(t[0], t[1])
 
 
     def delete_rsrc(self, inbound=False):

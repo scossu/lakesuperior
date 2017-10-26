@@ -1,0 +1,16 @@
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+
+DELETE {
+  ?s dc:title "Hello" .
+}
+INSERT {
+  ?s dc:title "Ciao" .
+}
+WHERE {
+  {
+    ?s dc:title "Hello" .
+  } UNION {
+    ?s dc:title "Hola" .
+  }
+}
+

@@ -1,0 +1,16 @@
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+
+DELETE {
+  <> dc:title "Hello" .
+}
+INSERT {
+  <> dc:title "Ciao" .
+  <> dc:title "Hola" .
+}
+WHERE {
+  <> dc:title "Hello" .
+  <> dc:description "Some text" .
+}
+
+
+
