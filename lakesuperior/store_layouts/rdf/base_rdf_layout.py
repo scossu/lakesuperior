@@ -63,6 +63,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # N.B. This is Fuseki-specific.
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
+    RES_CREATED = '_created_'
+    RES_UPDATED = '_updated_'
+
     _conf = config['application']['store']['ldp_rs']
     _logger = logging.getLogger(__name__)
 

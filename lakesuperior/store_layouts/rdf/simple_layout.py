@@ -3,13 +3,15 @@ from copy import deepcopy
 import arrow
 
 from rdflib import Graph
-from rdflib.namespace import XSD
+from rdflib.namespace import RDF, XSD
 from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
+        srv_mgd_predicates, srv_mgd_types
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout, \
         needs_rsrc
 from lakesuperior.util.digest import Digest
@@ -44,7 +46,7 @@ class SimpleLayout(BaseRdfLayout):
             etag = digest.identifier.split(':')[-1]
             headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = self.rsrc.value(nsc['fcrepo'].lastUpdated)
+        last_updated_term = self.rsrc.value(nsc['fcrepo'].lastModified)
         if last_updated_term:
             headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -52,23 +54,31 @@ class SimpleLayout(BaseRdfLayout):
         return headers
 
 
-    def extract_imr(self, uri=None, graph=None, inbound=False):
+    def extract_imr(self, uri=None, graph=None, minimal=False,
+            incl_inbound=False, incl_children=True, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
         uri = uri or self.base_urn
 
         inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
-                if inbound else ''
+                if incl_inbound else ''
+        embed_children_qry = '''
+        OPTIONAL {{
+          {0} ldp:contains ?c .
+          ?c ?cp ?co .
+        }}
+        '''.format(uri.n3()) if incl_children else ''
 
         q = '''
         CONSTRUCT {{
             {0} ?p ?o .{1}
+            ?c ?cp ?co .
         }} WHERE {{
-            {0} ?p ?o .{1}
-            #FILTER (?p != premis:hasMessageDigest) .
+            {0} ?p ?o .{1}{2}
+            FILTER (?p != premis:hasMessageDigest) .
         }}
-        '''.format(uri.n3(), inbound_qry)
+        '''.format(uri.n3(), inbound_qry, embed_children_qry)
 
         try:
             qres = self.query(q)
@@ -77,16 +87,25 @@ class SimpleLayout(BaseRdfLayout):
             g = Graph()
         else:
             g = qres.graph
+            rsrc = Resource(g, uri)
+            if not incl_srv_mgd:
+                self._logger.info('Removing server managed triples.')
+                for p in srv_mgd_predicates:
+                    self._logger.debug('Removing predicate: {}'.format(p))
+                    rsrc.remove(p)
+                for t in srv_mgd_types:
+                    self._logger.debug('Removing type: {}'.format(t))
+                    rsrc.remove(RDF.type, t)
 
-        return Resource(g, uri)
+            return rsrc
 
 
     @needs_rsrc
-    def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
+    def out_rsrc(self, **kwargs):
         '''
         See base_rdf_layout.out_rsrc.
         '''
-        im_rsrc = self.extract_imr(inbound=inbound)
+        im_rsrc = self.extract_imr(**kwargs)
 
         im_rsrc.remove(nsc['premis'].hasMessageDigest)
 
@@ -125,18 +144,24 @@ class SimpleLayout(BaseRdfLayout):
             created_by = self.rsrc.value(nsc['fcrepo'].createdBy)
 
             self.delete_rsrc()
+            res = self.RES_UPDATED
         else:
             created = ts
             created_by = Literal('BypassAdmin')
+            res = self.RES_CREATED
+
+        self._logger.info('Created timestamp: {}'.format(ts))
 
         self.rsrc.set(nsc['fcrepo'].created, created)
         self.rsrc.set(nsc['fcrepo'].createdBy, created_by)
 
-        self.rsrc.set(nsc['fcrepo'].lastUpdated, ts)
-        self.rsrc.set(nsc['fcrepo'].lastUpdatedBy, Literal('BypassAdmin'))
+        self.rsrc.set(nsc['fcrepo'].lastModified, ts)
+        self.rsrc.set(nsc['fcrepo'].lastModifiedBy, Literal('BypassAdmin'))
 
         for s, p, o in g:
             self.ds.add((s, p, o))
+
+        return res
 
 
     @needs_rsrc
@@ -171,8 +196,8 @@ class SimpleLayout(BaseRdfLayout):
         q = Translator.localize_string(data).replace(
                 '<>', self.rsrc.identifier.n3())
 
-        self.rsrc.set(nsc['fcrepo'].lastUpdated, ts)
-        self.rsrc.set(nsc['fcrepo'].lastUpdatedBy, Literal('BypassAdmin'))
+        self.rsrc.set(nsc['fcrepo'].lastModified, ts)
+        self.rsrc.set(nsc['fcrepo'].lastModifiedBy, Literal('BypassAdmin'))
 
         self.ds.update(q)
 

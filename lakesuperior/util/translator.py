@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from flask import request
 from rdflib.term import URIRef
 
@@ -118,3 +120,43 @@ class Translator:
         global_uri = Translator.globalize_term(urn)
 
         return global_g.resource(global_uri)
+
+
+    @staticmethod
+    def parse_rfc7240(h_str):
+        '''
+        Parse `Prefer` header as per https://tools.ietf.org/html/rfc7240
+
+        The `cgi.parse_header` standard method does not work with all possible
+        use cases for this header.
+
+        @param h_str (string) The header(s) as a comma-separated list of Prefer
+        statements, excluding the `Prefer: ` token.
+        '''
+        parsed_hdr = defaultdict(dict)
+
+        # Split up headers by comma
+        hdr_list = [ x.strip() for x in h_str.split(',') ]
+        for hdr in hdr_list:
+            parsed_pref = defaultdict(dict)
+            # Split up tokens by semicolon
+            token_list = [ token.strip() for token in hdr.split(';') ]
+            prefer_token = token_list.pop(0).split('=')
+            prefer_name = prefer_token[0]
+            # If preference has a '=', it has a value, else none.
+            if len(prefer_token)>1:
+                parsed_pref['value'] = prefer_token[1].strip('"')
+
+            for param_token in token_list:
+                # If the token list had a ';' the preference has a parameter.
+                print('Param token: {}'.format(param_token))
+                param_parts = [ prm.strip().strip('"') \
+                        for prm in param_token.split('=') ]
+                param_value = param_parts[1] if len(param_parts) > 1 else None
+                parsed_pref['parameters'][param_parts[0]] = param_value
+
+            parsed_hdr[prefer_name] = parsed_pref
+
+        return parsed_hdr
+
+

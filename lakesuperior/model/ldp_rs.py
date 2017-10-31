@@ -18,6 +18,11 @@ class LdpRs(Ldpr):
 
     Definition: https://www.w3.org/TR/ldp/#ldprs
     '''
+
+    RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
+    RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
+    RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
+
     base_types = {
         nsc['ldp'].RDFSource
     }
@@ -51,11 +56,35 @@ class LdpRs(Ldpr):
         return headers
 
 
-    def get(self, inbound=False, children=True, srv_mgd=True):
+    def get(self, pref_return):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        im_rsrc = self.rdfly.out_rsrc(inbound)
+        kwargs = {}
+
+        minimal = embed_children = incl_inbound = False
+        kwargs['incl_srv_mgd'] = True
+
+        if 'value' in pref_return and pref_return['value'] == 'minimal':
+            kwargs['minimal'] = True
+        else:
+            include = pref_return['parameters']['include'].split(' ') \
+                    if 'include' in pref_return['parameters'] else []
+            omit = pref_return['parameters']['omit'].split(' ') \
+                    if 'omit' in pref_return['parameters'] else []
+
+            self._logger.debug('Include: {}'.format(include))
+            self._logger.debug('Omit: {}'.format(omit))
+
+            if str(self.RETURN_INBOUND_REF_URI) in include:
+                    kwargs['incl_inbound'] = True
+            if str(self.RETURN_CHILD_RES_URI) in omit:
+                    kwargs['embed_chldren'] = False
+            if str(self.RETURN_SRV_MGD_RES_URI) in omit:
+                    kwargs['incl_srv_mgd'] = False
+
+        im_rsrc = self.rdfly.out_rsrc(**kwargs)
+
         if not len(im_rsrc.graph):
             raise ResourceNotExistsError(im_rsrc.uuid)
 
@@ -63,7 +92,7 @@ class LdpRs(Ldpr):
 
 
     @transactional
-    def post(self, data, format='text/turtle'):
+    def post(self, data, format='text/turtle', handling=None):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
 
@@ -71,7 +100,7 @@ class LdpRs(Ldpr):
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
-        self._check_mgd_terms(g)
+        g = self._check_mgd_terms(g, handling)
         self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
@@ -83,21 +112,23 @@ class LdpRs(Ldpr):
 
 
     @transactional
-    def put(self, data, format='text/turtle'):
+    def put(self, data, format='text/turtle', handling=None):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
-        self._check_mgd_terms(g)
+        g = self._check_mgd_terms(g, handling)
         self._ensure_single_subject_rdf(g)
 
         for t in self.base_types:
             g.add((self.urn, RDF.type, t))
 
-        self.rdfly.create_or_replace_rsrc(g)
+        res = self.rdfly.create_or_replace_rsrc(g)
 
         self._set_containment_rel()
+
+        return res
 
 
     @transactional
@@ -113,24 +144,38 @@ class LdpRs(Ldpr):
 
     ## PROTECTED METHODS ##
 
-    def _check_mgd_terms(self, g):
+    def _check_mgd_terms(self, g, handling='strict'):
         '''
         Check whether server-managed terms are in a RDF payload.
         '''
         offending_subjects = set(g.subjects()) & srv_mgd_subjects
         if offending_subjects:
-            raise ServerManagedTermError(offending_subjects, 's')
+            if handling=='strict':
+                raise ServerManagedTermError(offending_subjects, 's')
+            else:
+                for s in offending_subjects:
+                    g.remove((s, Variable('p'), Variable('o')))
 
         offending_predicates = set(g.predicates()) & srv_mgd_predicates
         if offending_predicates:
-            raise ServerManagedTermError(offending_predicates, 'p')
+            if handling=='strict':
+                raise ServerManagedTermError(offending_predicates, 'p')
+            else:
+                for p in offending_predicates:
+                    g.remove((Variable('s'), p, Variable('o')))
 
         offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
         if offending_types:
-            raise ServerManagedTermError(offending_types, 't')
+            if handling=='strict':
+                raise ServerManagedTermError(offending_types, 't')
+            else:
+                for t in offending_types:
+                    g.remove((Variable('s'), RDF.type, t))
+
+        return g
 
 
-    def _sparql_delta(self, q):
+    def _sparql_delta(self, q, handling=None):
         '''
         Calculate the delta obtained by a SPARQL Update operation.
 
@@ -165,7 +210,8 @@ class LdpRs(Ldpr):
         self._logger.info('Adding: {}'.format(
             add.serialize(format='turtle').decode('utf8')))
 
-        self._check_mgd_terms(remove + add)
+        remove = self._check_mgd_terms(remove, handling)
+        add = self._check_mgd_terms(add, handling)
 
         return remove, add
 

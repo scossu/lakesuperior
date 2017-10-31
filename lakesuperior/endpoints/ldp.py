@@ -1,12 +1,16 @@
 import logging
 
+from collections import defaultdict
+
 from flask import Blueprint, request
 
 from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceNotExistsError, ServerManagedTermError
-
+        ResourceExistsError, ResourceNotExistsError, \
+        InvalidResourceError, ServerManagedTermError
 from lakesuperior.model.ldp_rs import Ldpc, LdpRs
 from lakesuperior.model.ldp_nr import LdpNr
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
+from lakesuperior.util.translator import Translator
 
 
 logger = logging.getLogger(__name__)
@@ -52,7 +56,6 @@ std_headers = {
     #'Allow' : ','.join(allow),
 }
 
-
 ## REST SERVICES ##
 
 @ldp.route('/<path:uuid>', methods=['GET'])
@@ -62,16 +65,24 @@ def get_resource(uuid):
     '''
     Retrieve RDF or binary content.
     '''
-    headers = std_headers
+    out_headers = std_headers
+
+    pref_return = defaultdict(dict)
+    if 'prefer' in request.headers:
+        prefer = Translator.parse_rfc7240(request.headers['prefer'])
+        logger.debug('Parsed Prefer header: {}'.format(prefer))
+        if 'return' in prefer:
+            pref_return = prefer['return']
+
     # @TODO Add conditions for LDP-NR
     rsrc = Ldpc(uuid)
     try:
-        out = rsrc.get()
+        out = rsrc.get(pref_return=pref_return)
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
     else:
-        headers = rsrc.head()
-        return (out.graph.serialize(format='turtle'), headers)
+        out_headers = rsrc.head()
+        return (out.graph.serialize(format='turtle'), out_headers)
 
 
 @ldp.route('/<path:parent>', methods=['POST'])
@@ -111,14 +122,32 @@ def put_resource(uuid):
     '''
     Add a new resource at a specified URI.
     '''
-    headers = std_headers
+    logger.info('Request headers: {}'.format(request.headers))
+    rsp_headers = std_headers
     rsrc = Ldpc(uuid)
 
+    # Parse headers.
+    pref_handling = None
+    if 'prefer' in request.headers:
+        prefer = Translator.parse_rfc7240(request.headers['prefer'])
+        logger.debug('Parsed Prefer header: {}'.format(prefer))
+        if 'handling' in prefer:
+            pref_handling = prefer['handling']['value']
+
     try:
-        rsrc.put(request.get_data().decode('utf-8'))
+        ret = rsrc.put(
+            request.get_data().decode('utf-8'),
+            handling=pref_handling
+        )
+    except InvalidResourceError as e:
+        return str(e), 409
+    except ResourceExistsError as e:
+        return str(e), 409
     except ServerManagedTermError as e:
         return str(e), 412
-    return '', 204, headers
+    else:
+        res_code = 201 if ret == BaseRdfLayout.RES_CREATED else 204
+        return '', res_code, rsp_headers
 
 
 @ldp.route('/<path:uuid>', methods=['PATCH'])
@@ -153,4 +182,5 @@ def delete_resource(uuid):
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
 
     return '', 204, headers
+
 

@@ -275,8 +275,8 @@ class Ldpr(metaclass=ABCMeta):
                 return LdpNr(uuid)
             if t == cls.LDP_RS_TYPE:
                 return LdpRs(uuid)
-
-        raise ResourceNotExistsError(uuid)
+            else:
+                raise ResourceNotExistsError(uuid)
 
 
     @classmethod
