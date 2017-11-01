@@ -42,7 +42,7 @@ class Digest:
 
 
     @staticmethod
-    def non_rdf_checksum(data):
+    def non_rdf_cksum(data):
         '''
         Generate a checksum of non-RDF content.
 

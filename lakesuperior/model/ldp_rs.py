@@ -32,22 +32,6 @@ class LdpRs(Ldpr):
         nsc['ldp'].RDFSource
     }
 
-    std_headers = {
-        'Accept-Post' : {
-            'text/turtle',
-            'text/rdf+n3',
-            'text/n3',
-            'application/rdf+xml',
-            'application/n-triples',
-            'application/ld+json',
-            'multipart/form-data',
-            'application/sparql-update',
-        },
-        'Accept-Patch' : {
-            'application/sparql-update',
-        },
-    }
-
 
     def get(self, pref_return):
         '''
@@ -91,15 +75,8 @@ class LdpRs(Ldpr):
 
         Perform a POST action after a valid resource URI has been found.
         '''
-        g = Graph().parse(data=data, format=format, publicID=self.urn)
-
-        imr = Resource(self._check_mgd_terms(g, handling), self.urn)
-        imr = self._add_srv_mgd_triples(imr, create=True)
-        self._ensure_single_subject_rdf(imr.graph)
-
-        self.rdfly.create_rsrc(imr)
-
-        self._set_containment_rel()
+        return self._create_or_update_rsrc(data, format, handling,
+                create_only=True)
 
 
     @transactional
@@ -107,17 +84,7 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        g = Graph().parse(data=data, format=format, publicID=self.urn)
-
-        imr = Resource(self._check_mgd_terms(g, handling), self.urn)
-        imr = self._add_srv_mgd_triples(imr, create=True)
-        self._ensure_single_subject_rdf(imr.graph)
-
-        res = self.rdfly.create_or_replace_rsrc(imr)
-
-        self._set_containment_rel()
-
-        return res
+        return self._create_or_update_rsrc(data, format, handling)
 
 
     @transactional
@@ -132,6 +99,37 @@ class LdpRs(Ldpr):
 
 
     ## PROTECTED METHODS ##
+
+    def _create_or_update_rsrc(self, data, format, handling,
+            create_only=False):
+        '''
+        Create or update a resource. PUT and POST methods, which are almost
+        identical, are wrappers for this method.
+
+        @param data (string) RDF data to parse for insertion.
+        @param format(string) MIME type of RDF data.
+        @param handling (sting) One of `strict` or `lenient`. This determines
+        how to handle provided server-managed triples. If `strict` is selected,
+        any server-managed triple  included in the input RDF will trigger an
+        exception. If `lenient`, server-managed triples are ignored.
+        @param create_only (boolean) Whether the operation is a create-only one (i.e.
+        POST) or a create-or-update one (i.e. PUT).
+        '''
+        g = Graph().parse(data=data, format=format, publicID=self.urn)
+
+        imr = Resource(self._check_mgd_terms(g, handling), self.urn)
+        imr = self._add_srv_mgd_triples(imr, create=True)
+        self._ensure_single_subject_rdf(imr.graph)
+
+        if create_only:
+            res = self.rdfly.create_rsrc(imr)
+        else:
+            res = self.rdfly.create_or_replace_rsrc(imr)
+
+        self._set_containment_rel()
+
+        return res
+
 
     def _check_mgd_terms(self, g, handling='strict'):
         '''
@@ -164,32 +162,32 @@ class LdpRs(Ldpr):
         return g
 
 
-    def _add_srv_mgd_triples(self, imr, create=False):
+    def _add_srv_mgd_triples(self, rsrc, create=False):
         '''
-        Add server-managed triples to a graph.
+        Add server-managed triples to a resource.
 
         @param create (boolean) Whether the resource is being created.
         '''
         # Message digest.
-        cksum = Digest.rdf_cksum(imr.graph)
-        imr.set(nsc['premis'].hasMessageDigest,
+        cksum = Digest.rdf_cksum(rsrc.graph)
+        rsrc.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
         if create:
-            imr.set(nsc['fcrepo'].created, ts)
-            imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+            rsrc.set(nsc['fcrepo'].created, ts)
+            rsrc.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
 
-        imr.set(nsc['fcrepo'].lastModified, ts)
-        imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+        rsrc.set(nsc['fcrepo'].lastModified, ts)
+        rsrc.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
         # Base LDP types.
         for t in self.base_types:
-            imr.add(RDF.type, t)
+            rsrc.add(RDF.type, t)
 
-        return imr
+        return rsrc
 
 
     def _sparql_delta(self, q, handling=None):

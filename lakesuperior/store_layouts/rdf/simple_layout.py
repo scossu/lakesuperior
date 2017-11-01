@@ -136,7 +136,7 @@ class SimpleLayout(BaseRdfLayout):
     def delete_rsrc(self, inbound=True):
         '''
         Delete a resource. If `inbound` is specified, delete all inbound
-        relationships as well.
+        relationships as well (this is the default).
         '''
         print('Removing resource {}.'.format(self.rsrc.identifier))
 
@@ -146,27 +146,3 @@ class SimpleLayout(BaseRdfLayout):
                     (Variable('s'), Variable('p'), self.rsrc.identifier))
 
 
-    ## PROTECTED METHODS ##
-
-    def _unique_value(self, p):
-        '''
-        Use this to retrieve a single value knowing that there SHOULD be only
-        one (e.g. `skos:prefLabel`), If more than one is found, raise an
-        exception.
-
-        @param rdflib.Resource rsrc The resource to extract value from.
-        @param rdflib.term.URIRef p The predicate to serach for.
-
-        @throw ValueError if more than one value is found.
-        '''
-        values = self.rsrc[p]
-        value = next(values)
-        try:
-            next(values)
-        except StopIteration:
-            return value
-
-        # If the second next() did not raise a StopIteration, something is
-        # wrong.
-        raise ValueError('Predicate {} should be single valued. Found: {}.'\
-                .format(set(values)))
