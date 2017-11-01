@@ -25,16 +25,16 @@ ldp = Blueprint('ldp', __name__)
 accept_patch = (
     'application/sparql-update',
 )
-accept_post = (
+accept_post_rdf = (
     'application/ld+json',
     'application/n-triples',
     'application/rdf+xml',
-    'application/x-turtle',
-    'application/xhtml+xml',
-    'application/xml',
-    'text/html',
+    #'application/x-turtle',
+    #'application/xhtml+xml',
+    #'application/xml',
+    #'text/html',
     'text/n3',
-    'text/plain',
+    #'text/plain',
     'text/rdf+n3',
     'text/turtle',
 )
@@ -52,7 +52,7 @@ accept_post = (
 
 std_headers = {
     'Accept-Patch' : ','.join(accept_patch),
-    'Accept-Post' : ','.join(accept_post),
+    'Accept-Post' : ','.join(accept_post_rdf),
     #'Allow' : ','.join(allow),
 }
 
@@ -92,14 +92,26 @@ def post_resource(parent):
     '''
     Add a new resource in a new URI.
     '''
-    headers = std_headers
+    out_headers = std_headers
     try:
         slug = request.headers['Slug']
     except KeyError:
         slug = None
 
+    if 'Content-Type' in request.headers:
+        logger.debug('Content type: {}'.format(request.headers['Content-Type']))
+        if request.headers['Content-Type'] in accept_post_rdf:
+            cls = Ldpc
+        else:
+            cls = LdpNr
+    else:
+        # @TODO guess content type from magic number
+        cls = Ldpc
+
+    logger.info('POSTing resource of type: {}'.format(cls.__name__))
+
     try:
-       rsrc = Ldpc.inst_for_post(parent, slug)
+       rsrc = cls.inst_for_post(parent, slug)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -110,11 +122,11 @@ def post_resource(parent):
     except ServerManagedTermError as e:
         return str(e), 412
 
-    headers.update({
+    out_headers.update({
         'Location' : rsrc.uri,
     })
 
-    return rsrc.uri, headers, 201
+    return rsrc.uri, out_headers, 201
 
 
 @ldp.route('/<path:uuid>', methods=['PUT'])

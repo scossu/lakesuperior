@@ -1,9 +1,12 @@
 import logging
 
 from abc import ABCMeta
+from collections import defaultdict
 from importlib import import_module
 from itertools import accumulate
 from uuid import uuid4
+
+import arrow
 
 from rdflib import Graph
 from rdflib.resource import Resource
@@ -326,6 +329,47 @@ class Ldpr(metaclass=ABCMeta):
 
 
     ## LDP METHODS ##
+
+    def head(self):
+        '''
+        Return values for the headers.
+        '''
+        out_rsrc = self.rdfly.out_rsrc
+
+        out_headers = defaultdict(list)
+
+        digest = out_rsrc.value(nsc['premis'].hasMessageDigest)
+        if digest:
+            etag = digest.identifier.split(':')[-1]
+            out_headers['ETag'] = 'W/"{}"'.format(etag),
+
+        last_updated_term = out_rsrc.value(nsc['fcrepo'].lastModified)
+        if last_updated_term:
+            out_headers['Last-Modified'] = arrow.get(last_updated_term)\
+                .format('ddd, D MMM YYYY HH:mm:ss Z')
+
+        for t in self.ldp_types:
+            out_headers['Link'].append(
+                    '{};rel="type"'.format(t.identifier.n3()))
+
+        return out_headers
+
+
+    def get(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+    def post(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+    def put(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+    def patch(self, *args, **kwargs):
+        raise NotImplementedError()
+
 
     @transactional
     @must_exist

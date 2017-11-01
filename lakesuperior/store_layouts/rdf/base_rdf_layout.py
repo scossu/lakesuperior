@@ -136,15 +136,18 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @property
-    @abstractmethod
     @needs_rsrc
-    def headers(self):
+    def out_rsrc(self):
         '''
-        Return a dict with information for generating HTTP headers.
+        Graph obtained by querying the triplestore and adding any abstraction
+        and filtering to make up a graph that can be used for read-only,
+        API-facing results. Different layouts can implement this in very
+        different ways, so it is an abstract method.
 
-        @retun dict
+        @return rdflib.resource.Resource
         '''
-        pass
+        return self.extract_imr()
+
 
 
     ## PUBLIC METHODS ##
@@ -168,7 +171,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         Perform a SPARQL update on the triplestore.
 
-        This should provide non-abstract access, independent from the layout,
+        This should provide low-level access, independent from the layout,
         therefore it should not be overridden by individual layouts.
 
         @param q (string) SPARQL-UPDATE query.
@@ -177,6 +180,21 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         self._logger.debug('Sending SPARQL update: {}'.format(q))
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
+
+
+    @needs_rsrc
+    def create_or_replace_rsrc(self, g):
+        '''Create a resource graph in the main graph if it does not exist.
+
+        If it exists, replace the existing one retaining the creation date.
+        '''
+        if self.ask_rsrc_exists():
+            self._logger.info(
+                    'Resource {} exists. Removing all outbound triples.'
+                    .format(self.rsrc.identifier))
+            return self.replace_rsrc(g)
+        else:
+            return self.create_rsrc(g)
 
 
     ## INTERFACE METHODS ##
@@ -200,21 +218,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    @needs_rsrc
-    def out_rsrc(self, srv_mgd=True, inbound=False, embed_children=False):
-        '''
-        Graph obtained by querying the triplestore and adding any abstraction
-        and filtering to make up a graph that can be used for read-only,
-        API-facing results. Different layouts can implement this in very
-        different ways, so it is an abstract method.
-
-        @return rdflib.resource.Resource
-        '''
-        pass
-
-
-
-    @abstractmethod
     def ask_rsrc_exists(self, uri=None):
         '''
         Ask if a resource exists (is stored) in the graph store.
@@ -224,16 +227,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
         default resource. If this latter is not specified, the result is False.
 
         @return boolean
-        '''
-        pass
-
-
-    @abstractmethod
-    @needs_rsrc
-    def create_or_replace_rsrc(self, urn, data, commit=True):
-        '''Create a resource graph in the main graph if it does not exist.
-
-        If it exists, replace the existing one retaining the creation date.
         '''
         pass
 
@@ -250,9 +243,12 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     @abstractmethod
     @needs_rsrc
-    def patch_rsrc(self, urn, data, commit=False):
-        '''
-        Perform a SPARQL UPDATE on a resource.
+    def replace_rsrc(self, g):
+        '''Replace a resource, i.e. delete all the triples and re-add the
+        ones provided.
+
+        @param g (rdflib.Graph) Graph to load. It must not contain
+        `fcrepo:created` and `fcrepo:createdBy`.
         '''
         pass
 
@@ -273,3 +269,16 @@ class BaseRdfLayout(metaclass=ABCMeta):
     @needs_rsrc
     def delete_rsrc(self, urn, commit=True):
         pass
+
+
+
+    ## PROTECTED METHODS  ##
+
+    def _set_msg_digest(self):
+        '''
+        Add a message digest to the current resource.
+        '''
+        cksum = Digest.rdf_cksum(self.rsrc.graph)
+        self.rsrc.set(nsc['premis'].hasMessageDigest,
+                URIRef('urn:sha1:{}'.format(cksum)))
+

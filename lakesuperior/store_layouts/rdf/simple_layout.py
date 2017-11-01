@@ -14,7 +14,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout, \
         needs_rsrc
-from lakesuperior.util.digest import Digest
 from lakesuperior.util.translator import Translator
 
 
@@ -30,32 +29,8 @@ class SimpleLayout(BaseRdfLayout):
     for (possible) improved speed and reduced storage.
     '''
 
-    @property
-    def headers(self):
-        '''
-        See base_rdf_layout.headers.
-        '''
-        headers = {
-            'Link' : [],
-        }
-
-        # @NOTE: Easy with these one-by-one picks. Each one of them is a call
-        # to the triplestore.
-        digest = self.rsrc.value(nsc['premis'].hasMessageDigest)
-        if digest:
-            etag = digest.identifier.split(':')[-1]
-            headers['ETag'] = 'W/"{}"'.format(etag),
-
-        last_updated_term = self.rsrc.value(nsc['fcrepo'].lastModified)
-        if last_updated_term:
-            headers['Last-Modified'] = arrow.get(last_updated_term)\
-                .format('ddd, D MMM YYYY HH:mm:ss Z')
-
-        return headers
-
-
     def extract_imr(self, uri=None, graph=None, minimal=False,
-            incl_inbound=False, incl_children=True, incl_srv_mgd=True):
+            incl_inbound=False, embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
@@ -68,7 +43,7 @@ class SimpleLayout(BaseRdfLayout):
           {0} ldp:contains ?c .
           ?c ?cp ?co .
         }}
-        '''.format(uri.n3()) if incl_children else ''
+        '''.format(uri.n3()) if embed_children else ''
 
         q = '''
         CONSTRUCT {{
@@ -76,7 +51,7 @@ class SimpleLayout(BaseRdfLayout):
             ?c ?cp ?co .
         }} WHERE {{
             {0} ?p ?o .{1}{2}
-            FILTER (?p != premis:hasMessageDigest) .
+            #FILTER (?p != premis:hasMessageDigest) .
         }}
         '''.format(uri.n3(), inbound_qry, embed_children_qry)
 
@@ -100,18 +75,6 @@ class SimpleLayout(BaseRdfLayout):
             return rsrc
 
 
-    @needs_rsrc
-    def out_rsrc(self, **kwargs):
-        '''
-        See base_rdf_layout.out_rsrc.
-        '''
-        im_rsrc = self.extract_imr(**kwargs)
-
-        im_rsrc.remove(nsc['premis'].hasMessageDigest)
-
-        return im_rsrc
-
-
     def ask_rsrc_exists(self, uri=None):
         '''
         See base_rdf_layout.ask_rsrc_exists.
@@ -127,79 +90,35 @@ class SimpleLayout(BaseRdfLayout):
 
 
     @needs_rsrc
-    def create_or_replace_rsrc(self, g):
-        '''
-        See base_rdf_layout.create_or_replace_rsrc.
-        '''
-        # @TODO Use gunicorn to get request timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
-
-        if self.ask_rsrc_exists():
-            self._logger.info(
-                    'Resource {} exists. Removing all outbound triples.'
-                    .format(self.rsrc.identifier))
-
-            # Delete all triples but keep creation date and creator.
-            created = self.rsrc.value(nsc['fcrepo'].created)
-            created_by = self.rsrc.value(nsc['fcrepo'].createdBy)
-
-            self.delete_rsrc()
-            res = self.RES_UPDATED
-        else:
-            created = ts
-            created_by = Literal('BypassAdmin')
-            res = self.RES_CREATED
-
-        self._logger.info('Created timestamp: {}'.format(ts))
-
-        self.rsrc.set(nsc['fcrepo'].created, created)
-        self.rsrc.set(nsc['fcrepo'].createdBy, created_by)
-
-        self.rsrc.set(nsc['fcrepo'].lastModified, ts)
-        self.rsrc.set(nsc['fcrepo'].lastModifiedBy, Literal('BypassAdmin'))
-
-        for s, p, o in g:
-            self.ds.add((s, p, o))
-
-        return res
-
-
-    @needs_rsrc
-    def create_rsrc(self, g):
+    def create_rsrc(self, imr):
         '''
         See base_rdf_layout.create_rsrc.
         '''
-        # @TODO Use gunicorn to get request timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
-
-        self.rsrc.set(nsc['fcrepo'].created, ts)
-        self.rsrc.set(nsc['fcrepo'].createdBy, Literal('BypassAdmin'))
-
-        cksum = Digest.rdf_cksum(self.rsrc.graph)
-        self.rsrc.set(nsc['premis'].hasMessageDigest,
-                URIRef('urn:sha1:{}'.format(cksum)))
-
-        for s, p, o in g:
+        for s, p, o in imr.graph:
             self.ds.add((s, p, o))
+
+        return self.RES_CREATED
 
 
     @needs_rsrc
-    def patch_rsrc(self, data):
+    def replace_rsrc(self, imr):
         '''
-        Perform a SPARQL UPDATE on a resource.
-
-        @TODO deprecate.
+        See base_rdf_layout.replace_rsrc.
         '''
-        # @TODO Use gunicorn to get request timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+        # Delete all triples but keep creation date and creator.
+        created = self.rsrc.value(nsc['fcrepo'].created)
+        created_by = self.rsrc.value(nsc['fcrepo'].createdBy)
 
-        q = Translator.localize_string(data).replace(
-                '<>', self.rsrc.identifier.n3())
+        imr.set(nsc['fcrepo'].created, created)
+        imr.set(nsc['fcrepo'].createdBy, created_by)
 
-        self.rsrc.set(nsc['fcrepo'].lastModified, ts)
-        self.rsrc.set(nsc['fcrepo'].lastModifiedBy, Literal('BypassAdmin'))
+        # Delete the stored triples.
+        self.delete_rsrc()
 
-        self.ds.update(q)
+        for s, p, o in imr.graph:
+            self.ds.add((s, p, o))
+
+        return self.RES_UPDATED
 
 
     @needs_rsrc
@@ -214,7 +133,7 @@ class SimpleLayout(BaseRdfLayout):
             self.rsrc.add(t[0], t[1])
 
 
-    def delete_rsrc(self, inbound=False):
+    def delete_rsrc(self, inbound=True):
         '''
         Delete a resource. If `inbound` is specified, delete all inbound
         relationships as well.
@@ -223,7 +142,8 @@ class SimpleLayout(BaseRdfLayout):
 
         self.rsrc.remove(Variable('p'))
         if inbound:
-            self.ds.remove((Variable('s'), Variable('p'), self.rsrc.identifier))
+            self.ds.remove(
+                    (Variable('s'), Variable('p'), self.rsrc.identifier))
 
 
     ## PROTECTED METHODS ##
