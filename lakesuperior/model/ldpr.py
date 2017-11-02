@@ -13,10 +13,10 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
 
 from lakesuperior.config_parser import config
-from lakesuperior.connectors.filesystem_connector import FilesystemConnector
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.translator import Translator
 
 
@@ -100,6 +100,7 @@ class Ldpr(metaclass=ABCMeta):
     _logger = logging.getLogger(__name__)
 
     rdf_store_layout = config['application']['store']['ldp_rs']['layout']
+    non_rdf_store_layout = config['application']['store']['ldp_nr']['layout']
 
     ## MAGIC METHODS ##
 
@@ -115,21 +116,12 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self.uuid = uuid
 
-        # Dynamically load the store layout indicated in the configuration.
-        store_mod = import_module(
-                'lakesuperior.store_layouts.rdf.{}'.format(
-                        self.rdf_store_layout))
-        rdf_store_cls = getattr(store_mod, Translator.camelcase(
-                self.rdf_store_layout))
-
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
-                else rdf_store_cls.ROOT_NODE_URN
+                else BaseRdfLayout.ROOT_NODE_URN
 
-        self.rdfly = rdf_store_cls(self._urn)
+        self.rdfly = __class__.load_layout('rdf', self._urn)
+        self.nonrdfly = __class__.load_layout('non_rdf')
 
-        # Same thing coud be done for the filesystem store layout, but we
-        # will keep it simple for now.
-        self.fs = FilesystemConnector()
 
 
     @property
@@ -246,17 +238,20 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def load_rdf_layout(cls, uuid=None):
+    def load_layout(cls, type, uuid=None):
         '''
         Dynamically load the store layout indicated in the configuration.
-        This essentially replicates the init() code in a static context.
+
+        @param type (string) One of `rdf` or `non_rdf`. Determines the type of
+        layout to be loaded.
+        @param uuid (string) UUID of the base resource. For RDF layouts only.
         '''
-        store_mod = import_module(
-                'lakesuperior.store_layouts.rdf.{}'.format(
-                        cls.rdf_store_layout))
-        rdf_layout_cls = getattr(store_mod, Translator.camelcase(
-                cls.rdf_store_layout))
-        return rdf_layout_cls(uuid)
+        layout_name = getattr(cls, '{}_store_layout'.format(type))
+        store_mod = import_module('lakesuperior.store_layouts.{0}.{1}'.format(
+                type, layout_name))
+        layout_cls = getattr(store_mod, Translator.camelcase(layout_name))
+
+        return layout_cls(uuid) if type=='rdf' else layout_cls()
 
 
     @classmethod
