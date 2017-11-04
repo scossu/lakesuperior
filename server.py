@@ -1,3 +1,6 @@
+import logging
+import os
+
 from logging.config import dictConfig
 
 from flask import Flask, render_template
@@ -6,11 +9,12 @@ from lakesuperior.config_parser import config
 from lakesuperior.endpoints.ldp import ldp
 from lakesuperior.endpoints.query import query
 
-
 fcrepo = Flask(__name__)
 fcrepo.config.update(config['flask'])
 
 dictConfig(config['logging'])
+logger = logging.getLogger(__name__)
+logger.info('Starting LAKEsuperior HTTP server.')
 
 ## Configure enpoint blueprints here. ##
 

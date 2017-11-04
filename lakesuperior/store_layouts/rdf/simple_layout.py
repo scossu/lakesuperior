@@ -58,11 +58,10 @@ class SimpleLayout(BaseRdfLayout):
         try:
             qres = self.query(q)
         except ResultException:
-            # RDFlib bug? https://github.com/RDFLib/rdflib/issues/775
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             g = Graph()
         else:
             g = qres.graph
-            rsrc = Resource(g, uri)
             if not incl_srv_mgd:
                 self._logger.info('Removing server managed triples.')
                 for p in srv_mgd_predicates:
@@ -72,7 +71,7 @@ class SimpleLayout(BaseRdfLayout):
                     self._logger.debug('Removing type: {}'.format(t))
                     rsrc.remove(RDF.type, t)
 
-            return rsrc
+        return Resource(g, uri)
 
 
     def ask_rsrc_exists(self, uri=None):
@@ -85,7 +84,7 @@ class SimpleLayout(BaseRdfLayout):
             else:
                 return False
 
-        self._logger.info('Searching for resource: {}'.format(uri))
+        self._logger.info('Checking if resource exists: {}'.format(uri))
         return (uri, Variable('p'), Variable('o')) in self.ds
 
 
@@ -115,22 +114,25 @@ class SimpleLayout(BaseRdfLayout):
         # Delete the stored triples.
         self.delete_rsrc()
 
-        for s, p, o in imr.graph:
-            self.ds.add((s, p, o))
+        self.ds |= imr.graph
+        #for s, p, o in imr.graph:
+        #    self.ds.add((s, p, o))
 
         return self.RES_UPDATED
 
 
     @needs_rsrc
-    def modify_rsrc(self, remove, add):
+    def modify_rsrc(self, remove_trp, add_trp):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        for t in remove.predicate_objects():
-            self.rsrc.remove(t[0], t[1])
+        self.ds -= remove_trp
+        self.ds += add_trp
+        #for t in remove.predicate_objects():
+        #    self.rsrc.remove(t[0], t[1])
 
-        for t in add.predicate_objects():
-            self.rsrc.add(t[0], t[1])
+        #for t in add.predicate_objects():
+        #    self.rsrc.add(t[0], t[1])
 
 
     def delete_rsrc(self, inbound=True):

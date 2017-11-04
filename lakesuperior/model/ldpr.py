@@ -66,7 +66,6 @@ def must_not_exist(fn):
 
 
 
-
 class Ldpr(metaclass=ABCMeta):
     '''LDPR (LDP Resource).
 
