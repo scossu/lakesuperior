@@ -26,35 +26,24 @@ class LdpNr(Ldpr):
         raise NotImplementedError()
 
 
-    def post(self, data):
+    def post(self, stream):
+        '''
+        Create a new binary resource with a corresponding RDF representation.
+
+        @param file (Stream) A Stream resource representing the uploaded file.
+        '''
         #self._logger.debug('Data: {}'.format(data[:256]))
         metadata_rsrc = Resource(Graph(), self.urn)
 
         for t in self.base_types:
             metadata_rsrc.add(RDF.type, t)
 
-        cksum = Digest.non_rdf_cksum(data)
+        cksum = self.nonrdfly.persist(stream)
         cksum_term = URIRef('urn:sha1:{}'.format(cksum))
         metadata_rsrc.add(nsc['premis'].hasMessageDigest, cksum_term)
-
-        self._store_binary(data, cksum)
-
 
 
     def put(self, data):
         raise NotImplementedError()
 
-
-
-    ## PROTECTED METHODS ##
-
-    def _store_binary(self, data, cksum):
-        '''
-        Move a binary file to persistent storage.
-
-        @param data (bytes) Binary data to store.
-        @param cksum (string) Digest of the data. This is used to determine the
-        file location.
-        '''
-        pass
 

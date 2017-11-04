@@ -1,8 +1,10 @@
 import logging
 
 from collections import defaultdict
+from uuid import uuid4
 
 from flask import Blueprint, request
+from werkzeug.datastructures import FileStorage
 
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceExistsError, ResourceNotExistsError, \
@@ -98,29 +100,7 @@ def post_resource(parent):
     except KeyError:
         slug = None
 
-    logger.debug('Content type: {}'.format(request.mimetype))
-    logger.debug('files: {}'.format(request.files))
-    #logger.debug('stream: {}'.format(request.stream))
-    #logger.debug('form: {}'.format(request.form))
-    #logger.debug('data: {}'.format(request.data))
-    if request.mimetype in accept_post_rdf:
-        cls = Ldpc
-        data = request.data.decode('utf-8')
-    else:
-        cls = LdpNr
-        if request.mimetype == 'multipart/form-data':
-            # This seems the "right" way to upload a binary file, with a multipart/
-            # form-data MIME type and the file in the `file` field. This however is
-            # not supported by FCREPO4.
-            data = request.files.get('file')
-        else:
-            # This is a less clean way, with the file in the form body and the
-            # request as application/x-www-form-urlencoded.
-            # This is how FCREPO4 accepts binary uploads.
-            data = request.data
-
-    logger.info('POSTing resource of type: {}'.format(cls.__name__))
-    #logger.info('POST data: {}'.format(data))
+    cls, data = class_from_req_body()
 
     try:
        rsrc = cls.inst_for_post(parent, slug)
@@ -148,7 +128,10 @@ def put_resource(uuid):
     '''
     logger.info('Request headers: {}'.format(request.headers))
     rsp_headers = std_headers
-    rsrc = Ldpc(uuid)
+
+    cls, data = class_from_req_body()
+
+    rsrc = cls(uuid)
 
     logger.debug('form: {}'.format(request.form))
     # Parse headers.
@@ -207,5 +190,32 @@ def delete_resource(uuid):
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
 
     return '', 204, headers
+
+
+def class_from_req_body():
+    logger.debug('Content type: {}'.format(request.mimetype))
+    #logger.debug('files: {}'.format(request.files))
+    logger.debug('stream: {}'.format(request.stream))
+    if request.mimetype in accept_post_rdf:
+        cls = Ldpc
+        # Parse out the RDF string.
+        data = request.data.decode('utf-8')
+    else:
+        cls = LdpNr
+        if request.mimetype == 'multipart/form-data':
+            # This seems the "right" way to upload a binary file, with a
+            # multipart/form-data MIME type and the file in the `file` field.
+            # This however is not supported by FCREPO4.
+            data = request.files.get('file').stream
+        else:
+            # This is a less clean way, with the file in the form body and the
+            # request as application/x-www-form-urlencoded.
+            # This is how FCREPO4 accepts binary uploads.
+            data = request.stream
+
+    logger.info('POSTing resource of type: {}'.format(cls.__name__))
+    #logger.info('POST data: {}'.format(data))
+
+    return cls, data
 
 

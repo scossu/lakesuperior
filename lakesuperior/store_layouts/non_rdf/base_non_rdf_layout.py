@@ -21,23 +21,11 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
         self.root = self._conf['path']
 
 
-    ## PROTECTED METHODS ##
+    ## INTERFACE METHODS ##
 
-    def _path(self, hash):
+    @abstractmethod
+    def persist(self, file):
         '''
-        Generate the resource path splitting the resource checksum according to
-        configuration parameters.
-
-        @param hash (string) The resource hash.
+        Store the stream in the designated persistence layer for this layout.
         '''
-        bl = self._conf['pairtree_branch_length']
-        bc = self._conf['pairtree_branches']
-        term = len(hash) if bc==0 else min(bc*bl, len(hash))
-
-        path = [ hash[i:i+bl] for i in range(0, term, bl) ]
-
-        if bc > 0:
-            path.append(hash[:term])
-        path.insert(0, self.root)
-
-        return '/'.join(path)
+        pass

@@ -23,6 +23,11 @@ fcrepo.register_blueprint(ldp, url_prefix='/ldp')
 fcrepo.register_blueprint(ldp, url_prefix='/rest')
 fcrepo.register_blueprint(query, url_prefix='/query')
 
+# Initialize temporary folders.
+tmp_path = config['application']['store']['ldp_nr']['path'] + '/tmp'
+if not os.path.exists(tmp_path):
+    os.makedirs(tmp_path)
+
 
 ## ROUTES ##
 
@@ -40,5 +45,4 @@ def debug():
     Debug page.
     '''
     raise RuntimeError()
-
 
