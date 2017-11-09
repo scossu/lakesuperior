@@ -28,11 +28,11 @@ def transactional(fn):
     def wrapper(self, *args, **kwargs):
         try:
             ret = fn(self, *args, **kwargs)
-            print('Committing transaction.')
+            self._logger.info('Committing transaction.')
             self.rdfly.store.commit()
             return ret
         except:
-            print('Rolling back transaction.')
+            self._logger.warn('Rolling back transaction.')
             self.rdfly.store.rollback()
             raise
 
@@ -118,16 +118,14 @@ class Ldpr(metaclass=ABCMeta):
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
                 else BaseRdfLayout.ROOT_NODE_URN
 
-        self.rdfly = __class__.load_layout('rdf', self._urn)
-        self.nonrdfly = __class__.load_layout('non_rdf')
-
 
 
     @property
     def urn(self):
         '''
         The internal URI (URN) for the resource as stored in the triplestore.
-        This is a URN that needs to be converted to a global URI for the REST
+
+        This is a URN that needs to be converted to a global URI for the LDP
         API.
 
         @return rdflib.URIRef
@@ -145,33 +143,73 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
+    def rdfly(self):
+        '''
+        Load RDF store layout.
+        '''
+        if not hasattr(self, '_rdfly'):
+            self._rdfly = __class__.load_layout('rdf')
+
+        return self._rdfly
+
+
+    @property
     def rsrc(self):
         '''
-        The RDFLib resource representing this LDPR. This is a copy of the
-        stored data if present, and what gets passed to most methods of the
-        store layout methods.
+        The RDFLib resource representing this LDPR. This is a live
+        representation of the stored data if present.
 
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_rsrc'):
-            self._rsrc = self.rdfly.rsrc
+            self._rsrc = self.rdfly.rsrc(self.urn)
 
         return self._rsrc
 
 
     @property
+    def imr(self):
+        '''
+        Extract an in-memory resource for harmless manipulation and output.
+
+        If the resource is not stored (yet), initialize a new IMR with basic
+        triples.
+
+        @return rdflib.resource.Resource
+        '''
+        if not hasattr(self, '_imr'):
+            if not self.is_stored:
+                self._imr = Resource(Graph(), self.urn)
+                for t in self.base_types:
+                    self.imr.add(RDF.type, t)
+            else:
+                self._imr = self.rdfly.extract_imr(self.urn)
+
+        return self._imr
+
+
+    @imr.deleter
+    def imr(self):
+        '''
+        Delete in-memory buffered resource.
+        '''
+        delattr(self, '_imr')
+
+
+    @property
     def is_stored(self):
-        return self.rdfly.ask_rsrc_exists()
+        return self.rdfly.ask_rsrc_exists(self.urn)
 
 
     @property
     def types(self):
         '''All RDF types.
 
-        @return generator
+        @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
             self._types = set(self.rsrc[RDF.type])
+
         return self._types
 
 
@@ -186,6 +224,7 @@ class Ldpr(metaclass=ABCMeta):
             for t in self.types:
                 if t.qname()[:4] == 'ldp:':
                     self._ldp_types.add(t)
+
         return self._ldp_types
 
 
@@ -245,18 +284,18 @@ class Ldpr(metaclass=ABCMeta):
         layout to be loaded.
         @param uuid (string) UUID of the base resource. For RDF layouts only.
         '''
-        layout_name = getattr(cls, '{}_store_layout'.format(type))
+        layout_cls = getattr(cls, '{}_store_layout'.format(type))
         store_mod = import_module('lakesuperior.store_layouts.{0}.{1}'.format(
-                type, layout_name))
-        layout_cls = getattr(store_mod, Translator.camelcase(layout_name))
+                type, layout_cls))
+        layout_cls = getattr(store_mod, Translator.camelcase(layout_cls))
 
-        return layout_cls(uuid) if type=='rdf' else layout_cls()
+        return layout_cls()
 
 
     @classmethod
     def readonly_inst(cls, uuid):
         '''
-        Fatory method that creates and returns an instance of an LDPR subclass
+        Factory method that creates and returns an instance of an LDPR subclass
         based on information that needs to be queried from the underlying
         graph store.
 
@@ -264,16 +303,23 @@ class Ldpr(metaclass=ABCMeta):
 
         @param uuid UUID of the instance.
         '''
-        rdfly = cls.load_rdf_layout(cls, uuid)
-        rdf_types = rdfly.rsrc[nsc['res'][uuid] : RDF.type]
+        rdfly = cls.load_layout('rdf')
+        imr_urn = nsc['fcres'][uuid] if uuid else rdfly.ROOT_NODE_URN
+        imr = rdfly.extract_imr(imr_urn, minimal=True)
+        rdf_types = imr.objects(RDF.type)
 
         for t in rdf_types:
-            if t == cls.LDP_NR_TYPE:
+            cls._logger.debug('Checking RDF type: {}'.format(t.identifier))
+            if t.identifier == cls.LDP_NR_TYPE:
+                from lakesuperior.model.ldp_nr import LdpNr
+                cls._logger.info('Resource is a LDP-NR.')
                 return LdpNr(uuid)
-            if t == cls.LDP_RS_TYPE:
+            if t.identifier == cls.LDP_RS_TYPE:
+                from lakesuperior.model.ldp_rs import LdpRs
+                cls._logger.info('Resource is a LDP-RS.')
                 return LdpRs(uuid)
-            else:
-                raise ResourceNotExistsError(uuid)
+
+        raise ResourceNotExistsError(uuid)
 
 
     @classmethod
@@ -289,15 +335,16 @@ class Ldpr(metaclass=ABCMeta):
         if not slug and not parent_uuid:
             return cls(str(uuid4()))
 
-        rdfly = cls.load_rdf_layout()
-        parent_imr = rdfly.extract_imr(nsc['fcres'][parent_uuid])
+        rdfly = cls.load_layout('rdf')
+
+        parent_imr_urn = nsc['fcres'][parent_uuid] if parent_uuid \
+                else rdfly.ROOT_NODE_URN
+        parent_imr = rdfly.extract_imr(parent_imr_urn, minimal=True)
+        if not len(parent_imr.graph):
+            raise ResourceNotExistsError(parent_uuid)
 
         # Set prefix.
         if parent_uuid:
-            parent_exists = rdfly.ask_rsrc_exists(parent_imr.identifier)
-            if not parent_exists:
-                raise ResourceNotExistsError(parent_uuid)
-
             parent_types = { t.identifier for t in \
                     parent_imr.objects(RDF.type) }
             cls._logger.debug('Parent types: {}'.format(
@@ -328,16 +375,14 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Return values for the headers.
         '''
-        out_rsrc = self.rdfly.out_rsrc
-
         out_headers = defaultdict(list)
 
-        digest = out_rsrc.value(nsc['premis'].hasMessageDigest)
+        digest = self.imr.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
             out_headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = out_rsrc.value(nsc['fcrepo'].lastModified)
+        last_updated_term = self.imr.value(nsc['fcrepo'].lastModified)
         if last_updated_term:
             out_headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')

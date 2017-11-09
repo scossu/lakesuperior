@@ -12,8 +12,8 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout, \
-        needs_rsrc
+from lakesuperior.exceptions import InvalidResourceError
+from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.translator import Translator
 
 
@@ -29,14 +29,12 @@ class SimpleLayout(BaseRdfLayout):
     for (possible) improved speed and reduced storage.
     '''
 
-    def extract_imr(self, uri=None, graph=None, minimal=False,
+    def extract_imr(self, uri, graph=None, minimal=False,
             incl_inbound=False, embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
-        uri = uri or self.base_urn
-
-        inbound_qry = '\n?s1 ?p1 {}'.format(self.base_urn.n3()) \
+        inbound_qry = '\n?s1 ?p1 {}'.format(uri.n3()) \
                 if incl_inbound else ''
         embed_children_qry = '''
         OPTIONAL {{
@@ -62,6 +60,8 @@ class SimpleLayout(BaseRdfLayout):
             g = Graph()
         else:
             g = qres.graph
+            # @FIXME This can be expensive with many children. Move this in
+            # query string.
             if not incl_srv_mgd:
                 self._logger.info('Removing server managed triples.')
                 for p in srv_mgd_predicates:
@@ -74,39 +74,35 @@ class SimpleLayout(BaseRdfLayout):
         return Resource(g, uri)
 
 
-    def ask_rsrc_exists(self, uri=None):
+    def ask_rsrc_exists(self, urn):
         '''
         See base_rdf_layout.ask_rsrc_exists.
         '''
-        if not uri:
-            if self.rsrc is not None:
-                uri = self.rsrc.identifier
-            else:
-                return False
-
-        self._logger.info('Checking if resource exists: {}'.format(uri))
-        return (uri, Variable('p'), Variable('o')) in self.ds
+        self._logger.info('Checking if resource exists: {}'.format(urn))
+        return (urn, Variable('p'), Variable('o')) in self.ds
 
 
-    @needs_rsrc
     def create_rsrc(self, imr):
         '''
         See base_rdf_layout.create_rsrc.
         '''
-        for s, p, o in imr.graph:
-            self.ds.add((s, p, o))
+        self.ds |= imr.graph
 
         return self.RES_CREATED
 
 
-    @needs_rsrc
     def replace_rsrc(self, imr):
         '''
         See base_rdf_layout.replace_rsrc.
         '''
+        # @TODO Move this to LDP.
+        rsrc = self.rsrc(imr.identifier)
         # Delete all triples but keep creation date and creator.
-        created = self.rsrc.value(nsc['fcrepo'].created)
-        created_by = self.rsrc.value(nsc['fcrepo'].createdBy)
+        created = rsrc.value(nsc['fcrepo'].created)
+        created_by = rsrc.value(nsc['fcrepo'].createdBy)
+
+        if not created or not created_by:
+            raise InvalidResourceError(urn)
 
         imr.set(nsc['fcrepo'].created, created)
         imr.set(nsc['fcrepo'].createdBy, created_by)
@@ -115,14 +111,11 @@ class SimpleLayout(BaseRdfLayout):
         self.delete_rsrc()
 
         self.ds |= imr.graph
-        #for s, p, o in imr.graph:
-        #    self.ds.add((s, p, o))
 
         return self.RES_UPDATED
 
 
-    @needs_rsrc
-    def modify_rsrc(self, remove_trp, add_trp):
+    def modify_dataset(self, remove_trp, add_trp):
         '''
         See base_rdf_layout.update_rsrc.
         '''
@@ -135,16 +128,19 @@ class SimpleLayout(BaseRdfLayout):
         #    self.rsrc.add(t[0], t[1])
 
 
-    def delete_rsrc(self, inbound=True):
+    def delete_rsrc(self, urn, inbound=True):
         '''
         Delete a resource. If `inbound` is specified, delete all inbound
         relationships as well (this is the default).
         '''
-        print('Removing resource {}.'.format(self.rsrc.identifier))
+        rsrc = self.rsrc(urn)
 
-        self.rsrc.remove(Variable('p'))
+        print('Removing resource {}.'.format(rsrc.identifier))
+
+        rsrc.remove(Variable('p'))
+        # @TODO Remove children recursively
         if inbound:
             self.ds.remove(
-                    (Variable('s'), Variable('p'), self.rsrc.identifier))
+                    (Variable('s'), Variable('p'), rsrc.identifier))
 
 

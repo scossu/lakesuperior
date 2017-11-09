@@ -10,6 +10,7 @@ isodate==0.5.4
 itsdangerous==0.24
 Jinja2==2.9.6
 MarkupSafe==1.0
+numpy==1.13.3
 py==1.4.34
 pyparsing==2.2.0
 pytest==3.2.2

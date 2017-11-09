@@ -8,6 +8,10 @@ from lakesuperior.config_parser import config
 class BaseNonRdfLayout(metaclass=ABCMeta):
     '''
     Abstract class for setting the non-RDF (bitstream) store layout.
+
+    Differerent layouts can be created by implementing all the abstract methods
+    of this class. A non-RDF layout is not necessarily restricted to a
+    traditional filesystem—e.g. a layout persisting to HDFS can be written too.
     '''
 
     _conf = config['application']['store']['ldp_nr']
@@ -24,8 +28,24 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
     ## INTERFACE METHODS ##
 
     @abstractmethod
-    def persist(self, file):
+    def persist(self, stream):
         '''
         Store the stream in the designated persistence layer for this layout.
+        '''
+        pass
+
+
+    @abstractmethod
+    def delete(self, id):
+        '''
+        Delete a stream by its identifier (i.e. checksum).
+        '''
+        pass
+
+
+    @abstractmethod
+    def local_path(self, uuid):
+        '''
+        Return the local path of a file.
         '''
         pass

@@ -14,7 +14,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
 from lakesuperior.exceptions import ResourceNotExistsError, \
         ServerManagedTermError, SingleSubjectError
-from lakesuperior.util.digest import Digest
 from lakesuperior.util.translator import Translator
 
 class LdpRs(Ldpr):
@@ -29,9 +28,13 @@ class LdpRs(Ldpr):
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
 
     base_types = {
-        nsc['ldp'].RDFSource
+        nsc['fcrepo'].Resource,
+        nsc['ldp'].Resource,
+        nsc['ldp'].RDFSource,
     }
 
+
+    ## LDP METHODS ##
 
     def get(self, pref_return):
         '''
@@ -60,12 +63,7 @@ class LdpRs(Ldpr):
             if str(self.RETURN_SRV_MGD_RES_URI) in omit:
                     kwargs['incl_srv_mgd'] = False
 
-        imr = self.rdfly.out_rsrc
-
-        if not imr or not len(imr.graph):
-            raise ResourceNotExistsError(self.uri)
-
-        return Translator.globalize_rsrc(imr)
+        return Translator.globalize_rsrc(self.imr)
 
 
     @transactional
@@ -89,13 +87,17 @@ class LdpRs(Ldpr):
 
     @transactional
     @must_exist
-    def patch(self, data):
+    def patch(self, update_str):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
-        '''
-        trp_remove, trp_add = self._sparql_delta(data)
 
-        return self.rdfly.modify_rsrc(trp_remove, trp_add)
+        Update an existing resource by applying a SPARQL-UPDATE query.
+
+        @param update_str (string) SPARQL-Update staements.
+        '''
+        delta = self._sparql_delta(update_str)
+
+        return self.rdfly.modify_dataset(*delta)
 
 
     ## PROTECTED METHODS ##
@@ -112,8 +114,8 @@ class LdpRs(Ldpr):
         how to handle provided server-managed triples. If `strict` is selected,
         any server-managed triple  included in the input RDF will trigger an
         exception. If `lenient`, server-managed triples are ignored.
-        @param create_only (boolean) Whether the operation is a create-only one (i.e.
-        POST) or a create-or-update one (i.e. PUT).
+        @param create_only (boolean) Whether the operation is a create-only
+        one (i.e. POST) or a create-or-update one (i.e. PUT).
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
@@ -134,6 +136,10 @@ class LdpRs(Ldpr):
     def _check_mgd_terms(self, g, handling='strict'):
         '''
         Check whether server-managed terms are in a RDF payload.
+
+        @param handling (string) One of `strict` (the default) or `lenient`.
+        `strict` raises an error if a server-managed term is in the graph.
+        `lenient` removes all sever-managed triples encountered.
         '''
         offending_subjects = set(g.subjects()) & srv_mgd_subjects
         if offending_subjects:
@@ -194,7 +200,8 @@ class LdpRs(Ldpr):
         '''
         Calculate the delta obtained by a SPARQL Update operation.
 
-        This does a couple of extra things:
+        This is a critical component of the SPARQL query prcess and does a
+        couple of things:
 
         1. It ensures that no resources outside of the subject of the request
         are modified (e.g. by variable subjects)
@@ -209,10 +216,11 @@ class LdpRs(Ldpr):
         cause any change in the updated resource, no error is raised.
 
         @return tuple Remove and add triples. These can be used with
-        `BaseStoreLayout.update_resource`.
+        `BaseStoreLayout.update_resource` and/or recorded as separate events in
+        a provenance tracking system.
         '''
 
-        pre_g = self.rdfly.extract_imr().graph
+        pre_g = self.imr.graph
 
         post_g = deepcopy(pre_g)
         post_g.update(q)

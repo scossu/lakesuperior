@@ -55,6 +55,14 @@ the default.
 If `Prefer` is set to `handling=lenient`, all server-managed triples sent with
 the payload are ignored.
 
+## LDP-NR metadata by content negotiation
+
+FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
+an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
+use of content negotiation to do that. Any request to an LDP-NR with an
+`Accept` header set to one of the supported RDF serialization formats will
+yield the RDF metadata of the resource instead of the binary contents.
+
 ## Asynchronous processing
 
 *TODO*

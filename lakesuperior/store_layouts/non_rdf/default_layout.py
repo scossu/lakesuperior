@@ -1,7 +1,6 @@
 import os
 
 from hashlib import sha1
-from shutil import copyfileobj
 from uuid import uuid4
 
 from lakesuperior.store_layouts.non_rdf.base_non_rdf_layout import \
@@ -30,8 +29,6 @@ class DefaultLayout(BaseNonRdfLayout):
         tmp_file = '{}/tmp/{}'.format(self.root, uuid4())
         try:
             with open(tmp_file, 'wb') as f:
-                #if hasattr(stream, 'seek'):
-                #    stream.seek(0)
                 self._logger.debug('Writing temp file to {}.'.format(tmp_file))
 
                 hash = sha1()
@@ -47,40 +44,49 @@ class DefaultLayout(BaseNonRdfLayout):
             raise
 
         # Move temp file to final destination.
-
-        digest = hash.hexdigest()
-        dst = self._path(digest)
+        uuid = hash.hexdigest()
+        dst = self.local_path(uuid)
         self._logger.debug('Saving file to disk: {}'.format(dst))
         if not os.access(os.path.dirname(dst), os.X_OK):
             os.makedirs(os.path.dirname(dst))
+
         # If the file exists already, don't bother rewriting it.
         if os.path.exists(dst):
-            self._logger.info('File exists on {}. Not overwriting.'.format(dst))
+            self._logger.info(
+                    'File exists on {}. Not overwriting.'.format(dst))
             os.unlink(tmp_file)
         else:
             os.rename(tmp_file, dst)
 
-        return digest
+        return uuid
+
+
+    def delete(self, uuid):
+        '''
+        See BaseNonRdfLayout.delete.
+        '''
+        os.unlink(self.local_path(uuid))
 
 
     ## PROTECTED METHODS ##
 
-    def _path(self, digest):
+    def local_path(self, uuid):
         '''
         Generate the resource path splitting the resource checksum according to
         configuration parameters.
 
-        @param digest (string) The resource digest.
+        @param uuid (string) The resource UUID. This corresponds to the content
+        checksum.
         '''
-        self._logger.debug('Generating path from digest: {}'.format(digest))
+        self._logger.debug('Generating path from uuid: {}'.format(uuid))
         bl = self._conf['pairtree_branch_length']
         bc = self._conf['pairtree_branches']
-        term = len(digest) if bc==0 else min(bc*bl, len(digest))
+        term = len(uuid) if bc==0 else min(bc*bl, len(uuid))
 
-        path = [ digest[i:i+bl] for i in range(0, term, bl) ]
+        path = [ uuid[i:i+bl] for i in range(0, term, bl) ]
 
         if bc > 0:
-            path.append(digest[term:])
+            path.append(uuid[term:])
         path.insert(0, self.root)
 
         return '/'.join(path)

@@ -11,20 +11,21 @@ from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.exceptions import ResourceNotExistsError
 
 
-def needs_rsrc(fn):
-    '''
-    Decorator for methods that cannot be called without `self.rsrc` set.
-    '''
-    def wrapper(self, *args, **kwargs):
-        if not hasattr(self, 'rsrc') or self.rsrc is None:
-            raise TypeError(
-                'This method must be called by an instance with `rsrc` set.')
-
-        return fn(self, *args, **kwargs)
-
-    return wrapper
+#def needs_rsrc(fn):
+#    '''
+#    Decorator for methods that cannot be called without `self.rsrc` set.
+#    '''
+#    def wrapper(self, *args, **kwargs):
+#        if not hasattr(self, 'rsrc') or self.rsrc is None:
+#            raise TypeError(
+#                'This method must be called by an instance with `rsrc` set.')
+#
+#        return fn(self, *args, **kwargs)
+#
+#    return wrapper
 
 
 
@@ -75,7 +76,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, urn=None):
+    def __init__(self):
         '''Initialize the graph store and a layout.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
@@ -84,20 +85,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
         this only in the (currently) unreleased 2.2 branch. It works with Jena,
         but other considerations would have to be made (e.g. Jena has no REST
         API for handling transactions).
-
-        In a more advanced development phase it could be possible to extend the
-        SPARQLUpdateStore class to add non-standard interaction with specific
-        SPARQL implementations in order to support ACID features provided
-        by them; e.g. Blazegraph's RESTful transaction handling methods.
-
-        The layout can be initialized with a URN to make resource-centric
-        operations simpler. However, for generic queries, urn can be None and
-        no `self.rsrc` is assigned. In this case, some methods (the ones
-        decorated by `@needs_rsrc`) will not be available.
         '''
         self.ds = Dataset(self.store, default_union=True)
         self.ds.namespace_manager = nsm
-        self._base_urn = urn
 
 
     @property
@@ -112,32 +102,16 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self._store
 
 
-    @property
-    def base_urn(self):
-        '''
-        The base URN for the current resource being handled.
-
-        This value is only here for convenience. It does not preclude one from
-        using an instance of this class with more than one subject.
-        '''
-        return self._base_urn
-
-
-    @property
-    def rsrc(self):
+    def rsrc(self, urn):
         '''
         Reference to a live data set that can be updated. This exposes the
         whole underlying triplestore structure and is used to update a
         resource.
         '''
-        if self.base_urn is None:
-            return None
-        return self.ds.resource(self.base_urn)
+        return self.ds.resource(urn)
 
 
-    @property
-    @needs_rsrc
-    def out_rsrc(self):
+    def out_rsrc(self, urn):
         '''
         Graph obtained by querying the triplestore and adding any abstraction
         and filtering to make up a graph that can be used for read-only,
@@ -146,7 +120,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         @return rdflib.resource.Resource
         '''
-        return self.extract_imr()
+        imr = self.extract_imr(urn)
+        if not len(imr.graph):
+            raise ResourceNotExistsError
 
 
 
@@ -182,19 +158,18 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 
-    @needs_rsrc
-    def create_or_replace_rsrc(self, g):
+    def create_or_replace_rsrc(self, imr):
         '''Create a resource graph in the main graph if it does not exist.
 
         If it exists, replace the existing one retaining the creation date.
         '''
-        if self.ask_rsrc_exists():
+        if self.ask_rsrc_exists(imr.identifier):
             self._logger.info(
                     'Resource {} exists. Removing all outbound triples.'
-                    .format(self.rsrc.identifier))
-            return self.replace_rsrc(g)
+                    .format(imr.identifier))
+            return self.replace_rsrc(imr)
         else:
-            return self.create_rsrc(g)
+            return self.create_rsrc(imr)
 
 
     ## INTERFACE METHODS ##
@@ -203,7 +178,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # implement.
 
     @abstractmethod
-    def extract_imr(self, uri=None, graph=None, inbound=False):
+    def extract_imr(self, uri, graph=None, minimal=False,
+            incl_inbound=False, embed_children=False, incl_srv_mgd=True):
         '''
         Extract an in-memory resource based on the copy of a graph on a subject.
 
@@ -218,13 +194,12 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def ask_rsrc_exists(self, uri=None):
+    def ask_rsrc_exists(self, urn):
         '''
-        Ask if a resource exists (is stored) in the graph store.
+        Ask if a resource is stored in the graph store.
 
-        @param uri (rdflib.term.URIRef) If this is provided, this method
-        will look for the specified resource. Otherwise, it will look for the
-        default resource. If this latter is not specified, the result is False.
+        @param uri (rdflib.term.URIRef) The internal URN of the resource to be
+        queried.
 
         @return boolean
         '''
@@ -232,8 +207,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    @needs_rsrc
-    def create_rsrc(self, urn, data, commit=True):
+    def create_rsrc(self, imr):
         '''Create a resource graph in the main graph.
 
         If the resource exists, raise an exception.
@@ -242,8 +216,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    @needs_rsrc
-    def replace_rsrc(self, g):
+    def replace_rsrc(self, imr):
         '''Replace a resource, i.e. delete all the triples and re-add the
         ones provided.
 
@@ -254,10 +227,13 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    @needs_rsrc
-    def modify_rsrc(self, remove, add):
+    def modify_dataset(self, remove_trp, add_trp):
         '''
-        Adds and/or removes triples from a graph.
+        Adds and/or removes triples from the graph.
+
+        NOTE: This is not specific to a resource. The LDP layer is responsible
+        for checking that all the +/- triples are referring to the intended
+        subject(s).
 
         @param remove (rdflib.Graph) Triples to be removed.
         @param add (rdflib.Graph) Triples to be added.
@@ -266,8 +242,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    @needs_rsrc
-    def delete_rsrc(self, urn, commit=True):
+    def delete_rsrc(self, urn, inbound=True):
         pass
 
 
