@@ -106,7 +106,7 @@ class Ldpr(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, uuid, retr_opts={}):
+    def __init__(self, uuid, repr_opts={}):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
 
@@ -121,7 +121,7 @@ class Ldpr(metaclass=ABCMeta):
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
                 else BaseRdfLayout.ROOT_NODE_URN
 
-        self._set_imr_options(retr_opts)
+        self._imr_options = __class__.imr_options(repr_opts)
 
 
     @property
@@ -328,7 +328,9 @@ class Ldpr(metaclass=ABCMeta):
         '''
         rdfly = cls.load_layout('rdf')
         imr_urn = nsc['fcres'][uuid] if uuid else rdfly.ROOT_NODE_URN
-        imr = rdfly.extract_imr(imr_urn, **repr_opts)
+        cls._logger.debug('Representation options: {}'.format(repr_opts))
+        imr_opts = cls.imr_options(repr_opts)
+        imr = rdfly.extract_imr(imr_urn, **imr_opts)
         rdf_types = imr.objects(RDF.type)
 
         for t in rdf_types:
@@ -336,11 +338,11 @@ class Ldpr(metaclass=ABCMeta):
             if t.identifier == cls.LDP_NR_TYPE:
                 from lakesuperior.model.ldp_nr import LdpNr
                 cls._logger.info('Resource is a LDP-NR.')
-                return LdpNr(uuid)
+                return LdpNr(uuid, repr_opts)
             if t.identifier == cls.LDP_RS_TYPE:
                 from lakesuperior.model.ldp_rs import LdpRs
                 cls._logger.info('Resource is a LDP-RS.')
-                return LdpRs(uuid)
+                return LdpRs(uuid, repr_opts)
 
         raise ResourceNotExistsError(uuid)
 
@@ -390,6 +392,48 @@ class Ldpr(metaclass=ABCMeta):
                 return cls(cnd_uuid)
         else:
             return cls(pfx + str(uuid4()))
+
+
+    @classmethod
+    def imr_options(cls, repr_opts):
+        '''
+        Set options to retrieve IMR.
+
+        Ideally, IMR retrieval is done once per request, so all the options
+        are set once in the `imr()` property.
+
+        @param repr_opts (dict): Options parsed from `Prefer` header.
+        '''
+        cls._logger.debug('Setting retrieval options from: {}'.format(repr_opts))
+        imr_options = {}
+
+        #imr_options['embed_children'] = imr_options['incl_inbound'] = False
+        #imr_options['incl_srv_mgd'] = True
+
+        if 'value' in repr_opts and repr_opts['value'] == 'minimal':
+            imr_options = {
+                'incl_srv_mgd' : False,
+                'incl_inbound' : False,
+                'embed_children' : False,
+            }
+        elif 'parameters' in repr_opts:
+            include = repr_opts['parameters']['include'].split(' ') \
+                    if 'include' in repr_opts['parameters'] else []
+            omit = repr_opts['parameters']['omit'].split(' ') \
+                    if 'omit' in repr_opts['parameters'] else []
+
+            cls._logger.debug('Include: {}'.format(include))
+            cls._logger.debug('Omit: {}'.format(omit))
+
+            if str(cls.RETURN_INBOUND_REF_URI) in include:
+                    imr_options['incl_inbound'] = True
+            if str(cls.RETURN_CHILD_RES_URI) in include:
+                    imr_options['embed_children'] = True
+            if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
+                    imr_options['incl_srv_mgd'] = False
+        cls._logger.debug('Retrieval options: {}'.format(imr_options))
+
+        return imr_options
 
 
     ## LDP METHODS ##
@@ -533,38 +577,5 @@ class Ldpr(metaclass=ABCMeta):
             imr.graph.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
 
         self.rdfly.create_rsrc(imr)
-
-
-    def _set_imr_options(self, repr_opts):
-        '''
-        Set options to retrieve IMR.
-
-        Ideally, IMR retrieval is done once per request, so all the options
-        are set once in the `imr()` property.
-
-        @param repr_opts (dict): Options parsed from `Prefer` header.
-        '''
-        self._imr_options = {}
-
-        minimal = embed_children = incl_inbound = False
-        self._imr_options['incl_srv_mgd'] = True
-
-        if 'value' in repr_opts and repr_opts['value'] == 'minimal':
-            self._imr_options['minimal'] = True
-        elif 'parameters' in repr_opts:
-            include = repr_opts['parameters']['include'].split(' ') \
-                    if 'include' in repr_opts['parameters'] else []
-            omit = repr_opts['parameters']['omit'].split(' ') \
-                    if 'omit' in repr_opts['parameters'] else []
-
-            self._logger.debug('Include: {}'.format(include))
-            self._logger.debug('Omit: {}'.format(omit))
-
-            if str(self.RETURN_INBOUND_REF_URI) in include:
-                    self._imr_options['incl_inbound'] = True
-            if str(self.RETURN_CHILD_RES_URI) in omit:
-                    self._imr_options['embed_chldren'] = False
-            if str(self.RETURN_SRV_MGD_RES_URI) in omit:
-                    self._imr_options['incl_srv_mgd'] = False
 
 

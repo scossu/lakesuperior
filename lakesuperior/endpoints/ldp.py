@@ -84,9 +84,6 @@ def get_resource(uuid, force_rdf=False):
     except ResourceNotExistsError as e:
         return str(e), 404
     else:
-        logger.debug('Resource URN in the route: {}'.format(rsrc._urn))
-        x = rsrc.imr
-        logger.debug('IMR options in the route: {}'.format(rsrc._imr_options))
         out_headers.update(rsrc.head())
         if isinstance(rsrc, LdpRs) \
                 or request.headers['accept'] in accept_rdf \
