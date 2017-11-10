@@ -30,12 +30,14 @@ class SimpleLayout(BaseRdfLayout):
     for (possible) improved speed and reduced storage.
     '''
 
-    def extract_imr(self, uri, strict=False, minimal=False, incl_inbound=False,
+    def extract_imr(self, uri, strict=False, incl_inbound=False,
                 embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
-        inbound_qry = '\n?s1 ?p1 {}'.format(uri.n3()) \
+        inbound_construct = '\n?s1 ?p1 {} .'.format(uri.n3()) \
+                if incl_inbound else ''
+        inbound_qry = '\nOPTIONAL {{ ?s1 ?p1 {} . }} .'.format(uri.n3()) \
                 if incl_inbound else ''
         embed_children_qry = '''
         OPTIONAL {{
@@ -44,15 +46,26 @@ class SimpleLayout(BaseRdfLayout):
         }}
         '''.format(uri.n3()) if embed_children else ''
 
+        srv_mgd_qry = ''
+        if not incl_srv_mgd:
+            for p in srv_mgd_predicates:
+                self._logger.debug('Removing predicate: {}'.format(p))
+                srv_mgd_qry += '\nFILTER ( ?p != {} ) .'.format(p.n3())
+            for t in srv_mgd_types:
+                self._logger.debug('Removing type: {}'.format(t))
+                srv_mgd_qry += '\nMINUS {{ ?s a {} .}} .'.format(t.n3())
+
         q = '''
         CONSTRUCT {{
-            {0} ?p ?o .{1}
+            {uri} ?p ?o .{inb_cnst}
             ?c ?cp ?co .
         }} WHERE {{
-            {0} ?p ?o .{1}{2}
+            {uri} ?p ?o .{inb_qry}{embed_chld}{omit_srv_mgd}
             #FILTER (?p != premis:hasMessageDigest) .
         }}
-        '''.format(uri.n3(), inbound_qry, embed_children_qry)
+        '''.format(uri=uri.n3(), inb_cnst=inbound_construct,
+                    inb_qry=inbound_qry, embed_chld=embed_children_qry,
+                    omit_srv_mgd=srv_mgd_qry)
 
         try:
             qres = self.query(q)
@@ -61,16 +74,6 @@ class SimpleLayout(BaseRdfLayout):
             g = Graph()
         else:
             g = qres.graph
-            # @FIXME This can be expensive with many children. Move this in
-            # query string.
-            if not incl_srv_mgd:
-                self._logger.info('Removing server managed triples.')
-                for p in srv_mgd_predicates:
-                    self._logger.debug('Removing predicate: {}'.format(p))
-                    rsrc.remove(p)
-                for t in srv_mgd_types:
-                    self._logger.debug('Removing type: {}'.format(t))
-                    rsrc.remove(RDF.type, t)
 
         #self._logger.debug('Found resource: {}'.format(
         #        g.serialize(format='turtle').decode('utf-8')))
