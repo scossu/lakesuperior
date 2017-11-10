@@ -7,8 +7,7 @@ from flask import Blueprint, request, send_file
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceExistsError, ResourceNotExistsError, \
-        InvalidResourceError, ServerManagedTermError
+        ResourceExistsError, ResourceNotExistsError, ServerManagedTermError
 from lakesuperior.model.ldp_rs import Ldpr, Ldpc, LdpRs
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
@@ -63,16 +62,39 @@ std_headers = {
 @ldp.route('/<path:uuid>', methods=['GET'])
 @ldp.route('/', defaults={'uuid': None}, methods=['GET'],
         strict_slashes=False)
-def get_resource(uuid):
+def get_resource(uuid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
-    '''
-    rsrc = Ldpr.readonly_inst(uuid)
 
-    if isinstance(rsrc, LdpRs) or request.headers['accept'] in accept_rdf:
-        return _get_rdf(rsrc)
+    @param uuid (string) UUID of resource to retrieve.
+    @param force_rdf (boolean) Whether to retrieve RDF even if the resource is
+    a LDP-NR. This is not available in the API but is used e.g. by the
+    `*/fcr:metadata` endpoint. The default is False.
+    '''
+    out_headers = std_headers
+    repr_options = defaultdict(dict)
+    if 'prefer' in request.headers:
+        prefer = Translator.parse_rfc7240(request.headers['prefer'])
+        logger.debug('Parsed Prefer header: {}'.format(prefer))
+        if 'return' in prefer:
+            repr_options = prefer['return']
+
+    try:
+        rsrc = Ldpr.readonly_inst(uuid, repr_options)
+    except ResourceNotExistsError as e:
+        return str(e), 404
     else:
-        return _get_bitstream(rsrc)
+        logger.debug('Resource URN in the route: {}'.format(rsrc._urn))
+        x = rsrc.imr
+        logger.debug('IMR options in the route: {}'.format(rsrc._imr_options))
+        out_headers.update(rsrc.head())
+        if isinstance(rsrc, LdpRs) \
+                or request.headers['accept'] in accept_rdf \
+                or force_rdf:
+            return (rsrc.imr.graph.serialize(format='turtle'), out_headers)
+        else:
+            return send_file(rsrc.local_path, as_attachment=True,
+                    attachment_filename=rsrc.filename)
 
 
 @ldp.route('/<path:uuid>/fcr:metadata', methods=['GET'])
@@ -80,7 +102,7 @@ def get_metadata(uuid):
     '''
     Retrieve RDF metadata of a LDP-NR.
     '''
-    return _get_rdf(LdpRs(uuid))
+    return get_resource(uuid, force_rdf=True)
 
 
 @ldp.route('/<path:parent>', methods=['POST'])
@@ -212,7 +234,7 @@ def class_from_req_body():
     logger.debug('Content type: {}'.format(request.mimetype))
     logger.debug('files: {}'.format(request.files))
     logger.debug('stream: {}'.format(request.stream))
-    if request.mimetype in accept_rdf:
+    if  not request.mimetype or request.mimetype in accept_rdf:
         cls = Ldpc
         # Parse out the RDF string.
         data = request.data.decode('utf-8')
@@ -233,31 +255,6 @@ def class_from_req_body():
     #logger.info('POST data: {}'.format(data))
 
     return cls, data
-
-
-def _get_rdf(rsrc):
-    '''
-    Get the RDF representation of a resource.
-
-    @param rsrc An in-memory resource.
-    '''
-    out_headers = std_headers
-
-    pref_return = defaultdict(dict)
-    if 'prefer' in request.headers:
-        prefer = Translator.parse_rfc7240(request.headers['prefer'])
-        logger.debug('Parsed Prefer header: {}'.format(prefer))
-        if 'return' in prefer:
-            pref_return = prefer['return']
-
-    try:
-        imr = rsrc.get('rdf', pref_return=pref_return)
-        logger.debug('GET RDF: {}'.format(imr))
-    except ResourceNotExistsError as e:
-        return str(e), 404
-    else:
-        out_headers.update(rsrc.head())
-        return (imr.graph.serialize(format='turtle'), out_headers)
 
 
 def _get_bitstream(rsrc):

@@ -6,6 +6,7 @@ from rdflib.term import URIRef, Literal, Variable
 from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
+from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.util.digest import Digest
 
 class LdpNr(Ldpr):
@@ -93,7 +94,7 @@ class LdpNr(Ldpr):
         '''
         # File size.
         self._logger.debug('Data stream size: {}'.format(stream.limit))
-        self.imr.add(nsc['premis'].hasSize, Literal(stream.limit,
+        self.stored_or_new_imr.add(nsc['premis'].hasSize, Literal(stream.limit,
                 datatype=XSD.long))
 
         # Checksum.

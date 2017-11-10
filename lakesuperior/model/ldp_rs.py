@@ -14,6 +14,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
 from lakesuperior.exceptions import ResourceNotExistsError, \
         ServerManagedTermError, SingleSubjectError
+from lakesuperior.util.digest import Digest
 from lakesuperior.util.translator import Translator
 
 class LdpRs(Ldpr):
@@ -23,9 +24,6 @@ class LdpRs(Ldpr):
     '''
 
     DEFAULT_USER = Literal('BypassAdmin')
-    RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
-    RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
-    RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
 
     base_types = {
         nsc['fcrepo'].Resource,
@@ -36,33 +34,10 @@ class LdpRs(Ldpr):
 
     ## LDP METHODS ##
 
-    def get(self, pref_return):
+    def get(self, repr_opts):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        kwargs = {}
-
-        minimal = embed_children = incl_inbound = False
-        kwargs['incl_srv_mgd'] = True
-
-        if 'value' in pref_return and pref_return['value'] == 'minimal':
-            kwargs['minimal'] = True
-        else:
-            include = pref_return['parameters']['include'].split(' ') \
-                    if 'include' in pref_return['parameters'] else []
-            omit = pref_return['parameters']['omit'].split(' ') \
-                    if 'omit' in pref_return['parameters'] else []
-
-            self._logger.debug('Include: {}'.format(include))
-            self._logger.debug('Omit: {}'.format(omit))
-
-            if str(self.RETURN_INBOUND_REF_URI) in include:
-                    kwargs['incl_inbound'] = True
-            if str(self.RETURN_CHILD_RES_URI) in omit:
-                    kwargs['embed_chldren'] = False
-            if str(self.RETURN_SRV_MGD_RES_URI) in omit:
-                    kwargs['incl_srv_mgd'] = False
-
         return Translator.globalize_rsrc(self.imr)
 
 

@@ -178,15 +178,14 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # implement.
 
     @abstractmethod
-    def extract_imr(self, uri, graph=None, minimal=False,
-            incl_inbound=False, embed_children=False, incl_srv_mgd=True):
+    def extract_imr(self, uri, strict=False, minimal=False, incl_inbound=False,
+                embed_children=False, incl_srv_mgd=True):
         '''
         Extract an in-memory resource based on the copy of a graph on a subject.
 
         @param uri (URIRef) Resource URI.
-        @param graph (rdflib.term.URIRef | set(rdflib.graphURIRef)) The graph
-        to extract from. This can be an URI for a single graph, or a list of
-        graph URIs in which case an aggregate graph will be used.
+        @param strict (boolean) If set to True, an empty result graph will
+        raise a `ResourceNotExistsError`.
         @param inbound (boolean) Whether to pull triples that have the resource
         URI as their object.
         '''

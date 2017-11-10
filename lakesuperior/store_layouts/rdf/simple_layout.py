@@ -12,7 +12,8 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import InvalidResourceError
+from lakesuperior.exceptions import InvalidResourceError, \
+        ResourceNotExistsError
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.translator import Translator
 
@@ -29,8 +30,8 @@ class SimpleLayout(BaseRdfLayout):
     for (possible) improved speed and reduced storage.
     '''
 
-    def extract_imr(self, uri, graph=None, minimal=False,
-            incl_inbound=False, embed_children=False, incl_srv_mgd=True):
+    def extract_imr(self, uri, strict=False, minimal=False, incl_inbound=False,
+                embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
@@ -71,6 +72,11 @@ class SimpleLayout(BaseRdfLayout):
                     self._logger.debug('Removing type: {}'.format(t))
                     rsrc.remove(RDF.type, t)
 
+        #self._logger.debug('Found resource: {}'.format(
+        #        g.serialize(format='turtle').decode('utf-8')))
+        if strict and not len(g):
+            raise ResourceNotExistsError(uri)
+
         return Resource(g, uri)
 
 
@@ -86,7 +92,11 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.create_rsrc.
         '''
-        self.ds |= imr.graph
+        self._logger.debug('Creating resource:\n{}'.format(
+            imr.graph.serialize(format='turtle').decode('utf8')))
+        #self.ds |= imr.graph # This does not seem to work with datasets.
+        for t in imr.graph:
+            self.ds.add(t)
 
         return self.RES_CREATED
 
@@ -108,9 +118,11 @@ class SimpleLayout(BaseRdfLayout):
         imr.set(nsc['fcrepo'].createdBy, created_by)
 
         # Delete the stored triples.
-        self.delete_rsrc()
+        self.delete_rsrc(imr.identifier)
 
-        self.ds |= imr.graph
+        #self.ds |= imr.graph # This does not seem to work with datasets.
+        for t in imr.graph:
+            self.ds.add(t)
 
         return self.RES_UPDATED
 

@@ -95,6 +95,9 @@ class Ldpr(metaclass=ABCMeta):
     FCREPO_PTREE_TYPE = nsc['fcrepo'].Pairtree
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
+    RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
+    RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
+    RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
 
     _logger = logging.getLogger(__name__)
 
@@ -103,7 +106,7 @@ class Ldpr(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, uuid):
+    def __init__(self, uuid, retr_opts={}):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
 
@@ -118,6 +121,7 @@ class Ldpr(metaclass=ABCMeta):
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
                 else BaseRdfLayout.ROOT_NODE_URN
 
+        self._set_imr_options(retr_opts)
 
 
     @property
@@ -170,6 +174,24 @@ class Ldpr(metaclass=ABCMeta):
     @property
     def imr(self):
         '''
+        Extract an in-memory resource from the graph store.
+
+        If the resource is not stored (yet), a `ResourceNotExistsError` is
+        raised.
+
+        @return rdflib.resource.Resource
+        '''
+        if not hasattr(self, '_imr'):
+            self._logger.debug('IMR options: {}'.format(self._imr_options))
+            options = dict(self._imr_options, strict=True)
+            self._imr = self.rdfly.extract_imr(self.urn, **options)
+
+        return self._imr
+
+
+    @property
+    def stored_or_new_imr(self):
+        '''
         Extract an in-memory resource for harmless manipulation and output.
 
         If the resource is not stored (yet), initialize a new IMR with basic
@@ -178,12 +200,13 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_imr'):
-            if not self.is_stored:
+            options = dict(self._imr_options, strict=True)
+            try:
+                self._imr = self.rdfly.extract_imr(self.urn, **options)
+            except ResourceNotExistsError:
                 self._imr = Resource(Graph(), self.urn)
                 for t in self.base_types:
                     self.imr.add(RDF.type, t)
-            else:
-                self._imr = self.rdfly.extract_imr(self.urn)
 
         return self._imr
 
@@ -293,7 +316,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @classmethod
-    def readonly_inst(cls, uuid):
+    def readonly_inst(cls, uuid, repr_opts=None):
         '''
         Factory method that creates and returns an instance of an LDPR subclass
         based on information that needs to be queried from the underlying
@@ -305,7 +328,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         rdfly = cls.load_layout('rdf')
         imr_urn = nsc['fcres'][uuid] if uuid else rdfly.ROOT_NODE_URN
-        imr = rdfly.extract_imr(imr_urn, minimal=True)
+        imr = rdfly.extract_imr(imr_urn, **repr_opts)
         rdf_types = imr.objects(RDF.type)
 
         for t in rdf_types:
@@ -377,6 +400,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         out_headers = defaultdict(list)
 
+        self._logger.debug('IMR options in head(): {}'.format(self._imr_options))
         digest = self.imr.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
@@ -498,17 +522,49 @@ class Ldpr(metaclass=ABCMeta):
         between a and a/b and between a/b and a/b/c in order to maintain the
         `containment chain.
         '''
-        g = Graph()
-        g.add((uri, RDF.type, nsc['ldp'].Container))
-        g.add((uri, RDF.type, nsc['ldp'].BasicContainer))
-        g.add((uri, RDF.type, nsc['ldp'].RDFSource))
-        g.add((uri, nsc['fcrepo'].contains, child_uri))
+        imr = Resource(Graph(), uri)
+        imr.add(RDF.type, nsc['ldp'].Container)
+        imr.add(RDF.type, nsc['ldp'].BasicContainer)
+        imr.add(RDF.type, nsc['ldp'].RDFSource)
+        imr.add(nsc['fcrepo'].contains, child_uri)
 
         # If the path segment is just below root
         if '/' not in str(uri):
-            g.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
+            imr.graph.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
 
-        self.rdfly.create_rsrc(g)
+        self.rdfly.create_rsrc(imr)
 
+
+    def _set_imr_options(self, repr_opts):
+        '''
+        Set options to retrieve IMR.
+
+        Ideally, IMR retrieval is done once per request, so all the options
+        are set once in the `imr()` property.
+
+        @param repr_opts (dict): Options parsed from `Prefer` header.
+        '''
+        self._imr_options = {}
+
+        minimal = embed_children = incl_inbound = False
+        self._imr_options['incl_srv_mgd'] = True
+
+        if 'value' in repr_opts and repr_opts['value'] == 'minimal':
+            self._imr_options['minimal'] = True
+        elif 'parameters' in repr_opts:
+            include = repr_opts['parameters']['include'].split(' ') \
+                    if 'include' in repr_opts['parameters'] else []
+            omit = repr_opts['parameters']['omit'].split(' ') \
+                    if 'omit' in repr_opts['parameters'] else []
+
+            self._logger.debug('Include: {}'.format(include))
+            self._logger.debug('Omit: {}'.format(omit))
+
+            if str(self.RETURN_INBOUND_REF_URI) in include:
+                    self._imr_options['incl_inbound'] = True
+            if str(self.RETURN_CHILD_RES_URI) in omit:
+                    self._imr_options['embed_chldren'] = False
+            if str(self.RETURN_SRV_MGD_RES_URI) in omit:
+                    self._imr_options['incl_srv_mgd'] = False
 
 
