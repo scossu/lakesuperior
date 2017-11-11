@@ -102,28 +102,17 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self._store
 
 
-    def rsrc(self, urn):
+    @property
+    def protected_pred(self):
         '''
-        Reference to a live data set that can be updated. This exposes the
-        whole underlying triplestore structure and is used to update a
-        resource.
+        Predicated that are not deleted from an existing resources when it is
+        replaced, e.g. by a PUT operation.
         '''
-        return self.ds.resource(urn)
-
-
-    def out_rsrc(self, urn):
-        '''
-        Graph obtained by querying the triplestore and adding any abstraction
-        and filtering to make up a graph that can be used for read-only,
-        API-facing results. Different layouts can implement this in very
-        different ways, so it is an abstract method.
-
-        @return rdflib.resource.Resource
-        '''
-        imr = self.extract_imr(urn)
-        if not len(imr.graph):
-            raise ResourceNotExistsError
-
+        return {
+            nsc['fcrepo'].created,
+            nsc['fcrepo'].createdBy,
+            nsc['ldp'].contains,
+        }
 
 
     ## PUBLIC METHODS ##
@@ -156,6 +145,29 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         self._logger.debug('Sending SPARQL update: {}'.format(q))
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
+
+
+    def rsrc(self, urn):
+        '''
+        Reference to a live data set that can be updated. This exposes the
+        whole underlying triplestore structure and is used to update a
+        resource.
+        '''
+        return self.ds.resource(urn)
+
+
+    def out_rsrc(self, urn):
+        '''
+        Graph obtained by querying the triplestore and adding any abstraction
+        and filtering to make up a graph that can be used for read-only,
+        API-facing results. Different layouts can implement this in very
+        different ways, so it is an abstract method.
+
+        @return rdflib.resource.Resource
+        '''
+        imr = self.extract_imr(urn)
+        if not len(imr.graph):
+            raise ResourceNotExistsError
 
 
     def create_or_replace_rsrc(self, imr):

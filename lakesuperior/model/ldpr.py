@@ -114,7 +114,8 @@ class Ldpr(metaclass=ABCMeta):
         layout should commit an open transaction. Methods are wrapped in a
         transaction by using the `@transactional` decorator.
 
-        @param uuid (string) UUID of the resource.
+        @param uuid (string) UUID of the resource. If None (must be explicitly
+        set) it refers to the root node.
         '''
         self.uuid = uuid
 
@@ -362,16 +363,12 @@ class Ldpr(metaclass=ABCMeta):
 
         rdfly = cls.load_layout('rdf')
 
-        parent_imr_urn = nsc['fcres'][parent_uuid] if parent_uuid \
-                else rdfly.ROOT_NODE_URN
-        parent_imr = rdfly.extract_imr(parent_imr_urn, minimal=True)
-        if not len(parent_imr.graph):
-            raise ResourceNotExistsError(parent_uuid)
+        parent = cls(parent_uuid, incl_children=False)
 
         # Set prefix.
         if parent_uuid:
             parent_types = { t.identifier for t in \
-                    parent_imr.objects(RDF.type) }
+                    parent.imr.objects(RDF.type) }
             cls._logger.debug('Parent types: {}'.format(
                     parent_types))
             if nsc['ldp'].Container not in parent_types:

@@ -31,7 +31,7 @@ class SimpleLayout(BaseRdfLayout):
     '''
 
     def extract_imr(self, uri, strict=False, incl_inbound=False,
-                embed_children=False, incl_srv_mgd=True):
+                incl_children=True, embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
         '''
@@ -40,11 +40,14 @@ class SimpleLayout(BaseRdfLayout):
         inbound_qry = '\nOPTIONAL {{ ?s1 ?p1 {} . }} .'.format(uri.n3()) \
                 if incl_inbound else ''
         embed_children_qry = '''
-        OPTIONAL {{
+        \nOPTIONAL {{
           {0} ldp:contains ?c .
           ?c ?cp ?co .
         }}
-        '''.format(uri.n3()) if embed_children else ''
+        '''.format(uri.n3()) if incl_children and embed_children else ''
+
+        incl_children_qry = '\nFILTER ( ?p != ldp:contains )' \
+                if not incl_children else ''
 
         srv_mgd_qry = ''
         if not incl_srv_mgd:
@@ -60,12 +63,12 @@ class SimpleLayout(BaseRdfLayout):
             {uri} ?p ?o .{inb_cnst}
             ?c ?cp ?co .
         }} WHERE {{
-            {uri} ?p ?o .{inb_qry}{embed_chld}{omit_srv_mgd}
+            {uri} ?p ?o .{inb_qry}{incl_chld}{embed_chld}{omit_srv_mgd}
             #FILTER (?p != premis:hasMessageDigest) .
         }}
         '''.format(uri=uri.n3(), inb_cnst=inbound_construct,
-                    inb_qry=inbound_qry, embed_chld=embed_children_qry,
-                    omit_srv_mgd=srv_mgd_qry)
+                    inb_qry=inbound_qry, incl_chld=incl_children_qry,
+                    embed_chld=embed_children_qry, omit_srv_mgd=srv_mgd_qry)
 
         try:
             qres = self.query(q)
@@ -108,20 +111,26 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.replace_rsrc.
         '''
-        # @TODO Move this to LDP.
         rsrc = self.rsrc(imr.identifier)
         # Delete all triples but keep creation date and creator.
-        created = rsrc.value(nsc['fcrepo'].created)
-        created_by = rsrc.value(nsc['fcrepo'].createdBy)
+        #created = rsrc.value(nsc['fcrepo'].created)
+        #created_by = rsrc.value(nsc['fcrepo'].createdBy)
 
-        if not created or not created_by:
-            raise InvalidResourceError(urn)
+        #if not created or not created_by:
+        #    raise InvalidResourceError(urn)
 
-        imr.set(nsc['fcrepo'].created, created)
-        imr.set(nsc['fcrepo'].createdBy, created_by)
+        #imr.set(nsc['fcrepo'].created, created)
+        #imr.set(nsc['fcrepo'].createdBy, created_by)
 
-        # Delete the stored triples.
-        self.delete_rsrc(imr.identifier)
+        # Delete the stored triples but spare the protected predicates.
+        del_trp_qry = []
+        for p in rsrc.predicates():
+            if p.identifier not in self.protected_pred:
+                self._logger.debug('Removing {}'.format(p.identifier))
+                rsrc.remove(p.identifier)
+            else:
+                self._logger.debug('NOT Removing {}'.format(p))
+                imr.remove(p.identifier)
 
         #self.ds |= imr.graph # This does not seem to work with datasets.
         for t in imr.graph:
@@ -136,24 +145,23 @@ class SimpleLayout(BaseRdfLayout):
         '''
         self.ds -= remove_trp
         self.ds += add_trp
-        #for t in remove.predicate_objects():
-        #    self.rsrc.remove(t[0], t[1])
-
-        #for t in add.predicate_objects():
-        #    self.rsrc.add(t[0], t[1])
 
 
-    def delete_rsrc(self, urn, inbound=True):
+    def delete_rsrc(self, urn, inbound=True, delete_children=True):
         '''
         Delete a resource. If `inbound` is specified, delete all inbound
         relationships as well (this is the default).
         '''
         rsrc = self.rsrc(urn)
+        if delete_children:
+            self._logger.info('Deleting resource children')
+            for c in rsrc[nsc['ldp'].contains * '+']:
+                self._logger.debug('Removing child: {}'.format(c))
+                c.remove(Variable('p'))
 
         print('Removing resource {}.'.format(rsrc.identifier))
 
         rsrc.remove(Variable('p'))
-        # @TODO Remove children recursively
         if inbound:
             self.ds.remove(
                     (Variable('s'), Variable('p'), rsrc.identifier))
