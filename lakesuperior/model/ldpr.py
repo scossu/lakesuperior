@@ -609,6 +609,7 @@ class Ldpr(metaclass=ABCMeta):
                     add_g.add((s, p, target_uri))
 
         if len(add_g):
+            add_g = self._check_mgd_terms(add_g)
             self._logger.debug('Adding DC/IC triples: {}'.format(
                 add_g.serialize(format='turtle').decode('utf-8')))
             self.rdfly.modify_dataset(Graph(), add_g)

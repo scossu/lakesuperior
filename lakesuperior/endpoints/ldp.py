@@ -4,12 +4,14 @@ from collections import defaultdict
 from uuid import uuid4
 
 from flask import Blueprint, request, send_file
+from rdflib import Graph
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceExistsError, ResourceNotExistsError, ServerManagedTermError
-from lakesuperior.model.ldp_rs import Ldpr, Ldpc, LdpRs
+from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
+from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.translator import Translator
 
@@ -228,28 +230,41 @@ def delete_resource(uuid):
 
 
 def class_from_req_body():
+    '''
+    Determine LDP type (and instance class) from the provided RDF body.
+    '''
     logger.debug('Content type: {}'.format(request.mimetype))
     logger.debug('files: {}'.format(request.files))
     logger.debug('stream: {}'.format(request.stream))
+
+    # LDP-NR types
     if  not request.mimetype or request.mimetype in accept_rdf:
-        cls = Ldpc
         # Parse out the RDF string.
         data = request.data.decode('utf-8')
+        g = Graph().parse(data=data, format=request.mimetype)
+
+        if Ldpr.MBR_RSRC_URI in g.predicates() and \
+                Ldpr.MBR_REL_URI in g.predicates():
+            if Ldpr.INS_CNT_REL_URI in g.predicates():
+                cls = LdpIc
+            else:
+                cls = LdpDc
+        else:
+            cls = Ldpc
     else:
         cls = LdpNr
         if request.mimetype == 'multipart/form-data':
             # This seems the "right" way to upload a binary file, with a
-            # multipart/form-data MIME type and the file in the `file` field.
-            # This however is not supported by FCREPO4.
+            # multipart/form-data MIME type and the file in the `file`
+            # field. This however is not supported by FCREPO4.
             data = request.files.get('file').stream
         else:
-            # This is a less clean way, with the file in the form body and the
-            # request as application/x-www-form-urlencoded.
+            # This is a less clean way, with the file in the form body and
+            # the request as application/x-www-form-urlencoded.
             # This is how FCREPO4 accepts binary uploads.
             data = request.stream
 
-    logger.info('POSTing resource of type: {}'.format(cls.__name__))
-    #logger.info('POST data: {}'.format(data))
+    logger.info('Creating resource of type: {}'.format(cls.__name__))
 
     return cls, data
 

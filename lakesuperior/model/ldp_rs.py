@@ -123,7 +123,8 @@ class LdpRs(Ldpr):
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
-                    g.remove((s, Variable('p'), Variable('o')))
+                    self._logger.info('Removing offending subj: {}'.format(s))
+                    g.remove((s, None, None))
 
         offending_predicates = set(g.predicates()) & srv_mgd_predicates
         if offending_predicates:
@@ -131,7 +132,8 @@ class LdpRs(Ldpr):
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
                 for p in offending_predicates:
-                    g.remove((Variable('s'), p, Variable('o')))
+                    self._logger.info('Removing offending pred: {}'.format(p))
+                    g.remove((None, p, None))
 
         offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
         if offending_types:
@@ -139,8 +141,11 @@ class LdpRs(Ldpr):
                 raise ServerManagedTermError(offending_types, 't')
             else:
                 for t in offending_types:
-                    g.remove((Variable('s'), RDF.type, t))
+                    self._logger.info('Removing offending type: {}'.format(t))
+                    g.remove((None, RDF.type, t))
 
+        self._logger.debug('Sanitized graph: {}'.format(g.serialize(
+            format='turtle').decode('utf-8')))
         return g
 
 
