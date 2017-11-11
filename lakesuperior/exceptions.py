@@ -19,8 +19,8 @@ class ResourceExistsError(ResourceError):
 
     This usually surfaces at the HTTP level as a 409.
     '''
-    def __repr__(self):
-        return self.msg or 'Resource #{} already exists.'.format(self.uuid)
+    def __str__(self):
+        return self.msg or 'Resource {} already exists.'.format(self.uuid)
 
 
 
@@ -31,8 +31,8 @@ class ResourceNotExistsError(ResourceError):
 
     This usually surfaces at the HTTP level as a 404.
     '''
-    def __repr__(self):
-        return self.msg or 'Resource #{} does not exist.'.format(self.uuid)
+    def __str__(self):
+        return self.msg or 'Resource {} not found.'.format(self.uuid)
 
 
 
@@ -42,8 +42,8 @@ class InvalidResourceError(ResourceError):
 
     This usually surfaces at the HTTP level as a 409 or other error.
     '''
-    def __repr__(self):
-        return self.msg or 'Resource #{} is invalid.'.format(self.uuid)
+    def __str__(self):
+        return self.msg or 'Resource {} is invalid.'.format(self.uuid)
 
 
 
