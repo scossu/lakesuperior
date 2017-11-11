@@ -1,3 +1,5 @@
+import logging
+
 from collections import defaultdict
 
 from flask import request
@@ -12,6 +14,13 @@ class Translator:
     Utility class to perform translations of strings and their wrappers.
     All static methods.
     '''
+
+    _logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def base_url():
+        return request.host_url + request.path.split('/')[1]
+
 
     @staticmethod
     def camelcase(word):
@@ -40,10 +49,25 @@ class Translator:
 
         @return string
         '''
-        return s.replace(
-            request.host_url + 'rest/',
-            str(nsc['fcres'])
-        )
+        #import pdb; pdb.set_trace()
+        return s.replace(Translator.base_url()+'/', str(nsc['fcres']))\
+                .replace(Translator.base_url(), str(nsc['fcres']))
+
+
+    @staticmethod
+    def localize_term(uri):
+        '''
+        Convert an URI into an URN.
+
+        @param rdflib.term.URIRef urn Input URI.
+
+        @return rdflib.term.URIRef
+        '''
+        #import pdb; pdb.set_trace()
+        Translator._logger.debug('Input URI: {}'.format(uri))
+        if uri.strip('/') == Translator.base_url():
+            return BaseRdfLayout.ROOT_NODE_URN
+        return URIRef(Translator.localize_string(str(uri)))
 
 
     @staticmethod

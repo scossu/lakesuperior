@@ -94,14 +94,15 @@ class LdpRs(Ldpr):
         '''
         g = Graph().parse(data=data, format=format, publicID=self.urn)
 
-        imr = Resource(self._check_mgd_terms(g, handling), self.urn)
-        imr = self._add_srv_mgd_triples(imr, create=True)
-        self._ensure_single_subject_rdf(imr.graph)
+        self.provided_imr = Resource(self._check_mgd_terms(g, handling),
+                self.urn)
+        self._add_srv_mgd_triples(create=True)
+        self._ensure_single_subject_rdf(self.provided_imr.graph)
 
         if create_only:
-            res = self.rdfly.create_rsrc(imr)
+            res = self.rdfly.create_rsrc(self.provided_imr)
         else:
-            res = self.rdfly.create_or_replace_rsrc(imr)
+            res = self.rdfly.create_or_replace_rsrc(self.provided_imr)
 
         self._set_containment_rel()
 
@@ -143,32 +144,30 @@ class LdpRs(Ldpr):
         return g
 
 
-    def _add_srv_mgd_triples(self, rsrc, create=False):
+    def _add_srv_mgd_triples(self, create=False):
         '''
         Add server-managed triples to a resource.
 
         @param create (boolean) Whether the resource is being created.
         '''
         # Message digest.
-        cksum = Digest.rdf_cksum(rsrc.graph)
-        rsrc.set(nsc['premis'].hasMessageDigest,
+        cksum = Digest.rdf_cksum(self.provided_imr.graph)
+        self.provided_imr.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
         # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
         if create:
-            rsrc.set(nsc['fcrepo'].created, ts)
-            rsrc.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+            self.provided_imr.set(nsc['fcrepo'].created, ts)
+            self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
 
-        rsrc.set(nsc['fcrepo'].lastModified, ts)
-        rsrc.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+        self.provided_imr.set(nsc['fcrepo'].lastModified, ts)
+        self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
         # Base LDP types.
         for t in self.base_types:
-            rsrc.add(RDF.type, t)
-
-        return rsrc
+            self.provided_imr.add(RDF.type, t)
 
 
     def _sparql_delta(self, q, handling=None):

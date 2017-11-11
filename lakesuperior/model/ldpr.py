@@ -93,8 +93,11 @@ class Ldpr(metaclass=ABCMeta):
     '''
 
     FCREPO_PTREE_TYPE = nsc['fcrepo'].Pairtree
+    INS_CNT_REL_URI = nsc['ldp'].insertedContentRelation
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
+    MBR_RSRC_URI = nsc['ldp'].membershipResource
+    MBR_REL_URI = nsc['ldp'].hasMemberRelation
     RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
     RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
@@ -499,22 +502,17 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
-            cparent_uri = self._find_parent_or_create_pairtree(self.uuid)
+            parent_uri = self._find_parent_or_create_pairtree(self.uuid)
 
-            # Reroute possible containment relationships between parent and new
-            # resource.
-            #self._splice_in(cparent)
-
-            if cparent_uri:
-                self.rdfly.ds.add((cparent_uri, nsc['ldp'].contains,
+            if parent_uri:
+                self.rdfly.ds.add((parent_uri, nsc['ldp'].contains,
                         self.rsrc.identifier))
+
+                # Direct or indirect container relationship.
+                self._add_ldp_dc_ic_rel(parent_uri)
         else:
             self.rsrc.graph.add((nsc['fcsystem'].root, nsc['ldp'].contains,
                     self.rsrc.identifier))
-        # If a resource has no parent and should be parent of the new resource,
-        # add the relationship.
-        #for child_uri in self.find_lost_children():
-        #    self.rsrc.add(nsc['ldp'].contains, child_uri)
 
 
     def _find_parent_or_create_pairtree(self, uuid):
@@ -574,5 +572,45 @@ class Ldpr(metaclass=ABCMeta):
             imr.graph.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
 
         self.rdfly.create_rsrc(imr)
+
+
+    def _add_ldp_dc_ic_rel(self, cont_uri):
+        '''
+        Add relationship triples from a direct or indirect container parent.
+
+        @param cont_uri (rdflib.term.URIRef)  The container URI.
+        '''
+        cont_imr = self.rdfly.extract_imr(cont_uri, incl_children=False)
+        cont_p = set(cont_imr.graph.predicates())
+        add_g = Graph()
+
+        self._logger.info('Checking direct or indirect containment.')
+        self._logger.debug('Parent predicates: {}'.format(cont_p))
+
+        if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
+            s = Translator.localize_term(
+                    cont_imr.value(self.MBR_RSRC_URI).identifier)
+            p = cont_imr.value(self.MBR_REL_URI).identifier
+
+            if cont_imr[RDF.type : nsc['ldp'].DirectContainer]:
+                self._logger.info('Parent is a direct container.')
+
+                self._logger.debug('Creating DC triples.')
+                add_g.add((s, p, self.urn))
+
+            elif cont_imr[RDF.type : nsc['ldp'].IndirectContainer] \
+                   and self.INS_CNT_REL_URI in cont_p:
+                self._logger.info('Parent is an indirect container.')
+                cont_rel_uri = cont_imr.value(self.INS_CNT_REL_URI).identifier
+                target_uri = self.provided_imr.value(cont_rel_uri).identifier
+                self._logger.debug('Target URI: {}'.format(target_uri))
+                if target_uri:
+                    self._logger.debug('Creating IC triples.')
+                    add_g.add((s, p, target_uri))
+
+        if len(add_g):
+            self._logger.debug('Adding DC/IC triples: {}'.format(
+                add_g.serialize(format='turtle').decode('utf-8')))
+            self.rdfly.modify_dataset(Graph(), add_g)
 
 

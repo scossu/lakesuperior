@@ -112,15 +112,6 @@ class SimpleLayout(BaseRdfLayout):
         See base_rdf_layout.replace_rsrc.
         '''
         rsrc = self.rsrc(imr.identifier)
-        # Delete all triples but keep creation date and creator.
-        #created = rsrc.value(nsc['fcrepo'].created)
-        #created_by = rsrc.value(nsc['fcrepo'].createdBy)
-
-        #if not created or not created_by:
-        #    raise InvalidResourceError(urn)
-
-        #imr.set(nsc['fcrepo'].created, created)
-        #imr.set(nsc['fcrepo'].createdBy, created_by)
 
         # Delete the stored triples but spare the protected predicates.
         del_trp_qry = []
@@ -143,8 +134,15 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        self.ds -= remove_trp
-        self.ds += add_trp
+        #self._logger.debug('Remove triples: {}'.format(
+        #        remove_trp.serialize(format='turtle').decode('utf-8')))
+        #self._logger.debug('Add triples: {}'.format(
+        #        add_trp.serialize(format='turtle').decode('utf-8')))
+
+        for t in remove_trp:
+            self.ds.remove(t)
+        for t in add_trp:
+            self.ds.add(t)
 
 
     def delete_rsrc(self, urn, inbound=True, delete_children=True):
