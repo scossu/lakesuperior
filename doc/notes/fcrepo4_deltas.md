@@ -55,6 +55,17 @@ the default.
 If `Prefer` is set to `handling=lenient`, all server-managed triples sent with
 the payload are ignored.
 
+## Automatic LDP class assignment
+
+Since LAKEsuperior rejects client-provided server-managed triples, and since
+the LDP types are among them, the LDP container type is inferred from the
+provided properties: if the `ldp:hasMemberRelation` and
+`ldp:membershipResource` properties are provided, the resource is a Direct
+Container. If in addition to these the `ldp:insertedContentRelation` property
+is present, the resource is an Indirect Container. If any of the first two are
+missing, the resource is a Container (@TODO discuss: shall it be a Basic
+Contaner?)
+
 ## LDP-NR metadata by content negotiation
 
 FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
