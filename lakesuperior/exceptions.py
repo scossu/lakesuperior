@@ -71,6 +71,23 @@ class ServerManagedTermError(RuntimeError):
                 .format(self.term_name, ' , '.join(self.terms))
 
 
+
+class RefIntViolationError(RuntimeError):
+    '''
+    Raised when a provided data set has a link to a non-existing repository
+    resource. With some setups this is handled silently, with a strict setting
+    it raises this exception that should return a 412 HTTP code.
+    '''
+    def __init__(self, o):
+        self.o = o
+
+    def __str__(self):
+        return 'Resource {} does not exist in repository. Linking to it '\
+            'constitutes an integrity violation under the current setup.'\
+            .format(self.o)
+
+
+
 class SingleSubjectError(RuntimeError):
     '''
     Raised when a SPARQL-Update query or a RDF payload for a PUT contain

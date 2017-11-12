@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import arrow
 
+from flask import request
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
@@ -100,6 +101,9 @@ class LdpRs(Ldpr):
                 self.urn)
         self._add_srv_mgd_triples(create=True)
         self._ensure_single_subject_rdf(self.provided_imr.graph)
+        cnf = self.rdfly.conf['referential_integrity']
+        if cnf != 'none':
+            self._check_ref_int(cnf)
 
         if create_only:
             res = self.rdfly.create_rsrc(self.provided_imr)
@@ -227,6 +231,21 @@ class LdpRs(Ldpr):
         for s in set(g.subjects()):
             if not s == self.uri:
                 return SingleSubjectError(s, self.uri)
+
+
+    def _check_ref_int(self, config):
+        g = self.provided_imr.graph
+
+        for o in g.objects():
+            if isinstance(o, URIRef) and str(o).startswith(request.host_url) \
+                    and not self.rdfly.ask_rsrc_exists(o):
+                if config == 'strict':
+                    raise RefIntViolationError(o)
+                else:
+                    self._logger.info(
+                            'Removing link to non-existent repo resource: {}'
+                            .format(o))
+                    g.remove((None, None, o))
 
 
 class Ldpc(LdpRs):

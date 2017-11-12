@@ -67,11 +67,11 @@ class BaseRdfLayout(metaclass=ABCMeta):
     RES_CREATED = '_created_'
     RES_UPDATED = '_updated_'
 
-    _conf = config['application']['store']['ldp_rs']
+    conf = config['application']['store']['ldp_rs']
     _logger = logging.getLogger(__name__)
 
-    query_ep = _conf['webroot'] + _conf['query_ep']
-    update_ep = _conf['webroot'] + _conf['update_ep']
+    query_ep = conf['webroot'] + conf['query_ep']
+    update_ep = conf['webroot'] + conf['update_ep']
 
 
     ## MAGIC METHODS ##
