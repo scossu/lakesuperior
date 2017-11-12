@@ -92,7 +92,9 @@ class LdpRs(Ldpr):
         @param create_only (boolean) Whether the operation is a create-only
         one (i.e. POST) or a create-or-update one (i.e. PUT).
         '''
-        g = Graph().parse(data=data, format=format, publicID=self.urn)
+        g = Graph()
+        if data:
+            g.parse(data=data, format=format, publicID=self.urn)
 
         self.provided_imr = Resource(self._check_mgd_terms(g, handling),
                 self.urn)

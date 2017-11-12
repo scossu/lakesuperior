@@ -238,7 +238,11 @@ def class_from_req_body():
     logger.debug('stream: {}'.format(request.stream))
 
     # LDP-NR types
-    if  not request.mimetype or request.mimetype in accept_rdf:
+    if  not request.data:
+        logger.debug('No data received in body.')
+        cls = Ldpc
+        data = None
+    elif request.mimetype in accept_rdf:
         # Parse out the RDF string.
         data = request.data.decode('utf-8')
         g = Graph().parse(data=data, format=request.mimetype)
