@@ -184,6 +184,30 @@ class BaseRdfLayout(metaclass=ABCMeta):
             return self.create_rsrc(imr)
 
 
+    def delete_rsrc(self, urn, inbound=True, delete_children=True):
+        '''
+        Delete a resource and optionally its children.
+
+        @param urn (rdflib.term.URIRef) URN of the resource to be deleted.
+        @param inbound (boolean) If specified, delete all inbound relationships
+        as well (this is the default).
+        @param delete_children (boolean) Whether to delete all child resources.
+        This is normally true.
+        '''
+        inbound = inbound if self.conf['referential_integrity'] == 'none' \
+                else True
+        rsrc = self.rsrc(urn)
+        children = rsrc[nsc['ldp'].contains * '+'] if delete_children else []
+
+        self._do_delete_rsrc(rsrc, inbound)
+
+        for child_rsrc in children:
+            self._do_delete_rsrc(child_rsrc, inbound)
+            self._leave_tombstone(child_rsrc.identifier, urn)
+
+        return self._leave_tombstone(urn)
+
+
     ## INTERFACE METHODS ##
 
     # Implementers of custom layouts should look into these methods to
@@ -253,9 +277,28 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def delete_rsrc(self, urn, inbound=True):
+    def _do_delete_rsrc(self, rsrc, inbound):
+        '''
+        Delete a single resource.
+
+        @param rsrc (rdflib.resource.Resource) Resource to be deleted.
+        @param inbound (boolean) Whether to delete the inbound relationships.
+        '''
         pass
 
+
+    @abstractmethod
+    def _leave_tombstone(self, urn, parent_urn=None):
+        '''
+        Leave a tombstone when deleting a resource.
+
+        If a parent resource is specified, a pointer to the parent's tombstone
+        is added instead.
+
+        @param urn (rdflib.term.URIRef) URN of the deleted resource.
+        @param parent_urn (rdflib.term.URIRef) URI of deleted parent.
+        '''
+        pass
 
 
     ## PROTECTED METHODS  ##

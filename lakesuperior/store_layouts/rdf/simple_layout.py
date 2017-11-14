@@ -13,7 +13,7 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceNotExistsError
+        ResourceNotExistsError, TombstoneError
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.util.translator import Translator
 
@@ -40,7 +40,7 @@ class SimpleLayout(BaseRdfLayout):
         inbound_qry = '\nOPTIONAL {{ ?s1 ?p1 {} . }} .'.format(uri.n3()) \
                 if incl_inbound else ''
         embed_children_qry = '''
-        \nOPTIONAL {{
+        OPTIONAL {{
           {0} ldp:contains ?c .
           ?c ?cp ?co .
         }}
@@ -67,8 +67,8 @@ class SimpleLayout(BaseRdfLayout):
             #FILTER (?p != premis:hasMessageDigest) .
         }}
         '''.format(uri=uri.n3(), inb_cnst=inbound_construct,
-                    inb_qry=inbound_qry, incl_chld=incl_children_qry,
-                    embed_chld=embed_children_qry, omit_srv_mgd=srv_mgd_qry)
+                inb_qry=inbound_qry, incl_chld=incl_children_qry,
+                embed_chld=embed_children_qry, omit_srv_mgd=srv_mgd_qry)
 
         try:
             qres = self.query(q)
@@ -83,7 +83,20 @@ class SimpleLayout(BaseRdfLayout):
         if strict and not len(g):
             raise ResourceNotExistsError(uri)
 
-        return Resource(g, uri)
+        rsrc = Resource(g, uri)
+
+        # Check if resource is a tombstone.
+        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+            raise TombstoneError(
+                    Translator.uri_to_uuid(rsrc.identifier),
+                    rsrc.value(nsc['fcrepo'].created))
+        elif rsrc.value(nsc['fcsystem'].tombstone):
+            tombstone_rsrc = rsrc.value(nsc['fcsystem'].tombstone)
+            raise TombstoneError(
+                    Translator.uri_to_uuid(rsrc.identifier),
+                    tombstone_rsrc.value(nsc['fcrepo'].created))
+
+        return rsrc
 
 
     def ask_rsrc_exists(self, urn):
@@ -91,7 +104,8 @@ class SimpleLayout(BaseRdfLayout):
         See base_rdf_layout.ask_rsrc_exists.
         '''
         self._logger.info('Checking if resource exists: {}'.format(urn))
-        return (urn, Variable('p'), Variable('o')) in self.ds
+        imr = self.extract_imr(urn, incl_children=False)
+        return len(imr.graph) > 0
 
 
     def create_rsrc(self, imr):
@@ -145,23 +159,33 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.add(t)
 
 
-    def delete_rsrc(self, urn, inbound=True, delete_children=True):
-        '''
-        Delete a resource. If `inbound` is specified, delete all inbound
-        relationships as well (this is the default).
-        '''
-        rsrc = self.rsrc(urn)
-        if delete_children:
-            self._logger.info('Deleting resource children')
-            for c in rsrc[nsc['ldp'].contains * '+']:
-                self._logger.debug('Removing child: {}'.format(c))
-                c.remove(Variable('p'))
+    ## PROTECTED METHODS ##
 
-        print('Removing resource {}.'.format(rsrc.identifier))
+    def _do_delete_rsrc(self, rsrc, inbound):
+        '''
+        See BaseRdfLayout._do_delete_rsrc
+        '''
+        urn = rsrc.identifier
+        print('Removing resource {}.'.format(urn))
 
         rsrc.remove(Variable('p'))
+
         if inbound:
-            self.ds.remove(
-                    (Variable('s'), Variable('p'), rsrc.identifier))
+            self.ds.remove((Variable('s'), Variable('p'), rsrc.identifier))
+
+        return urn
+
+
+    def _leave_tombstone(self, urn, parent_urn=None):
+        '''
+        See BaseRdfLayout._leave_tombstone
+        '''
+        if parent_urn:
+            self.ds.add((urn, nsc['fcsystem'].tombstone, parent_urn))
+        else:
+            # @TODO Use gunicorn to get request timestamp.
+            ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+            self.ds.add((urn, RDF.type, nsc['fcsystem'].Tombstone))
+            self.ds.add((urn, nsc['fcrepo'].created, ts))
 
 

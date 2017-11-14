@@ -102,3 +102,20 @@ class SingleSubjectError(RuntimeError):
                 self.uuid, self.subject)
 
 
+class TombstoneError(RuntimeError):
+    '''
+    Raised when a tombstone resource is found.
+
+    It is up to the caller to handle this which may be a benign and expected
+    result.
+    '''
+    def __init__(self, uuid, ts):
+        self.uuid = uuid
+        self.ts = ts
+
+    def __str__(self):
+        return 'Discovered tombstone resource at /{}, departed: {}'.format(
+                self.uuid, self.ts)
+
+
+

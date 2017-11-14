@@ -8,7 +8,8 @@ from rdflib import Graph
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceExistsError, ResourceNotExistsError, ServerManagedTermError
+        ResourceExistsError, ResourceNotExistsError, ServerManagedTermError, \
+        TombstoneError
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
@@ -85,6 +86,8 @@ def get_resource(uuid, force_rdf=False):
         rsrc = Ldpr.readonly_inst(uuid, repr_options)
     except ResourceNotExistsError as e:
         return str(e), 404
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
     else:
         out_headers.update(rsrc.head())
         if isinstance(rsrc, LdpRs) \
@@ -125,6 +128,8 @@ def post_resource(parent):
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
 
     if cls == LdpNr:
         try:
@@ -175,6 +180,8 @@ def put_resource(uuid):
             return str(e), 409
         except ResourceExistsError as e:
             return str(e), 409
+        except TombstoneError as e:
+            return _tombstone_response(e, uuid)
     else:
         if 'prefer' in request.headers:
             prefer = Translator.parse_rfc7240(request.headers['prefer'])
@@ -188,6 +195,8 @@ def put_resource(uuid):
             return str(e), 409
         except ResourceExistsError as e:
             return str(e), 409
+        except TombstoneError as e:
+            return _tombstone_response(e, uuid)
         except ServerManagedTermError as e:
             return str(e), 412
 
@@ -207,6 +216,8 @@ def patch_resource(uuid):
         rsrc.patch(request.get_data().decode('utf-8'))
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
     except ServerManagedTermError as e:
         return str(e), 412
 
@@ -225,6 +236,8 @@ def delete_resource(uuid):
         rsrc.delete()
     except ResourceNotExistsError:
         return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
 
     return '', 204, headers
 
@@ -282,3 +295,8 @@ def _get_bitstream(rsrc):
             attachment_filename=rsrc.filename)
 
 
+def _tombstone_response(e, uuid):
+    headers = {
+        'Link' : '<{}/fcr:tombstone>; rel="hasTombstone"'.format(request.url),
+    } if e.uuid == uuid else {}
+    return str(e), 410, headers
