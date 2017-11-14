@@ -20,7 +20,7 @@ class ResourceExistsError(ResourceError):
     This usually surfaces at the HTTP level as a 409.
     '''
     def __str__(self):
-        return self.msg or 'Resource {} already exists.'.format(self.uuid)
+        return self.msg or 'Resource /{} already exists.'.format(self.uuid)
 
 
 
@@ -32,7 +32,7 @@ class ResourceNotExistsError(ResourceError):
     This usually surfaces at the HTTP level as a 404.
     '''
     def __str__(self):
-        return self.msg or 'Resource {} not found.'.format(self.uuid)
+        return self.msg or 'Resource /{} not found.'.format(self.uuid)
 
 
 
@@ -43,7 +43,7 @@ class InvalidResourceError(ResourceError):
     This usually surfaces at the HTTP level as a 409 or other error.
     '''
     def __str__(self):
-        return self.msg or 'Resource {} is invalid.'.format(self.uuid)
+        return self.msg or 'Resource /{} is invalid.'.format(self.uuid)
 
 
 
@@ -93,12 +93,12 @@ class SingleSubjectError(RuntimeError):
     Raised when a SPARQL-Update query or a RDF payload for a PUT contain
     subjects that do not correspond to the resource being operated on.
     '''
-    def __init__(self, uri, subject):
-        self.uri = uri
+    def __init__(self, uuid, subject):
+        self.uuid = uuid
         self.subject = subject
 
     def __str__(self):
         return '{} is not in the topic of this RDF, which is {}'.format(
-                self.uri, self.subject)
+                self.uuid, self.subject)
 
 

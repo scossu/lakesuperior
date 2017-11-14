@@ -38,7 +38,19 @@ class Translator:
 
         @return URIRef
         '''
-        return URIRef('{}rest/{}'.format(request.host_url, uuid))
+        return URIRef('{}/{}'.format(Translator.base_url(), uuid))
+
+
+    @staticmethod
+    def uri_to_uuid(uri):
+        '''Convert an absolute URI (internal or external) to a UUID.
+
+        @return string
+        '''
+        if uri.startswith(nsc['fcres']):
+            return str(uri).replace(nsc['fcres'], '')
+        else:
+            return str(uri).replace(Translator.base_url(), '')
 
 
     @staticmethod
@@ -49,7 +61,6 @@ class Translator:
 
         @return string
         '''
-        #import pdb; pdb.set_trace()
         return s.replace(Translator.base_url()+'/', str(nsc['fcres']))\
                 .replace(Translator.base_url(), str(nsc['fcres']))
 
@@ -63,7 +74,6 @@ class Translator:
 
         @return rdflib.term.URIRef
         '''
-        #import pdb; pdb.set_trace()
         Translator._logger.debug('Input URI: {}'.format(uri))
         if uri.strip('/') == Translator.base_url():
             return BaseRdfLayout.ROOT_NODE_URN
@@ -78,10 +88,7 @@ class Translator:
 
         @return string
         '''
-        return s.replace(
-            str(nsc['fcres']),
-            request.host_url + 'rest/'
-        )
+        return s.replace(str(nsc['fcres']), Translator.base_url() + '/')
 
 
     @staticmethod
