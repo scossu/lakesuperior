@@ -14,7 +14,7 @@ from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
-from lakesuperior.util.translator import Translator
+from lakesuperior.toolbox import Toolbox
 
 
 logger = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ def get_resource(uuid, force_rdf=False):
     out_headers = std_headers
     repr_options = defaultdict(dict)
     if 'prefer' in request.headers:
-        prefer = Translator.parse_rfc7240(request.headers['prefer'])
+        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(prefer))
         if 'return' in prefer:
             repr_options = prefer['return']
@@ -144,7 +144,7 @@ def post_resource(parent):
 
     if cls == LdpNr:
         try:
-            cont_disp = Translator.parse_rfc7240(
+            cont_disp = Toolbox().parse_rfc7240(
                     request.headers['content-disposition'])
         except KeyError:
             cont_disp = None
@@ -180,7 +180,7 @@ def put_resource(uuid):
     if cls == LdpNr:
         try:
             logger.debug('Headers: {}'.format(request.headers))
-            cont_disp = Translator.parse_rfc7240(
+            cont_disp = Toolbox().parse_rfc7240(
                     request.headers['content-disposition'])
         except KeyError:
             cont_disp = None
@@ -195,7 +195,7 @@ def put_resource(uuid):
             return _tombstone_response(e, uuid)
     else:
         if 'prefer' in request.headers:
-            prefer = Translator.parse_rfc7240(request.headers['prefer'])
+            prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
             logger.debug('Parsed Prefer header: {}'.format(prefer))
             if 'handling' in prefer:
                 pref_handling = prefer['handling']['value']

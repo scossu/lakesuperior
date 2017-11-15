@@ -7,7 +7,6 @@ from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
 from lakesuperior.model.ldp_rs import LdpRs
-from lakesuperior.util.digest import Digest
 
 class LdpNr(Ldpr):
     '''LDP-NR (Non-RDF Source).

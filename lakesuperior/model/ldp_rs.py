@@ -15,8 +15,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
 from lakesuperior.exceptions import ResourceNotExistsError, \
         ServerManagedTermError, SingleSubjectError
-from lakesuperior.util.digest import Digest
-from lakesuperior.util.translator import Translator
+from lakesuperior.toolbox import Toolbox
 
 class LdpRs(Ldpr):
     '''LDP-RS (LDP RDF source).
@@ -39,7 +38,7 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        return Translator.globalize_rsrc(self.imr)
+        return Toolbox().globalize_rsrc(self.imr)
 
 
     @transactional
@@ -162,7 +161,7 @@ class LdpRs(Ldpr):
         @param create (boolean) Whether the resource is being created.
         '''
         # Message digest.
-        cksum = Digest.rdf_cksum(self.provided_imr.graph)
+        cksum = Toolbox().rdf_cksum(self.provided_imr.graph)
         self.provided_imr.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 

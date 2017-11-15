@@ -12,6 +12,7 @@ from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
+from lakesuperior.toolbox import Toolbox
 
 
 #def needs_rsrc(fn):
@@ -322,7 +323,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         Add a message digest to the current resource.
         '''
-        cksum = Digest.rdf_cksum(self.rsrc.graph)
+        cksum = Toolbox().rdf_cksum(self.rsrc.graph)
         self.rsrc.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 

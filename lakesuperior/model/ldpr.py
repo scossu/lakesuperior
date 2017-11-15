@@ -17,7 +17,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
-from lakesuperior.util.translator import Translator
+from lakesuperior.toolbox import Toolbox
 
 
 def transactional(fn):
@@ -147,7 +147,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @return rdflib.URIRef
         '''
-        return Translator.uuid_to_uri(self.uuid)
+        return Toolbox().uuid_to_uri(self.uuid)
 
 
     @property
@@ -314,7 +314,7 @@ class Ldpr(metaclass=ABCMeta):
         layout_cls = getattr(cls, '{}_store_layout'.format(type))
         store_mod = import_module('lakesuperior.store_layouts.{0}.{1}'.format(
                 type, layout_cls))
-        layout_cls = getattr(store_mod, Translator.camelcase(layout_cls))
+        layout_cls = getattr(store_mod, Toolbox().camelcase(layout_cls))
 
         return layout_cls()
 
@@ -596,7 +596,7 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            s = Translator.localize_term(
+            s = Toolbox().localize_term(
                     cont_imr.value(self.MBR_RSRC_URI).identifier)
             p = cont_imr.value(self.MBR_REL_URI).identifier
 

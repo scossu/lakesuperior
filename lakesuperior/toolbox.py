@@ -1,29 +1,32 @@
 import logging
+import pickle
 
 from collections import defaultdict
+from hashlib import sha1
 
 from flask import request, g
-from rdflib.term import URIRef
+from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 
 
-class Translator:
+class Toolbox:
     '''
-    Utility class to perform translations of strings and their wrappers.
-    All static methods.
+    Utility class to translate and generate strings and other objects.
     '''
 
     _logger = logging.getLogger(__name__)
 
-    @staticmethod
-    def base_url():
-        return request.host_url + g.url_prefix
+    def __init__():
+        '''
+        Set the base URL for the requests. This class has to be instantiated
+        within a request context.
+       '''
+        self.base_url = request.host_url + g.url_prefix
 
 
-    @staticmethod
-    def camelcase(word):
+    def camelcase(self, word):
         '''
         Convert a string with underscores with a camel-cased one.
 
@@ -32,17 +35,15 @@ class Translator:
         return ''.join(x.capitalize() or '_' for x in word.split('_'))
 
 
-    @staticmethod
-    def uuid_to_uri(uuid):
+    def uuid_to_uri(self, uuid):
         '''Convert a UUID to a URI.
 
         @return URIRef
         '''
-        return URIRef('{}/{}'.format(Translator.base_url(), uuid))
+        return URIRef('{}/{}'.format(self.base_url, uuid))
 
 
-    @staticmethod
-    def uri_to_uuid(uri):
+    def uri_to_uuid(self, uri):
         '''Convert an absolute URI (internal or external) to a UUID.
 
         @return string
@@ -50,23 +51,21 @@ class Translator:
         if uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:
-            return str(uri).replace(Translator.base_url(), '')
+            return str(uri).replace(self.base_url, '')
 
 
-    @staticmethod
-    def localize_string(s):
+    def localize_string(self, s):
         '''Convert URIs into URNs in a string using the application base URI.
 
         @param string s Input string.
 
         @return string
         '''
-        return s.replace(Translator.base_url()+'/', str(nsc['fcres']))\
-                .replace(Translator.base_url(), str(nsc['fcres']))
+        return s.replace(self.base_url+'/', str(nsc['fcres']))\
+                .replace(self.base_url, str(nsc['fcres']))
 
 
-    @staticmethod
-    def localize_term(uri):
+    def localize_term(self, uri):
         '''
         Convert an URI into an URN.
 
@@ -74,25 +73,24 @@ class Translator:
 
         @return rdflib.term.URIRef
         '''
-        Translator._logger.debug('Input URI: {}'.format(uri))
-        if uri.strip('/') == Translator.base_url():
+        self._logger.debug('Input URI: {}'.format(uri))
+        if uri.strip('/') == self.base_url:
             return BaseRdfLayout.ROOT_NODE_URN
-        return URIRef(Translator.localize_string(str(uri)))
+
+        return URIRef(self.localize_string(str(uri)))
 
 
-    @staticmethod
-    def globalize_string(s):
+    def globalize_string(self, s):
         '''Convert URNs into URIs in a string using the application base URI.
 
         @param string s Input string.
 
         @return string
         '''
-        return s.replace(str(nsc['fcres']), Translator.base_url() + '/')
+        return s.replace(str(nsc['fcres']), self.base_url + '/')
 
 
-    @staticmethod
-    def globalize_term(urn):
+    def globalize_term(self, urn):
         '''
         Convert an URN into an URI using the application base URI.
 
@@ -102,7 +100,8 @@ class Translator:
         '''
         if urn == BaseRdfLayout.ROOT_NODE_URN:
             urn = nsc['fcres']
-        return URIRef(Translator.globalize_string(str(urn)))
+
+        return URIRef(self.globalize_string(str(urn)))
 
 
     @staticmethod
@@ -129,8 +128,8 @@ class Translator:
         flt_g = g.query(q)
 
         for t in flt_g:
-            global_s = Translator.globalize_term(t[0])
-            global_o = Translator.globalize_term(t[2]) \
+            global_s = self.globalize_term(t[0])
+            global_o = self.globalize_term(t[2]) \
                     if isinstance(t[2], URIRef) \
                     else t[2]
             g.remove(t)
@@ -139,22 +138,20 @@ class Translator:
         return g
 
 
-    @staticmethod
-    def globalize_rsrc(rsrc):
+    def globalize_rsrc(self, rsrc):
         '''
         Globalize a resource.
         '''
         g = rsrc.graph
         urn = rsrc.identifier
 
-        global_g = Translator.globalize_graph(g)
-        global_uri = Translator.globalize_term(urn)
+        global_g = self.globalize_graph(g)
+        global_uri = self.globalize_term(urn)
 
         return global_g.resource(global_uri)
 
 
-    @staticmethod
-    def parse_rfc7240(h_str):
+    def parse_rfc7240(self, h_str):
         '''
         Parse `Prefer` header as per https://tools.ietf.org/html/rfc7240
 
@@ -190,4 +187,32 @@ class Translator:
 
         return parsed_hdr
 
+
+    def rdf_cksum(self, g):
+        '''
+        Generate a checksum for a graph.
+
+        This is not straightforward because a graph is derived from an
+        unordered data structure (RDF).
+
+        What this method does is ordering the graph by subject, predicate,
+        object, then creating a pickle string and a checksum of it.
+
+        N.B. The context of the triples is ignored, so isomorphic graphs would
+        have the same checksum regardless of the context(s) they are found in.
+
+        @TODO This can be later reworked to use a custom hashing algorithm.
+
+        @param rdflib.Graph g The graph to be hashed.
+
+        @return string SHA1 checksum.
+        '''
+        # Remove the messageDigest property, which very likely reflects the
+        # previous state of the resource.
+        g.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
+
+        ord_g = sorted(list(g), key=lambda x : (x[0], x[1], x[2]))
+        hash = sha1(pickle.dumps(ord_g)).hexdigest()
+
+        return hash
 

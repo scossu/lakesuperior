@@ -15,7 +15,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, TombstoneError
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
-from lakesuperior.util.translator import Translator
+from lakesuperior.toolbox import Toolbox
 
 
 class SimpleLayout(BaseRdfLayout):
@@ -88,12 +88,12 @@ class SimpleLayout(BaseRdfLayout):
         # Check if resource is a tombstone.
         if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
             raise TombstoneError(
-                    Translator.uri_to_uuid(rsrc.identifier),
+                    Toolbox().uri_to_uuid(rsrc.identifier),
                     rsrc.value(nsc['fcrepo'].created))
         elif rsrc.value(nsc['fcsystem'].tombstone):
             tombstone_rsrc = rsrc.value(nsc['fcsystem'].tombstone)
             raise TombstoneError(
-                    Translator.uri_to_uuid(rsrc.identifier),
+                    Toolbox().uri_to_uuid(rsrc.identifier),
                     tombstone_rsrc.value(nsc['fcrepo'].created))
 
         return rsrc
