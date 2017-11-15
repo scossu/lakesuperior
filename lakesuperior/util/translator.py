@@ -2,7 +2,7 @@ import logging
 
 from collections import defaultdict
 
-from flask import request
+from flask import request, g
 from rdflib.term import URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -19,7 +19,7 @@ class Translator:
 
     @staticmethod
     def base_url():
-        return request.host_url + request.path.split('/')[1]
+        return request.host_url + g.url_prefix
 
 
     @staticmethod

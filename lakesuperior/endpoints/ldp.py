@@ -3,7 +3,7 @@ import logging
 from collections import defaultdict
 from uuid import uuid4
 
-from flask import Blueprint, request, send_file
+from flask import Blueprint, g, request, send_file, url_for
 from rdflib import Graph
 from werkzeug.datastructures import FileStorage
 
@@ -59,6 +59,17 @@ std_headers = {
     'Accept-Post' : ','.join(accept_rdf),
     #'Allow' : ','.join(allow),
 }
+
+@ldp.url_defaults
+def bp_url_defaults(endpoint, values):
+    url_prefix = getattr(g, 'url_prefix', None)
+    if url_prefix is not None:
+        values.setdefault('url_prefix', url_prefix)
+
+@ldp.url_value_preprocessor
+def bp_url_value_preprocessor(endpoint, values):
+    g.url_prefix = values.pop('url_prefix')
+
 
 ## REST SERVICES ##
 

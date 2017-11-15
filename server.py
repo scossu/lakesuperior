@@ -18,9 +18,13 @@ logger.info('Starting LAKEsuperior HTTP server.')
 
 ## Configure enpoint blueprints here. ##
 
-fcrepo.register_blueprint(ldp, url_prefix='/ldp')
+fcrepo.register_blueprint(ldp, url_prefix='/ldp', url_defaults={
+    'url_prefix': 'ldp'
+})
 # Legacy endpoint. @TODO Deprecate.
-fcrepo.register_blueprint(ldp, url_prefix='/rest')
+fcrepo.register_blueprint(ldp, url_prefix='/rest', url_defaults={
+    'url_prefix': 'rest'
+})
 fcrepo.register_blueprint(query, url_prefix='/query')
 
 # Initialize temporary folders.

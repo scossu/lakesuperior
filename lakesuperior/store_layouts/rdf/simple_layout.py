@@ -196,3 +196,4 @@ class SimpleLayout(BaseRdfLayout):
         self.ds.remove((urn, RDF.type, nsc['fcsystem'].Tombstone))
         self.ds.remove((urn, nsc['fcrepo'].created, None))
         self.ds.remove((None, nsc['fcsystem'].tombstone, urn))
+
