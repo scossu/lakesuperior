@@ -203,9 +203,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         for child_rsrc in children:
             self._do_delete_rsrc(child_rsrc, inbound)
-            self._leave_tombstone(child_rsrc.identifier, urn)
+            self.leave_tombstone(child_rsrc.identifier, urn)
 
-        return self._leave_tombstone(urn)
+        return self.leave_tombstone(urn)
 
 
     ## INTERFACE METHODS ##
@@ -277,18 +277,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def _do_delete_rsrc(self, rsrc, inbound):
-        '''
-        Delete a single resource.
-
-        @param rsrc (rdflib.resource.Resource) Resource to be deleted.
-        @param inbound (boolean) Whether to delete the inbound relationships.
-        '''
-        pass
-
-
-    @abstractmethod
-    def _leave_tombstone(self, urn, parent_urn=None):
+    def leave_tombstone(self, urn, parent_urn=None):
         '''
         Leave a tombstone when deleting a resource.
 
@@ -297,6 +286,32 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         @param urn (rdflib.term.URIRef) URN of the deleted resource.
         @param parent_urn (rdflib.term.URIRef) URI of deleted parent.
+        '''
+        pass
+
+
+    @abstractmethod
+    def delete_tombstone(self, rsrc):
+        '''
+        Delete a tombstone.
+
+        This means removing the `fcsystem:Tombstone` RDF type and the tombstone
+        creation date, as well as all inbound `fcsystem:tombstone`
+        relationships.
+
+        NOTE: This method should NOT indiscriminately wipe all triples about
+        the subject. Some other metadata may be left for some good reason.
+        '''
+        pass
+
+
+    @abstractmethod
+    def _do_delete_rsrc(self, rsrc, inbound):
+        '''
+        Delete a single resource.
+
+        @param rsrc (rdflib.resource.Resource) Resource to be deleted.
+        @param inbound (boolean) Whether to delete the inbound relationships.
         '''
         pass
 

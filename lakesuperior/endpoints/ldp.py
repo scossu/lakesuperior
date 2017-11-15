@@ -214,8 +214,8 @@ def patch_resource(uuid):
 
     try:
         rsrc.patch(request.get_data().decode('utf-8'))
-    except ResourceNotExistsError:
-        return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    except ResourceNotExistsError as e:
+        return str(e), 404
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
     except ServerManagedTermError as e:
@@ -234,12 +234,39 @@ def delete_resource(uuid):
 
     try:
         rsrc.delete()
-    except ResourceNotExistsError:
-        return 'Resource #{} not found.'.format(rsrc.uuid), 404
+    except ResourceNotExistsError as e:
+        return str(e), 404
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
 
     return '', 204, headers
+
+
+@ldp.route('/<path:uuid>/fcr:tombstone', methods=['GET', 'POST', 'PUT',
+        'PATCH', 'DELETE'])
+def tombstone(uuid):
+    '''
+    Handle all tombstone operations.
+
+    The only allowed method is DELETE; any other verb will return a 405.
+    '''
+    logger.debug('Deleting tombstone for {}.'.format(uuid))
+    rsrc = Ldpr(uuid, {'value' : 'minimal'})
+    try:
+        imr = rsrc.imr
+    except TombstoneError as e:
+        if request.method == 'DELETE':
+            if e.uuid == uuid:
+                rsrc.delete_tombstone()
+                return '', 204
+            else:
+                return _tombstone_response(e, uuid)
+        else:
+            return 'Method Not Allowed.', 405
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    else:
+        return '', 404
 
 
 def class_from_req_body():

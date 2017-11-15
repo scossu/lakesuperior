@@ -176,9 +176,9 @@ class SimpleLayout(BaseRdfLayout):
         return urn
 
 
-    def _leave_tombstone(self, urn, parent_urn=None):
+    def leave_tombstone(self, urn, parent_urn=None):
         '''
-        See BaseRdfLayout._leave_tombstone
+        See BaseRdfLayout.leave_tombstone
         '''
         if parent_urn:
             self.ds.add((urn, nsc['fcsystem'].tombstone, parent_urn))
@@ -189,3 +189,10 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.add((urn, nsc['fcrepo'].created, ts))
 
 
+    def delete_tombstone(self, urn):
+        '''
+        See BaseRdfLayout.leave_tombstone
+        '''
+        self.ds.remove((urn, RDF.type, nsc['fcsystem'].Tombstone))
+        self.ds.remove((urn, nsc['fcrepo'].created, None))
+        self.ds.remove((None, nsc['fcsystem'].tombstone, urn))

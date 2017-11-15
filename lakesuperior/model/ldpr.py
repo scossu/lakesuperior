@@ -484,7 +484,15 @@ class Ldpr(metaclass=ABCMeta):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
         '''
-        self.rdfly.delete_rsrc(self.urn)
+        return self.rdfly.delete_rsrc(self.urn)
+
+
+    @transactional
+    def delete_tombstone(self):
+        '''
+        Delete a tombstone.
+        '''
+        return self.rdfly.delete_tombstone(self.urn)
 
 
     ## PROTECTED METHODS ##

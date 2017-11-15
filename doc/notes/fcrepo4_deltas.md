@@ -74,6 +74,15 @@ use of content negotiation to do that. Any request to an LDP-NR with an
 `Accept` header set to one of the supported RDF serialization formats will
 yield the RDF metadata of the resource instead of the binary contents.
 
+## Tombstone methods
+
+If a client requests a tombstone resource in
+FCREPO4 with a method other than DELETE, the server will return `405 Method Not
+Allowed` regardless of whether the tombstone exists or not.
+
+LAKEsuperior will return `405` only if the tombstone actually exists, `404`
+otherwise.
+
 ## Asynchronous processing
 
 *TODO*
