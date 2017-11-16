@@ -101,6 +101,7 @@ class Ldpr(metaclass=ABCMeta):
     RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
     RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
+    ROOT_NODE_URN = nsc['fcsystem'].root
 
     _logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class Ldpr(metaclass=ABCMeta):
         self.uuid = uuid
 
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
-                else BaseRdfLayout.ROOT_NODE_URN
+                else self.ROOT_NODE_URN
 
         self._imr_options = __class__.imr_options(repr_opts)
 
@@ -331,7 +332,7 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid UUID of the instance.
         '''
         rdfly = cls.load_layout('rdf')
-        imr_urn = nsc['fcres'][uuid] if uuid else rdfly.ROOT_NODE_URN
+        imr_urn = nsc['fcres'][uuid] if uuid else self.ROOT_NODE_URN
         cls._logger.debug('Representation options: {}'.format(repr_opts))
         imr_opts = cls.imr_options(repr_opts)
         imr = rdfly.extract_imr(imr_urn, **imr_opts)

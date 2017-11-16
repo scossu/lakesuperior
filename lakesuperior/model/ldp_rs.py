@@ -229,7 +229,7 @@ class LdpRs(Ldpr):
         '''
         for s in set(g.subjects()):
             if not s == self.uri:
-                return SingleSubjectError(s, self.uuid)
+                raise SingleSubjectError(s, self.uuid)
 
 
     def _check_ref_int(self, config):

@@ -8,7 +8,6 @@ from flask import request, g
 from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 
 
 class Toolbox:
@@ -18,7 +17,9 @@ class Toolbox:
 
     _logger = logging.getLogger(__name__)
 
-    def __init__():
+    ROOT_NODE_URN = nsc['fcsystem'].root
+
+    def __init__(self):
         '''
         Set the base URL for the requests. This class has to be instantiated
         within a request context.
@@ -75,7 +76,7 @@ class Toolbox:
         '''
         self._logger.debug('Input URI: {}'.format(uri))
         if uri.strip('/') == self.base_url:
-            return BaseRdfLayout.ROOT_NODE_URN
+            return self.ROOT_NODE_URN
 
         return URIRef(self.localize_string(str(uri)))
 
@@ -98,7 +99,7 @@ class Toolbox:
 
         @return rdflib.term.URIRef
         '''
-        if urn == BaseRdfLayout.ROOT_NODE_URN:
+        if urn == self.ROOT_NODE_URN:
             urn = nsc['fcres']
 
         return URIRef(self.globalize_string(str(urn)))
@@ -124,7 +125,7 @@ class Toolbox:
               STRSTARTS(str(?o), "{1}")
             ) .
           }}
-        }}'''.format(nsc['fcres'], BaseRdfLayout.ROOT_NODE_URN)
+        }}'''.format(nsc['fcres'], self.ROOT_NODE_URN)
         flt_g = g.query(q)
 
         for t in flt_g:
