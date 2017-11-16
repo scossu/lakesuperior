@@ -92,13 +92,14 @@ class Ldpr(metaclass=ABCMeta):
     All conversion from request payload strings is done here.
     '''
 
+    EMBED_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
     FCREPO_PTREE_TYPE = nsc['fcrepo'].Pairtree
     INS_CNT_REL_URI = nsc['ldp'].insertedContentRelation
     LDP_NR_TYPE = nsc['ldp'].NonRDFSource
     LDP_RS_TYPE = nsc['ldp'].RDFSource
     MBR_RSRC_URI = nsc['ldp'].membershipResource
     MBR_REL_URI = nsc['ldp'].hasMemberRelation
-    RETURN_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
+    RETURN_CHILD_RES_URI = nsc['fcrepo'].Children
     RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
     ROOT_NODE_URN = nsc['fcsystem'].root
@@ -332,7 +333,7 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid UUID of the instance.
         '''
         rdfly = cls.load_layout('rdf')
-        imr_urn = nsc['fcres'][uuid] if uuid else self.ROOT_NODE_URN
+        imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
         cls._logger.debug('Representation options: {}'.format(repr_opts))
         imr_opts = cls.imr_options(repr_opts)
         imr = rdfly.extract_imr(imr_urn, **imr_opts)
@@ -367,7 +368,9 @@ class Ldpr(metaclass=ABCMeta):
 
         rdfly = cls.load_layout('rdf')
 
-        parent = cls(parent_uuid, incl_children=False)
+        parent = cls(parent_uuid, repr_opts={
+            'parameters' : {'omit' : cls.RETURN_CHILD_RES_URI}
+        })
 
         # Set prefix.
         if parent_uuid:
@@ -413,9 +416,10 @@ class Ldpr(metaclass=ABCMeta):
 
         if 'value' in repr_opts and repr_opts['value'] == 'minimal':
             imr_options = {
-                'incl_srv_mgd' : False,
-                'incl_inbound' : False,
                 'embed_children' : False,
+                'incl_children' : False,
+                'incl_inbound' : False,
+                'incl_srv_mgd' : False,
             }
         elif 'parameters' in repr_opts:
             include = repr_opts['parameters']['include'].split(' ') \
@@ -426,10 +430,12 @@ class Ldpr(metaclass=ABCMeta):
             cls._logger.debug('Include: {}'.format(include))
             cls._logger.debug('Omit: {}'.format(omit))
 
+            if str(cls.EMBED_CHILD_RES_URI) in include:
+                    imr_options['embed_children'] = True
+            if str(cls.RETURN_CHILD_RES_URI) in omit:
+                    imr_options['incl_children'] = False
             if str(cls.RETURN_INBOUND_REF_URI) in include:
                     imr_options['incl_inbound'] = True
-            if str(cls.RETURN_CHILD_RES_URI) in include:
-                    imr_options['embed_children'] = True
             if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
                     imr_options['incl_srv_mgd'] = False
         cls._logger.debug('Retrieval options: {}'.format(imr_options))

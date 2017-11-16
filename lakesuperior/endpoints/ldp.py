@@ -134,7 +134,7 @@ def post_resource(parent):
     cls, data = class_from_req_body()
 
     try:
-       rsrc = cls.inst_for_post(parent, slug)
+        rsrc = cls.inst_for_post(parent, slug)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:

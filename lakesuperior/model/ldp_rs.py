@@ -250,8 +250,8 @@ class LdpRs(Ldpr):
 class Ldpc(LdpRs):
     '''LDPC (LDP Container).'''
 
-    def __init__(self, uuid):
-        super().__init__(uuid)
+    def __init__(self, uuid, *args, **kwargs):
+        super().__init__(uuid, *args, **kwargs)
         self.base_types.update({
             nsc['ldp'].Container,
         })
@@ -261,8 +261,8 @@ class Ldpc(LdpRs):
 
 class LdpBc(Ldpc):
     '''LDP-BC (LDP Basic Container).'''
-    def __init__(self, uuid):
-        super().__init__(uuid)
+    def __init__(self, uuid, *args, **kwargs):
+        super().__init__(uuid, *args, **kwargs)
         self.base_types.update({
             nsc['ldp'].BasicContainer,
         })
@@ -272,8 +272,8 @@ class LdpBc(Ldpc):
 class LdpDc(Ldpc):
     '''LDP-DC (LDP Direct Container).'''
 
-    def __init__(self, uuid):
-        super().__init__(uuid)
+    def __init__(self, uuid, *args, **kwargs):
+        super().__init__(uuid, *args, **kwargs)
         self.base_types.update({
             nsc['ldp'].DirectContainer,
         })
@@ -283,8 +283,8 @@ class LdpDc(Ldpc):
 class LdpIc(Ldpc):
     '''LDP-IC (LDP Indirect Container).'''
 
-    def __init__(self, uuid):
-        super().__init__(uuid)
+    def __init__(self, uuid, *args, **kwargs):
+        super().__init__(uuid, *args, **kwargs)
         self.base_types.update({
             nsc['ldp'].IndirectContainer,
         })
