@@ -5,13 +5,13 @@ import requests
 
 # Generate 10,000 children of root node.
 
-requests.put('http://localhost:5000/ldp/pomegranate')
+requests.put('http://localhost:8000/ldp/pomegranate')
 
 start = arrow.utcnow()
 ckpt = start
 
 for i in range(1, 10000):
-    requests.post('http://localhost:5000/ldp/pomegranate')
+    requests.post('http://localhost:8000/ldp/pomegranate')
     if i % 100 == 0:
         now = arrow.utcnow()
         tdelta = now - ckpt

@@ -50,3 +50,5 @@ def debug():
     '''
     raise RuntimeError()
 
+if __name__ == "__main__":
+    fcrepo.run(host='0.0.0.0')

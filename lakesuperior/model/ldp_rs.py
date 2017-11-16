@@ -228,7 +228,7 @@ class LdpRs(Ldpr):
         Ensure that a RDF payload for a POST or PUT has a single resource.
         '''
         for s in set(g.subjects()):
-            if not s == self.uri:
+            if not s == self.urn:
                 raise SingleSubjectError(s, self.uuid)
 
 
