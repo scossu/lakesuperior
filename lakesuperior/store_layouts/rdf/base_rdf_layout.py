@@ -2,31 +2,17 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from rdflib import Dataset, Graph
+from flask import current_app
 from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import URIRef
-from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 
-from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
+from lakesuperior.store_layouts.rdf.graph_store_connector import \
+        GraphStoreConnector
 from lakesuperior.toolbox import Toolbox
-
-
-#def needs_rsrc(fn):
-#    '''
-#    Decorator for methods that cannot be called without `self.rsrc` set.
-#    '''
-#    def wrapper(self, *args, **kwargs):
-#        if not hasattr(self, 'rsrc') or self.rsrc is None:
-#            raise TypeError(
-#                'This method must be called by an instance with `rsrc` set.')
-#
-#        return fn(self, *args, **kwargs)
-#
-#    return wrapper
 
 
 
@@ -67,11 +53,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
     RES_CREATED = '_created_'
     RES_UPDATED = '_updated_'
 
-    conf = config['application']['store']['ldp_rs']
     _logger = logging.getLogger(__name__)
-
-    query_ep = conf['webroot'] + conf['query_ep']
-    update_ep = conf['webroot'] + conf['update_ep']
 
 
     ## MAGIC METHODS ##
@@ -82,24 +64,30 @@ class BaseRdfLayout(metaclass=ABCMeta):
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
         for Graph Store HTTP protocol
         (https://www.w3.org/TR/sparql11-http-rdf-update/). Blazegraph supports
-        this only in the (currently) unreleased 2.2 branch. It works with Jena,
-        but other considerations would have to be made (e.g. Jena has no REST
-        API for handling transactions).
+        this only in the (currently unreleased) 2.2 branch. It works with Jena,
+        which is currently the reference implementation.
         '''
-        self.ds = Dataset(self.store, default_union=True)
-        self.ds.namespace_manager = nsm
+        self.conf = current_app.config['store']['ldp_rs']
+        self._conn = GraphStoreConnector(
+                self.conf['webroot'] + self.conf['query_ep'],
+                update_ep=self.conf['webroot'] + self.conf['update_ep'])
 
 
     @property
     def store(self):
         if not hasattr(self, '_store') or not self._store:
-            self._store = SPARQLUpdateStore(
-                    queryEndpoint=self.query_ep,
-                    update_endpoint=self.update_ep,
-                    autocommit=False,
-                    dirty_reads=True)
+            self._store = self._conn.store
 
         return self._store
+
+
+    @property
+    def ds(self):
+        if not hasattr(self, '_ds'):
+            self._ds = self._conn.ds
+            self._ds.namespace_manager = nsm
+
+        return self._ds
 
 
     @property
@@ -116,36 +104,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     ## PUBLIC METHODS ##
-
-    def query(self, q, initBindings=None, nsc=nsc):
-        '''
-        Perform a SPARQL query on the triplestore.
-
-        This should provide non-abstract access, independent from the layout,
-        therefore it should not be overridden by individual layouts.
-
-        @param q (string) SPARQL query.
-
-        @return rdflib.query.Result
-        '''
-        self._logger.debug('Sending SPARQL query: {}'.format(q))
-        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
-
-
-    def update(self, q, initBindings=None, nsc=nsc):
-        '''
-        Perform a SPARQL update on the triplestore.
-
-        This should provide low-level access, independent from the layout,
-        therefore it should not be overridden by individual layouts.
-
-        @param q (string) SPARQL-UPDATE query.
-
-        @return None
-        '''
-        self._logger.debug('Sending SPARQL update: {}'.format(q))
-        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
-
 
     def rsrc(self, urn):
         '''

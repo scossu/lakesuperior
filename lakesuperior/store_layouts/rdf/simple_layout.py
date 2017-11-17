@@ -71,7 +71,7 @@ class SimpleLayout(BaseRdfLayout):
                 embed_chld=embed_children_qry, omit_srv_mgd=srv_mgd_qry)
 
         try:
-            qres = self.query(q)
+            qres = self._conn.query(q)
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             g = Graph()
