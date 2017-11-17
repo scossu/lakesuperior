@@ -160,7 +160,7 @@ def post_resource(parent):
         'Location' : rsrc.uri,
     })
 
-    return rsrc.uri, out_headers, 201
+    return rsrc.uri, 201, out_headers
 
 
 @ldp.route('/<path:uuid>', methods=['PUT'])
