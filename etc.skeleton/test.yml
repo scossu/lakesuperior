@@ -1,0 +1,16 @@
+# Configuration for testing framework.
+#
+# These values override the ones found in `application.yml`.
+
+store:
+    ldp_rs:
+        webroot: http://localhost:9999/namespace/fcrepo_test/
+        query_ep: sparql
+        update_ep: sparql
+        # Optional
+        #username: <set me>
+        #password: <set me>
+        #ssl_verify: false
+    ldp_nr:
+        path: /tmp/fcrepo_test/ldpnr_store
+

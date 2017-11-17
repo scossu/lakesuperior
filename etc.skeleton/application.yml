@@ -39,9 +39,9 @@ store:
         query_ep: sparql
         update_ep: sparql
         # Optional
-        username: <set me>
-        password: <set me>
-        ssl_verify: false
+        #username: <set me>
+        #password: <set me>
+        #ssl_verify: false
 
     # The path used to persist LDP-NR (bitstreams).
     # This is for now a POSIX filesystem. Other solutions such as HDFS may be

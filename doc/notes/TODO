@@ -1,36 +1,43 @@
 # Alpha 1 TODO
 
-H Pairtree resources
-D Logging
-D Server-managed triples
-  D PATCH
-  D PUT + POST
-D Single-subject rule
-  D PATCH
-  D PUT + POST
-D Prefer headers
-D LDP-NR
-D Direct and Indirect containers
-D Referential integrity
-D Tombstone
-  D Set
-  D Retrieve
-  D Delete
-D Refactor toolbox
-- GUnicorn
-- Tests
-- Messaging SPI
+- [D] Logging
+- [D] Server-managed triples
+  - [D] PATCH
+  - [D] PUT + POST
+- [D] Single-subject rule
+  - [D] PATCH
+  - [D] PUT + POST
+- [D] Prefer headers
+- [D] LDP-NR
+- [D] Direct and Indirect containers
+- [D] Referential integrity
+- [D] Tombstone
+  - [D] Set
+  - [D] Retrieve
+  - [D] Delete
+- [D] Refactor toolbox
+- [D] GUnicorn
+- [W] Tests
+  - [D] Framework + config
+  - [W] HTTP layer
+  - [ ] Unit tests
+- [ ] Optimize queries
+- [ ] Messaging SPI
+- [ ] Hook up Hyrax
 
 # Alpha 2 TODO
 
-- Separate read-only graph/resource generation from RW graph/res generation
-- Move server-managed triples to separate graph in simple layout
-- Full provenance layout
-- Fixity checks
+- [ ] Migraion tool
+- [ ] Complete header handling
+- [ ] Query API
+- [ ] Separate read-only graph/resource generation from RW graph/res generation
+- [ ] Move server-managed triples to separate graph in simple layout
+- [ ] Fixity checks
 
 # Alpha 3 TODO
-- Basic UI
-- Versioning
-- Async coroutines
-  - Within sync request
-  - Fully async request
+- [ ] Full provenance layout
+- [ ] Versioning
+- [ ] Async coroutines
+  - [ ] Within sync request
+  - [ ] Fully async request
+- [?] Basic UI

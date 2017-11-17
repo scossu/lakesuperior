@@ -1,5 +1,6 @@
 import os
 
+import hiyapyco
 import yaml
 
 configs = (
@@ -23,4 +24,6 @@ for cname in configs:
     with open(file, 'r') as stream:
         config[cname] = yaml.load(stream, yaml.SafeLoader)
 
-
+# Merge default and test configurations.
+config['test'] = hiyapyco.load(CONFIG_DIR + '/application.yml',
+        CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)

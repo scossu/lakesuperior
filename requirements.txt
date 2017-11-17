@@ -5,6 +5,7 @@ click==6.7
 dateutils==0.6.6
 Flask==0.12.2
 gunicorn==19.7.1
+HiYaPyCo==0.4.11
 idna==2.6
 isodate==0.5.4
 itsdangerous==0.24
