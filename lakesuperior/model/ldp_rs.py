@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import arrow
 
-from flask import request
+from flask import current_app
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
@@ -236,7 +236,7 @@ class LdpRs(Ldpr):
         g = self.provided_imr.graph
 
         for o in g.objects():
-            if isinstance(o, URIRef) and str(o).startswith(request.host_url) \
+            if isinstance(o, URIRef) and str(o).startswith(Toolbox().base_url)\
                     and not self.rdfly.ask_rsrc_exists(o):
                 if config == 'strict':
                     raise RefIntViolationError(o)

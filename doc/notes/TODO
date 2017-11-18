@@ -21,6 +21,7 @@
   - [D] Framework + config
   - [W] HTTP layer
   - [ ] Unit tests
+- [W] Bootstrap
 - [ ] Optimize queries
 - [ ] Messaging SPI
 - [ ] Hook up Hyrax

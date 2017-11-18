@@ -1,9 +1,11 @@
 # Bootstrap data for simple RDF store layout.
 
-PREFIX ldp: <http://www.w3.org/ns/ldp#>
-PREFIX fcrepo: <http://fedora.info/definitions/v4/repository#>
+@prefix ldp: <http://www.w3.org/ns/ldp#> .
+@prefix fcrepo: <http://fedora.info/definitions/v4/repository#> .
 
-<urn:fcsystem:root>
-  a ldp:RDFSource , ldp:Container , ldp:BasicContainer ,
-    fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ;
-  .
+{
+  <urn:fcsystem:root>
+    a ldp:RDFSource , ldp:Container , ldp:BasicContainer ,
+      fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ;
+    .
+}

@@ -4,7 +4,7 @@ from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
 
 
-fcrepo = create_app(config['flask'], config['logging'])
+fcrepo = create_app(config['application'], config['logging'])
 
 
 ## GENERIC ROUTES ##

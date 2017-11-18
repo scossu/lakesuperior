@@ -3,7 +3,6 @@ from rdflib.namespace import RDF, XSD
 from rdflib.resource import Resource
 from rdflib.term import URIRef, Literal, Variable
 
-from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
 from lakesuperior.model.ldp_rs import LdpRs

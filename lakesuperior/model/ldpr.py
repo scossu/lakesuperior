@@ -8,11 +8,11 @@ from uuid import uuid4
 
 import arrow
 
+from flask import current_app
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
 
-from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
@@ -106,8 +106,6 @@ class Ldpr(metaclass=ABCMeta):
 
     _logger = logging.getLogger(__name__)
 
-    rdf_store_layout = config['application']['store']['ldp_rs']['layout']
-    non_rdf_store_layout = config['application']['store']['ldp_nr']['layout']
 
     ## MAGIC METHODS ##
 
@@ -122,6 +120,10 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid (string) UUID of the resource. If None (must be explicitly
         set) it refers to the root node.
         '''
+        self.rdf_store_layout = current_app.config['store']['ldp_rs']['layout']
+        self.non_rdf_store_layout = \
+                current_app.config['store']['ldp_nr']['layout']
+
         self.uuid = uuid
 
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
@@ -305,15 +307,14 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def load_layout(cls, type, uuid=None):
+    def load_layout(cls, type):
         '''
         Dynamically load the store layout indicated in the configuration.
 
         @param type (string) One of `rdf` or `non_rdf`. Determines the type of
         layout to be loaded.
-        @param uuid (string) UUID of the base resource. For RDF layouts only.
         '''
-        layout_cls = getattr(cls, '{}_store_layout'.format(type))
+        layout_cls = getattr(cls(None), '{}_store_layout'.format(type))
         store_mod = import_module('lakesuperior.store_layouts.{0}.{1}'.format(
                 type, layout_cls))
         layout_cls = getattr(store_mod, Toolbox().camelcase(layout_cls))

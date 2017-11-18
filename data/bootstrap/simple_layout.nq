@@ -1,0 +1,9 @@
+# This needs to be in N-Quads format because of
+# https://github.com/RDFLib/rdflib/issues/436
+
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#RDFSource> .
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#Container> .
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#BasicContainer> .
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#RepositoryRoot> .
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#Resource> .
+<urn:fcsystem:root> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#Container> .

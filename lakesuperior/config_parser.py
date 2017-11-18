@@ -1,4 +1,5 @@
 import os
+import sys
 
 import hiyapyco
 import yaml
@@ -25,5 +26,26 @@ for cname in configs:
         config[cname] = yaml.load(stream, yaml.SafeLoader)
 
 # Merge default and test configurations.
+error_msg = '''
+**************
+** WARNING! **
+**************
+
+Your test {} store endpoint is set to be the same as the production endpoint.
+This means that if you run a test suite, your live data may be wiped clean!
+
+Please review your configuration before starting.
+'''
+
 config['test'] = hiyapyco.load(CONFIG_DIR + '/application.yml',
         CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)
+
+if config['application']['store']['ldp_rs']['webroot'] == \
+        config['test']['store']['ldp_rs']['webroot']:
+            raise RuntimeError(error_msg.format('RDF'))
+            sys.exit()
+
+if config['application']['store']['ldp_nr']['path'] == \
+        config['test']['store']['ldp_nr']['path']:
+            raise RuntimeError(error_msg.format('binary'))
+            sys.exit()

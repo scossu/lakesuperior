@@ -79,8 +79,8 @@ class DefaultLayout(BaseNonRdfLayout):
         checksum.
         '''
         self._logger.debug('Generating path from uuid: {}'.format(uuid))
-        bl = self._conf['pairtree_branch_length']
-        bc = self._conf['pairtree_branches']
+        bl = self.conf['pairtree_branch_length']
+        bc = self.conf['pairtree_branches']
         term = len(uuid) if bc==0 else min(bc*bl, len(uuid))
 
         path = [ uuid[i:i+bl] for i in range(0, term, bl) ]

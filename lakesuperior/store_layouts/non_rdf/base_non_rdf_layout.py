@@ -2,7 +2,7 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from lakesuperior.config_parser import config
+from flask import current_app
 
 
 class BaseNonRdfLayout(metaclass=ABCMeta):
@@ -14,7 +14,6 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
     traditional filesystem—e.g. a layout persisting to HDFS can be written too.
     '''
 
-    _conf = config['application']['store']['ldp_nr']
     _logger = logging.getLogger(__name__)
 
 
@@ -22,7 +21,8 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
         '''
         Initialize the base non-RDF store layout.
         '''
-        self.root = self._conf['path']
+        self.conf = current_app.config['store']['ldp_nr']
+        self.root = self.conf['path']
 
 
     ## INTERFACE METHODS ##

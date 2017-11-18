@@ -17,13 +17,18 @@ class GraphStoreConnector:
 
     _logger = logging.getLogger(__name__)
 
-    def __init__(self, query_ep, update_ep=None):
+    def __init__(self, query_ep, update_ep=None, autocommit=False):
+        '''
+        Initialize the connection to the SPARQL endpoint.
+
+        If `update_ep` is not specified, the store is initialized as read-only.
+        '''
         if update_ep:
             self.store = SPARQLUpdateStore(
                     queryEndpoint=query_ep,
                     update_endpoint=update_ep,
-                    autocommit=False,
-                    dirty_reads=True)
+                    autocommit=autocommit,
+                    dirty_reads=not autocommit)
 
             self.readonly = False
         else:

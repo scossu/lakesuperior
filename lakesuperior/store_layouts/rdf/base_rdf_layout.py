@@ -69,7 +69,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         self.conf = current_app.config['store']['ldp_rs']
         self._conn = GraphStoreConnector(
-                self.conf['webroot'] + self.conf['query_ep'],
+                query_ep=self.conf['webroot'] + self.conf['query_ep'],
                 update_ep=self.conf['webroot'] + self.conf['update_ep'])
 
 
