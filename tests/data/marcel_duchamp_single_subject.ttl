@@ -1,0 +1,114 @@
+@prefix aat: <http://vocab.getty.edu/aat/> .
+@prefix aat_contrib: <http://vocab.getty.edu/aat/contrib/> .
+@prefix aat_rel: <http://vocab.getty.edu/aat/rel/> .
+@prefix aat_rev: <http://vocab.getty.edu/aat/rev/> .
+@prefix aat_scopeNote: <http://vocab.getty.edu/aat/scopeNote/> .
+@prefix aat_source: <http://vocab.getty.edu/aat/source/> .
+@prefix aat_source_rev: <http://vocab.getty.edu/aat/source/rev/> .
+@prefix aat_term: <http://vocab.getty.edu/aat/term/> .
+@prefix adms: <http://www.w3.org/ns/adms#> .
+@prefix bibo: <http://purl.org/ontology/bibo/> .
+@prefix bio: <http://purl.org/vocab/bio/0.1/> .
+@prefix cc: <http://creativecommons.org/ns#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dctype: <http://purl.org/dc/dcmitype/> .
+@prefix fmt: <http://www.w3.org/ns/formats/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix freq: <http://purl.org/cld/freq/> .
+@prefix gvp: <http://vocab.getty.edu/ontology#> .
+@prefix gvp_lang: <http://vocab.getty.edu/language/> .
+@prefix iso: <http://purl.org/iso25964/skos-thes#> .
+@prefix luc: <http://www.ontotext.com/owlim/lucene#> .
+@prefix ontogeo: <http://www.ontotext.com/owlim/geo#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ptop: <http://www.ontotext.com/proton/protontop#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix rrx: <http://purl.org/r2rml-ext/> .
+@prefix schema: <http://schema.org/> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+@prefix sesame: <http://www.openrdf.org/schema/sesame#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix skosxl: <http://www.w3.org/2008/05/skos-xl#> .
+@prefix tgn: <http://vocab.getty.edu/tgn/> .
+@prefix tgn_contrib: <http://vocab.getty.edu/tgn/contrib/> .
+@prefix tgn_rel: <http://vocab.getty.edu/tgn/rel/> .
+@prefix tgn_rev: <http://vocab.getty.edu/tgn/rev/> .
+@prefix tgn_scopeNote: <http://vocab.getty.edu/tgn/scopeNote/> .
+@prefix tgn_source: <http://vocab.getty.edu/tgn/source/> .
+@prefix tgn_source_rev: <http://vocab.getty.edu/tgn/source/rev/> .
+@prefix tgn_term: <http://vocab.getty.edu/tgn/term/> .
+@prefix ulan: <http://vocab.getty.edu/ulan/> .
+@prefix ulan_bio: <http://vocab.getty.edu/ulan/bio/> .
+@prefix ulan_contrib: <http://vocab.getty.edu/ulan/contrib/> .
+@prefix ulan_event: <http://vocab.getty.edu/ulan/event/> .
+@prefix ulan_rel: <http://vocab.getty.edu/ulan/rel/> .
+@prefix ulan_rev: <http://vocab.getty.edu/ulan/rev/> .
+@prefix ulan_scopeNote: <http://vocab.getty.edu/ulan/scopeNote/> .
+@prefix ulan_source: <http://vocab.getty.edu/ulan/source/> .
+@prefix ulan_source_rev: <http://vocab.getty.edu/ulan/source/rev/> .
+@prefix ulan_term: <http://vocab.getty.edu/ulan/term/> .
+@prefix vaem: <http://www.linkedmodel.org/schema/vaem#> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix vdpp: <http://data.lirmm.fr/ontologies/vdpp#> .
+@prefix voaf: <http://purl.org/vocommons/voaf#> .
+@prefix voag: <http://voag.linkedmodel.org/voag#> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix wdrs: <http://www.w3.org/2007/05/powder-s#> .
+@prefix wgs: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix wv: <http://vocab.org/waiver/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<> a gvp:Subject , skos:Concept , gvp:PersonConcept ;
+	rdfs:label "Duchamp, Marcel" , "Marcel Duchamp" , "Duchamp, Henri-Robert-Marcel" , "Duchamp, Henri Robert Marcel" , "Duchamp-Villon, Marcel" , "Dushan, Marsel" , "Villon, Marcel Duchamp-" , "Sélavy, Rrose" , "Sélavy, Rose" , "דושאן, מרסל" , "デユシヤンマルセル" , "Duxiang" , "Mutt, R." , "R. Mutt" ;
+	rdfs:seeAlso <http://www.getty.edu/vow/ULANFullDisplay?find=&role=&nation=&subjectid=500115393> ;
+	dct:modified "2008-08-16T11:50:37"^^xsd:dateTime , "2003-03-24T09:59:08"^^xsd:dateTime , "2002-06-20T14:58:54"^^xsd:dateTime , "2006-11-30T11:34:43"^^xsd:dateTime , "2007-10-23T16:06:29"^^xsd:dateTime , "2011-02-18T12:50:49"^^xsd:dateTime , "2015-03-11T17:06:04"^^xsd:dateTime , "2009-06-14T14:58:05"^^xsd:dateTime , "2011-02-18T12:50:52"^^xsd:dateTime , "2003-10-03T14:11:24"^^xsd:dateTime , "2002-12-05T10:39:30"^^xsd:dateTime , "2016-09-12T16:20:32"^^xsd:dateTime , "2006-04-12T09:59:32"^^xsd:dateTime , "2016-03-23T17:25:31"^^xsd:dateTime , "2016-04-06T15:47:13"^^xsd:dateTime , "2015-04-16T08:15:43"^^xsd:dateTime , "2016-03-31T14:31:29"^^xsd:dateTime , "2006-04-12T09:48:36"^^xsd:dateTime , "2008-04-28T11:34:06"^^xsd:dateTime , "2014-10-20T12:20:21"^^xsd:dateTime , "2002-06-20T15:00:17"^^xsd:dateTime , "2002-07-30T11:53:19"^^xsd:dateTime , "2002-10-29T15:17:42"^^xsd:dateTime , "2011-09-13T16:29:33"^^xsd:dateTime , "2016-03-23T16:25:40"^^xsd:dateTime , "2016-05-03T17:06:16"^^xsd:dateTime , "2002-06-20T15:00:45"^^xsd:dateTime , "2002-10-01T14:06:53"^^xsd:dateTime , "2002-10-01T14:08:36"^^xsd:dateTime , "2002-10-01T14:22:08"^^xsd:dateTime , "2002-10-02T15:04:52"^^xsd:dateTime , "2003-03-24T10:01:30"^^xsd:dateTime , "2006-04-12T10:04:07"^^xsd:dateTime , "2006-11-30T11:34:42"^^xsd:dateTime , "2006-11-30T13:07:02"^^xsd:dateTime , "2007-08-29T11:53:31"^^xsd:dateTime , "2008-04-28T11:37:26"^^xsd:dateTime , "2010-01-07T12:00:49"^^xsd:dateTime , "2015-02-19T12:09:11"^^xsd:dateTime , "2015-03-11T17:34:20"^^xsd:dateTime , "2015-03-11T17:34:38"^^xsd:dateTime , "2009-06-14T14:58:03"^^xsd:dateTime , "2002-06-20T14:58:58"^^xsd:dateTime , "2008-08-16T22:29:50"^^xsd:dateTime , "2010-11-05T08:45:12"^^xsd:dateTime , "2015-02-19T12:08:44"^^xsd:dateTime , "2015-03-11T17:06:05"^^xsd:dateTime , "2016-11-30T14:46:12"^^xsd:dateTime , "2017-03-21T12:03:40"^^xsd:dateTime ;
+	skos:changeNote ulan_rev:5501238598 , ulan_rev:5501238599 , ulan_rev:5501238600 , ulan_rev:5502832577 , ulan_rev:5502832579 , ulan_rev:5503033110 , ulan_rev:5503033111 , ulan_rev:5503033112 , ulan_rev:5503033113 , ulan_rev:5505529824 , ulan_rev:5505529825 , ulan_rev:5505529826 , ulan_rev:5506788587 , ulan_rev:5506788588 , ulan_rev:5501238601 , ulan_rev:5501238602 , ulan_rev:5501238603 , ulan_rev:5501238613 , ulan_rev:5501466778 , ulan_rev:5501539027 , ulan_rev:5501570505 , ulan_rev:5501627408 , ulan_rev:5501694067 , ulan_rev:5502679517 , ulan_rev:5502679518 , ulan_rev:5502679530 , ulan_rev:5503185111 , ulan_rev:5505880119 , ulan_rev:5506762725 , ulan_rev:5506797239 , ulan_rev:5507214591 , ulan_rev:5507214623 , ulan_rev:5507216140 , ulan_rev:5507218569 , ulan_rev:5507223628 , ulan_rev:5507478879 , ulan_rev:5501238612 , ulan_rev:5501238615 , ulan_rev:5501523125 , ulan_rev:5501523127 , ulan_rev:5501523167 , ulan_rev:5501524349 , ulan_rev:5501627410 , ulan_rev:5502679516 , ulan_rev:5502679529 , ulan_rev:5502679534 , ulan_rev:5502832575 , ulan_rev:5502832601 , ulan_rev:5503023064 , ulan_rev:5503033106 , ulan_rev:5503185113 , ulan_rev:5504721787 , ulan_rev:5506785448 , ulan_rev:5506788606 , ulan_rev:5506788608 , ulan_rev:5501523124 , ulan_rev:5503185112 , ulan_rev:5504085419 , ulan_rev:5504721788 , ulan_rev:5501238611 , ulan_rev:5503239603 , ulan_rev:5503577698 , ulan_rev:5504085421 , ulan_rev:5505277603 , ulan_rev:5505529848 , ulan_rev:5506785447 , ulan_rev:5506788605 , ulan_rev:5507609107 , ulan_rev:5507704846 ;
+	gvp:broader ulan:500000002 ;
+	gvp:broaderInstantialExtended ulan:500000002 ;
+	gvp:broaderExtended ulan:500000002 ;
+	gvp:broaderPreferredExtended ulan:500000002 ;
+	gvp:parentString "Persons, Artists" ;
+	skos:note ulan_scopeNote:52499 , ulan_rev:5501238598 , ulan_rev:5501238599 , ulan_rev:5501238600 , ulan_rev:5502832577 , ulan_rev:5502832579 , ulan_rev:5503033110 , ulan_rev:5503033111 , ulan_rev:5503033112 , ulan_rev:5503033113 , ulan_rev:5505529824 , ulan_rev:5505529825 , ulan_rev:5505529826 , ulan_rev:5506788587 , ulan_rev:5506788588 , ulan_rev:5501238601 , ulan_rev:5501238602 , ulan_rev:5501238603 , ulan_rev:5501238613 , ulan_rev:5501466778 , ulan_rev:5501539027 , ulan_rev:5501570505 , ulan_rev:5501627408 , ulan_rev:5501694067 , ulan_rev:5502679517 , ulan_rev:5502679518 , ulan_rev:5502679530 , ulan_rev:5503185111 , ulan_rev:5505880119 , ulan_rev:5506762725 , ulan_rev:5506797239 , ulan_rev:5507214591 , ulan_rev:5507214623 , ulan_rev:5507216140 , ulan_rev:5507218569 , ulan_rev:5507223628 , ulan_rev:5507478879 , ulan_rev:5501238612 , ulan_rev:5501238615 , ulan_rev:5501523125 , ulan_rev:5501523127 , ulan_rev:5501523167 , ulan_rev:5501524349 , ulan_rev:5501627410 , ulan_rev:5502679516 , ulan_rev:5502679529 , ulan_rev:5502679534 , ulan_rev:5502832575 , ulan_rev:5502832601 , ulan_rev:5503023064 , ulan_rev:5503033106 , ulan_rev:5503185113 , ulan_rev:5504721787 , ulan_rev:5506785448 , ulan_rev:5506788606 , ulan_rev:5506788608 , ulan_rev:5501523124 , ulan_rev:5503185112 , ulan_rev:5504085419 , ulan_rev:5504721788 , ulan_rev:5501238611 , ulan_rev:5503239603 , ulan_rev:5503577698 , ulan_rev:5504085421 , ulan_rev:5505277603 , ulan_rev:5505529848 , ulan_rev:5506785447 , ulan_rev:5506788605 , ulan_rev:5507609107 , ulan_rev:5507704846 ;
+	gvp:parentStringAbbrev "Persons, Artists" ;
+	gvp:displayOrder "47287"^^xsd:positiveInteger ;
+	gvp:agentType aat:300025103 , aat:300025181 , aat:300025136 , aat:300025687 , aat:300154308 , aat:300112172 , aat:300025164 , aat:300386235 , aat:300386233 ;
+	skos:exactMatch ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	dct:replaces ulan:500011982 , ulan:500114549 ;
+	skosxl:prefLabel ulan_term:1500033607 ;
+	skos:prefLabel "Duchamp, Marcel" ;
+	skosxl:altLabel ulan_term:1500033608 , ulan_term:1500322910 , ulan_term:1500337572 , ulan_term:1500337574 , ulan_term:1500337573 , ulan_term:1500337575 , ulan_term:1500033609 , ulan_term:1500322908 , ulan_term:1500771322 , ulan_term:1500771323 , ulan_term:1500771324 , ulan_term:1500795577 , ulan_term:1500796877 ;
+	skos:altLabel "Marcel Duchamp" , "Duchamp, Henri-Robert-Marcel" , "Duchamp, Henri Robert Marcel" , "Duchamp-Villon, Marcel" , "Dushan, Marsel" , "Villon, Marcel Duchamp-" , "Sélavy, Rrose" , "Sélavy, Rose" , "דושאן, מרסל" , "デユシヤンマルセル" , "Duxiang" , "Mutt, R." , "R. Mutt" ;
+	gvp:broaderInstantial ulan:500000002 ;
+	gvp:broaderPreferred ulan:500000002 ;
+	gvp:prefLabelGVP ulan_term:1500033607 ;
+	skos:inScheme <http://vocab.getty.edu/ulan/> ;
+	skos:scopeNote ulan_scopeNote:52499 ;
+	dct:contributor ulan_contrib:2500000002 , ulan_contrib:2500000130 , ulan_contrib:2500000003 , ulan_contrib:2500000001 , ulan_contrib:2500000005 , ulan_contrib:2500000189 , ulan_contrib:2500000013 , ulan_contrib:2500000016 , ulan_contrib:2500000008 , ulan_contrib:2500000012 , ulan_contrib:2500000011 , ulan_contrib:2500000124 , ulan_contrib:2500000256 ;
+	dct:source ulan_source:2100042266 , ulan_source:2100042297 , ulan_source:2100045787 , ulan_source:2100146253 , ulan_source:2100149039 , ulan_source:2100153925 , ulan_source:2100153980 , ulan_source:2100154640 , ulan_source:2100156731 , ulan_source:2100158442 , ulan_source:2100042617-subject-500115393 , ulan_source:2100039584-subject-500115393 , ulan_source:2100156698-subject-500115393 , ulan_source:2100046392-subject-500115393 , ulan_source:2100047116-subject-500115393 , ulan_source:2100156593-subject-500115393 , ulan_source:2100149014-subject-500115393 ;
+	gvp:agentTypePreferred aat:300025103 ;
+	gvp:agentTypeNonPreferred aat:300025181 , aat:300025136 , aat:300025687 , aat:300154308 , aat:300112172 , aat:300025164 , aat:300386235 , aat:300386233 ;
+	skos:related ulan:500067144 , ulan:500060362 , ulan:500010539 , ulan:500372350 , ulan:500092478 , ulan:500117049 , ulan:500004441 , ulan:500020337 , ulan:500030274 , ulan:500029284 , ulan:500115729 , ulan:500126033 , ulan:500199881 , ulan:500015030 , ulan:500006325 , ulan:500196090 , ulan:500003616 , ulan:500009062 ;
+	dc:identifier "500115393" ;
+	gvp:ulan1003_associated_with ulan:500196090 ;
+	gvp:ulan1108_influenced_by ulan:500199881 ;
+	gvp:ulan1301_colleague_of ulan:500020337 ;
+	gvp:ulan1302_associate_of ulan:500126033 ;
+	gvp:ulan1303_collaborated_with ulan:500067144 , ulan:500015030 ;
+	gvp:ulan1305_worked_with ulan:500115729 ;
+	gvp:ulan1317_member_of ulan:500372350 , ulan:500092478 , ulan:500117049 ;
+	gvp:ulan1501_sibling_of ulan:500030274 , ulan:500029284 , ulan:500003616 ;
+	gvp:ulan1541_spouse_of ulan:500060362 ;
+	gvp:ulan1547_romantic_partner_of ulan:500009062 ;
+	gvp:ulan2550_friend_of ulan:500010539 , ulan:500004441 , ulan:500006325 ;
+	skos:mappingRelation ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	skos:closeMatch ulan:500115393 , <http://id.loc.gov/authorities/names/n80057220> ;
+	dct:license <http://opendatacommons.org/licenses/by/1.0/> ;
+	void:inDataset <http://vocab.getty.edu/dataset/ulan> ;
+	cc:license <http://opendatacommons.org/licenses/by/1.0/> ;
+	foaf:focus ulan:500115393-agent .

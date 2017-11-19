@@ -1,0 +1,16 @@
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix fcrepo: <http://fedora.info/definitions/v4/repository#> .
+@prefix ns: <http://example.edu/ns#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+
+<> a ns:Place , ns:Resource ;
+    ns:uid "2147473719" ;
+    fcrepo:created "2017-11-11T13:43:16.501Z"^^xsd:dateTime ;
+    fcrepo:createdBy "admin" ;
+    fcrepo:updated "2017-12-02T16:00:12.632Z"^^xsd:dateTime ;
+    fcrepo:updatedBy "admin" ;
+    skos:prefLabel "Some place" ;
+    ns:batchUid "1db43832-b7ae-49f6-be3e-874b7850d658" ;
+    .

@@ -186,7 +186,8 @@ def put_resource(uuid):
             cont_disp = None
 
         try:
-            ret = rsrc.put(data, disposition=cont_disp)
+            ret = rsrc.put(data, disposition=cont_disp,
+                    mimetype=request.content_type)
         except InvalidResourceError as e:
             return str(e), 409
         except ResourceExistsError as e:
@@ -289,7 +290,7 @@ def class_from_req_body():
     logger.debug('stream: {}'.format(request.stream))
 
     # LDP-NR types
-    if  not request.data:
+    if not request.content_length:
         logger.debug('No data received in body.')
         cls = Ldpc
         data = None

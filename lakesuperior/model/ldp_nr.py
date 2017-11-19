@@ -58,10 +58,11 @@ class LdpNr(Ldpr):
         @param file (Stream) A Stream resource representing the uploaded file.
         '''
         # Persist the stream.
-        uuid = self.nonrdfly.persist(stream)
+        file_uuid = self.nonrdfly.persist(stream)
 
         # Gather RDF metadata.
-        self._add_metadata(stream, mimetype=mimetype, disposition=disposition)
+        self._add_metadata(stream, digest=file_uuid, mimetype=mimetype,
+                disposition=disposition)
 
         # Try to persist metadata. If it fails, delete the file.
         self._logger.debug('Persisting LDP-NR triples in {}'.format(
@@ -69,7 +70,7 @@ class LdpNr(Ldpr):
         try:
             rsrc = self.rdfly.create_rsrc(self.imr)
         except:
-            self.nonrdfly.delete(uuid)
+            self.nonrdfly.delete(file_uuid)
         else:
             return rsrc
 
@@ -80,8 +81,8 @@ class LdpNr(Ldpr):
 
     ## PROTECTED METHODS ##
 
-    def _add_metadata(self, stream, mimetype='application/octet-stream',
-            disposition=None):
+    def _add_metadata(self, stream, digest,
+            mimetype='application/octet-stream', disposition=None):
         '''
         Add all metadata for the RDF representation of the LDP-NR.
 
@@ -92,22 +93,19 @@ class LdpNr(Ldpr):
         '''
         # File size.
         self._logger.debug('Data stream size: {}'.format(stream.limit))
-        self.stored_or_new_imr.add(nsc['premis'].hasSize, Literal(stream.limit,
-                datatype=XSD.long))
+        self.stored_or_new_imr.set(nsc['premis'].hasSize, Literal(stream.limit))
 
         # Checksum.
-        cksum_term = URIRef('urn:sha1:{}'.format(self.uuid))
-        self.imr.add(nsc['premis'].hasMessageDigest, cksum_term)
+        cksum_term = URIRef('urn:sha1:{}'.format(digest))
+        self.imr.set(nsc['premis'].hasMessageDigest, cksum_term)
 
         # MIME type.
-        self.imr.add(nsc['ebucore']['hasMimeType'], Literal(
-                mimetype, datatype=XSD.string))
+        self.imr.set(nsc['ebucore']['hasMimeType'], Literal(mimetype))
 
         # File name.
         self._logger.debug('Disposition: {}'.format(disposition))
         try:
-            self.imr.add(nsc['ebucore']['filename'], Literal(
-                    disposition['attachment']['parameters']['filename'],
-                    datatype=XSD.string))
+            self.imr.set(nsc['ebucore']['filename'], Literal(
+                    disposition['attachment']['parameters']['filename']))
         except KeyError:
             pass
