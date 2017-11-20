@@ -105,8 +105,7 @@ class Toolbox:
         return URIRef(self.globalize_string(str(urn)))
 
 
-    @staticmethod
-    def globalize_graph(g):
+    def globalize_graph(self, g):
         '''
         Globalize a graph.
         '''

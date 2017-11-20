@@ -74,8 +74,7 @@ def bp_url_value_preprocessor(endpoint, values):
 ## REST SERVICES ##
 
 @ldp.route('/<path:uuid>', methods=['GET'])
-@ldp.route('/', defaults={'uuid': None}, methods=['GET'],
-        strict_slashes=False)
+@ldp.route('/', defaults={'uuid': None}, methods=['GET'], strict_slashes=False)
 def get_resource(uuid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
@@ -104,7 +103,7 @@ def get_resource(uuid, force_rdf=False):
         if isinstance(rsrc, LdpRs) \
                 or request.headers['accept'] in accept_rdf \
                 or force_rdf:
-            return (rsrc.imr.graph.serialize(format='turtle'), out_headers)
+            return (rsrc.out_graph.serialize(format='turtle'), out_headers)
         else:
             return send_file(rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename)

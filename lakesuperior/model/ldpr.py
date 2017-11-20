@@ -198,6 +198,16 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
+    def out_graph(self):
+        '''
+        Retun a globalized graph of the resource's IMR.
+
+        Internal URNs are replaced by global URIs using the endpoint webroot.
+        '''
+        return Toolbox().globalize_graph(self.imr.graph)
+
+
+    @property
     def stored_or_new_imr(self):
         '''
         Extract an in-memory resource for harmless manipulation and output.
