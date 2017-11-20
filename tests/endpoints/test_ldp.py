@@ -51,23 +51,18 @@ def test_put_ldp_rs(client):
             g.objects(None, RDF.type)
 
 
-def test_put_ldp_nr(client, rnd_image, rnd_utf8_string):
+def test_put_ldp_nr(client, rnd_img):
     '''
     PUT a resource with binary payload and verify checksums.
     '''
-    rnd_image['content'].seek(0)
-    print('Filename: {}'.format(rnd_image['filename']))
-    print('Data: {}'.format(rnd_image['content']))
-    client.put('/ldp/ldpnr01', data=rnd_image['content'], headers={
+    rnd_img['content'].seek(0)
+    client.put('/ldp/ldpnr01', data=rnd_img['content'], headers={
             'Content-Disposition' : 'attachment; filename={}'.format(
-            rnd_image['filename'])})
+            rnd_img['filename'])})
 
     resp = client.get('/ldp/ldpnr01', headers={'accept' : 'image/png'})
     assert resp.status_code == 200
-    rnd_image['content'].seek(0)
-    #print('Original sample: {}'.format(rnd_image['content'].read(64)))
-    #print('Response sample: {}'.format(resp.data))
-    assert sha1(resp.data).hexdigest() == rnd_image['hash']
+    assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
 
 def test_put_existing_resource(client, db, random_uuid):
