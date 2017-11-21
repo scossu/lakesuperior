@@ -94,6 +94,66 @@ class TestLdp:
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
 
+    def test_post_slug(self):
+        '''
+        Verify that a POST with slug results in the expected URI only if the
+        resource does not exist already.
+        '''
+        slug01_resp = self.client.post('/ldp', headers={'slug' : 'slug01'})
+        assert slug01_resp.status_code == 201
+        assert slug01_resp.headers['location'] == \
+                Toolbox().base_url + '/slug01'
+
+        slug02_resp = self.client.post('/ldp', headers={'slug' : 'slug01'})
+        assert slug02_resp.status_code == 201
+        assert slug02_resp.headers['location'] != \
+                Toolbox().base_url + '/slug01'
+
+
+    def test_post_404(self):
+        '''
+        Verify that a POST to a non-existing parent results in a 404.
+        '''
+        assert self.client.post('/ldp/{}'.format(uuid.uuid4()))\
+                .status_code == 404
+
+
+    def test_post_409(self, rnd_img):
+        '''
+        Verify that you cannot POST to a binary resource.
+        '''
+        rnd_img['content'].seek(0)
+        self.client.put('/ldp/post_409', data=rnd_img['content'], headers={
+                'Content-Disposition' : 'attachment; filename={}'.format(
+                rnd_img['filename'])})
+        assert self.client.post('/ldp/post_409').status_code == 409
+
+
+    def test_delete(self):
+        create_resp = self.client.put('/ldp/test_delete01')
+        delete_resp = self.client.delete('/ldp/test_delete01')
+
+        assert delete_resp.status_code == 204
+
+
+    def test_tombstone(self):
+        tstone_resp = self.client.get('/ldp/test_delete01')
+        assert tstone_resp.status_code == 410
+        assert tstone_resp.headers['Link'] == \
+                '<{}/test_delete01/fcr:tombstone>; rel="hasTombstone"'\
+                .format(Toolbox().base_url)
+
+        tstone_path = '/ldp/test_delete01/fcr:tombstone'
+        assert self.client.get(tstone_path).status_code == 405
+        assert self.client.put(tstone_path).status_code == 405
+        assert self.client.post(tstone_path).status_code == 405
+        assert self.client.delete(tstone_path).status_code == 204
+
+        assert self.client.get('/ldp/test_delete01').status_code == 404
+
+
+
+
 
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')
