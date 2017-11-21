@@ -39,36 +39,34 @@ class SimpleLayout(BaseRdfLayout):
                 if incl_inbound else ''
         inbound_qry = '\nOPTIONAL {{ ?s1 ?p1 {} . }} .'.format(uri.n3()) \
                 if incl_inbound else ''
-        embed_children_qry = '''
-        OPTIONAL {{
-          {0} ldp:contains ?c .
-          ?c ?cp ?co .
-        }}
-        '''.format(uri.n3()) if incl_children and embed_children else ''
 
-        incl_children_qry = '\nFILTER ( ?p != ldp:contains )' \
-                if not incl_children else ''
+        # Include and/or embed children.
+        embed_children_trp = embed_children_qry = ''
+        if incl_srv_mgd and incl_children:
+            incl_children_qry = ''
 
-        srv_mgd_qry = ''
-        if not incl_srv_mgd:
-            for p in srv_mgd_predicates:
-                self._logger.debug('Removing predicate: {}'.format(p))
-                srv_mgd_qry += '\nFILTER ( ?p != {} ) .'.format(p.n3())
-            for t in srv_mgd_types:
-                self._logger.debug('Removing type: {}'.format(t))
-                srv_mgd_qry += '\nMINUS {{ ?s a {} .}} .'.format(t.n3())
+            # Embed children.
+            if embed_children:
+                embed_children_trp = '?c ?cp ?co .'
+                embed_children_qry = '''
+                OPTIONAL {{
+                  {0} ldp:contains ?c .
+                  {1}
+                }}
+                '''.format(uri.n3(), embed_children_trp)
+        else:
+            incl_children_qry = '\nFILTER ( ?p != ldp:contains )' \
 
         q = '''
         CONSTRUCT {{
             {uri} ?p ?o .{inb_cnst}
-            ?c ?cp ?co .
+            {embed_chld_t}
         }} WHERE {{
-            {uri} ?p ?o .{inb_qry}{incl_chld}{embed_chld}{omit_srv_mgd}
-            #FILTER (?p != premis:hasMessageDigest) .
+            {uri} ?p ?o .{inb_qry}{incl_chld}{embed_chld}
         }}
         '''.format(uri=uri.n3(), inb_cnst=inbound_construct,
                 inb_qry=inbound_qry, incl_chld=incl_children_qry,
-                embed_chld=embed_children_qry, omit_srv_mgd=srv_mgd_qry)
+                embed_chld_t=embed_children_trp, embed_chld=embed_children_qry)
 
         try:
             qres = self._conn.query(q)
@@ -91,9 +89,9 @@ class SimpleLayout(BaseRdfLayout):
                     Toolbox().uri_to_uuid(rsrc.identifier),
                     rsrc.value(nsc['fcrepo'].created))
         elif rsrc.value(nsc['fcsystem'].tombstone):
-            tombstone_rsrc = rsrc.value(nsc['fcsystem'].tombstone)
             raise TombstoneError(
-                    Toolbox().uri_to_uuid(rsrc.identifier),
+                    Toolbox().uri_to_uuid(
+                            rsrc.value(nsc['fcsystem'].tombstone).identifier),
                     tombstone_rsrc.value(nsc['fcrepo'].created))
 
         return rsrc
@@ -104,8 +102,8 @@ class SimpleLayout(BaseRdfLayout):
         See base_rdf_layout.ask_rsrc_exists.
         '''
         self._logger.info('Checking if resource exists: {}'.format(urn))
-        imr = self.extract_imr(urn, incl_children=False)
-        return len(imr.graph) > 0
+
+        return self._conn.query('ASK {{ {} ?p ?o . }}'.format(urn.n3()))
 
 
     def create_rsrc(self, imr):

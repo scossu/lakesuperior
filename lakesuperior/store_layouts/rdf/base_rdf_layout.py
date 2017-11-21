@@ -114,20 +114,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self.ds.resource(urn)
 
 
-    def out_rsrc(self, urn):
-        '''
-        Graph obtained by querying the triplestore and adding any abstraction
-        and filtering to make up a graph that can be used for read-only,
-        API-facing results. Different layouts can implement this in very
-        different ways, so it is an abstract method.
-
-        @return rdflib.resource.Resource
-        '''
-        imr = self.extract_imr(urn)
-        if not len(imr.graph):
-            raise ResourceNotExistsError
-
-
     def create_or_replace_rsrc(self, imr):
         '''Create a resource graph in the main graph if it does not exist.
 
@@ -172,16 +158,29 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # implement.
 
     @abstractmethod
-    def extract_imr(self, uri, strict=False, minimal=False, incl_inbound=False,
-                embed_children=False, incl_srv_mgd=True):
+    def extract_imr(self, uri, strict=False, incl_inbound=False,
+                incl_children=True, embed_children=False, incl_srv_mgd=True):
         '''
-        Extract an in-memory resource based on the copy of a graph on a subject.
+        Extract an in-memory resource from the dataset restricted to a subject.
+
+        some filtering operations are carried out in this method for
+        performance purposes (e.g. `incl_children` and `embed_children`, i.e.
+        the IMR will never have those properties). Others, such as
+        server-managed triples, are kept in the IMR until they are filtered out
+        when the graph is output with `Ldpr.out_graph`.
 
         @param uri (URIRef) Resource URI.
         @param strict (boolean) If set to True, an empty result graph will
         raise a `ResourceNotExistsError`.
-        @param inbound (boolean) Whether to pull triples that have the resource
-        URI as their object.
+        @param incl_inbound (boolean) Whether to pull triples that have the
+        resource URI as their object.
+        @param incl_children (boolean) Whether to include all children
+        indicated by `ldp:contains`. This is only effective if `incl_srv_mgd`
+        is True.
+        @param embed_children (boolean) If this and `incl_children` are True,
+        the full graph is retrieved for each of the children.
+        @param incl_srv_mgd (boolean) Whether to include server-managed
+        triples.
         '''
         pass
 

@@ -14,6 +14,8 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
+        srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
 from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
@@ -129,7 +131,7 @@ class Ldpr(metaclass=ABCMeta):
         self._urn = nsc['fcres'][uuid] if self.uuid is not None \
                 else self.ROOT_NODE_URN
 
-        self._imr_options = __class__.imr_options(repr_opts)
+        self._imr_options = __class__.set_imr_options(repr_opts)
 
 
     @property
@@ -204,7 +206,23 @@ class Ldpr(metaclass=ABCMeta):
 
         Internal URNs are replaced by global URIs using the endpoint webroot.
         '''
-        return Toolbox().globalize_graph(self.imr.graph)
+        # Remove digest hash.
+        self.imr.remove(nsc['premis'].hasMessageDigest)
+
+        if not self._imr_options.setdefault('incl_srv_mgd', False):
+            for p in srv_mgd_predicates:
+                self._logger.debug('Removing predicate: {}'.format(p))
+                self.imr.remove(p)
+            for t in srv_mgd_types:
+                self._logger.debug('Removing type: {}'.format(t))
+                self.imr.remove(RDF.type, t)
+
+        out_g = Toolbox().globalize_graph(self.imr.graph)
+        # Clear IMR because it's been pruned. In the rare case it is needed
+        # after this method, it will be retrieved again.
+        delattr(self, 'imr')
+
+        return out_g
 
 
     @property
@@ -346,7 +364,7 @@ class Ldpr(metaclass=ABCMeta):
         rdfly = cls.load_layout('rdf')
         imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
         cls._logger.debug('Representation options: {}'.format(repr_opts))
-        imr_opts = cls.imr_options(repr_opts)
+        imr_opts = cls.set_imr_options(repr_opts)
         imr = rdfly.extract_imr(imr_urn, **imr_opts)
         rdf_types = imr.objects(RDF.type)
 
@@ -410,7 +428,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @classmethod
-    def imr_options(cls, repr_opts):
+    def set_imr_options(cls, repr_opts):
         '''
         Set options to retrieve IMR.
 
@@ -422,9 +440,6 @@ class Ldpr(metaclass=ABCMeta):
         cls._logger.debug('Setting retrieval options from: {}'.format(repr_opts))
         imr_options = {}
 
-        #imr_options['embed_children'] = imr_options['incl_inbound'] = False
-        #imr_options['incl_srv_mgd'] = True
-
         if 'value' in repr_opts and repr_opts['value'] == 'minimal':
             imr_options = {
                 'embed_children' : False,
@@ -432,23 +447,34 @@ class Ldpr(metaclass=ABCMeta):
                 'incl_inbound' : False,
                 'incl_srv_mgd' : False,
             }
-        elif 'parameters' in repr_opts:
-            include = repr_opts['parameters']['include'].split(' ') \
-                    if 'include' in repr_opts['parameters'] else []
-            omit = repr_opts['parameters']['omit'].split(' ') \
-                    if 'omit' in repr_opts['parameters'] else []
+        else:
+            # Default.
+            imr_options = {
+                'embed_children' : False,
+                'incl_children' : True,
+                'incl_inbound' : False,
+                'incl_srv_mgd' : True,
+            }
 
-            cls._logger.debug('Include: {}'.format(include))
-            cls._logger.debug('Omit: {}'.format(omit))
+            # Override defaults.
+            if 'parameters' in repr_opts:
+                include = repr_opts['parameters']['include'].split(' ') \
+                        if 'include' in repr_opts['parameters'] else []
+                omit = repr_opts['parameters']['omit'].split(' ') \
+                        if 'omit' in repr_opts['parameters'] else []
 
-            if str(cls.EMBED_CHILD_RES_URI) in include:
-                    imr_options['embed_children'] = True
-            if str(cls.RETURN_CHILD_RES_URI) in omit:
-                    imr_options['incl_children'] = False
-            if str(cls.RETURN_INBOUND_REF_URI) in include:
-                    imr_options['incl_inbound'] = True
-            if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
-                    imr_options['incl_srv_mgd'] = False
+                cls._logger.debug('Include: {}'.format(include))
+                cls._logger.debug('Omit: {}'.format(omit))
+
+                if str(cls.EMBED_CHILD_RES_URI) in include:
+                        imr_options['embed_children'] = True
+                if str(cls.RETURN_CHILD_RES_URI) in omit:
+                        imr_options['incl_children'] = False
+                if str(cls.RETURN_INBOUND_REF_URI) in include:
+                        imr_options['incl_inbound'] = True
+                if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
+                        imr_options['incl_srv_mgd'] = False
+
         cls._logger.debug('Retrieval options: {}'.format(imr_options))
 
         return imr_options

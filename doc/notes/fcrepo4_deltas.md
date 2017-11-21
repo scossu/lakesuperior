@@ -55,6 +55,16 @@ the default.
 If `Prefer` is set to `handling=lenient`, all server-managed triples sent with
 the payload are ignored.
 
+## "Include" and "Omit" options for children
+
+LAKEsuperior offers an additional `Prefer` header option to exclude all
+references to child resources (i.e. by removing all the `ldp:contains` triples)
+while leaving the other server-managed triples when retrieving a resource:
+
+    Prefer: return=representation; [include | omit]="http://fedora.info/definitions/v4/repository#Children"
+
+The default is `include`.
+
 ## Automatic LDP class assignment
 
 Since LAKEsuperior rejects client-provided server-managed triples, and since
@@ -64,7 +74,7 @@ provided properties: if the `ldp:hasMemberRelation` and
 Container. If in addition to these the `ldp:insertedContentRelation` property
 is present, the resource is an Indirect Container. If any of the first two are
 missing, the resource is a Container (@TODO discuss: shall it be a Basic
-Contaner?)
+Container?)
 
 ## LDP-NR metadata by content negotiation
 
