@@ -7,5 +7,5 @@ INSERT {
   ?s dc:title "Ciao" .
 }
 WHERE {
-  ?s dc:title ?t .
+  ?s dc:title "Hello" .
 }

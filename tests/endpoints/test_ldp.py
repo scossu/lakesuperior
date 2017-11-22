@@ -37,15 +37,6 @@ class TestLdp:
         #assert ldp_resp.data == rest_resp.data
 
 
-    def test_post_resource(self, client):
-        '''
-        Check response headers for a POST operation with empty payload.
-        '''
-        res = self.client.post('/ldp/')
-        assert res.status_code == 201
-        assert 'Location' in res.headers
-
-
     def test_put_empty_resource(self, random_uuid):
         '''
         Check response headers for a PUT operation with empty payload.
@@ -94,6 +85,15 @@ class TestLdp:
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
 
+    def test_post_resource(self, client):
+        '''
+        Check response headers for a POST operation with empty payload.
+        '''
+        res = self.client.post('/ldp/')
+        assert res.status_code == 201
+        assert 'Location' in res.headers
+
+
     def test_post_slug(self):
         '''
         Verify that a POST with slug results in the expected URI only if the
@@ -129,6 +129,33 @@ class TestLdp:
         assert self.client.post('/ldp/post_409').status_code == 409
 
 
+    def test_patch(self):
+        '''
+        Test patching a resource.
+        '''
+        path = '/ldp/test_patch01'
+        self.client.put(path)
+
+        uri = Toolbox().base_url + '/test_patch01'
+
+        self.client.patch(path,
+                data=open('tests/data/sparql_update/simple_insert.sparql'),
+                headers={'content-type' : 'application/sparql-update'})
+
+        resp = self.client.get(path)
+        g = Graph().parse(data=resp.data, format='text/turtle')
+        print('Triples after first PATCH: {}'.format(set(g)))
+        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+
+        self.client.patch(path,
+                data=open('tests/data/sparql_update/delete+insert+where.sparql'),
+                headers={'content-type' : 'application/sparql-update'})
+
+        resp = self.client.get(path)
+        g = Graph().parse(data=resp.data, format='text/turtle')
+        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
+
+
     def test_delete(self):
         create_resp = self.client.put('/ldp/test_delete01')
         delete_resp = self.client.delete('/ldp/test_delete01')
@@ -150,8 +177,6 @@ class TestLdp:
         assert self.client.delete(tstone_path).status_code == 204
 
         assert self.client.get('/ldp/test_delete01').status_code == 404
-
-
 
 
 
