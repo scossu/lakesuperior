@@ -30,18 +30,17 @@ def db(app):
     dbconf = app.config['store']['ldp_rs']
     db = GraphStoreConnector(
             query_ep=dbconf['webroot'] + dbconf['query_ep'],
-            update_ep=dbconf['webroot'] + dbconf['update_ep'])
+            update_ep=dbconf['webroot'] + dbconf['update_ep'],
+            autocommit=True)
 
     db.ds.default_context.parse(source='data/bootstrap/simple_layout.nq',
             format='nquads')
-    db.store.commit()
 
     yield db
 
     print('Tearing down fixure graph store.')
     for g in db.ds.graphs():
         db.ds.remove_graph(g)
-    db.store.commit()
 
 
 @pytest.fixture

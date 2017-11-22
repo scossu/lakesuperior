@@ -70,7 +70,7 @@ class LdpRs(Ldpr):
 
         @param update_str (string) SPARQL-Update staements.
         '''
-        delta = self._sparql_delta(update_str)
+        delta = self._sparql_delta(update_str.replace('<>', self.urn.n3()))
 
         return self.rdfly.modify_dataset(*delta)
 
