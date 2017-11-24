@@ -1,3 +1,5 @@
+# Bootstrap data set for default RDF layout.
+#
 # This needs to be in N-Quads format because of
 # https://github.com/RDFLib/rdflib/issues/436
 

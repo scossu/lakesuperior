@@ -10,9 +10,8 @@ from PIL import Image
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.rdf.graph_store_connector import \
-        GraphStoreConnector
 from util.generators import random_image
+from util.bootstrap import bootstrap_db, bootstrap_binary_store
 
 
 @pytest.fixture(scope='module')
@@ -27,14 +26,8 @@ def db(app):
     '''
     Set up and tear down test triplestore.
     '''
-    dbconf = app.config['store']['ldp_rs']
-    db = GraphStoreConnector(
-            query_ep=dbconf['webroot'] + dbconf['query_ep'],
-            update_ep=dbconf['webroot'] + dbconf['update_ep'],
-            autocommit=True)
-
-    db.ds.default_context.parse(source='data/bootstrap/simple_layout.nq',
-            format='nquads')
+    db = bootstrap_db(app)
+    bootstrap_binary_store(app)
 
     yield db
 

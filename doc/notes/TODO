@@ -23,7 +23,7 @@
   - [W] Toolbox
   - [ ] Storage layer (RDF + file)
   - [ ] LDP layer
-- [W] Bootstrap
+- [D] Bootstrap
 - [ ] Optimize queries
 - [ ] Messaging SPI
 - [ ] Hook up Hyrax
