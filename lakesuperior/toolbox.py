@@ -41,7 +41,9 @@ class Toolbox:
 
         @return URIRef
         '''
-        return URIRef('{}/{}'.format(self.base_url, uuid))
+        uri = '{}/{}'.format(self.base_url, uuid) if uuid else self.base_url
+
+        return URIRef(uri)
 
 
     def uri_to_uuid(self, uri):
@@ -49,10 +51,12 @@ class Toolbox:
 
         @return string
         '''
-        if uri.startswith(nsc['fcres']):
+        if uri == self.ROOT_NODE_URN:
+            return ''
+        elif uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:
-            return str(uri).replace(self.base_url, '')
+            return str(uri).replace(self.base_url, '').strip('/')
 
 
     def localize_string(self, s):
@@ -62,8 +66,10 @@ class Toolbox:
 
         @return string
         '''
-        return s.replace(self.base_url+'/', str(nsc['fcres']))\
-                .replace(self.base_url, str(nsc['fcres']))
+        if s.strip('/') == self.base_url:
+            return str(self.ROOT_NODE_URN)
+        else:
+            return s.strip('/').replace(self.base_url+'/', str(nsc['fcres']))
 
 
     def localize_term(self, uri):
@@ -74,10 +80,6 @@ class Toolbox:
 
         @return rdflib.term.URIRef
         '''
-        self._logger.debug('Input URI: {}'.format(uri))
-        if uri.strip('/') == self.base_url:
-            return self.ROOT_NODE_URN
-
         return URIRef(self.localize_string(str(uri)))
 
 

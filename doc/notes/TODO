@@ -19,13 +19,15 @@
 - [D] GUnicorn
 - [W] Tests
   - [D] Framework + config
-  - [W] HTTP layer
-  - [ ] Unit tests
+  - [D] HTTP layer
+  - [W] Toolbox
+  - [ ] Storage layer (RDF + file)
+  - [ ] LDP layer
 - [W] Bootstrap
 - [ ] Optimize queries
 - [ ] Messaging SPI
 - [ ] Hook up Hyrax
-- [ ] Documentation
+- [ ] Reformat documentation
 
 # Alpha 2 TODO
 
