@@ -87,7 +87,7 @@ messaging:
           port: 61613
           username:
           password:
-          protocol: 12
+          protocol: '12'
           destination: '/topic/fcrepo'
 
           # Message format: at the moment only `ActivityStreamsFormatter` is
