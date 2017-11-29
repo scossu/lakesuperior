@@ -16,17 +16,18 @@ class StompHandler(logging.Handler):
     informational purpose, this module has a functional one.
     '''
     def __init__(self, conf):
-        super().__init__()
-
-        #import pdb; pdb.set_trace()
+        self.conf = conf
         self.conn = stomp.Connection([(conf['host'], conf['port'])])
         self.conn.start()
         self.conn.connect(conf['username'], conf['password'], wait=True)
+
+        return super().__init__()
 
 
     def emit(self, record):
         '''
         Send the message to the destination endpoint.
         '''
-        self.conn.send('/topic/fcrepo', self.format(record))
+        self.conn.send(destination=self.conf['destination'],
+                body=self.format(record))
 
