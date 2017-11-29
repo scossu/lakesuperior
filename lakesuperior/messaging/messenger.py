@@ -16,7 +16,7 @@ class Messenger:
     def __init__(self, config):
         for route in config['routes']:
             handler_cls = getattr(handlers, route['handler'])
-            messenger.addHandler(handler_cls(route['endpoint']))
+            messenger.addHandler(handler_cls(route))
             messenger.setLevel(logging.INFO)
             #messenger.formatter = logging.Formatter('%(message)s')
             formatter = getattr(formatters, route['formatter'])
