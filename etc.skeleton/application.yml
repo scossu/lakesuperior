@@ -90,14 +90,20 @@ messaging:
           protocol: '12'
           destination: '/topic/fcrepo'
 
-          # Message format: at the moment only `ActivityStreamsFormatter` is
-          # supported.
-          formatter: ActivityStreamsFormatter
+          # Message format: at the moment the following are supported:
+          # - `ASResourceFormatter`: Sends information about a resource being
+          #   created, updated or deleted, by who and when, with no further
+          #   information about what changed.
+          # - `ASDeltaFormatter`: Sends the same information as
+          #   `ASResourceFormatter` with the addition of the triples that were
+          #   added and the ones that were removed in the request. This may be
+          #   used to send rich provenance data to a preservation system.
+          formatter: ASResourceFormatter
 
           # Granularity level of messages. It can be one of:
-          # - `none`: No message is ever sent.
+          # - `none`: route is not used. No message is ever sent.
           # - `resource`: Messages are sent whenever a resource is created,
           #   updated or deleted. No details about what changed is included.
-          # - `provenance`: up to two messages are sent for each individual
+          # - `delta`: up to two messages are sent for each individual
           #   request: one for the added triples and one for the deleted triples.
-          level: resource
+          active: True

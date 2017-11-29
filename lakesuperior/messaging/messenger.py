@@ -15,13 +15,13 @@ class Messenger:
 
     def __init__(self, config):
         for route in config['routes']:
-            handler_cls = getattr(handlers, route['handler'])
-            messenger.addHandler(handler_cls(route))
-            messenger.setLevel(logging.INFO)
-            #messenger.formatter = logging.Formatter('%(message)s')
-            formatter = getattr(formatters, route['formatter'])
+            if route['active']:
+                handler_cls = getattr(handlers, route['handler'])
+                messenger.addHandler(handler_cls(route))
+                messenger.setLevel(logging.INFO)
+                formatter = getattr(formatters, route['formatter'])
 
-            self._msg_routes.append((messenger, formatter))
+                self._msg_routes.append((messenger, formatter))
 
 
     def send(self, *args, **kwargs):
