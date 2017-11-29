@@ -75,3 +75,26 @@ store:
         # Default: 4
         pairtree_branches: 4
 
+# Configuration for messaging.
+messaging:
+    # List of channels to send messages to.
+    # Each channel must define the `endpoint` and the `level` parameters.
+    routes:
+        # The destination of the message. Currently only the STOMP protocol
+        # is supported.
+        - endpoint: stomp://localhost:61613
+
+          # Message format: at the moment only `ActivityStreamsFormatter` is
+          # supported.
+          formatter: ActivityStreamsFormatter
+
+          # Output handler. Currently only `StompHandler` is supported.
+          handler: StompHandler
+
+          # Granularity level of messages. It can be one of:
+          # - `none`: No message are ever sent.
+          # - `resource`: Messages are sent whenever a resource is created,
+          #   updated or deleted. No details about what changed is included.
+          # - `provenance`: up to two messages are sent for each individual
+          #   request: one for the added triples and one for the deleted triples.
+          level: resource

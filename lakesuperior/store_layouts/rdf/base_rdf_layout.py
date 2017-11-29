@@ -3,6 +3,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 from flask import current_app
+from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.term import URIRef
@@ -10,6 +11,7 @@ from rdflib.term import URIRef
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
+from lakesuperior.messaging.messenger import Messenger
 from lakesuperior.store_layouts.rdf.graph_store_connector import \
         GraphStoreConnector
 from lakesuperior.toolbox import Toolbox
@@ -50,8 +52,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # N.B. This is Fuseki-specific.
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
-    RES_CREATED = '_created_'
-    RES_UPDATED = '_updated_'
+    RES_CREATED = 'Create'
+    RES_UPDATED = 'Update'
+    RES_DELETED = 'Delete'
 
     _logger = logging.getLogger(__name__)
 
@@ -71,6 +74,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
         self._conn = GraphStoreConnector(
                 query_ep=self.conf['webroot'] + self.conf['query_ep'],
                 update_ep=self.conf['webroot'] + self.conf['update_ep'])
+
+        self._msg = Messenger(current_app.config['messaging'])
 
 
     @property
@@ -123,9 +128,22 @@ class BaseRdfLayout(metaclass=ABCMeta):
             self._logger.info(
                     'Resource {} exists. Removing all outbound triples.'
                     .format(imr.identifier))
-            return self.replace_rsrc(imr)
+            ev_type = self.replace_rsrc(imr)
         else:
-            return self.create_rsrc(imr)
+            ev_type = self.create_rsrc(imr)
+
+        self._msg.send(
+            imr.identifier,
+            ev_type,
+            time=imr.value(nsc['fcrepo'].lastModified),
+            type=list(imr.graph.objects(imr.identifier, RDF.type)),
+            data=imr.graph,
+            metadata={
+                'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
+            }
+        )
+
+        return ev_type
 
 
     def delete_rsrc(self, urn, inbound=True, delete_children=True):

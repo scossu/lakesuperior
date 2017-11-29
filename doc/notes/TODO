@@ -24,24 +24,27 @@
   - [ ] Storage layer (RDF + file)
   - [ ] LDP layer
 - [D] Bootstrap
-- [ ] Optimize queries
-- [ ] Messaging SPI
+- [W] Messaging SPI
 - [ ] Hook up Hyrax
 - [ ] Reformat documentation
 
 # Alpha 2 TODO
 
-- [ ] Migraion tool
+- [ ] Migration tool
 - [ ] Complete header handling
 - [ ] Query API
+
+# Alpha 3 TODO
+
+- [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 3 TODO
+# Alpha 4 TODO
+
 - [ ] Full provenance layout
 - [ ] Versioning
-- [ ] Async coroutines
-  - [ ] Within sync request
-  - [ ] Fully async request
-- [?] Basic UI
+- [ ] AuthN/Z
+  - [ ] Authentication
+  - [ ] WebAC
