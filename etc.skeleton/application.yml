@@ -83,6 +83,10 @@ messaging:
           # Output handler. Currently only `StompHandler` is supported.
         - handler: StompHandler
 
+          # Whether this route is used. It False, no messages will be emitted
+          # for this route.
+          active: True
+
           host: 127.0.0.1
           port: 61613
           username:
@@ -99,11 +103,3 @@ messaging:
           #   added and the ones that were removed in the request. This may be
           #   used to send rich provenance data to a preservation system.
           formatter: ASResourceFormatter
-
-          # Granularity level of messages. It can be one of:
-          # - `none`: route is not used. No message is ever sent.
-          # - `resource`: Messages are sent whenever a resource is created,
-          #   updated or deleted. No details about what changed is included.
-          # - `delta`: up to two messages are sent for each individual
-          #   request: one for the added triples and one for the deleted triples.
-          active: True
