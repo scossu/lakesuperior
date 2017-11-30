@@ -106,6 +106,16 @@ class Ldpr(metaclass=ABCMeta):
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
     ROOT_NODE_URN = nsc['fcsystem'].root
 
+    RES_CREATED = 'Create'
+    RES_DELETED = 'Delete'
+    RES_UPDATED = 'Update'
+
+    protected_pred = (
+        nsc['fcrepo'].created,
+        nsc['fcrepo'].createdBy,
+        nsc['ldp'].contains,
+    )
+
     _logger = logging.getLogger(__name__)
 
 
@@ -127,33 +137,11 @@ class Ldpr(metaclass=ABCMeta):
                 current_app.config['store']['ldp_nr']['layout']
 
         self.uuid = uuid
-
-        self._urn = nsc['fcres'][uuid] if self.uuid is not None \
+        self.urn = nsc['fcres'][uuid] if self.uuid is not None \
                 else self.ROOT_NODE_URN
+        self.uri = Toolbox().uuid_to_uri(self.uuid)
 
         self._imr_options = __class__.set_imr_options(repr_opts)
-
-
-    @property
-    def urn(self):
-        '''
-        The internal URI (URN) for the resource as stored in the triplestore.
-
-        This is a URN that needs to be converted to a global URI for the LDP
-        API.
-
-        @return rdflib.URIRef
-        '''
-        return self._urn
-
-    @property
-    def uri(self):
-        '''
-        The URI for the resource as published by the REST API.
-
-        @return rdflib.URIRef
-        '''
-        return Toolbox().uuid_to_uri(self.uuid)
 
 
     @property
@@ -176,7 +164,7 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_rsrc'):
-            self._rsrc = self.rdfly.rsrc(self.urn)
+            self._rsrc = self.rdfly.ds.resource(self.urn)
 
         return self._rsrc
 
@@ -197,32 +185,6 @@ class Ldpr(metaclass=ABCMeta):
             self._imr = self.rdfly.extract_imr(self.urn, **options)
 
         return self._imr
-
-
-    @property
-    def out_graph(self):
-        '''
-        Retun a globalized graph of the resource's IMR.
-
-        Internal URNs are replaced by global URIs using the endpoint webroot.
-        '''
-        # Remove digest hash.
-        self.imr.remove(nsc['premis'].hasMessageDigest)
-
-        if not self._imr_options.setdefault('incl_srv_mgd', False):
-            for p in srv_mgd_predicates:
-                self._logger.debug('Removing predicate: {}'.format(p))
-                self.imr.remove(p)
-            for t in srv_mgd_types:
-                self._logger.debug('Removing type: {}'.format(t))
-                self.imr.remove(RDF.type, t)
-
-        out_g = Toolbox().globalize_graph(self.imr.graph)
-        # Clear IMR because it's been pruned. In the rare case it is needed
-        # after this method, it will be retrieved again.
-        delattr(self, 'imr')
-
-        return out_g
 
 
     @property
@@ -256,6 +218,32 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
+    def out_graph(self):
+        '''
+        Retun a globalized graph of the resource's IMR.
+
+        Internal URNs are replaced by global URIs using the endpoint webroot.
+        '''
+        # Remove digest hash.
+        self.imr.remove(nsc['premis'].hasMessageDigest)
+
+        if not self._imr_options.setdefault('incl_srv_mgd', False):
+            for p in srv_mgd_predicates:
+                self._logger.debug('Removing predicate: {}'.format(p))
+                self.imr.remove(p)
+            for t in srv_mgd_types:
+                self._logger.debug('Removing type: {}'.format(t))
+                self.imr.remove(RDF.type, t)
+
+        out_g = Toolbox().globalize_graph(self.imr.graph)
+        # Clear IMR because it's been pruned. In the rare case it is needed
+        # after this method, it will be retrieved again.
+        delattr(self, 'imr')
+
+        return out_g
+
+
+    @property
     def is_stored(self):
         return self.rdfly.ask_rsrc_exists(self.urn)
 
@@ -267,7 +255,7 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
-            self._types = set(self.rsrc[RDF.type])
+            self._types = set(self.imr[RDF.type])
 
         return self._types
 
@@ -285,51 +273,6 @@ class Ldpr(metaclass=ABCMeta):
                     self._ldp_types.add(t)
 
         return self._ldp_types
-
-
-    @property
-    def containment(self):
-        if not hasattr(self, '_containment'):
-            q = '''
-            SELECT ?container ?contained {
-              {
-                ?s ldp:contains ?contained .
-              } UNION {
-                ?container ldp:contains ?s .
-              }
-            }
-            '''
-            qres = self.rsrc.graph.query(q, initBindings={'s' : self.urn})
-
-            # There should only be one container.
-            for t in qres:
-                if t[0]:
-                    container = self.rdfly.ds.resource(t[0])
-
-            contains = ( self.rdfly.ds.resource(t[1]) for t in qres if t[1] )
-
-            self._containment = {
-                    'container' : container, 'contains' : contains}
-
-        return self._containment
-
-
-    @containment.deleter
-    def containment(self):
-        '''
-        Reset containment variable when changing containment triples.
-        '''
-        del self._containment
-
-
-    @property
-    def container(self):
-        return self.containment['container']
-
-
-    @property
-    def contains(self):
-        return self.containment['contains']
 
 
     ## STATIC & CLASS METHODS ##
@@ -540,6 +483,35 @@ class Ldpr(metaclass=ABCMeta):
 
 
     ## PROTECTED METHODS ##
+
+    def _create_rsrc(self):
+        '''
+        Create a new resource by comparing an empty graph with the provided
+        IMR graph.
+        '''
+        self.rdfly.modify_dataset(Graph(), self.provided_imr.graph)
+
+        return self.RES_CREATED
+
+
+    def _replace_rsrc(self):
+        '''
+        Replace a resource.
+
+        The existing resource graph is removed except for the protected terms.
+        '''
+        # The extracted IMR is used as a "minus" delta, so protected predicates
+        # must be removed.
+        for p in self.protected_pred:
+            self.imr.remove(p)
+
+        self.rdfly.modify_dataset(self.imr.graph, self.provided_imr.graph)
+
+        # Reset the IMR because it has changed.
+        delattr(self, 'imr')
+
+        return self.RES_CREATED
+
 
     def _set_containment_rel(self):
         '''Find the closest parent in the path indicated by the UUID and

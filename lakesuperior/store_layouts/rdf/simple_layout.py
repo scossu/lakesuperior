@@ -35,10 +35,8 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.extract_imr.
         '''
-        inbound_construct = '\n?s1 ?p1 {} .'.format(uri.n3()) \
-                if incl_inbound else ''
-        inbound_qry = '\nOPTIONAL {{ ?s1 ?p1 {} . }} .'.format(uri.n3()) \
-                if incl_inbound else ''
+        inbound_construct = '\n?s1 ?p1 ?s .' if incl_inbound else ''
+        inbound_qry = '\nOPTIONAL { ?s1 ?p1 ?s . } .' if incl_inbound else ''
 
         # Include and/or embed children.
         embed_children_trp = embed_children_qry = ''
@@ -50,26 +48,26 @@ class SimpleLayout(BaseRdfLayout):
                 embed_children_trp = '?c ?cp ?co .'
                 embed_children_qry = '''
                 OPTIONAL {{
-                  {0} ldp:contains ?c .
-                  {1}
+                  ?s ldp:contains ?c .
+                  {}
                 }}
-                '''.format(uri.n3(), embed_children_trp)
+                '''.format(embed_children_trp)
         else:
             incl_children_qry = '\nFILTER ( ?p != ldp:contains )' \
 
         q = '''
         CONSTRUCT {{
-            {uri} ?p ?o .{inb_cnst}
+            ?s ?p ?o .{inb_cnst}
             {embed_chld_t}
         }} WHERE {{
-            {uri} ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+            ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
         }}
-        '''.format(uri=uri.n3(), inb_cnst=inbound_construct,
+        '''.format(inb_cnst=inbound_construct,
                 inb_qry=inbound_qry, incl_chld=incl_children_qry,
                 embed_chld_t=embed_children_trp, embed_chld=embed_children_qry)
 
         try:
-            qres = self._conn.query(q)
+            qres = self._conn.query(q, initBindings={'s' : uri})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             g = Graph()
@@ -103,7 +101,8 @@ class SimpleLayout(BaseRdfLayout):
         '''
         self._logger.info('Checking if resource exists: {}'.format(urn))
 
-        return self._conn.query('ASK {{ {} ?p ?o . }}'.format(urn.n3()))
+        return self._conn.query('ASK { ?s ?p ?o . }', initBindings={
+            's' : urn})
 
 
     def create_rsrc(self, imr):
@@ -146,10 +145,10 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        #self._logger.debug('Remove triples: {}'.format(
-        #        remove_trp.serialize(format='turtle').decode('utf-8')))
-        #self._logger.debug('Add triples: {}'.format(
-        #        add_trp.serialize(format='turtle').decode('utf-8')))
+        self._logger.debug('Remove triples: {}'.format(
+                remove_trp.serialize(format='turtle').decode('utf-8')))
+        self._logger.debug('Add triples: {}'.format(
+                add_trp.serialize(format='turtle').decode('utf-8')))
 
         for t in remove_trp:
             self.ds.remove(t)

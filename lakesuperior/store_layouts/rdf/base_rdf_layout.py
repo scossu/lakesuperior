@@ -52,10 +52,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # N.B. This is Fuseki-specific.
     UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
-    RES_CREATED = 'Create'
-    RES_UPDATED = 'Update'
-    RES_DELETED = 'Delete'
-
     _logger = logging.getLogger(__name__)
 
 
@@ -95,29 +91,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         return self._ds
 
 
-    @property
-    def protected_pred(self):
-        '''
-        Predicated that are not deleted from an existing resources when it is
-        replaced, e.g. by a PUT operation.
-        '''
-        return {
-            nsc['fcrepo'].created,
-            nsc['fcrepo'].createdBy,
-            nsc['ldp'].contains,
-        }
-
-
     ## PUBLIC METHODS ##
-
-    def rsrc(self, urn):
-        '''
-        Reference to a live data set that can be updated. This exposes the
-        whole underlying triplestore structure and is used to update a
-        resource.
-        '''
-        return self.ds.resource(urn)
-
 
     def create_or_replace_rsrc(self, imr):
         '''Create a resource graph in the main graph if it does not exist.
@@ -132,16 +106,16 @@ class BaseRdfLayout(metaclass=ABCMeta):
         else:
             ev_type = self.create_rsrc(imr)
 
-        self._msg.send(
-            imr.identifier,
-            ev_type,
-            time=imr.value(nsc['fcrepo'].lastModified),
-            type=list(imr.graph.objects(imr.identifier, RDF.type)),
-            data=imr.graph,
-            metadata={
-                'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
-            }
-        )
+        #self._msg.send(
+        #    imr.identifier,
+        #    ev_type,
+        #    time=imr.value(nsc['fcrepo'].lastModified),
+        #    type=list(imr.graph.objects(imr.identifier, RDF.type)),
+        #    data=imr.graph,
+        #    metadata={
+        #        'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
+        #    }
+        #)
 
         return ev_type
 
@@ -158,7 +132,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         inbound = inbound if self.conf['referential_integrity'] == 'none' \
                 else True
-        rsrc = self.rsrc(urn)
+        rsrc = self.ds.resource(urn)
         children = rsrc[nsc['ldp'].contains * '+'] if delete_children else []
 
         self._do_delete_rsrc(rsrc, inbound)
@@ -276,6 +250,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         NOTE: This method should NOT indiscriminately wipe all triples about
         the subject. Some other metadata may be left for some good reason.
+
+        NOTE: This operation does not emit a message.
         '''
         pass
 
@@ -289,15 +265,4 @@ class BaseRdfLayout(metaclass=ABCMeta):
         @param inbound (boolean) Whether to delete the inbound relationships.
         '''
         pass
-
-
-    ## PROTECTED METHODS  ##
-
-    def _set_msg_digest(self):
-        '''
-        Add a message digest to the current resource.
-        '''
-        cksum = Toolbox().rdf_cksum(self.rsrc.graph)
-        self.rsrc.set(nsc['premis'].hasMessageDigest,
-                URIRef('urn:sha1:{}'.format(cksum)))
 

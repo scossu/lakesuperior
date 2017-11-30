@@ -98,20 +98,25 @@ class LdpRs(Ldpr):
 
         self.provided_imr = Resource(self._check_mgd_terms(g, handling),
                 self.urn)
-        self._add_srv_mgd_triples(create=True)
-        self._ensure_single_subject_rdf(self.provided_imr.graph)
-        cnf = self.rdfly.conf['referential_integrity']
-        if cnf != 'none':
-            self._check_ref_int(cnf)
 
-        if create_only:
-            res = self.rdfly.create_rsrc(self.provided_imr)
+        create = create_only or not self.is_stored
+        self._add_srv_mgd_triples(create)
+        self._ensure_single_subject_rdf(self.provided_imr.graph)
+        ref_int = self.rdfly.conf['referential_integrity']
+        if ref_int:
+            self._check_ref_int(ref_int)
+
+        if create:
+            ev_type = self._create_rsrc()
         else:
-            res = self.rdfly.create_or_replace_rsrc(self.provided_imr)
+            ev_type = self._replace_rsrc()
 
         self._set_containment_rel()
 
-        return res
+        return ev_type
+
+
+    ## PROTECTED METHODS ##
 
 
     def _check_mgd_terms(self, g, handling='strict'):
@@ -156,7 +161,7 @@ class LdpRs(Ldpr):
 
     def _add_srv_mgd_triples(self, create=False):
         '''
-        Add server-managed triples to a resource.
+        Add server-managed triples to a provided IMR.
 
         @param create (boolean) Whether the resource is being created.
         '''
@@ -166,7 +171,6 @@ class LdpRs(Ldpr):
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
-        # @TODO Use gunicorn to get request timestamp.
         ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
         if create:
             self.provided_imr.set(nsc['fcrepo'].created, ts)

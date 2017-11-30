@@ -13,7 +13,6 @@ from lakesuperior.exceptions import InvalidResourceError, \
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
 
@@ -211,7 +210,7 @@ def put_resource(uuid):
         except ServerManagedTermError as e:
             return str(e), 412
 
-    res_code = 201 if ret == BaseRdfLayout.RES_CREATED else 204
+    res_code = 201 if ret == Ldpr.RES_CREATED else 204
     return '', res_code, rsp_headers
 
 

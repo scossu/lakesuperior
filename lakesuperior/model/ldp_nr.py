@@ -68,7 +68,7 @@ class LdpNr(Ldpr):
         self._logger.debug('Persisting LDP-NR triples in {}'.format(
             self.urn))
         try:
-            rsrc = self.rdfly.create_rsrc(self.imr)
+            rsrc = self._create_rsrc(self.imr)
         except:
             self.nonrdfly.delete(file_uuid)
         else:
