@@ -454,7 +454,7 @@ class Ldpr(metaclass=ABCMeta):
         for child_uri in children:
             child_rsrc = Ldpr.inst(
                 Toolbox().uri_to_uuid(child_uri.identifier), self.repr_opts)
-            child_rsrc._delete_rsrc(inbound, tstone_pointer=self.uri)
+            child_rsrc._delete_rsrc(inbound, tstone_pointer=self.urn)
 
         return ret
 
@@ -463,8 +463,15 @@ class Ldpr(metaclass=ABCMeta):
     def delete_tombstone(self):
         '''
         Delete a tombstone.
+
+        N.B. This does not trigger an event.
         '''
-        return self.rdfly.delete_tombstone(self.urn)
+        remove_trp = {
+            (self.urn, RDF.type, nsc['fcsystem'].Tombstone),
+            (self.urn, nsc['fcrepo'].created, None),
+            (None, nsc['fcsystem'].tombstone, self.urn),
+        }
+        self.rdfly.modify_dataset(remove_trp)
 
 
     ## PROTECTED METHODS ##
@@ -504,7 +511,7 @@ class Ldpr(metaclass=ABCMeta):
         Delete a single resource and create a tombstone.
 
         @param inbound (boolean) Whether to delete the inbound relationships.
-        @param tstone_pointer (URIRef) If set to a URI, this creates a pointer
+        @param tstone_pointer (URIRef) If set to a URN, this creates a pointer
         to the tombstone of the resource that used to contain the deleted
         resource. Otherwise the delete resource becomes a tombstone.
         '''

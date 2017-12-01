@@ -116,13 +116,3 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.remove(t)
         for t in add_trp:
             self.ds.add(t)
-
-
-    def delete_tombstone(self, urn):
-        '''
-        See BaseRdfLayout.leave_tombstone
-        '''
-        self.ds.remove((urn, RDF.type, nsc['fcsystem'].Tombstone))
-        self.ds.remove((urn, nsc['fcrepo'].created, None))
-        self.ds.remove((None, nsc['fcsystem'].tombstone, urn))
-
