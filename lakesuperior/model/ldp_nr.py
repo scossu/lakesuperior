@@ -4,7 +4,7 @@ from rdflib.resource import Resource
 from rdflib.term import URIRef, Literal, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr, transactional, must_exist
+from lakesuperior.model.ldpr import Ldpr, transactional
 from lakesuperior.model.ldp_rs import LdpRs
 
 class LdpNr(Ldpr):

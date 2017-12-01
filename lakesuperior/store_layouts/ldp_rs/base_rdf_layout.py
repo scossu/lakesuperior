@@ -49,9 +49,6 @@ class BaseRdfLayout(metaclass=ABCMeta):
     - Methods starting with `ask_` return a boolean value.
     '''
 
-    # N.B. This is Fuseki-specific.
-    UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
-
     _logger = logging.getLogger(__name__)
 
 
@@ -71,64 +68,10 @@ class BaseRdfLayout(metaclass=ABCMeta):
                 query_ep=config['webroot'] + config['query_ep'],
                 update_ep=config['webroot'] + config['update_ep'])
 
+        self.store = self._conn.store
 
-    @property
-    def store(self):
-        if not hasattr(self, '_store') or not self._store:
-            self._store = self._conn.store
-
-        return self._store
-
-
-    @property
-    def ds(self):
-        if not hasattr(self, '_ds'):
-            self._ds = self._conn.ds
-            self._ds.namespace_manager = nsm
-
-        return self._ds
-
-
-    ## PUBLIC METHODS ##
-
-    #def create_or_replace_rsrc(self, imr):
-    #    '''Create a resource graph in the main graph if it does not exist.
-
-    #    If it exists, replace the existing one retaining the creation date.
-    #    '''
-    #    if self.ask_rsrc_exists(imr.identifier):
-    #        self._logger.info(
-    #                'Resource {} exists. Removing all outbound triples.'
-    #                .format(imr.identifier))
-    #        ev_type = self.replace_rsrc(imr)
-    #    else:
-    #        ev_type = self.create_rsrc(imr)
-
-    #    return ev_type
-
-
-    #def delete_rsrc(self, urn, inbound=True, delete_children=True):
-    #    '''
-    #    Delete a resource and optionally its children.
-
-    #    @param urn (rdflib.term.URIRef) URN of the resource to be deleted.
-    #    @param inbound (boolean) If specified, delete all inbound relationships
-    #    as well (this is the default).
-    #    @param delete_children (boolean) Whether to delete all child resources.
-    #    This is normally true.
-    #    '''
-    #    inbound = inbound if self.config['referential_integrity'] == 'none' \
-    #            else True
-    #    rsrc = self.ds.resource(urn)
-    #    children = rsrc[nsc['ldp'].contains * '+'] if delete_children else []
-
-    #    self._do_delete_rsrc(rsrc, inbound)
-
-    #    for child_rsrc in children:
-    #        self._do_delete_rsrc(child_rsrc, inbound)
-    #        self.leave_tombstone(child_rsrc.identifier, urn)
-
-    #    return self.leave_tombstone(urn)
+        self.ds = self._conn.ds
+        self.ds.namespace_manager = nsm
 
 
     ## INTERFACE METHODS ##

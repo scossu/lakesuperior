@@ -41,32 +41,6 @@ def transactional(fn):
     return wrapper
 
 
-def must_exist(fn):
-    '''
-    Ensures that a method is applied to a stored resource.
-    Decorator for methods of the Ldpr class.
-    '''
-    def wrapper(self, *args, **kwargs):
-        if not self.is_stored:
-            raise ResourceNotExistsError(self.uuid)
-        return fn(self, *args, **kwargs)
-
-    return wrapper
-
-
-def must_not_exist(fn):
-    '''
-    Ensures that a method is applied to a resource that is not stored.
-    Decorator for methods of the Ldpr class.
-    '''
-    def wrapper(self, *args, **kwargs):
-        if self.is_stored:
-            raise ResourceExistsError(self.uuid)
-        return fn(self, *args, **kwargs)
-
-    return wrapper
-
-
 
 class Ldpr(metaclass=ABCMeta):
     '''LDPR (LDP Resource).
@@ -432,7 +406,6 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @transactional
-    @must_exist
     def delete(self, inbound=True, delete_children=True, leave_tstone=True):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE

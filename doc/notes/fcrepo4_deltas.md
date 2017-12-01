@@ -133,6 +133,14 @@ the payload are ignored.
 Clients using the `Prefer` header to control PUT behavior as advertised by the
 specs should not notice any difference.
 
+### LDP-NR metadata by content negotiation
+
+FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
+an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
+use of content negotiation to do the same. Any request to an LDP-NR with an
+`Accept` header set to one of the supported RDF serialization formats will
+yield the RDF metadata of the resource instead of the binary contents.
+
 
 ## Optional improvements
 
@@ -148,14 +156,6 @@ while leaving the other server-managed triples when retrieving a resource:
     Prefer: return=representation; [include | omit]="http://fedora.info/definitions/v4/repository#Children"
 
 The default behavior is including all children URIs.
-
-### LDP-NR metadata by content negotiation
-
-FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
-an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
-use of content negotiation to do the same. Any request to an LDP-NR with an
-`Accept` header set to one of the supported RDF serialization formats will
-yield the RDF metadata of the resource instead of the binary contents.
 
 ### Optional deletion without leaving tombstone
 
