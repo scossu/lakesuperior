@@ -17,12 +17,12 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
     _logger = logging.getLogger(__name__)
 
 
-    def __init__(self):
+    def __init__(self, config):
         '''
         Initialize the base non-RDF store layout.
         '''
-        self.conf = current_app.config['store']['ldp_nr']
-        self.root = self.conf['path']
+        self.config = config
+        self.root = config['path']
 
 
     ## INTERFACE METHODS ##

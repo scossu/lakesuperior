@@ -3,13 +3,14 @@ import logging
 from collections import defaultdict
 from uuid import uuid4
 
-from flask import Blueprint, g, request, send_file, url_for
+from flask import Blueprint, current_app, g, request, send_file, url_for
 from rdflib import Graph
 from werkzeug.datastructures import FileStorage
 
-from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceExistsError, ResourceNotExistsError, ServerManagedTermError, \
-        TombstoneError
+from lakesuperior.exceptions import (
+    InvalidResourceError, ResourceExistsError, ResourceNotExistsError,
+    ServerManagedTermError, TombstoneError
+)
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
@@ -92,7 +93,7 @@ def get_resource(uuid, force_rdf=False):
             repr_options = prefer['return']
 
     try:
-        rsrc = Ldpr.readonly_inst(uuid, repr_options)
+        rsrc = Ldpr.inst(uuid, repr_options)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -240,10 +241,14 @@ def delete_resource(uuid):
     Delete a resource.
     '''
     headers = std_headers
-    rsrc = Ldpc(uuid)
 
+    # If referential integrity is enforced, grab all inbound relationships
+    # to break them.
+    repr_opts = {'parameters' : {'include' : Ldpr.RETURN_INBOUND_REF_URI}} \
+            if current_app.config['store']['ldp_rs']['referential_integrity'] \
+            else None
     try:
-        rsrc.delete()
+        Ldpr.inst(uuid, repr_opts).delete()
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -261,7 +266,7 @@ def tombstone(uuid):
     The only allowed method is DELETE; any other verb will return a 405.
     '''
     logger.debug('Deleting tombstone for {}.'.format(uuid))
-    rsrc = Ldpr(uuid, {'value' : 'minimal'})
+    rsrc = Ldpr(uuid, repr_opts={'value' : 'minimal'})
     try:
         imr = rsrc.imr
     except TombstoneError as e:

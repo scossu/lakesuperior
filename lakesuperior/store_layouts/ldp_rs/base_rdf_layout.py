@@ -12,7 +12,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
 from lakesuperior.messaging.messenger import Messenger
-from lakesuperior.store_layouts.rdf.graph_store_connector import \
+from lakesuperior.store_layouts.ldp_rs.graph_store_connector import \
         GraphStoreConnector
 from lakesuperior.toolbox import Toolbox
 
@@ -57,7 +57,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self):
+    def __init__(self, config):
         '''Initialize the graph store and a layout.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
@@ -66,12 +66,10 @@ class BaseRdfLayout(metaclass=ABCMeta):
         this only in the (currently unreleased) 2.2 branch. It works with Jena,
         which is currently the reference implementation.
         '''
-        self.conf = current_app.config['store']['ldp_rs']
+        self.config = config
         self._conn = GraphStoreConnector(
-                query_ep=self.conf['webroot'] + self.conf['query_ep'],
-                update_ep=self.conf['webroot'] + self.conf['update_ep'])
-
-        self._msg = Messenger(current_app.config['messaging'])
+                query_ep=config['webroot'] + config['query_ep'],
+                update_ep=config['webroot'] + config['update_ep'])
 
 
     @property
@@ -93,55 +91,44 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     ## PUBLIC METHODS ##
 
-    def create_or_replace_rsrc(self, imr):
-        '''Create a resource graph in the main graph if it does not exist.
+    #def create_or_replace_rsrc(self, imr):
+    #    '''Create a resource graph in the main graph if it does not exist.
 
-        If it exists, replace the existing one retaining the creation date.
-        '''
-        if self.ask_rsrc_exists(imr.identifier):
-            self._logger.info(
-                    'Resource {} exists. Removing all outbound triples.'
-                    .format(imr.identifier))
-            ev_type = self.replace_rsrc(imr)
-        else:
-            ev_type = self.create_rsrc(imr)
+    #    If it exists, replace the existing one retaining the creation date.
+    #    '''
+    #    if self.ask_rsrc_exists(imr.identifier):
+    #        self._logger.info(
+    #                'Resource {} exists. Removing all outbound triples.'
+    #                .format(imr.identifier))
+    #        ev_type = self.replace_rsrc(imr)
+    #    else:
+    #        ev_type = self.create_rsrc(imr)
 
-        #self._msg.send(
-        #    imr.identifier,
-        #    ev_type,
-        #    time=imr.value(nsc['fcrepo'].lastModified),
-        #    type=list(imr.graph.objects(imr.identifier, RDF.type)),
-        #    data=imr.graph,
-        #    metadata={
-        #        'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
-        #    }
-        #)
-
-        return ev_type
+    #    return ev_type
 
 
-    def delete_rsrc(self, urn, inbound=True, delete_children=True):
-        '''
-        Delete a resource and optionally its children.
+    #def delete_rsrc(self, urn, inbound=True, delete_children=True):
+    #    '''
+    #    Delete a resource and optionally its children.
 
-        @param urn (rdflib.term.URIRef) URN of the resource to be deleted.
-        @param inbound (boolean) If specified, delete all inbound relationships
-        as well (this is the default).
-        @param delete_children (boolean) Whether to delete all child resources.
-        This is normally true.
-        '''
-        inbound = inbound if self.conf['referential_integrity'] == 'none' \
-                else True
-        rsrc = self.ds.resource(urn)
-        children = rsrc[nsc['ldp'].contains * '+'] if delete_children else []
+    #    @param urn (rdflib.term.URIRef) URN of the resource to be deleted.
+    #    @param inbound (boolean) If specified, delete all inbound relationships
+    #    as well (this is the default).
+    #    @param delete_children (boolean) Whether to delete all child resources.
+    #    This is normally true.
+    #    '''
+    #    inbound = inbound if self.config['referential_integrity'] == 'none' \
+    #            else True
+    #    rsrc = self.ds.resource(urn)
+    #    children = rsrc[nsc['ldp'].contains * '+'] if delete_children else []
 
-        self._do_delete_rsrc(rsrc, inbound)
+    #    self._do_delete_rsrc(rsrc, inbound)
 
-        for child_rsrc in children:
-            self._do_delete_rsrc(child_rsrc, inbound)
-            self.leave_tombstone(child_rsrc.identifier, urn)
+    #    for child_rsrc in children:
+    #        self._do_delete_rsrc(child_rsrc, inbound)
+    #        self.leave_tombstone(child_rsrc.identifier, urn)
 
-        return self.leave_tombstone(urn)
+    #    return self.leave_tombstone(urn)
 
 
     ## INTERFACE METHODS ##
@@ -191,78 +178,21 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def create_rsrc(self, imr):
-        '''Create a resource graph in the main graph.
-
-        If the resource exists, raise an exception.
-        '''
-        pass
-
-
-    @abstractmethod
-    def replace_rsrc(self, imr):
-        '''Replace a resource, i.e. delete all the triples and re-add the
-        ones provided.
-
-        @param g (rdflib.Graph) Graph to load. It must not contain
-        `fcrepo:created` and `fcrepo:createdBy`.
-        '''
-        pass
-
-
-    @abstractmethod
     def modify_dataset(self, remove_trp, add_trp):
         '''
         Adds and/or removes triples from the graph.
+
+        This is a crucial point for messaging. Any write operation on the RDF
+        store that needs to be notified must be performed by invoking this
+        method.
 
         NOTE: This is not specific to a resource. The LDP layer is responsible
         for checking that all the +/- triples are referring to the intended
         subject(s).
 
-        @param remove (rdflib.Graph) Triples to be removed.
-        @param add (rdflib.Graph) Triples to be added.
+        @param remove_trp (Iterable) Triples to be removed. This can be a graph
+        @param add_trp (Iterable) Triples to be added. This can be a graph.
         '''
         pass
 
-
-    @abstractmethod
-    def leave_tombstone(self, urn, parent_urn=None):
-        '''
-        Leave a tombstone when deleting a resource.
-
-        If a parent resource is specified, a pointer to the parent's tombstone
-        is added instead.
-
-        @param urn (rdflib.term.URIRef) URN of the deleted resource.
-        @param parent_urn (rdflib.term.URIRef) URI of deleted parent.
-        '''
-        pass
-
-
-    @abstractmethod
-    def delete_tombstone(self, rsrc):
-        '''
-        Delete a tombstone.
-
-        This means removing the `fcsystem:Tombstone` RDF type and the tombstone
-        creation date, as well as all inbound `fcsystem:tombstone`
-        relationships.
-
-        NOTE: This method should NOT indiscriminately wipe all triples about
-        the subject. Some other metadata may be left for some good reason.
-
-        NOTE: This operation does not emit a message.
-        '''
-        pass
-
-
-    @abstractmethod
-    def _do_delete_rsrc(self, rsrc, inbound):
-        '''
-        Delete a single resource.
-
-        @param rsrc (rdflib.resource.Resource) Resource to be deleted.
-        @param inbound (boolean) Whether to delete the inbound relationships.
-        '''
-        pass
 

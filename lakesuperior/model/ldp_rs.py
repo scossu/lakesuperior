@@ -48,7 +48,7 @@ class LdpRs(Ldpr):
 
         Perform a POST action after a valid resource URI has been found.
         '''
-        return self._create_or_update_rsrc(data, format, handling,
+        return self._create_or_replace_rsrc(data, format, handling,
                 create_only=True)
 
 
@@ -57,7 +57,7 @@ class LdpRs(Ldpr):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        return self._create_or_update_rsrc(data, format, handling)
+        return self._create_or_replace_rsrc(data, format, handling)
 
 
     @transactional
@@ -77,7 +77,7 @@ class LdpRs(Ldpr):
 
     ## PROTECTED METHODS ##
 
-    def _create_or_update_rsrc(self, data, format, handling,
+    def _create_or_replace_rsrc(self, data, format, handling,
             create_only=False):
         '''
         Create or update a resource. PUT and POST methods, which are almost
@@ -102,7 +102,7 @@ class LdpRs(Ldpr):
         create = create_only or not self.is_stored
         self._add_srv_mgd_triples(create)
         self._ensure_single_subject_rdf(self.provided_imr.graph)
-        ref_int = self.rdfly.conf['referential_integrity']
+        ref_int = self.rdfly.config['referential_integrity']
         if ref_int:
             self._check_ref_int(ref_int)
 
@@ -203,28 +203,28 @@ class LdpRs(Ldpr):
         modified. If a server-managed term is present in the query but does not
         cause any change in the updated resource, no error is raised.
 
-        @return tuple Remove and add triples. These can be used with
-        `BaseStoreLayout.update_resource` and/or recorded as separate events in
-        a provenance tracking system.
+        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
+        with `BaseStoreLayout.update_resource` and/or recorded as separate
+        events in a provenance tracking system.
         '''
-
         pre_g = self.imr.graph
 
         post_g = deepcopy(pre_g)
         post_g.update(q)
 
-        remove = pre_g - post_g
-        add = post_g - pre_g
+        #remove = pre_g - post_g
+        #add = post_g - pre_g
+        remove_g, add_g = self._dedup_deltas(pre_g, post_g)
 
-        self._logger.info('Removing: {}'.format(
-            remove.serialize(format='turtle').decode('utf8')))
-        self._logger.info('Adding: {}'.format(
-            add.serialize(format='turtle').decode('utf8')))
+        #self._logger.info('Removing: {}'.format(
+        #    remove_g.serialize(format='turtle').decode('utf8')))
+        #self._logger.info('Adding: {}'.format(
+        #    add_g.serialize(format='turtle').decode('utf8')))
 
-        remove = self._check_mgd_terms(remove, handling)
-        add = self._check_mgd_terms(add, handling)
+        remove_g = self._check_mgd_terms(remove_g, handling)
+        add_g = self._check_mgd_terms(add_g, handling)
 
-        return remove, add
+        return remove_g, add_g
 
 
     def _ensure_single_subject_rdf(self, g):

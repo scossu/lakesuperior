@@ -24,7 +24,7 @@ results in `/rest/8c/9a/07/4e/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` being
 created.
 
 The same request in LAKEsuperior would create
-`rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` (obviously the identifiers will be
+`/rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` (obviously the identifiers will be
 different).
 
 ## Explicit intermediate paths
@@ -63,7 +63,7 @@ while leaving the other server-managed triples when retrieving a resource:
 
     Prefer: return=representation; [include | omit]="http://fedora.info/definitions/v4/repository#Children"
 
-The default is `include`.
+The default behavior is including all children URIs.
 
 ## Automatic LDP class assignment
 
@@ -80,7 +80,7 @@ Container?)
 
 FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
 an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
-use of content negotiation to do that. Any request to an LDP-NR with an
+use of content negotiation to do the same. Any request to an LDP-NR with an
 `Accept` header set to one of the supported RDF serialization formats will
 yield the RDF metadata of the resource instead of the binary contents.
 
@@ -93,10 +93,23 @@ Allowed` regardless of whether the tombstone exists or not.
 LAKEsuperior will return `405` only if the tombstone actually exists, `404`
 otherwise.
 
-## Asynchronous processing
+## Atomicity
 
-*TODO*
+FCREPO4 supports batch atomic operations whereas a transaction can be opened
+and a number of operations (i.e. multiple R/W requests to the repository) can
+be performed. The operations are persisted in the repository only if and when
+the transaction is committed.
 
-The server may reply with a 202 if the `Prefer` header is set to
-`respond-async`.
+LAKesuperior only supports atomicity for a single LDP request. I.e. a single
+HTTTP request that should reult in multiple write operations to the storage
+layer is only persisted if no exception is thrown. Otherwise, the operation is
+rolled back in order to prevent resources to be left in an inconsistent state.
+
+## Web UI
+
+FCREPO4 includes a web UI for simple CRUD operations.
+
+Such a UI is not foreseen to be built in LAKEsuperior any time soon since the
+API interaction leaves a greater degree of flexibility. In addition, the
+underlying triplestore layer may provide a UI for complex RDF queries.
 

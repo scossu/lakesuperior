@@ -3,7 +3,7 @@ import os
 from hashlib import sha1
 from uuid import uuid4
 
-from lakesuperior.store_layouts.non_rdf.base_non_rdf_layout import \
+from lakesuperior.store_layouts.ldp_nr.base_non_rdf_layout import \
         BaseNonRdfLayout
 
 class DefaultLayout(BaseNonRdfLayout):
@@ -79,8 +79,8 @@ class DefaultLayout(BaseNonRdfLayout):
         checksum.
         '''
         self._logger.debug('Generating path from uuid: {}'.format(uuid))
-        bl = self.conf['pairtree_branch_length']
-        bc = self.conf['pairtree_branches']
+        bl = self.config['pairtree_branch_length']
+        bc = self.config['pairtree_branches']
         term = len(uuid) if bc==0 else min(bc*bl, len(uuid))
 
         path = [ uuid[i:i+bl] for i in range(0, term, bl) ]

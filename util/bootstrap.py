@@ -7,15 +7,17 @@ sys.path.append('.')
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.rdf.graph_store_connector import \
+from lakesuperior.store_layouts.ldp_rs.graph_store_connector import \
         GraphStoreConnector
 from lakesuperior.model.ldpr import Ldpr
 
-# This script will parse configuration files and initialize a filesystem and
-# triplestore with an empty FCREPO repository.
-# It is used in test suites and on a first run.
-#
-# Additional, scaffolding files may be parsed to create initial contents.
+__doc__ = '''
+This script will parse configuration files and initialize a filesystem and
+triplestore with an empty FCREPO repository.
+It is used in test suites and on a first run.
+
+Additional, scaffolding files may be parsed to create initial contents.
+'''
 
 
 def bootstrap_db(app):

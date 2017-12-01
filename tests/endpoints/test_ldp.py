@@ -76,9 +76,11 @@ class TestLdp:
         PUT a resource with binary payload and verify checksums.
         '''
         rnd_img['content'].seek(0)
-        self.client.put('/ldp/ldpnr01', data=rnd_img['content'], headers={
-                'Content-Disposition' : 'attachment; filename={}'.format(
-                rnd_img['filename'])})
+        resp = self.client.put('/ldp/ldpnr01', data=rnd_img['content'],
+                headers={
+                    'Content-Disposition' : 'attachment; filename={}'.format(
+                    rnd_img['filename'])})
+        assert resp.status_code == 201
 
         resp = self.client.get('/ldp/ldpnr01', headers={'accept' : 'image/png'})
         assert resp.status_code == 200

@@ -27,15 +27,6 @@ class Toolbox:
         self.base_url = request.host_url + g.url_prefix
 
 
-    def camelcase(self, word):
-        '''
-        Convert a string with underscores with a camel-cased one.
-
-        Ripped from https://stackoverflow.com/a/6425628
-        '''
-        return ''.join(x.capitalize() or '_' for x in word.split('_'))
-
-
     def uuid_to_uri(self, uuid):
         '''Convert a UUID to a URI.
 
@@ -52,7 +43,7 @@ class Toolbox:
         @return string
         '''
         if uri == self.ROOT_NODE_URN:
-            return ''
+            return None
         elif uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:

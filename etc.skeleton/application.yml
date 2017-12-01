@@ -30,14 +30,14 @@ store:
         # If set to false, properties are allowed to point to resources in the
         # repositoy that do not exist. Also, if a resource is deleted, inbound
         # relationships may not be cleaned up.
-        # This can be one of `none`, `lenient` or `strict`. `none` does not
-        # check for referential integrity. `lenient` quietly drops a
-        # user-provided triple if its # object violates referential integrity.
+        # This can be one of `False` (boolean), `lenient` or `strict`. `False`
+        # does not check for referential integrity. `lenient` quietly drops a
+        # user-provided triple if its object violates referential integrity.
         # `strict` raises an exception.
         referential_integrity: lenient
-        webroot: http://localhost:9999/namespace/fcrepo/
-        query_ep: sparql
-        update_ep: sparql
+        webroot: http://localhost:3030/fcrepo
+        query_ep: query
+        update_ep: update
         # Optional
         #username: <set me>
         #password: <set me>

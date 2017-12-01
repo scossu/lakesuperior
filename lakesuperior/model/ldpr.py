@@ -2,7 +2,6 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
-from importlib import import_module
 from itertools import accumulate
 from uuid import uuid4
 
@@ -12,13 +11,14 @@ from flask import current_app
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
+from rdflib.term import URIRef, Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, ServerManagedTermError
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
+from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
 
@@ -119,6 +119,135 @@ class Ldpr(metaclass=ABCMeta):
     _logger = logging.getLogger(__name__)
 
 
+    ## STATIC & CLASS METHODS ##
+
+    @classmethod
+    def inst(cls, uuid, repr_opts=None):
+        '''
+        Factory method that creates and returns an instance of an LDPR subclass
+        based on information that needs to be queried from the underlying
+        graph store.
+
+        N.B. The resource must exist.
+
+        @param uuid UUID of the instance.
+        '''
+        imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
+        cls._logger.debug('Representation options: {}'.format(repr_opts))
+        imr_opts = cls.set_imr_options(repr_opts)
+        imr = current_app.rdfly.extract_imr(imr_urn, **imr_opts)
+        rdf_types = set(imr.objects(RDF.type))
+
+        for t in rdf_types:
+            cls._logger.debug('Checking RDF type: {}'.format(t.identifier))
+            if t.identifier == cls.LDP_NR_TYPE:
+                from lakesuperior.model.ldp_nr import LdpNr
+                cls._logger.info('Resource is a LDP-NR.')
+                return LdpNr(uuid, repr_opts)
+            if t.identifier == cls.LDP_RS_TYPE:
+                from lakesuperior.model.ldp_rs import LdpRs
+                cls._logger.info('Resource is a LDP-RS.')
+                return LdpRs(uuid, repr_opts)
+
+        raise ResourceNotExistsError(uuid)
+
+
+    @classmethod
+    def inst_for_post(cls, parent_uuid=None, slug=None):
+        '''
+        Validate conditions to perform a POST and return an LDP resource
+        instancefor using with the `post` method.
+
+        This may raise an exception resulting in a 404 if the parent is not
+        found or a 409 if the parent is not a valid container.
+        '''
+        # Shortcut!
+        if not slug and not parent_uuid:
+            return cls(str(uuid4()))
+
+        parent = cls(parent_uuid, repr_opts={
+            'parameters' : {'omit' : cls.RETURN_CHILD_RES_URI}
+        })
+
+        # Set prefix.
+        if parent_uuid:
+            parent_types = { t.identifier for t in \
+                    parent.imr.objects(RDF.type) }
+            cls._logger.debug('Parent types: {}'.format(
+                    parent_types))
+            if nsc['ldp'].Container not in parent_types:
+                raise InvalidResourceError('Parent {} is not a container.'
+                       .format(parent_uuid))
+
+            pfx = parent_uuid + '/'
+        else:
+            pfx = ''
+
+        # Create candidate UUID and validate.
+        if slug:
+            cnd_uuid = pfx + slug
+            cnd_rsrc = Resource(current_app.rdfly.ds, nsc['fcres'][cnd_uuid])
+            if current_app.rdfly.ask_rsrc_exists(cnd_rsrc.identifier):
+                return cls(pfx + str(uuid4()))
+            else:
+                return cls(cnd_uuid)
+        else:
+            return cls(pfx + str(uuid4()))
+
+
+    @classmethod
+    def set_imr_options(cls, repr_opts):
+        '''
+        Set options to retrieve IMR.
+
+        Ideally, IMR retrieval is done once per request, so all the options
+        are set once in the `imr()` property.
+
+        @param repr_opts (dict): Options parsed from `Prefer` header.
+        '''
+        cls._logger.debug('Setting retrieval options from: {}'.format(repr_opts))
+        imr_options = {}
+
+        if repr_opts.setdefault('value') == 'minimal':
+            imr_options = {
+                'embed_children' : False,
+                'incl_children' : False,
+                'incl_inbound' : False,
+                'incl_srv_mgd' : False,
+            }
+        else:
+            # Default.
+            imr_options = {
+                'embed_children' : False,
+                'incl_children' : True,
+                'incl_inbound' : False,
+                'incl_srv_mgd' : True,
+            }
+
+            # Override defaults.
+            if 'parameters' in repr_opts:
+                include = repr_opts['parameters']['include'].split(' ') \
+                        if 'include' in repr_opts['parameters'] else []
+                omit = repr_opts['parameters']['omit'].split(' ') \
+                        if 'omit' in repr_opts['parameters'] else []
+
+                cls._logger.debug('Include: {}'.format(include))
+                cls._logger.debug('Omit: {}'.format(omit))
+
+                if str(cls.EMBED_CHILD_RES_URI) in include:
+                        imr_options['embed_children'] = True
+                if str(cls.RETURN_CHILD_RES_URI) in omit:
+                        imr_options['incl_children'] = False
+                if str(cls.RETURN_INBOUND_REF_URI) in include:
+                        imr_options['incl_inbound'] = True
+                if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
+                        imr_options['incl_srv_mgd'] = False
+
+        cls._logger.debug('Retrieval options: {}'.format(imr_options))
+
+        return imr_options
+
+
     ## MAGIC METHODS ##
 
     def __init__(self, uuid, repr_opts={}):
@@ -132,27 +261,15 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid (string) UUID of the resource. If None (must be explicitly
         set) it refers to the root node.
         '''
-        self.rdf_store_layout = current_app.config['store']['ldp_rs']['layout']
-        self.non_rdf_store_layout = \
-                current_app.config['store']['ldp_nr']['layout']
-
         self.uuid = uuid
-        self.urn = nsc['fcres'][uuid] if self.uuid is not None \
-                else self.ROOT_NODE_URN
+        self.urn = nsc['fcres'][uuid] if self.uuid else self.ROOT_NODE_URN
         self.uri = Toolbox().uuid_to_uri(self.uuid)
 
-        self._imr_options = __class__.set_imr_options(repr_opts)
+        self.repr_opts = repr_opts
+        self._imr_options = __class__.set_imr_options(self.repr_opts)
 
-
-    @property
-    def rdfly(self):
-        '''
-        Load RDF store layout.
-        '''
-        if not hasattr(self, '_rdfly'):
-            self._rdfly = __class__.load_layout('rdf')
-
-        return self._rdfly
+        self.rdfly = current_app.rdfly
+        self.nonrdfly = current_app.nonrdfly
 
 
     @property
@@ -255,7 +372,7 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
-            self._types = set(self.imr[RDF.type])
+            self._types = self.imr.graph[self.imr.identifier : RDF.type]
 
         return self._types
 
@@ -267,160 +384,9 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_ldp_types'):
-            self._ldp_types = set()
-            for t in self.types:
-                if t.qname()[:4] == 'ldp:':
-                    self._ldp_types.add(t)
+            self._ldp_types = { t for t in self.types if t[:4] == 'ldp:' }
 
         return self._ldp_types
-
-
-    ## STATIC & CLASS METHODS ##
-
-    @classmethod
-    def load_layout(cls, type):
-        '''
-        Dynamically load the store layout indicated in the configuration.
-
-        @param type (string) One of `rdf` or `non_rdf`. Determines the type of
-        layout to be loaded.
-        '''
-        layout_cls = getattr(cls(None), '{}_store_layout'.format(type))
-        store_mod = import_module('lakesuperior.store_layouts.{0}.{1}'.format(
-                type, layout_cls))
-        layout_cls = getattr(store_mod, Toolbox().camelcase(layout_cls))
-
-        return layout_cls()
-
-
-    @classmethod
-    def readonly_inst(cls, uuid, repr_opts=None):
-        '''
-        Factory method that creates and returns an instance of an LDPR subclass
-        based on information that needs to be queried from the underlying
-        graph store.
-
-        This is used with retrieval methods for resources that already exist.
-
-        @param uuid UUID of the instance.
-        '''
-        rdfly = cls.load_layout('rdf')
-        imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
-        cls._logger.debug('Representation options: {}'.format(repr_opts))
-        imr_opts = cls.set_imr_options(repr_opts)
-        imr = rdfly.extract_imr(imr_urn, **imr_opts)
-        rdf_types = imr.objects(RDF.type)
-
-        for t in rdf_types:
-            cls._logger.debug('Checking RDF type: {}'.format(t.identifier))
-            if t.identifier == cls.LDP_NR_TYPE:
-                from lakesuperior.model.ldp_nr import LdpNr
-                cls._logger.info('Resource is a LDP-NR.')
-                return LdpNr(uuid, repr_opts)
-            if t.identifier == cls.LDP_RS_TYPE:
-                from lakesuperior.model.ldp_rs import LdpRs
-                cls._logger.info('Resource is a LDP-RS.')
-                return LdpRs(uuid, repr_opts)
-
-        raise ResourceNotExistsError(uuid)
-
-
-    @classmethod
-    def inst_for_post(cls, parent_uuid=None, slug=None):
-        '''
-        Validate conditions to perform a POST and return an LDP resource
-        instancefor using with the `post` method.
-
-        This may raise an exception resulting in a 404 if the parent is not
-        found or a 409 if the parent is not a valid container.
-        '''
-        # Shortcut!
-        if not slug and not parent_uuid:
-            return cls(str(uuid4()))
-
-        rdfly = cls.load_layout('rdf')
-
-        parent = cls(parent_uuid, repr_opts={
-            'parameters' : {'omit' : cls.RETURN_CHILD_RES_URI}
-        })
-
-        # Set prefix.
-        if parent_uuid:
-            parent_types = { t.identifier for t in \
-                    parent.imr.objects(RDF.type) }
-            cls._logger.debug('Parent types: {}'.format(
-                    parent_types))
-            if nsc['ldp'].Container not in parent_types:
-                raise InvalidResourceError('Parent {} is not a container.'
-                       .format(parent_uuid))
-
-            pfx = parent_uuid + '/'
-        else:
-            pfx = ''
-
-        # Create candidate UUID and validate.
-        if slug:
-            cnd_uuid = pfx + slug
-            cnd_rsrc = Resource(rdfly.ds, nsc['fcres'][cnd_uuid])
-            if rdfly.ask_rsrc_exists(cnd_rsrc.identifier):
-                return cls(pfx + str(uuid4()))
-            else:
-                return cls(cnd_uuid)
-        else:
-            return cls(pfx + str(uuid4()))
-
-
-    @classmethod
-    def set_imr_options(cls, repr_opts):
-        '''
-        Set options to retrieve IMR.
-
-        Ideally, IMR retrieval is done once per request, so all the options
-        are set once in the `imr()` property.
-
-        @param repr_opts (dict): Options parsed from `Prefer` header.
-        '''
-        cls._logger.debug('Setting retrieval options from: {}'.format(repr_opts))
-        imr_options = {}
-
-        if 'value' in repr_opts and repr_opts['value'] == 'minimal':
-            imr_options = {
-                'embed_children' : False,
-                'incl_children' : False,
-                'incl_inbound' : False,
-                'incl_srv_mgd' : False,
-            }
-        else:
-            # Default.
-            imr_options = {
-                'embed_children' : False,
-                'incl_children' : True,
-                'incl_inbound' : False,
-                'incl_srv_mgd' : True,
-            }
-
-            # Override defaults.
-            if 'parameters' in repr_opts:
-                include = repr_opts['parameters']['include'].split(' ') \
-                        if 'include' in repr_opts['parameters'] else []
-                omit = repr_opts['parameters']['omit'].split(' ') \
-                        if 'omit' in repr_opts['parameters'] else []
-
-                cls._logger.debug('Include: {}'.format(include))
-                cls._logger.debug('Omit: {}'.format(omit))
-
-                if str(cls.EMBED_CHILD_RES_URI) in include:
-                        imr_options['embed_children'] = True
-                if str(cls.RETURN_CHILD_RES_URI) in omit:
-                        imr_options['incl_children'] = False
-                if str(cls.RETURN_INBOUND_REF_URI) in include:
-                        imr_options['incl_inbound'] = True
-                if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
-                        imr_options['incl_srv_mgd'] = False
-
-        cls._logger.debug('Retrieval options: {}'.format(imr_options))
-
-        return imr_options
 
 
     ## LDP METHODS ##
@@ -444,7 +410,7 @@ class Ldpr(metaclass=ABCMeta):
 
         for t in self.ldp_types:
             out_headers['Link'].append(
-                    '{};rel="type"'.format(t.identifier.n3()))
+                    '{};rel="type"'.format(t.n3()))
 
         return out_headers
 
@@ -467,11 +433,30 @@ class Ldpr(metaclass=ABCMeta):
 
     @transactional
     @must_exist
-    def delete(self):
+    def delete(self, inbound=True, delete_children=True):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
+
+        @param inbound (boolean) If specified, delete all inbound relationships
+        as well. This is the default and is always the case if referential
+        integrity is enforced by configuration.
+        @param delete_children (boolean) Whether to delete all child resources.
+        This is the default.
         '''
-        return self.rdfly.delete_rsrc(self.urn)
+        refint = current_app.config['store']['ldp_rs']['referential_integrity']
+        inbound = True if refint else inbound
+
+        children = self.imr[nsc['ldp'].contains * '+'] \
+                if delete_children else []
+
+        ret = self._delete_rsrc(inbound)
+
+        for child_uri in children:
+            child_rsrc = Ldpr.inst(
+                Toolbox().uri_to_uuid(child_uri.identifier), self.repr_opts)
+            child_rsrc._delete_rsrc(inbound, tstone_pointer=self.uri)
+
+        return ret
 
 
     @transactional
@@ -489,7 +474,7 @@ class Ldpr(metaclass=ABCMeta):
         Create a new resource by comparing an empty graph with the provided
         IMR graph.
         '''
-        self.rdfly.modify_dataset(Graph(), self.provided_imr.graph)
+        self.rdfly.modify_dataset(add_trp=self.provided_imr.graph)
 
         return self.RES_CREATED
 
@@ -505,12 +490,44 @@ class Ldpr(metaclass=ABCMeta):
         for p in self.protected_pred:
             self.imr.remove(p)
 
-        self.rdfly.modify_dataset(self.imr.graph, self.provided_imr.graph)
+        delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
+        self.rdfly.modify_dataset(*delta)
 
         # Reset the IMR because it has changed.
         delattr(self, 'imr')
 
-        return self.RES_CREATED
+        return self.RES_UPDATED
+
+
+    def _delete_rsrc(self, inbound, tstone_pointer=None):
+        '''
+        Delete a single resource and create a tombstone.
+
+        @param inbound (boolean) Whether to delete the inbound relationships.
+        @param tstone_pointer (URIRef) If set to a URI, this creates a pointer
+        to the tombstone of the resource that used to contain the deleted
+        resource. Otherwise the delete resource becomes a tombstone.
+        '''
+        self._logger.info('Removing resource {}'.format(self.urn))
+
+        remove_trp = set(self.imr.graph)
+        add_trp = set()
+
+        if tstone_pointer:
+            add_trp.add((self.urn, nsc['fcsystem'].tombstone, tstone_pointer))
+        else:
+            ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+            add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
+            add_trp.add((self.urn, nsc['fcrepo'].created, ts))
+
+
+        if inbound:
+            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
+                remove_trp.add((ib_rsrc_uri, None, self.urn))
+
+        self.rdfly.modify_dataset(remove_trp, add_trp)
+
+        return self.RES_DELETED
 
 
     def _set_containment_rel(self):
@@ -571,6 +588,17 @@ class Ldpr(metaclass=ABCMeta):
                 cur_child_uri = cparent_uri
 
         return None
+
+
+    def _dedup_deltas(self, remove_g, add_g):
+        '''
+        Remove duplicate triples from add and remove delta graphs, which would
+        otherwise contain unnecessary statements that annul each other.
+        '''
+        return (
+            remove_g - add_g,
+            add_g - remove_g
+        )
 
 
     def _create_path_segment(self, uri, child_uri):

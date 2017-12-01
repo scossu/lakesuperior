@@ -48,7 +48,6 @@ class GraphStoreConnector:
 
         @return rdflib.query.Result
         '''
-        self._logger.debug('Sending SPARQL query: {}'.format(q))
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 

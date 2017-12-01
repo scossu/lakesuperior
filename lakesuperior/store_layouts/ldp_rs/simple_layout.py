@@ -14,7 +14,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import InvalidResourceError, \
         ResourceNotExistsError, TombstoneError
-from lakesuperior.store_layouts.rdf.base_rdf_layout import BaseRdfLayout
+from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
 
@@ -90,7 +90,7 @@ class SimpleLayout(BaseRdfLayout):
             raise TombstoneError(
                     Toolbox().uri_to_uuid(
                             rsrc.value(nsc['fcsystem'].tombstone).identifier),
-                    tombstone_rsrc.value(nsc['fcrepo'].created))
+                    rsrc.value(nsc['fcrepo'].created))
 
         return rsrc
 
@@ -105,85 +105,17 @@ class SimpleLayout(BaseRdfLayout):
             's' : urn})
 
 
-    def create_rsrc(self, imr):
-        '''
-        See base_rdf_layout.create_rsrc.
-        '''
-        self._logger.debug('Creating resource:\n{}'.format(
-            imr.graph.serialize(format='turtle').decode('utf8')))
-        #self.ds |= imr.graph # This does not seem to work with datasets.
-        for t in imr.graph:
-            self.ds.add(t)
-
-        return self.RES_CREATED
-
-
-    def replace_rsrc(self, imr):
-        '''
-        See base_rdf_layout.replace_rsrc.
-        '''
-        rsrc = self.rsrc(imr.identifier)
-
-        # Delete the stored triples but spare the protected predicates.
-        del_trp_qry = []
-        for p in rsrc.predicates():
-            if p.identifier not in self.protected_pred:
-                self._logger.debug('Removing {}'.format(p.identifier))
-                rsrc.remove(p.identifier)
-            else:
-                self._logger.debug('NOT Removing {}'.format(p))
-                imr.remove(p.identifier)
-
-        #self.ds |= imr.graph # This does not seem to work with datasets.
-        for t in imr.graph:
-            self.ds.add(t)
-
-        return self.RES_UPDATED
-
-
-    def modify_dataset(self, remove_trp, add_trp):
+    def modify_dataset(self, remove_trp=[], add_trp=[]):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        self._logger.debug('Remove triples: {}'.format(
-                remove_trp.serialize(format='turtle').decode('utf-8')))
-        self._logger.debug('Add triples: {}'.format(
-                add_trp.serialize(format='turtle').decode('utf-8')))
+        self._logger.debug('Remove graph: {}'.format(set(remove_trp)))
+        self._logger.debug('Add graph: {}'.format(set(add_trp)))
 
         for t in remove_trp:
             self.ds.remove(t)
         for t in add_trp:
             self.ds.add(t)
-
-
-    ## PROTECTED METHODS ##
-
-    def _do_delete_rsrc(self, rsrc, inbound):
-        '''
-        See BaseRdfLayout._do_delete_rsrc
-        '''
-        urn = rsrc.identifier
-        print('Removing resource {}.'.format(urn))
-
-        rsrc.remove(Variable('p'))
-
-        if inbound:
-            self.ds.remove((Variable('s'), Variable('p'), rsrc.identifier))
-
-        return urn
-
-
-    def leave_tombstone(self, urn, parent_urn=None):
-        '''
-        See BaseRdfLayout.leave_tombstone
-        '''
-        if parent_urn:
-            self.ds.add((urn, nsc['fcsystem'].tombstone, parent_urn))
-        else:
-            # @TODO Use gunicorn to get request timestamp.
-            ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
-            self.ds.add((urn, RDF.type, nsc['fcsystem'].Tombstone))
-            self.ds.add((urn, nsc['fcrepo'].created, ts))
 
 
     def delete_tombstone(self, urn):

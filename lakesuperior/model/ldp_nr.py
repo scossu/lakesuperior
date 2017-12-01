@@ -20,18 +20,6 @@ class LdpNr(Ldpr):
         nsc['ldp'].NonRDFSource,
     }
 
-
-    @property
-    def nonrdfly(self):
-        '''
-        Load non-RDF (binary) store layout.
-        '''
-        if not hasattr(self, '_nonrdfly'):
-            self._nonrdfly = __class__.load_layout('non_rdf')
-
-        return self._nonrdfly
-
-
     @property
     def filename(self):
         return self.imr.value(nsc['ebucore'].filename)
@@ -61,14 +49,16 @@ class LdpNr(Ldpr):
         file_uuid = self.nonrdfly.persist(stream)
 
         # Gather RDF metadata.
+        self.provided_imr = Resource(Graph(), self.urn)
+        for t in self.base_types:
+            self.provided_imr.add(RDF.type, t)
         self._add_metadata(stream, digest=file_uuid, mimetype=mimetype,
                 disposition=disposition)
 
         # Try to persist metadata. If it fails, delete the file.
-        self._logger.debug('Persisting LDP-NR triples in {}'.format(
-            self.urn))
+        self._logger.debug('Persisting LDP-NR triples in {}'.format(self.urn))
         try:
-            rsrc = self._create_rsrc(self.imr)
+            rsrc = self._create_rsrc()
         except:
             self.nonrdfly.delete(file_uuid)
         else:
@@ -93,19 +83,19 @@ class LdpNr(Ldpr):
         '''
         # File size.
         self._logger.debug('Data stream size: {}'.format(stream.limit))
-        self.stored_or_new_imr.set(nsc['premis'].hasSize, Literal(stream.limit))
+        self.provided_imr.set(nsc['premis'].hasSize, Literal(stream.limit))
 
         # Checksum.
         cksum_term = URIRef('urn:sha1:{}'.format(digest))
-        self.imr.set(nsc['premis'].hasMessageDigest, cksum_term)
+        self.provided_imr.set(nsc['premis'].hasMessageDigest, cksum_term)
 
         # MIME type.
-        self.imr.set(nsc['ebucore']['hasMimeType'], Literal(mimetype))
+        self.provided_imr.set(nsc['ebucore']['hasMimeType'], Literal(mimetype))
 
         # File name.
         self._logger.debug('Disposition: {}'.format(disposition))
         try:
-            self.imr.set(nsc['ebucore']['filename'], Literal(
+            self.provided_imr.set(nsc['ebucore']['filename'], Literal(
                     disposition['attachment']['parameters']['filename']))
         except KeyError:
             pass

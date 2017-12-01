@@ -17,13 +17,13 @@ class TestToolbox:
     '''
     Unit tests for toolbox methods.
     '''
-    def test_camelcase(self, tb):
-        '''
-        Test conversion from underscore notation to camelcase.
-        '''
-        assert tb.camelcase('test_input_string') == 'TestInputString'
-        assert tb.camelcase('_test_input_string') == '_TestInputString'
-        assert tb.camelcase('test__input__string') == 'Test_Input_String'
+    #def test_camelcase(self, tb):
+    #    '''
+    #    Test conversion from underscore notation to camelcase.
+    #    '''
+    #    assert tb.camelcase('test_input_string') == 'TestInputString'
+    #    assert tb.camelcase('_test_input_string') == '_TestInputString'
+    #    assert tb.camelcase('test__input__string') == 'Test_Input_String'
 
 
     def test_uuid_to_uri(self, tb):
@@ -36,7 +36,7 @@ class TestToolbox:
         assert tb.uri_to_uuid(URIRef(tb.base_url) + '/test01/test02') == \
                 'test01/test02'
         assert tb.uri_to_uuid(URIRef(tb.base_url)) == ''
-        assert tb.uri_to_uuid(nsc['fcsystem'].root) == ''
+        assert tb.uri_to_uuid(nsc['fcsystem'].root) == None
         assert tb.uri_to_uuid(nsc['fcres']['1234']) == '1234'
         assert tb.uri_to_uuid(nsc['fcres']['1234/5678']) == '1234/5678'
 
