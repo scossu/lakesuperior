@@ -1,24 +1,68 @@
 # Divergencies between lakesuperior and FCREPO4
 
-## Endpoints
+This is a (vastly incomplete) list of discrepancies between the current FCREPO4
+implementation and LAKEsuperior. More will be added as more clients will use
+it.
 
-The FCREPO root endpoint is `/rest`. The LAKEsuperior root endpoint is `/ldp`.
 
-This should not pose a problem if a client does not have `rest` hard-coded in
-its code, but in any event, the `/rest` endpoint is provided for backwards
-compatibility.
+## Not yet implemented (but in the plans)
 
-LAKEsuperior adds the (currently stub) `query` endpoint. Other endpoints for
-non-LDP services may be opened in the future.
+See [TODO](TODO)
 
-## Automatic pairtree generation
+- Various header handling
+- Versioning
+- AuthN/Z
+- Fixity check
+- Blank nodes
+- Hash URIs
+
+
+## Potentially breaking changes
+
+The following  divergences may lead into incompatibilities with some clients.
+
+### Atomicity
+
+FCREPO4 supports batch atomic operations whereas a transaction can be opened
+and a number of operations (i.e. multiple R/W requests to the repository) can
+be performed. The operations are persisted in the repository only if and when
+the transaction is committed.
+
+LAKesuperior only supports atomicity for a single LDP request. I.e. a single
+HTTTP request that should reult in multiple write operations to the storage
+layer is only persisted if no exception is thrown. Otherwise, the operation is
+rolled back in order to prevent resources to be left in an inconsistent state.
+
+### Tombstone methods
+
+If a client requests a tombstone resource in
+FCREPO4 with a method other than DELETE, the server will return `405 Method Not
+Allowed` regardless of whether the tombstone exists or not.
+
+LAKEsuperior will return `405` only if the tombstone actually exists, `404`
+otherwise.
+
+### Web UI
+
+FCREPO4 includes a web UI for simple CRUD operations.
+
+Such a UI is not in the immediate LAKEsuperior development plans. However, a very
+basic UI may at some point be built for read-only interaction (i.e.
+requesting resources and clicking through relationship links). A more complete
+UI should be built for simple and/or SPARQL queries.
+
+
+## Non-standard client breaking changes
+
+The following changes may be incompatible with clients relying on some FCREPO4
+behavior not endorsed by LDP or other specifications.
+
+### Automatic pairtree generation
 
 A `POST` request without a slug in FCREPO4 results in a pairtree consisting of
 several intermediate nodes leading to the automatically minted identifier. E.g.
 
-~~~
-POST /rest
-~~~
+    POST /rest
 
 results in `/rest/8c/9a/07/4e/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` being
 created.
@@ -27,7 +71,7 @@ The same request in LAKEsuperior would create
 `/rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` (obviously the identifiers will be
 different).
 
-## Explicit intermediate paths
+### Explicit intermediate paths
 
 In FCREPO4, a PUT request to `/rest/a/b/c`, given `/rest/a` and `rest/a/b` not
 previously existing, results in the creation of Pairtree resources that are
@@ -39,7 +83,38 @@ in LAKEsuperior in a 404.
 In both above cases, PUTting into `rest/a` yields a 409, POSTing to it results
 in a 201.
 
-## Lenient handling
+
+## Deprecation track
+
+LAKEsuperior offers some "legacy" options to replicate the FCREPO4 behavior,
+however encourages new development to use a different approach for some types
+of interaction.
+
+### Endpoints
+
+The FCREPO root endpoint is `/rest`. The LAKEsuperior root endpoint is `/ldp`.
+
+This should not pose a problem if a client does not have `rest` hard-coded in
+its code, but in any event, the `/rest` endpoint is provided for backwards
+compatibility.
+
+LAKEsuperior adds the (currently stub) `query` endpoint. Other endpoints for
+non-LDP services may be opened in the future.
+
+### Automatic LDP class assignment
+
+Since LAKEsuperior rejects client-provided server-managed triples, and since
+the LDP types are among them, the LDP container type is inferred from the
+provided properties: if the `ldp:hasMemberRelation` and
+`ldp:membershipResource` properties are provided, the resource is a Direct
+Container. If in addition to these the `ldp:insertedContentRelation` property
+is present, the resource is an Indirect Container. If any of the first two are
+missing, the resource is a Container (@TODO discuss: shall it be a Basic
+Container?)
+
+Clients are encouraged to omit LDP types in PUT, POST and PATCH requests.
+
+### Lenient handling
 
 FCREPO4 requires server-managed triples to be expressly indicated in a PUT
 request, unless the `Prefer` heeader is set to
@@ -55,7 +130,16 @@ the default.
 If `Prefer` is set to `handling=lenient`, all server-managed triples sent with
 the payload are ignored.
 
-## "Include" and "Omit" options for children
+Clients using the `Prefer` header to control PUT behavior as advertised by the
+specs should not notice any difference.
+
+
+## Optional improvements
+
+The following are improvements in performance or usability that can only taken
+advantage of if client code is adjusted.
+
+### "Include" and "Omit" options for children
 
 LAKEsuperior offers an additional `Prefer` header option to exclude all
 references to child resources (i.e. by removing all the `ldp:contains` triples)
@@ -65,18 +149,7 @@ while leaving the other server-managed triples when retrieving a resource:
 
 The default behavior is including all children URIs.
 
-## Automatic LDP class assignment
-
-Since LAKEsuperior rejects client-provided server-managed triples, and since
-the LDP types are among them, the LDP container type is inferred from the
-provided properties: if the `ldp:hasMemberRelation` and
-`ldp:membershipResource` properties are provided, the resource is a Direct
-Container. If in addition to these the `ldp:insertedContentRelation` property
-is present, the resource is an Indirect Container. If any of the first two are
-missing, the resource is a Container (@TODO discuss: shall it be a Basic
-Container?)
-
-## LDP-NR metadata by content negotiation
+### LDP-NR metadata by content negotiation
 
 FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
 an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
@@ -84,37 +157,7 @@ use of content negotiation to do the same. Any request to an LDP-NR with an
 `Accept` header set to one of the supported RDF serialization formats will
 yield the RDF metadata of the resource instead of the binary contents.
 
-## Tombstone methods
-
-If a client requests a tombstone resource in
-FCREPO4 with a method other than DELETE, the server will return `405 Method Not
-Allowed` regardless of whether the tombstone exists or not.
-
-LAKEsuperior will return `405` only if the tombstone actually exists, `404`
-otherwise.
-
-## Optional deletion without leaving tombstone
+### Optional deletion without leaving tombstone
 
 In LAKEsuperior, setting the `Prefer:no-tombstone` header option allows to
 delete a resource without leaving a tombstone.
-
-## Atomicity
-
-FCREPO4 supports batch atomic operations whereas a transaction can be opened
-and a number of operations (i.e. multiple R/W requests to the repository) can
-be performed. The operations are persisted in the repository only if and when
-the transaction is committed.
-
-LAKesuperior only supports atomicity for a single LDP request. I.e. a single
-HTTTP request that should reult in multiple write operations to the storage
-layer is only persisted if no exception is thrown. Otherwise, the operation is
-rolled back in order to prevent resources to be left in an inconsistent state.
-
-## Web UI
-
-FCREPO4 includes a web UI for simple CRUD operations.
-
-Such a UI is not foreseen to be built in LAKEsuperior any time soon since the
-API interaction leaves a greater degree of flexibility. In addition, the
-underlying triplestore layer may provide a UI for complex RDF queries.
-

@@ -32,6 +32,12 @@
 
 - [ ] Migration tool
 - [ ] Complete header handling
+  - [ ] Accept
+  - [ ] If-None-Match
+  - [ ] If-Modified-Since
+  - [ ] Range
+  - [ ] Limit
+  - [ ] (PUT) Digest
 - [ ] Query API
 
 # Alpha 3 TODO
@@ -48,3 +54,8 @@
 - [ ] AuthN/Z
   - [ ] Authentication
   - [ ] WebAC
+
+# Alpha 5 TODO
+
+- Blank nodes
+- Hash URIs
