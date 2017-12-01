@@ -433,7 +433,7 @@ class Ldpr(metaclass=ABCMeta):
 
     @transactional
     @must_exist
-    def delete(self, inbound=True, delete_children=True):
+    def delete(self, inbound=True, delete_children=True, leave_tstone=True):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
 
@@ -449,12 +449,13 @@ class Ldpr(metaclass=ABCMeta):
         children = self.imr[nsc['ldp'].contains * '+'] \
                 if delete_children else []
 
-        ret = self._delete_rsrc(inbound)
+        ret = self._delete_rsrc(inbound, leave_tstone)
 
         for child_uri in children:
             child_rsrc = Ldpr.inst(
                 Toolbox().uri_to_uuid(child_uri.identifier), self.repr_opts)
-            child_rsrc._delete_rsrc(inbound, tstone_pointer=self.urn)
+            child_rsrc._delete_rsrc(inbound, leave_tstone,
+                    tstone_pointer=self.urn)
 
         return ret
 
@@ -506,7 +507,7 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_UPDATED
 
 
-    def _delete_rsrc(self, inbound, tstone_pointer=None):
+    def _delete_rsrc(self, inbound, leave_tstone=True, tstone_pointer=None):
         '''
         Delete a single resource and create a tombstone.
 
@@ -520,13 +521,16 @@ class Ldpr(metaclass=ABCMeta):
         remove_trp = set(self.imr.graph)
         add_trp = set()
 
-        if tstone_pointer:
-            add_trp.add((self.urn, nsc['fcsystem'].tombstone, tstone_pointer))
+        if leave_tstone:
+            if tstone_pointer:
+                add_trp.add((self.urn, nsc['fcsystem'].tombstone,
+                        tstone_pointer))
+            else:
+                ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+                add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
+                add_trp.add((self.urn, nsc['fcrepo'].created, ts))
         else:
-            ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
-            add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
-            add_trp.add((self.urn, nsc['fcrepo'].created, ts))
-
+            self._logger.info('NOT leaving tombstone.')
 
         if inbound:
             for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
