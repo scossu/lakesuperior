@@ -247,9 +247,11 @@ def delete_resource(uuid):
     repr_opts = {'parameters' : {'include' : Ldpr.RETURN_INBOUND_REF_URI}} \
             if current_app.config['store']['ldp_rs']['referential_integrity'] \
             else None
-    prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
-    leave_tstone = 'no-tombstone' not in prefer
-    import pdb; pdb.set_trace()
+    if 'prefer' in request.headers:
+        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
+        leave_tstone = 'no-tombstone' not in prefer
+    else:
+        leave_tstone = True
 
     try:
         Ldpr.inst(uuid, repr_opts).delete(leave_tstone=leave_tstone)

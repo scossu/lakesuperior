@@ -159,13 +159,21 @@ class TestLdp:
 
 
     def test_delete(self):
+        '''
+        Test delete response codes.
+        '''
         create_resp = self.client.put('/ldp/test_delete01')
         delete_resp = self.client.delete('/ldp/test_delete01')
-
         assert delete_resp.status_code == 204
+
+        bogus_delete_resp = self.client.delete('/ldp/test_delete101')
+        assert bogus_delete_resp.status_code == 404
 
 
     def test_tombstone(self):
+        '''
+        Test tombstone behaviors.
+        '''
         tstone_resp = self.client.get('/ldp/test_delete01')
         assert tstone_resp.status_code == 410
         assert tstone_resp.headers['Link'] == \
@@ -179,6 +187,27 @@ class TestLdp:
         assert self.client.delete(tstone_path).status_code == 204
 
         assert self.client.get('/ldp/test_delete01').status_code == 404
+
+
+    def test_delete_recursive(self):
+        '''
+        Test response codes for resources deleted recursively and their
+        tombstones.
+        '''
+        self.client.put('/ldp/test_delete_recursive01')
+        self.client.put('/ldp/test_delete_recursive01/a')
+
+        self.client.delete('/ldp/test_delete_recursive01')
+
+        tstone_resp = self.client.get('/ldp/test_delete_recursive01')
+        assert tstone_resp.status_code == 410
+        assert tstone_resp.headers['Link'] == \
+            '<{}/test_delete_recursive01/fcr:tombstone>; rel="hasTombstone"'\
+            .format(Toolbox().base_url)
+
+        child_tstone_resp = self.client.get('/ldp/test_delete_recursive01/a')
+        assert child_tstone_resp.status_code == tstone_resp.status_code
+        assert 'Link' not in child_tstone_resp.headers.keys()
 
 
 
@@ -371,4 +400,21 @@ class TestPrefHeader:
         }:
             assert incl_g[ cont_subject : RDF.type : type ]
             assert not omit_g[ cont_subject : RDF.type : type ]
+
+
+    def test_delete_no_tstone(self):
+        '''
+        Test the `no-tombstone` Prefer option.
+        '''
+        self.client.put('/ldp/test_delete_no_tstone01')
+        self.client.put('/ldp/test_delete_no_tstone01/a')
+
+        self.client.delete('/ldp/test_delete_no_tstone01', headers={
+                'prefer' : 'no-tombstone'})
+
+        resp = self.client.get('/ldp/test_delete_no_tstone01')
+        assert resp.status_code == 404
+
+        child_resp = self.client.get('/ldp/test_delete_no_tstone01/a')
+        assert child_resp.status_code == 404
 

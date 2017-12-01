@@ -93,6 +93,11 @@ Allowed` regardless of whether the tombstone exists or not.
 LAKEsuperior will return `405` only if the tombstone actually exists, `404`
 otherwise.
 
+## Optional deletion without leaving tombstone
+
+In LAKEsuperior, setting the `Prefer:no-tombstone` header option allows to
+delete a resource without leaving a tombstone.
+
 ## Atomicity
 
 FCREPO4 supports batch atomic operations whereas a transaction can be opened
