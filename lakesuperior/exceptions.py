@@ -72,6 +72,21 @@ class ServerManagedTermError(RuntimeError):
 
 
 
+class InvalidTripleError(RuntimeError):
+    '''
+    Raised when a triple in a delta is not valid.
+
+    This does not necessarily that it is not valid RDF, but rather that it may
+    not be valid for the context it is meant to be utilized.
+    '''
+    def __init__(self, t):
+        self.t = t
+
+    def __str__(self):
+        return '{} is not a valid triple.'.format(self.t)
+
+
+
 class RefIntViolationError(RuntimeError):
     '''
     Raised when a provided data set has a link to a non-existing repository

@@ -2,7 +2,6 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from flask import current_app
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
@@ -11,7 +10,6 @@ from rdflib.term import URIRef
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
-from lakesuperior.messaging.messenger import Messenger
 from lakesuperior.store_layouts.ldp_rs.graph_store_connector import \
         GraphStoreConnector
 from lakesuperior.toolbox import Toolbox
@@ -121,7 +119,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def modify_dataset(self, remove_trp, add_trp):
+    def modify_dataset(self, remove_trp=[], add_trp=[], metadata={}):
         '''
         Adds and/or removes triples from the graph.
 
@@ -129,13 +127,43 @@ class BaseRdfLayout(metaclass=ABCMeta):
         store that needs to be notified must be performed by invoking this
         method.
 
-        NOTE: This is not specific to a resource. The LDP layer is responsible
-        for checking that all the +/- triples are referring to the intended
-        subject(s).
+        NOTE: This method can apply to multiple resources. However, if
+        distinct resources are undergoing different operations (e.g. resource A
+        is being deleted and resource B is being updated) this method must be
+        called once for each operation.
 
         @param remove_trp (Iterable) Triples to be removed. This can be a graph
         @param add_trp (Iterable) Triples to be added. This can be a graph.
+        @param metadata (dict) Metadata related to the operation. At a minimum,
+        it should contain the name of the operation (create, update, delete).
+        If no metadata are passed, no messages are enqueued.
         '''
         pass
 
+
+    def _enqueue_event(self, remove_trp, add_trp):
+        '''
+        Group delta triples by subject and send out to event queue.
+
+        The event queue is stored in the request context and is processed
+        after `store.commit()` is called by the `atomic` decorator.
+        '''
+        remove_grp = groupby(remove_trp, lambda x : x[0])
+        remove_dict = { k[0] : k[1] for k in remove_grp }
+
+        add_grp = groupby(add_trp, lambda x : x[0])
+        add_dict = { k[0] : k[1] for k in add_grp }
+
+        subjects = set(remove_dict.keys()) | set(add_dict.keys())
+        for rsrc_uri in subjects:
+            request.changelog.append(
+                uri=rsrc_uri,
+                ev_type=None,
+                time=arrow.utcnow(),
+                type=list(imr.graph.subjects(imr.identifier, RDF.type)),
+                data=imr.graph,
+                metadata={
+                    'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
+                }
+            )
 

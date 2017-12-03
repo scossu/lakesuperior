@@ -1,27 +1,24 @@
 import logging
 
-from flask import current_app
-
 from lakesuperior.messaging import formatters, handlers
 
-messenger = logging.getLogger('_messaging')
+messenger = logging.getLogger('_messenger')
 
 
 class Messenger:
     '''
-    Very simple message sender.
+    Very simple message sender using the standard Python logging facility.
     '''
     _msg_routes = []
 
     def __init__(self, config):
         for route in config['routes']:
-            if route['active']:
-                handler_cls = getattr(handlers, route['handler'])
-                messenger.addHandler(handler_cls(route))
-                messenger.setLevel(logging.INFO)
-                formatter = getattr(formatters, route['formatter'])
+            handler_cls = getattr(handlers, route['handler'])
+            messenger.addHandler(handler_cls(route))
+            messenger.setLevel(logging.INFO)
+            formatter = getattr(formatters, route['formatter'])
 
-                self._msg_routes.append((messenger, formatter))
+            self._msg_routes.append((messenger, formatter))
 
 
     def send(self, *args, **kwargs):

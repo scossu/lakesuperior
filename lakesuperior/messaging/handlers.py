@@ -25,7 +25,6 @@ class StompHandler(logging.Handler):
         else:
             protocol_v = StompSpec.VERSION_1_0
 
-        self.conf
         client_config = StompConfig(
             'tcp://{}:{}'.format(self.conf['host'], self.conf['port']),
             login=self.conf['username'],

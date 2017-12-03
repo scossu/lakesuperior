@@ -2,12 +2,12 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
-from itertools import accumulate
+from itertools import accumulate, groupby
 from uuid import uuid4
 
 import arrow
 
-from flask import current_app
+from flask import current_app, request
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
@@ -22,21 +22,29 @@ from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
 
-def transactional(fn):
+def atomic(fn):
     '''
-    Decorator for methods of the Ldpr class to handle transactions in an RDF
-    store.
+    Handle atomic operations in an RDF store.
+
+    This wrapper ensures that a write operation is performed atomically. It
+    also takes care of sending a message for each resource changed in the
+    transaction.
     '''
     def wrapper(self, *args, **kwargs):
+        request.changelog = []
         try:
             ret = fn(self, *args, **kwargs)
-            self._logger.info('Committing transaction.')
-            self.rdfly.store.commit()
-            return ret
         except:
             self._logger.warn('Rolling back transaction.')
             self.rdfly.store.rollback()
             raise
+        else:
+            self._logger.info('Committing transaction.')
+            self.rdfly.store.commit()
+            for ev in request.changelog:
+                self._logger.info('Message: {}'.format(ev))
+                self._send_event_msg(*ev)
+            return ret
 
     return wrapper
 
@@ -80,9 +88,9 @@ class Ldpr(metaclass=ABCMeta):
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
     ROOT_NODE_URN = nsc['fcsystem'].root
 
-    RES_CREATED = 'Create'
-    RES_DELETED = 'Delete'
-    RES_UPDATED = 'Update'
+    RES_CREATED = '_create_'
+    RES_DELETED = '_delete_'
+    RES_UPDATED = '_update_'
 
     protected_pred = (
         nsc['fcrepo'].created,
@@ -230,13 +238,16 @@ class Ldpr(metaclass=ABCMeta):
 
         Persistence is done in this class. None of the operations in the store
         layout should commit an open transaction. Methods are wrapped in a
-        transaction by using the `@transactional` decorator.
+        transaction by using the `@atomic` decorator.
 
         @param uuid (string) UUID of the resource. If None (must be explicitly
-        set) it refers to the root node.
+        set) it refers to the root node. It can also be the full URI or URN,
+        in which case it will be converted.
         '''
-        self.uuid = uuid
-        self.urn = nsc['fcres'][uuid] if self.uuid else self.ROOT_NODE_URN
+        self.uuid = Toolbox().uri_to_uuid(uuid) \
+                if isinstance(uuid, URIRef) else uuid
+        self.urn = nsc['fcres'][uuid] \
+                if self.uuid else self.ROOT_NODE_URN
         self.uri = Toolbox().uuid_to_uri(self.uuid)
 
         self.repr_opts = repr_opts
@@ -405,7 +416,7 @@ class Ldpr(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-    @transactional
+    @atomic
     def delete(self, inbound=True, delete_children=True, leave_tstone=True):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
@@ -433,7 +444,7 @@ class Ldpr(metaclass=ABCMeta):
         return ret
 
 
-    @transactional
+    @atomic
     def delete_tombstone(self):
         '''
         Delete a tombstone.
@@ -455,7 +466,7 @@ class Ldpr(metaclass=ABCMeta):
         Create a new resource by comparing an empty graph with the provided
         IMR graph.
         '''
-        self.rdfly.modify_dataset(add_trp=self.provided_imr.graph)
+        self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
 
         return self.RES_CREATED
 
@@ -472,7 +483,7 @@ class Ldpr(metaclass=ABCMeta):
             self.imr.remove(p)
 
         delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
-        self.rdfly.modify_dataset(*delta)
+        self._modify_rsrc(self.RES_UPDATED, *delta)
 
         # Reset the IMR because it has changed.
         delattr(self, 'imr')
@@ -505,13 +516,30 @@ class Ldpr(metaclass=ABCMeta):
         else:
             self._logger.info('NOT leaving tombstone.')
 
-        if inbound:
-            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
-                remove_trp.add((ib_rsrc_uri, None, self.urn))
+        self._modify_rsrc(self.RES_DELETED, remove_trp, add_trp)
 
-        self.rdfly.modify_dataset(remove_trp, add_trp)
+        if inbound:
+            remove_trp = set()
+            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
+                remove_trp = {(ib_rsrc_uri, None, self.urn)}
+                Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
 
         return self.RES_DELETED
+
+
+    def _modify_rsrc(self, ev_type, remove_trp={}, add_trp={}):
+        '''
+        Low-level method to modify a graph for a single resource.
+
+        @param remove_trp (Iterable) Triples to be removed. This can be a graph
+        @param add_trp (Iterable) Triples to be added. This can be a graph.
+        '''
+        return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
+            'ev_type' : ev_type,
+            'time' : arrow.utcnow(),
+            'type' : list(self.imr.graph.objects(self.urn, RDF.type)),
+            'actor' : self.imr.value(nsc['fcrepo'].lastModifiedBy),
+        })
 
 
     def _set_containment_rel(self):
@@ -612,12 +640,13 @@ class Ldpr(metaclass=ABCMeta):
 
     def _add_ldp_dc_ic_rel(self, cont_uri):
         '''
-        Add relationship triples from a direct or indirect container parent.
+        Add relationship triples from a parent direct or indirect container.
 
         @param cont_uri (rdflib.term.URIRef)  The container URI.
         '''
-        cont_imr = self.rdfly.extract_imr(cont_uri, incl_children=False)
-        cont_p = set(cont_imr.graph.predicates())
+        repr_opts = {'parameters' : {'omit' : Ldpr.RETURN_CHILD_RES_URI }}
+        cont_rsrc = Ldpr.inst(cont_uri, repr_opts=repr_opts)
+        cont_p = set(cont_rsrc.imr.graph.predicates())
         add_g = Graph()
 
         self._logger.info('Checking direct or indirect containment.')
@@ -625,19 +654,19 @@ class Ldpr(metaclass=ABCMeta):
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = Toolbox().localize_term(
-                    cont_imr.value(self.MBR_RSRC_URI).identifier)
-            p = cont_imr.value(self.MBR_REL_URI).identifier
+                    cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)
+            p = cont_rsrc.imr.value(self.MBR_REL_URI).identifier
 
-            if cont_imr[RDF.type : nsc['ldp'].DirectContainer]:
+            if cont_rsrc.imr[RDF.type : nsc['ldp'].DirectContainer]:
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
                 add_g.add((s, p, self.urn))
 
-            elif cont_imr[RDF.type : nsc['ldp'].IndirectContainer] \
+            elif cont_rsrc.imr[RDF.type : nsc['ldp'].IndirectContainer] \
                    and self.INS_CNT_REL_URI in cont_p:
                 self._logger.info('Parent is an indirect container.')
-                cont_rel_uri = cont_imr.value(self.INS_CNT_REL_URI).identifier
+                cont_rel_uri = cont_rsrc.imr.value(self.INS_CNT_REL_URI).identifier
                 target_uri = self.provided_imr.value(cont_rel_uri).identifier
                 self._logger.debug('Target URI: {}'.format(target_uri))
                 if target_uri:
@@ -648,6 +677,20 @@ class Ldpr(metaclass=ABCMeta):
             add_g = self._check_mgd_terms(add_g)
             self._logger.debug('Adding DC/IC triples: {}'.format(
                 add_g.serialize(format='turtle').decode('utf-8')))
-            self.rdfly.modify_dataset(Graph(), add_g)
+            rsrc._modify_rsrc(self.RES_UPDATED, attr_trp=add_g)
 
 
+    def _send_event_msg(self, remove_trp, add_trp, metadata):
+        '''
+        Break down delta triples, find subjects and send event message.
+        '''
+        remove_grp = groupby(remove_trp, lambda x : x[0])
+        remove_dict = { k[0] : k[1] for k in remove_grp }
+
+        add_grp = groupby(add_trp, lambda x : x[0])
+        add_dict = { k[0] : k[1] for k in add_grp }
+
+        subjects = set(remove_dict.keys()) | set(add_dict.keys())
+        for rsrc_uri in subjects:
+            self._logger.info('subject: {}'.format(rsrc_uri))
+            #current_app.messenger.send

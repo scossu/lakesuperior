@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import arrow
 
+from flask import current_app, request
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.query import ResultException
@@ -10,10 +11,10 @@ from rdflib.term import Literal, URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
-        srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceNotExistsError, TombstoneError
+from lakesuperior.dictionaries.srv_mgd_terms import (srv_mgd_subjects,
+        srv_mgd_predicates, srv_mgd_types)
+from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
+        ResourceNotExistsError, TombstoneError)
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
@@ -105,14 +106,17 @@ class SimpleLayout(BaseRdfLayout):
             's' : urn})
 
 
-    def modify_dataset(self, remove_trp=[], add_trp=[]):
+    def modify_dataset(self, remove_trp=[], add_trp=[], metadata=None):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        self._logger.debug('Remove graph: {}'.format(set(remove_trp)))
-        self._logger.debug('Add graph: {}'.format(set(add_trp)))
+        self._logger.debug('Remove triples: {}'.format(set(remove_trp)))
+        self._logger.debug('Add triples: {}'.format(set(add_trp)))
 
         for t in remove_trp:
             self.ds.remove(t)
         for t in add_trp:
             self.ds.add(t)
+
+        if current_app.config.setdefault('messaging') and metadata:
+            request.changelog.append((remove_trp, add_trp, metadata))

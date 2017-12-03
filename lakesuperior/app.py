@@ -7,6 +7,7 @@ from logging.config import dictConfig
 from flask import Flask
 
 from lakesuperior.endpoints.ldp import ldp
+from lakesuperior.messaging.messenger import Messenger
 from lakesuperior.endpoints.query import query
 from lakesuperior.toolbox import Toolbox
 
@@ -53,6 +54,9 @@ def create_app(app_conf, logging_conf):
     app.rdfly = load_layout('ldp_rs')
     app.nonrdfly = load_layout('ldp_nr')
 
+    # Set up messaging.
+    app.messenger = Messenger(app_conf['messaging'])
+
     return app
 
 
@@ -63,6 +67,5 @@ def camelcase(word):
     Ripped from https://stackoverflow.com/a/6425628
     '''
     return ''.join(x.capitalize() or '_' for x in word.split('_'))
-
 
 

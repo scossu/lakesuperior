@@ -12,7 +12,7 @@ from rdflib.term import URIRef, Literal, Variable
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.model.ldpr import Ldpr, transactional
+from lakesuperior.model.ldpr import Ldpr, atomic
 from lakesuperior.exceptions import ResourceNotExistsError, \
         ServerManagedTermError, SingleSubjectError
 from lakesuperior.toolbox import Toolbox
@@ -41,7 +41,7 @@ class LdpRs(Ldpr):
         return Toolbox().globalize_rsrc(self.imr)
 
 
-    @transactional
+    @atomic
     def post(self, data, format='text/turtle', handling=None):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
@@ -52,7 +52,7 @@ class LdpRs(Ldpr):
                 create_only=True)
 
 
-    @transactional
+    @atomic
     def put(self, data, format='text/turtle', handling=None):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
@@ -60,7 +60,7 @@ class LdpRs(Ldpr):
         return self._create_or_replace_rsrc(data, format, handling)
 
 
-    @transactional
+    @atomic
     def patch(self, update_str):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
