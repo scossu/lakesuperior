@@ -2,6 +2,7 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
+from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
@@ -119,7 +120,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def modify_dataset(self, remove_trp=[], add_trp=[], metadata={}):
+    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
+            metadata=None):
         '''
         Adds and/or removes triples from the graph.
 
@@ -140,30 +142,4 @@ class BaseRdfLayout(metaclass=ABCMeta):
         '''
         pass
 
-
-    def _enqueue_event(self, remove_trp, add_trp):
-        '''
-        Group delta triples by subject and send out to event queue.
-
-        The event queue is stored in the request context and is processed
-        after `store.commit()` is called by the `atomic` decorator.
-        '''
-        remove_grp = groupby(remove_trp, lambda x : x[0])
-        remove_dict = { k[0] : k[1] for k in remove_grp }
-
-        add_grp = groupby(add_trp, lambda x : x[0])
-        add_dict = { k[0] : k[1] for k in add_grp }
-
-        subjects = set(remove_dict.keys()) | set(add_dict.keys())
-        for rsrc_uri in subjects:
-            request.changelog.append(
-                uri=rsrc_uri,
-                ev_type=None,
-                time=arrow.utcnow(),
-                type=list(imr.graph.subjects(imr.identifier, RDF.type)),
-                data=imr.graph,
-                metadata={
-                    'actor' : imr.value(nsc['fcrepo'].lastModifiedBy),
-                }
-            )
 

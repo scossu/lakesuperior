@@ -106,7 +106,8 @@ class SimpleLayout(BaseRdfLayout):
             's' : urn})
 
 
-    def modify_dataset(self, remove_trp=[], add_trp=[], metadata=None):
+    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
+            metadata=None):
         '''
         See base_rdf_layout.update_rsrc.
         '''
@@ -119,4 +120,4 @@ class SimpleLayout(BaseRdfLayout):
             self.ds.add(t)
 
         if current_app.config.setdefault('messaging') and metadata:
-            request.changelog.append((remove_trp, add_trp, metadata))
+            request.changelog.append((set(remove_trp), set(add_trp), metadata))

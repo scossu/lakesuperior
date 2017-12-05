@@ -6,6 +6,7 @@ from itertools import accumulate, groupby
 from uuid import uuid4
 
 import arrow
+import rdflib
 
 from flask import current_app, request
 from rdflib import Graph
@@ -88,6 +89,11 @@ class Ldpr(metaclass=ABCMeta):
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
     ROOT_NODE_URN = nsc['fcsystem'].root
 
+    # Workflow type. Inbound means that the resource is being written to the
+    # store, outbounnd is being retrieved for output.
+    WRKF_INBOUND = '_workflow:inbound_'
+    WRKF_OUTBOUND = '_workflow:outbound_'
+
     RES_CREATED = '_create_'
     RES_DELETED = '_delete_'
     RES_UPDATED = '_update_'
@@ -104,9 +110,11 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def inst(cls, uuid, repr_opts=None):
+    def inst(cls, uuid, repr_opts=None, **kwargs):
         '''
-        Factory method that creates and returns an instance of an LDPR subclass
+        Create an instance for retrieval purposes.
+
+        This factory method creates and returns an instance of an LDPR subclass
         based on information that needs to be queried from the underlying
         graph store.
 
@@ -115,124 +123,136 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid UUID of the instance.
         '''
         imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
+
         cls._logger.debug('Representation options: {}'.format(repr_opts))
-        imr_opts = cls.set_imr_options(repr_opts)
-        imr = current_app.rdfly.extract_imr(imr_urn, **imr_opts)
-        rdf_types = set(imr.objects(RDF.type))
+        imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
+        rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
 
-        for t in rdf_types:
-            cls._logger.debug('Checking RDF type: {}'.format(t.identifier))
-            if t.identifier == cls.LDP_NR_TYPE:
-                from lakesuperior.model.ldp_nr import LdpNr
-                cls._logger.info('Resource is a LDP-NR.')
-                return LdpNr(uuid, repr_opts)
-            if t.identifier == cls.LDP_RS_TYPE:
-                from lakesuperior.model.ldp_rs import LdpRs
-                cls._logger.info('Resource is a LDP-RS.')
-                return LdpRs(uuid, repr_opts)
-
-        raise ResourceNotExistsError(uuid)
-
-
-    @classmethod
-    def inst_for_post(cls, parent_uuid=None, slug=None):
-        '''
-        Validate conditions to perform a POST and return an LDP resource
-        instancefor using with the `post` method.
-
-        This may raise an exception resulting in a 404 if the parent is not
-        found or a 409 if the parent is not a valid container.
-        '''
-        # Shortcut!
-        if not slug and not parent_uuid:
-            return cls(str(uuid4()))
-
-        parent = cls(parent_uuid, repr_opts={
-            'parameters' : {'omit' : cls.RETURN_CHILD_RES_URI}
-        })
-
-        # Set prefix.
-        if parent_uuid:
-            parent_types = { t.identifier for t in \
-                    parent.imr.objects(RDF.type) }
-            cls._logger.debug('Parent types: {}'.format(
-                    parent_types))
-            if nsc['ldp'].Container not in parent_types:
-                raise InvalidResourceError('Parent {} is not a container.'
-                       .format(parent_uuid))
-
-            pfx = parent_uuid + '/'
+        if cls.LDP_NR_TYPE in rdf_types:
+            from lakesuperior.model.ldp_nr import LdpNr
+            cls._logger.info('Resource is a LDP-NR.')
+            rsrc = LdpNr(uuid, repr_opts, **kwargs)
+        elif cls.LDP_RS_TYPE in rdf_types:
+            from lakesuperior.model.ldp_rs import LdpRs
+            cls._logger.info('Resource is a LDP-RS.')
+            rsrc = LdpRs(uuid, repr_opts, **kwargs)
         else:
-            pfx = ''
+            raise ResourceNotExistsError(uuid)
 
-        # Create candidate UUID and validate.
-        if slug:
-            cnd_uuid = pfx + slug
-            cnd_rsrc = Resource(current_app.rdfly.ds, nsc['fcres'][cnd_uuid])
-            if current_app.rdfly.ask_rsrc_exists(cnd_rsrc.identifier):
-                return cls(pfx + str(uuid4()))
+        # Sneak in the already extracted IMR to save a query.
+        rsrc._imr = imr
+
+        return rsrc
+
+
+    @staticmethod
+    def inst_from_client_input(uuid, **kwargs):
+        '''
+        Determine LDP type (and instance class) from request headers and body.
+
+        This is used with POST and PUT methods.
+
+        @param uuid (string) UUID of the resource to be created or updated.
+        '''
+        # @FIXME Circular reference.
+        from lakesuperior.model.ldp_nr import LdpNr
+        from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
+
+        urn = nsc['fcres'][uuid]
+
+        logger = __class__._logger
+        logger.debug('Content type: {}'.format(request.mimetype))
+        logger.debug('files: {}'.format(request.files))
+        logger.debug('stream: {}'.format(request.stream))
+
+        if not request.content_length:
+            # Create empty LDPC.
+            logger.debug('No data received in request. '
+                    'Creating empty container.')
+
+            return Ldpc(uuid, provided_imr=Resource(Graph(), urn), **kwargs)
+
+        if __class__.is_rdf_parsable(request.mimetype):
+            # Create container and populate it with provided RDF data.
+            provided_g = Graph().parse(data=request.data.decode('utf-8'),
+                    format=request.mimetype, publicID=urn)
+            provided_imr = Resource(provided_g, urn)
+
+            if Ldpr.MBR_RSRC_URI in provided_g.predicates() and \
+                    Ldpr.MBR_REL_URI in provided_g.predicates():
+                if Ldpr.INS_CNT_REL_URI in provided_g.predicates():
+                    cls = LdpIc
+                else:
+                    cls = LdpDc
             else:
-                return cls(cnd_uuid)
+                cls = Ldpc
+
+            inst = cls(uuid, provided_imr=provided_imr, **kwargs)
+            inst._check_mgd_terms(inst.provided_imr.graph)
+
         else:
-            return cls(pfx + str(uuid4()))
+            # Create a LDP-NR and equip it with the binary file provided.
+            if request.mimetype == 'multipart/form-data':
+                # This seems the "right" way to upload a binary file, with a
+                # multipart/form-data MIME type and the file in the `file`
+                # field. This however is not supported by FCREPO4.
+                stream = request.files.get('file').stream
+                mimetype = request.file.get('file').content_type
+                provided_imr = Resource(Graph(), urn)
+                # @TODO This will turn out useful to provide metadata
+                # with the binary.
+                #metadata = request.files.get('metadata').stream
+                #provided_imr = [parse RDF here...]
+            else:
+                # This is a less clean way, with the file in the form body and
+                # the request as application/x-www-form-urlencoded.
+                # This is how FCREPO4 accepts binary uploads.
+                stream = request.stream
+                mimetype = request.mimetype
+                provided_imr = Resource(Graph(), urn)
+
+            inst = LdpNr(uuid, stream=stream, mimetype=mimetype,
+                    provided_imr=provided_imr, **kwargs)
+
+        logger.info('Creating resource of type: {}'.format(
+                inst.__class__.__name__))
+
+        return inst
 
 
-    @classmethod
-    def set_imr_options(cls, repr_opts):
+    @staticmethod
+    def is_rdf_parsable(mimetype):
         '''
-        Set options to retrieve IMR.
+        Checks whether a MIME type support RDF parsing by a RDFLib plugin.
 
-        Ideally, IMR retrieval is done once per request, so all the options
-        are set once in the `imr()` property.
-
-        @param repr_opts (dict): Options parsed from `Prefer` header.
+        @param mimetype (string) MIME type to check.
         '''
-        cls._logger.debug('Setting retrieval options from: {}'.format(repr_opts))
-        imr_options = {}
-
-        if repr_opts.setdefault('value') == 'minimal':
-            imr_options = {
-                'embed_children' : False,
-                'incl_children' : False,
-                'incl_inbound' : False,
-                'incl_srv_mgd' : False,
-            }
+        try:
+            rdflib.plugin.get(mimetype, rdflib.parser.Parser)
+        except rdflib.plugin.PluginException:
+            return False
         else:
-            # Default.
-            imr_options = {
-                'embed_children' : False,
-                'incl_children' : True,
-                'incl_inbound' : False,
-                'incl_srv_mgd' : True,
-            }
+            return True
 
-            # Override defaults.
-            if 'parameters' in repr_opts:
-                include = repr_opts['parameters']['include'].split(' ') \
-                        if 'include' in repr_opts['parameters'] else []
-                omit = repr_opts['parameters']['omit'].split(' ') \
-                        if 'omit' in repr_opts['parameters'] else []
 
-                cls._logger.debug('Include: {}'.format(include))
-                cls._logger.debug('Omit: {}'.format(omit))
+    @staticmethod
+    def is_rdf_serializable(mimetype):
+        '''
+        Checks whether a MIME type support RDF serialization by a RDFLib plugin
 
-                if str(cls.EMBED_CHILD_RES_URI) in include:
-                        imr_options['embed_children'] = True
-                if str(cls.RETURN_CHILD_RES_URI) in omit:
-                        imr_options['incl_children'] = False
-                if str(cls.RETURN_INBOUND_REF_URI) in include:
-                        imr_options['incl_inbound'] = True
-                if str(cls.RETURN_SRV_MGD_RES_URI) in omit:
-                        imr_options['incl_srv_mgd'] = False
-
-        cls._logger.debug('Retrieval options: {}'.format(imr_options))
-
-        return imr_options
+        @param mimetype (string) MIME type to check.
+        '''
+        try:
+            rdflib.plugin.get(mimetype, rdflib.serializer.Serializer)
+        except rdflib.plugin.PluginException:
+            return False
+        else:
+            return True
 
 
     ## MAGIC METHODS ##
 
-    def __init__(self, uuid, repr_opts={}):
+    def __init__(self, uuid, repr_opts={}, provided_imr=None, **kwargs):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
 
@@ -243,6 +263,11 @@ class Ldpr(metaclass=ABCMeta):
         @param uuid (string) UUID of the resource. If None (must be explicitly
         set) it refers to the root node. It can also be the full URI or URN,
         in which case it will be converted.
+        @param repr_opts (dict) Options used to retrieve the IMR. See
+        `parse_rfc7240` for format details.
+        @Param provd_rdf (string) RDF data provided by the client in
+        operations isuch as `PUT` or `POST`, serialized as a string. This sets
+        the `provided_imr` property.
         '''
         self.uuid = Toolbox().uri_to_uuid(uuid) \
                 if isinstance(uuid, URIRef) else uuid
@@ -250,11 +275,10 @@ class Ldpr(metaclass=ABCMeta):
                 if self.uuid else self.ROOT_NODE_URN
         self.uri = Toolbox().uuid_to_uri(self.uuid)
 
-        self.repr_opts = repr_opts
-        self._imr_options = __class__.set_imr_options(self.repr_opts)
-
         self.rdfly = current_app.rdfly
         self.nonrdfly = current_app.nonrdfly
+
+        self.provided_imr = provided_imr
 
 
     @property
@@ -282,8 +306,12 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_imr'):
-            self._logger.debug('IMR options: {}'.format(self._imr_options))
-            options = dict(self._imr_options, strict=True)
+            if hasattr(self, '_imr_options'):
+                self._logger.debug('IMR options: {}'.format(self._imr_options))
+                imr_options = self._imr_options
+            else:
+                imr_options = {}
+            options = dict(imr_options, strict=True)
             self._imr = self.rdfly.extract_imr(self.urn, **options)
 
         return self._imr
@@ -300,7 +328,12 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_imr'):
-            options = dict(self._imr_options, strict=True)
+            if hasattr(self, '_imr_options'):
+                self._logger.debug('IMR options: {}'.format(self._imr_options))
+                imr_options = self._imr_options
+            else:
+                imr_options = {}
+            options = dict(imr_options, strict=True)
             try:
                 self._imr = self.rdfly.extract_imr(self.urn, **options)
             except ResourceNotExistsError:
@@ -329,7 +362,7 @@ class Ldpr(metaclass=ABCMeta):
         # Remove digest hash.
         self.imr.remove(nsc['premis'].hasMessageDigest)
 
-        if not self._imr_options.setdefault('incl_srv_mgd', False):
+        if not self._imr_options.setdefault('incl_srv_mgd', True):
             for p in srv_mgd_predicates:
                 self._logger.debug('Removing predicate: {}'.format(p))
                 self.imr.remove(p)
@@ -382,7 +415,6 @@ class Ldpr(metaclass=ABCMeta):
         '''
         out_headers = defaultdict(list)
 
-        self._logger.debug('IMR options in head(): {}'.format(self._imr_options))
         digest = self.imr.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
@@ -437,7 +469,8 @@ class Ldpr(metaclass=ABCMeta):
 
         for child_uri in children:
             child_rsrc = Ldpr.inst(
-                Toolbox().uri_to_uuid(child_uri.identifier), self.repr_opts)
+                Toolbox().uri_to_uuid(child_uri.identifier),
+                repr_opts={'incl_children' : False})
             child_rsrc._delete_rsrc(inbound, leave_tstone,
                     tstone_pointer=self.urn)
 
@@ -502,8 +535,8 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Removing resource {}'.format(self.urn))
 
-        remove_trp = set(self.imr.graph)
-        add_trp = set()
+        remove_trp = self.imr.graph
+        add_trp = Graph()
 
         if leave_tstone:
             if tstone_pointer:
@@ -527,18 +560,37 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_DELETED
 
 
-    def _modify_rsrc(self, ev_type, remove_trp={}, add_trp={}):
+    def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph()):
         '''
         Low-level method to modify a graph for a single resource.
 
-        @param remove_trp (Iterable) Triples to be removed. This can be a graph
-        @param add_trp (Iterable) Triples to be added. This can be a graph.
+        @param ev_type (string) The type of event (create, update, delete).
+        @param remove_trp (rdflib.Graph) Triples to be removed.
+        @param add_trp (rdflib.Graph) Triples to be added.
         '''
+        # If one of the triple sets is not a graph, do a set merge and
+        # filtering. This is necessary to support non-RDF terms (e.g.
+        # variables).
+        if not isinstance(remove_trp, Graph) or not isinstance(add_trp, Graph):
+            if isinstance(remove_trp, Graph):
+                remove_trp = set(remove_trp)
+            if isinstance(add_trp, Graph):
+                add_trp = set(add_trp)
+            merge_g = remove_trp | add_trp
+            type = { trp[2] for trp in merge_g if trp[1] == RDF.type }
+            actor = { trp[2] for trp in merge_g \
+                    if trp[1] == nsc['fcrepo'].createdBy }
+        else:
+            merge_g = remove_trp | add_trp
+            type = merge_g[ self.urn : RDF.type ]
+            actor = merge_g[ self.urn : nsc['fcrepo'].createdBy ]
+
+
         return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
             'ev_type' : ev_type,
             'time' : arrow.utcnow(),
-            'type' : list(self.imr.graph.objects(self.urn, RDF.type)),
-            'actor' : self.imr.value(nsc['fcrepo'].lastModifiedBy),
+            'type' : type,
+            'actor' : actor,
         })
 
 
@@ -644,8 +696,8 @@ class Ldpr(metaclass=ABCMeta):
 
         @param cont_uri (rdflib.term.URIRef)  The container URI.
         '''
-        repr_opts = {'parameters' : {'omit' : Ldpr.RETURN_CHILD_RES_URI }}
-        cont_rsrc = Ldpr.inst(cont_uri, repr_opts=repr_opts)
+        cont_uuid = Toolbox().uri_to_uuid(cont_uri)
+        cont_rsrc = Ldpr.inst(cont_uuid, repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
         add_g = Graph()
 
@@ -677,7 +729,7 @@ class Ldpr(metaclass=ABCMeta):
             add_g = self._check_mgd_terms(add_g)
             self._logger.debug('Adding DC/IC triples: {}'.format(
                 add_g.serialize(format='turtle').decode('utf-8')))
-            rsrc._modify_rsrc(self.RES_UPDATED, attr_trp=add_g)
+            rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
 
 
     def _send_event_msg(self, remove_trp, add_trp, metadata):

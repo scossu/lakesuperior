@@ -5,8 +5,10 @@ from uuid import uuid4
 
 from flask import Blueprint, current_app, g, request, send_file, url_for
 from rdflib import Graph
+from rdflib.namespace import RDF, XSD
 from werkzeug.datastructures import FileStorage
 
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
     InvalidResourceError, ResourceExistsError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError
@@ -90,7 +92,7 @@ def get_resource(uuid, force_rdf=False):
         prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(prefer))
         if 'return' in prefer:
-            repr_options = prefer['return']
+            repr_options = parse_repr_options(prefer['return'])
 
     try:
         rsrc = Ldpr.inst(uuid, repr_options)
@@ -103,7 +105,7 @@ def get_resource(uuid, force_rdf=False):
         if isinstance(rsrc, LdpRs) \
                 or request.headers['accept'] in accept_rdf \
                 or force_rdf:
-            return (rsrc.out_graph.serialize(format='turtle'), out_headers)
+            return (rsrc.get(), out_headers)
         else:
             return send_file(rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename)
@@ -130,10 +132,12 @@ def post_resource(parent):
     except KeyError:
         slug = None
 
-    cls, data = class_from_req_body()
+    handling, disposition = set_post_put_params()
 
     try:
-        rsrc = cls.inst_for_post(parent, slug)
+        uuid = uuid_for_post(parent, slug)
+        rsrc = Ldpr.inst_from_client_input(uuid, handling=handling,
+                disposition=disposition)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -141,19 +145,10 @@ def post_resource(parent):
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
 
-    if cls == LdpNr:
-        try:
-            cont_disp = Toolbox().parse_rfc7240(
-                    request.headers['content-disposition'])
-        except KeyError:
-            cont_disp = None
-
-        rsrc.post(data, mimetype=request.content_type, disposition=cont_disp)
-    else:
-        try:
-            rsrc.post(data)
-        except ServerManagedTermError as e:
-            return str(e), 412
+    try:
+        rsrc.post()
+    except ServerManagedTermError as e:
+        return str(e), 412
 
     out_headers.update({
         'Location' : rsrc.uri,
@@ -167,49 +162,26 @@ def put_resource(uuid):
     '''
     Add a new resource at a specified URI.
     '''
+    # Parse headers.
     logger.info('Request headers: {}'.format(request.headers))
     rsp_headers = std_headers
 
-    cls, data = class_from_req_body()
+    handling, disposition = set_post_put_params()
 
-    rsrc = cls(uuid)
+    try:
+        rsrc = Ldpr.inst_from_client_input(uuid, handling=handling,
+                disposition=disposition)
+    except ServerManagedTermError as e:
+        return str(e), 412
 
-    # Parse headers.
-    pref_handling = None
-    if cls == LdpNr:
-        try:
-            logger.debug('Headers: {}'.format(request.headers))
-            cont_disp = Toolbox().parse_rfc7240(
-                    request.headers['content-disposition'])
-        except KeyError:
-            cont_disp = None
-
-        try:
-            ret = rsrc.put(data, disposition=cont_disp,
-                    mimetype=request.content_type)
-        except InvalidResourceError as e:
-            return str(e), 409
-        except ResourceExistsError as e:
-            return str(e), 409
-        except TombstoneError as e:
-            return _tombstone_response(e, uuid)
-    else:
-        if 'prefer' in request.headers:
-            prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
-            logger.debug('Parsed Prefer header: {}'.format(prefer))
-            if 'handling' in prefer:
-                pref_handling = prefer['handling']['value']
-
-        try:
-            ret = rsrc.put(data, handling=pref_handling)
-        except InvalidResourceError as e:
-            return str(e), 409
-        except ResourceExistsError as e:
-            return str(e), 409
-        except TombstoneError as e:
-            return _tombstone_response(e, uuid)
-        except ServerManagedTermError as e:
-            return str(e), 412
+    try:
+        ret = rsrc.put()
+    except InvalidResourceError as e:
+        return str(e), 409
+    except ResourceExistsError as e:
+        return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
 
     res_code = 201 if ret == Ldpr.RES_CREATED else 204
     return '', res_code, rsp_headers
@@ -244,9 +216,9 @@ def delete_resource(uuid):
 
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.
-    repr_opts = {'parameters' : {'include' : Ldpr.RETURN_INBOUND_REF_URI}} \
+    repr_opts = {'incl_inbound' : True} \
             if current_app.config['store']['ldp_rs']['referential_integrity'] \
-            else None
+            else {}
     if 'prefer' in request.headers:
         prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
         leave_tstone = 'no-tombstone' not in prefer
@@ -272,7 +244,7 @@ def tombstone(uuid):
     The only allowed method is DELETE; any other verb will return a 405.
     '''
     logger.debug('Deleting tombstone for {}.'.format(uuid))
-    rsrc = Ldpr(uuid, repr_opts={'value' : 'minimal'})
+    rsrc = Ldpr(uuid)
     try:
         imr = rsrc.imr
     except TombstoneError as e:
@@ -290,48 +262,45 @@ def tombstone(uuid):
         return '', 404
 
 
-def class_from_req_body():
+def uuid_for_post(parent_uuid=None, slug=None):
     '''
-    Determine LDP type (and instance class) from the provided RDF body.
+    Validate conditions to perform a POST and return an LDP resource
+    UUID for using with the `post` method.
+
+    This may raise an exception resulting in a 404 if the parent is not
+    found or a 409 if the parent is not a valid container.
     '''
-    logger.debug('Content type: {}'.format(request.mimetype))
-    logger.debug('files: {}'.format(request.files))
-    logger.debug('stream: {}'.format(request.stream))
+    # Shortcut!
+    if not slug and not parent_uuid:
+        return str(uuid4())
 
-    # LDP-NR types
-    if not request.content_length:
-        logger.debug('No data received in body.')
-        cls = Ldpc
-        data = None
-    elif request.mimetype in accept_rdf:
-        # Parse out the RDF string.
-        data = request.data.decode('utf-8')
-        g = Graph().parse(data=data, format=request.mimetype)
+    parent = Ldpr.inst(parent_uuid, repr_opts={'incl_children' : False})
 
-        if Ldpr.MBR_RSRC_URI in g.predicates() and \
-                Ldpr.MBR_REL_URI in g.predicates():
-            if Ldpr.INS_CNT_REL_URI in g.predicates():
-                cls = LdpIc
-            else:
-                cls = LdpDc
-        else:
-            cls = Ldpc
+    # Set prefix.
+    if parent_uuid:
+        parent_types = { t.identifier for t in \
+                parent.imr.objects(RDF.type) }
+        logger.debug('Parent types: {}'.format(
+                parent_types))
+        if nsc['ldp'].Container not in parent_types:
+            raise InvalidResourceError('Parent {} is not a container.'
+                   .format(parent_uuid))
+
+        pfx = parent_uuid + '/'
     else:
-        cls = LdpNr
-        if request.mimetype == 'multipart/form-data':
-            # This seems the "right" way to upload a binary file, with a
-            # multipart/form-data MIME type and the file in the `file`
-            # field. This however is not supported by FCREPO4.
-            data = request.files.get('file').stream
+        pfx = ''
+
+    # Create candidate UUID and validate.
+    if slug:
+        cnd_uuid = pfx + slug
+        if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uuid]):
+            uuid = pfx + str(uuid4())
         else:
-            # This is a less clean way, with the file in the form body and
-            # the request as application/x-www-form-urlencoded.
-            # This is how FCREPO4 accepts binary uploads.
-            data = request.stream
+            uuid = cnd_uuid
+    else:
+        uuid = pfx + str(uuid4())
 
-    logger.info('Creating resource of type: {}'.format(cls.__name__))
-
-    return cls, data
+    return uuid
 
 
 def _get_bitstream(rsrc):
@@ -348,3 +317,78 @@ def _tombstone_response(e, uuid):
         'Link' : '<{}/fcr:tombstone>; rel="hasTombstone"'.format(request.url),
     } if e.uuid == uuid else {}
     return str(e), 410, headers
+
+
+
+def set_post_put_params():
+    '''
+    Sets handling and content disposition for POST and PUT by parsing headers.
+    '''
+    handling = None
+    if 'prefer' in request.headers:
+        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
+        logger.debug('Parsed Prefer header: {}'.format(prefer))
+        if 'handling' in prefer:
+            handling = prefer['handling']['value']
+
+    try:
+        disposition = Toolbox().parse_rfc7240(
+                request.headers['content-disposition'])
+    except KeyError:
+        disposition = None
+
+    return handling, disposition
+
+
+def parse_repr_options(retr_opts):
+    '''
+    Set options to retrieve IMR.
+
+    Ideally, IMR retrieval is done once per request, so all the options
+    are set once in the `imr()` property.
+
+    @param retr_opts (dict): Options parsed from `Prefer` header.
+    '''
+    logger.debug('Parsing retrieval options: {}'.format(retr_opts))
+    imr_options = {}
+
+    if retr_opts.setdefault('value') == 'minimal':
+        imr_options = {
+            'embed_children' : False,
+            'incl_children' : False,
+            'incl_inbound' : False,
+            'incl_srv_mgd' : False,
+        }
+    else:
+        # Default.
+        imr_options = {
+            'embed_children' : False,
+            'incl_children' : True,
+            'incl_inbound' : False,
+            'incl_srv_mgd' : True,
+        }
+
+        # Override defaults.
+        if 'parameters' in retr_opts:
+            include = retr_opts['parameters']['include'].split(' ') \
+                    if 'include' in retr_opts['parameters'] else []
+            omit = retr_opts['parameters']['omit'].split(' ') \
+                    if 'omit' in retr_opts['parameters'] else []
+
+            logger.debug('Include: {}'.format(include))
+            logger.debug('Omit: {}'.format(omit))
+
+            if str(Ldpr.EMBED_CHILD_RES_URI) in include:
+                    imr_options['embed_children'] = True
+            if str(Ldpr.RETURN_CHILD_RES_URI) in omit:
+                    imr_options['incl_children'] = False
+            if str(Ldpr.RETURN_INBOUND_REF_URI) in include:
+                    imr_options['incl_inbound'] = True
+            if str(Ldpr.RETURN_SRV_MGD_RES_URI) in omit:
+                    imr_options['incl_srv_mgd'] = False
+
+    logger.debug('Retrieval options: {}'.format(imr_options))
+
+    return imr_options
+
+

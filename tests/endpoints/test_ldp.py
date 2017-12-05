@@ -63,7 +63,8 @@ class TestLdp:
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
             self.client.put('/ldp/ldprs01', data=f, content_type='text/turtle')
 
-        resp = self.client.get('/ldp/ldprs01', headers={'accept' : 'text/turtle'})
+        resp = self.client.get('/ldp/ldprs01',
+                headers={'accept' : 'text/turtle'})
         assert resp.status_code == 200
 
         g = Graph().parse(data=resp.data, format='text/turtle')
@@ -251,7 +252,7 @@ class TestPrefHeader:
         assert self.client.put(path).status_code == 204
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
             rsp_len = self.client.put(
-                '/ldp/{}'.format(random_uuid),
+                path,
                 headers={
                     'Prefer' : 'handling=lenient',
                     'Content-Type' : 'text/turtle',

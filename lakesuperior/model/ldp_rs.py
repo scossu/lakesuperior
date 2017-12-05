@@ -32,32 +32,51 @@ class LdpRs(Ldpr):
     }
 
 
+    def __init__(self, uuid, repr_opts={}, handling='strict', **kwargs):
+        '''
+        Extends Ldpr.__init__ by adding LDP-RS specific parameters.
+
+        @param handling (string) One of `strict` (the default) or `lenient`.
+        `strict` raises an error if a server-managed term is in the graph.
+        `lenient` removes all sever-managed triples encountered.
+        '''
+        super().__init__(uuid, **kwargs)
+
+        # provided_imr can be empty. If None, it is an outbound resource.
+        if self.provided_imr is not None:
+            self.workflow = self.WRKF_INBOUND
+        else:
+            self.workflow = self.WRKF_OUTBOUND
+            self._imr_options = repr_opts
+
+        self.handling = handling
+
+
     ## LDP METHODS ##
 
-    def get(self, repr_opts):
+    def get(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
         '''
-        return Toolbox().globalize_rsrc(self.imr)
+        return self.out_graph.serialize(format='turtle')
 
 
     @atomic
-    def post(self, data, format='text/turtle', handling=None):
+    def post(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
 
         Perform a POST action after a valid resource URI has been found.
         '''
-        return self._create_or_replace_rsrc(data, format, handling,
-                create_only=True)
+        return self._create_or_replace_rsrc(create_only=True)
 
 
     @atomic
-    def put(self, data, format='text/turtle', handling=None):
+    def put(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        return self._create_or_replace_rsrc(data, format, handling)
+        return self._create_or_replace_rsrc()
 
 
     @atomic
@@ -71,34 +90,22 @@ class LdpRs(Ldpr):
         '''
         delta = self._sparql_delta(update_str.replace('<>', self.urn.n3()))
 
-        return self.rdfly.modify_dataset(*delta)
+        return self._modify_rsrc(self.RES_UPDATED, *delta)
 
 
     ## PROTECTED METHODS ##
 
-    def _create_or_replace_rsrc(self, data, format, handling,
-            create_only=False):
+    def _create_or_replace_rsrc(self, create_only=False):
         '''
         Create or update a resource. PUT and POST methods, which are almost
         identical, are wrappers for this method.
 
         @param data (string) RDF data to parse for insertion.
         @param format(string) MIME type of RDF data.
-        @param handling (sting) One of `strict` or `lenient`. This determines
-        how to handle provided server-managed triples. If `strict` is selected,
-        any server-managed triple  included in the input RDF will trigger an
-        exception. If `lenient`, server-managed triples are ignored.
-        @param create_only (boolean) Whether the operation is a create-only
-        one (i.e. POST) or a create-or-update one (i.e. PUT).
+        @param create_only (boolean) Whether this is a create-only operation.
         '''
-        g = Graph()
-        if data:
-            g.parse(data=data, format=format, publicID=self.urn)
-
-        self.provided_imr = Resource(self._check_mgd_terms(g, handling),
-                self.urn)
-
         create = create_only or not self.is_stored
+
         self._add_srv_mgd_triples(create)
         self._ensure_single_subject_rdf(self.provided_imr.graph)
         ref_int = self.rdfly.config['referential_integrity']
@@ -118,17 +125,13 @@ class LdpRs(Ldpr):
     ## PROTECTED METHODS ##
 
 
-    def _check_mgd_terms(self, g, handling='strict'):
+    def _check_mgd_terms(self, g):
         '''
         Check whether server-managed terms are in a RDF payload.
-
-        @param handling (string) One of `strict` (the default) or `lenient`.
-        `strict` raises an error if a server-managed term is in the graph.
-        `lenient` removes all sever-managed triples encountered.
         '''
         offending_subjects = set(g.subjects()) & srv_mgd_subjects
         if offending_subjects:
-            if handling=='strict':
+            if self.handling=='strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
@@ -137,7 +140,7 @@ class LdpRs(Ldpr):
 
         offending_predicates = set(g.predicates()) & srv_mgd_predicates
         if offending_predicates:
-            if handling=='strict':
+            if self.handling=='strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
                 for p in offending_predicates:
@@ -146,7 +149,7 @@ class LdpRs(Ldpr):
 
         offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
         if offending_types:
-            if handling=='strict':
+            if self.handling=='strict':
                 raise ServerManagedTermError(offending_types, 't')
             else:
                 for t in offending_types:
@@ -183,7 +186,7 @@ class LdpRs(Ldpr):
             self.provided_imr.add(RDF.type, t)
 
 
-    def _sparql_delta(self, q, handling=None):
+    def _sparql_delta(self, q):
         '''
         Calculate the delta obtained by a SPARQL Update operation.
 
@@ -220,8 +223,8 @@ class LdpRs(Ldpr):
         #self._logger.info('Adding: {}'.format(
         #    add_g.serialize(format='turtle').decode('utf8')))
 
-        remove_g = self._check_mgd_terms(remove_g, handling)
-        add_g = self._check_mgd_terms(add_g, handling)
+        remove_g = self._check_mgd_terms(remove_g)
+        add_g = self._check_mgd_terms(add_g)
 
         return remove_g, add_g
 
