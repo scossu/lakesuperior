@@ -74,6 +74,8 @@ def bp_url_value_preprocessor(endpoint, values):
 
 @ldp.route('/<path:uuid>', methods=['GET'])
 @ldp.route('/', defaults={'uuid': None}, methods=['GET'], strict_slashes=False)
+@ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
+        methods=['GET'])
 def get_resource(uuid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
@@ -100,20 +102,12 @@ def get_resource(uuid, force_rdf=False):
     else:
         out_headers.update(rsrc.head())
         if isinstance(rsrc, LdpRs) \
-                or request.headers['accept'] in accept_rdf \
+                or is_accept_hdr_rdf_parsable() \
                 or force_rdf:
             return (rsrc.get(), out_headers)
         else:
             return send_file(rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename)
-
-
-@ldp.route('/<path:uuid>/fcr:metadata', methods=['GET'])
-def get_metadata(uuid):
-    '''
-    Retrieve RDF metadata of a LDP-NR.
-    '''
-    return get_resource(uuid, force_rdf=True)
 
 
 @ldp.route('/<path:parent>', methods=['POST'])
@@ -157,6 +151,8 @@ def post_resource(parent):
 
 
 @ldp.route('/<path:uuid>', methods=['PUT'])
+@ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
+        methods=['PUT'])
 def put_resource(uuid):
     '''
     Add a new resource at a specified URI.
@@ -194,7 +190,10 @@ def patch_resource(uuid):
     Update an existing resource with a SPARQL-UPDATE payload.
     '''
     headers = std_headers
-    rsrc = Ldpc(uuid)
+    rsrc = LdpRs(uuid)
+    if request.mimetype != 'application/sparql-update':
+        return 'Provided content type is not a valid parsable format: {}'\
+                .format(request.mimetype), 415
 
     try:
         rsrc.patch(request.get_data().decode('utf-8'))
@@ -206,6 +205,11 @@ def patch_resource(uuid):
         return str(e), 412
 
     return '', 204, headers
+
+
+@ldp.route('/<path:uuid>/fcr:metadata', methods=['PATCH'])
+def patch_resource_metadata(uuid):
+    return patch_resource(uuid)
 
 
 @ldp.route('/<path:uuid>', methods=['DELETE'])
@@ -367,6 +371,17 @@ def set_post_put_params():
         disposition = None
 
     return handling, disposition
+
+
+def is_accept_hdr_rdf_parsable():
+    '''
+    Check if any of the 'Accept' header values provided is a RDF parsable
+    format.
+    '''
+    for mimetype in request.accept_mimetypes.values():
+        if Ldpr.is_rdf_parsable(mimetype):
+            return True
+    return False
 
 
 def parse_repr_options(retr_opts):

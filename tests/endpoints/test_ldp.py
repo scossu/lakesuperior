@@ -56,6 +56,22 @@ class TestLdp:
         assert self.client.put(path).status_code == 204
 
 
+    def test_put_tree(self, client):
+        '''
+        PUT a resource with several path segments.
+
+        The test should create intermediate path segments that are not
+        accessible to PUT but allow POST.
+        '''
+        path = '/ldp/test_tree/a/b/c/d/e/f/g'
+        self.client.put(path)
+
+        assert self.client.get(path).resp.status_code == 200
+
+        assert self.client.put('/ldp/test_tree/a').resp.status_code == 409
+        assert self.client.post('/ldp/test_tree/a').resp.status_code == 201
+
+
     def test_put_ldp_rs(self, client):
         '''
         PUT a resource with RDF payload and verify.
@@ -187,13 +203,15 @@ class TestLdp:
 
         uri = Toolbox().base_url + '/test_patch01'
 
-        self.client.patch(path,
-                data=open('tests/data/sparql_update/simple_insert.sparql'),
-                headers={'content-type' : 'application/sparql-update'})
+        with open('tests/data/sparql_update/simple_insert.sparql') as data:
+            resp = self.client.patch(path,
+                    data=data,
+                    headers={'content-type' : 'application/sparql-update'})
+
+        assert resp.status_code == 204
 
         resp = self.client.get(path)
         g = Graph().parse(data=resp.data, format='text/turtle')
-        print('Triples after first PATCH: {}'.format(set(g)))
         assert g[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
 
         self.client.patch(path,
@@ -203,6 +221,52 @@ class TestLdp:
         resp = self.client.get(path)
         g = Graph().parse(data=resp.data, format='text/turtle')
         assert g[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
+
+
+    def test_patch_ldp_nr_metadata(self):
+        '''
+        Test patching a LDP-NR metadata resource, both from the fcr:metadata
+        and the resource URIs.
+        '''
+        path = '/ldp/ldpnr01'
+
+        with open('tests/data/sparql_update/simple_insert.sparql') as data:
+            self.client.patch(path + '/fcr:metadata',
+                    data=data,
+                    headers={'content-type' : 'application/sparql-update'})
+
+        resp = self.client.get(path + '/fcr:metadata')
+        assert resp.status_code == 200
+
+        uri = Toolbox().base_url + '/ldpnr01'
+        g = Graph().parse(data=resp.data, format='text/turtle')
+        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+
+        with open(
+                'tests/data/sparql_update/delete+insert+where.sparql') as data:
+            patch_resp = self.client.patch(path,
+                    data=data,
+                    headers={'content-type' : 'application/sparql-update'})
+        assert patch_resp.status_code == 204
+
+        resp = self.client.get(path + '/fcr:metadata')
+        assert resp.status_code == 200
+
+        g = Graph().parse(data=resp.data, format='text/turtle')
+        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
+
+
+    def test_patch_ldp_nr(self, rnd_img):
+        '''
+        Verify that a PATCH using anything other than an
+        `application/sparql-update` MIME type results in an error.
+        '''
+        rnd_img['content'].seek(0)
+        resp = self.client.patch('/ldp/ldpnr01/fcr:metadata',
+                data=rnd_img,
+                headers={'content-type' : 'image/jpeg'})
+
+        assert resp.status_code == 415
 
 
     def test_delete(self):

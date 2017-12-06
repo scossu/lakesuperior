@@ -74,6 +74,38 @@ class Toolbox:
         return URIRef(self.localize_string(str(uri)))
 
 
+    def localize_graph(self, g):
+        '''
+        Locbalize a graph.
+        '''
+        q = '''
+        CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
+          {{
+            ?s ?p ?o .
+            FILTER (
+              STRSTARTS(str(?s), "{0}")
+              ||
+              STRSTARTS(str(?o), "{0}")
+              ||
+              STRSTARTS(str(?s), "{0}/")
+              ||
+              STRSTARTS(str(?o), "{0}/")
+            ) .
+          }}
+        }}'''.format(self.base_url)
+        flt_g = g.query(q)
+
+        for t in flt_g:
+            local_s = self.localize_term(t[0])
+            local_o = self.localize_term(t[2]) \
+                    if isinstance(t[2], URIRef) \
+                    else t[2]
+            g.remove(t)
+            g.add((local_s, t[1], local_o))
+
+        return g
+
+
     def globalize_string(self, s):
         '''Convert URNs into URIs in a string using the application base URI.
 
@@ -102,7 +134,6 @@ class Toolbox:
         '''
         Globalize a graph.
         '''
-        from lakesuperior.model.ldpr import Ldpr
         q = '''
         CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
           {{

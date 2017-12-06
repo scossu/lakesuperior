@@ -18,8 +18,7 @@ from rdflib.term import URIRef, Literal
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import (IncompatibleLdpTypeError,
-        InvalidResourceError, ResourceNotExistsError, ServerManagedTermError)
+from lakesuperior.exceptions import *
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
@@ -178,7 +177,8 @@ class Ldpr(metaclass=ABCMeta):
             # Create container and populate it with provided RDF data.
             provided_g = Graph().parse(data=stream.read().decode('utf-8'),
                     format=mimetype, publicID=urn)
-            provided_imr = Resource(provided_g, urn)
+            local_g = Toolbox().localize_graph(provided_g)
+            provided_imr = Resource(local_g, urn)
 
             if Ldpr.MBR_RSRC_URI in provided_g.predicates() and \
                     Ldpr.MBR_REL_URI in provided_g.predicates():
@@ -861,7 +861,7 @@ class Ldpr(metaclass=ABCMeta):
         if '/' not in str(uri):
             imr.graph.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
 
-        self.rdfly.create_rsrc(imr)
+        self.rdfly.modify_dataset(add_trp=imr.graph)
 
 
     def _add_ldp_dc_ic_rel(self, cont_uri):
@@ -904,7 +904,7 @@ class Ldpr(metaclass=ABCMeta):
             add_g = self._check_mgd_terms(add_g)
             self._logger.debug('Adding DC/IC triples: {}'.format(
                 add_g.serialize(format='turtle').decode('utf-8')))
-            rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
+            self._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
 
 
     def _send_event_msg(self, remove_trp, add_trp, metadata):
