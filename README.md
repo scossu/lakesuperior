@@ -5,44 +5,59 @@ implementation.
 
 ## Basic concepts
 
-LAKEsuperior stores LDP resources in a triplestore (currently Blazegraph) and
-non-RDF sources (i.e. binaries) in a filesystem.
+LAKEsuperior aims at being an uncomplicated, efficient Fedora 4 implementation.
 
-Resources are stored in discrete named graphs under the hood. A "main" graph
-contains metadata about the resources, e.g. provenance information (NOTE:
-versioning is not in the Level 1 scope).
+Implementation of the official Fedora API specs (Fedora 5.x and beyond) is not
+foreseen in the short term, however it may become a natural evolution of this
+project if it gains support.
 
-[@TODO more]
+Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas) for
+divergences with the official Fedora4 implementation.
+
+Alpha 2 consists of less than 2200 lines of code and strives to maintain a
+linear, intuitive code structure to foster collaboration. *TODO link to tech
+overview and approach*
 
 ## Installation
 
-This is currently just a couple of config files, so there is nothing to install
-yet. However, in the happiest possible outcome for Level 1, it should go like
-this:
+### Dependencies
 
-1. Install [Blazegraph](https://sourceforge.net/projects/bigdata/files/bigdata/)
-2. Create a folder to store binary contents
-3. Copy the `etc.skeleton` folder to a separate location
-4. Configure the application and optionally add custom namespaces
-5. Run `server.py`
+1. A triplestore.
+   [Fuseki](https://jena.apache.org/documentation/fuseki2/#download-fuseki)
+   is the benchmark used so far in development. Other implementations are
+   possible as long as they support RDF 1.1 and SPARQL over HTTP
+1. A message broker supporting the STOMP protocol. If you have a separate
+   instance of official Fedora listening to port 61613, that will do the job
+1. Python 3.5 or greater
+
+### Installation steps
+
+1. Install dependencies as indicated above
+1. Create a virtualenv in a project folder:
+   `virtualenv -p <python 3.5+ exec path> <virtualenv folder>`
+1. Initialize the virtualenv: `source <path_to_virtualenv>/bin/activate`
+1. Clone this repo
+1. `cd` into repo folder
+1. Install dependencies: `pip install -r requirements.txt`
+1. Copy the `etc.skeleton` folder to a separate location
+1. Set the configuration folder location in the environment:
+   `export FCREPO_CONFIG_DIR=<your config dir location>` (alternatively you can
+   add this line to your virtualenv `activate` script)
+1. Configure the application
+1. Start your triplestore and STOMP broker
+1. Run `util/bootstrap.py` to initialize the binary and graph stores
+1. Run `./fcrepo` for a multi-threaded server or `flask run` for a
+   single-threaded development server
+
+### Production deployment
+
+If you like fried repositories for lunch, deploy before 11AM.
 
 ## Status and development
 
-LAKEsuperior is in **pre-alpha** status.
+LAKEsuperior is in **alpha** status. Please see the [TODO](doc/notes/TODO) list
+for a rudimentary road map and status.
 
-Development will be planned in subsequent "levels", the scope of each depending
-on the outcomes of the previous level development and feedback:
+## Further documentation
 
-- Level 1: proof of concept. This implementation will adhere to the current
-Fedora Repository v4 specifications, in order to provide a testbed application
-that easily integrates with Samvera and/or Islandora and can be used to test
-and compare features with the official Fedora 4 implementation.
-- Level 2: After a review with community members, the goal is to produce a beta
-release that includes basic features to become a drop-in (or near there) with
-the official Fedora 4.
-- Level 3: production quality release.
-- Level 4: Conform to the new [Fedora API specifications](http://fedora.info/spec/)
-
-## Further docuentation
-
-The design documents are in the `doc/pdf` folder.
+The design documents are in the [doc/pdf](doc/pdf) folder. *@TODO needs update*

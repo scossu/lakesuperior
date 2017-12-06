@@ -20,13 +20,14 @@
 - [W] Tests
   - [D] Framework + config
   - [D] HTTP layer
-  - [W] Toolbox
-  - [ ] Storage layer (RDF + file)
-  - [ ] LDP layer
+  - [D] Toolbox
+  - [D] LDP layer
 - [D] Bootstrap
-- [W] Messaging SPI
-- [ ] Hook up Hyrax
-- [ ] Reformat documentation
+- [D] Messaging SPI
+- [D] Refactor structure and flow
+- [W] Support PUT and PATCH for LDP-NR metadata
+- [W] Hook up Hyrax
+- [W] Reformat documentation
 
 # Alpha 2 TODO
 
