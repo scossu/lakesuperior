@@ -102,8 +102,8 @@ class SimpleLayout(BaseRdfLayout):
         '''
         self._logger.info('Checking if resource exists: {}'.format(urn))
 
-        return self._conn.query('ASK { ?s ?p ?o . }', initBindings={
-            's' : urn})
+        return bool(self._conn.query('ASK { ?s ?p ?o . }', initBindings={
+            's' : urn}))
 
 
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
