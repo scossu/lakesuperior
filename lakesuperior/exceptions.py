@@ -47,6 +47,23 @@ class InvalidResourceError(ResourceError):
 
 
 
+class IncompatibleLdpTypeError(ResourceError):
+    '''
+    Raised when a LDP-NR resource is PUT in place of a LDP-RS and vice versa.
+
+    This usually surfaces at the HTTP level as a 415.
+    '''
+    def __init__(self, uuid, mimetype, msg=None):
+        super().__init__(uuid, msg)
+        self.mimetype = mimetype
+
+
+    def __str__(self):
+        return self.msg or 'Invalid content type \'{}\' for resource /{}'.\
+                format(self.mimetype, self.uuid)
+
+
+
 class ServerManagedTermError(RuntimeError):
     '''
     Raised in an attempt to change a triple containing a server-managed term.

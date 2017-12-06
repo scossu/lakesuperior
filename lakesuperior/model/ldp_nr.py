@@ -56,39 +56,29 @@ class LdpNr(Ldpr):
 
 
     @atomic
-    def post(self):
+    def _create_or_replace_rsrc(self, create_only=False):
         '''
         Create a new binary resource with a corresponding RDF representation.
 
         @param file (Stream) A Stream resource representing the uploaded file.
         '''
         # Persist the stream.
-        file_uuid = self.nonrdfly.persist(self.stream)
-
-        # Gather RDF metadata.
-        for t in self.base_types:
-            self.provided_imr.add(RDF.type, t)
-        # @TODO check that the existing resource is of the same LDP type.
-        self._add_metadata(digest=file_uuid)
+        file_uuid = self.digest = self.nonrdfly.persist(self.stream)
 
         # Try to persist metadata. If it fails, delete the file.
         self._logger.debug('Persisting LDP-NR triples in {}'.format(self.urn))
         try:
-            rsrc = self._create_rsrc()
+            ev_type = super()._create_or_replace_rsrc(create_only)
         except:
             self.nonrdfly.delete(file_uuid)
             raise
         else:
-            return rsrc
-
-
-    def put(self):
-        return self.post()
+            return ev_type
 
 
     ## PROTECTED METHODS ##
 
-    def _add_metadata(self, digest):
+    def _add_srv_mgd_triples(self, create=False):
         '''
         Add all metadata for the RDF representation of the LDP-NR.
 
@@ -97,12 +87,14 @@ class LdpNr(Ldpr):
         @param disposition (defaultdict) The `Content-Disposition` header
         content, parsed through `parse_rfc7240`.
         '''
+        super()._add_srv_mgd_triples(create)
+
         # File size.
         self._logger.debug('Data stream size: {}'.format(self.stream.limit))
         self.provided_imr.set(nsc['premis'].hasSize, Literal(self.stream.limit))
 
         # Checksum.
-        cksum_term = URIRef('urn:sha1:{}'.format(digest))
+        cksum_term = URIRef('urn:sha1:{}'.format(self.digest))
         self.provided_imr.set(nsc['premis'].hasMessageDigest, cksum_term)
 
         # MIME type.

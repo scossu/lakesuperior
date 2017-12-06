@@ -88,6 +88,52 @@ class TestLdp:
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
 
+    def test_put_mismatched_ldp_rs(self, rnd_img):
+        '''
+        Verify MIME type / LDP mismatch.
+        PUT a LDP-RS, then PUT a LDP-NR on the same location and verify it
+        fails.
+        '''
+        path = '/ldp/' + str(uuid.uuid4())
+
+        rnd_img['content'].seek(0)
+        ldp_nr_resp = self.client.put(path, data=rnd_img['content'],
+                headers={
+                    'Content-Disposition' : 'attachment; filename={}'.format(
+                    rnd_img['filename'])})
+
+        assert ldp_nr_resp.status_code == 201
+
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            ldp_rs_resp = self.client.put(path, data=f,
+                    content_type='text/turtle')
+
+        assert ldp_rs_resp.status_code == 415
+
+
+    def test_put_mismatched_ldp_nr(self, rnd_img):
+        '''
+        Verify MIME type / LDP mismatch.
+        PUT a LDP-NR, then PUT a LDP-RS on the same location and verify it
+        fails.
+        '''
+        path = '/ldp/' + str(uuid.uuid4())
+
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            ldp_rs_resp = self.client.put(path, data=f,
+                    content_type='text/turtle')
+
+        assert ldp_rs_resp.status_code == 201
+
+        rnd_img['content'].seek(0)
+        ldp_nr_resp = self.client.put(path, data=rnd_img['content'],
+                headers={
+                    'Content-Disposition' : 'attachment; filename={}'.format(
+                    rnd_img['filename'])})
+
+        assert ldp_nr_resp.status_code == 415
+
+
     def test_post_resource(self, client):
         '''
         Check response headers for a POST operation with empty payload.

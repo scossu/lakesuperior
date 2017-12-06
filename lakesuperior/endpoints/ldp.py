@@ -9,10 +9,7 @@ from rdflib.namespace import RDF, XSD
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.exceptions import (
-    InvalidResourceError, ResourceExistsError, ResourceNotExistsError,
-    ServerManagedTermError, TombstoneError
-)
+from lakesuperior.exceptions import *
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
@@ -95,7 +92,7 @@ def get_resource(uuid, force_rdf=False):
             repr_options = parse_repr_options(prefer['return'])
 
     try:
-        rsrc = Ldpr.inst(uuid, repr_options)
+        rsrc = Ldpr.outbound_inst(uuid, repr_options)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -133,10 +130,12 @@ def post_resource(parent):
         slug = None
 
     handling, disposition = set_post_put_params()
+    stream, mimetype = bitstream_from_req()
 
     try:
         uuid = uuid_for_post(parent, slug)
-        rsrc = Ldpr.inst_from_client_input(uuid, handling=handling,
+        rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
+                stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except ResourceNotExistsError as e:
         return str(e), 404
@@ -167,18 +166,20 @@ def put_resource(uuid):
     rsp_headers = std_headers
 
     handling, disposition = set_post_put_params()
+    stream, mimetype = bitstream_from_req()
 
     try:
-        rsrc = Ldpr.inst_from_client_input(uuid, handling=handling,
+        rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
+                stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except ServerManagedTermError as e:
         return str(e), 412
+    except IncompatibleLdpTypeError as e:
+        return str(e), 415
 
     try:
         ret = rsrc.put()
-    except InvalidResourceError as e:
-        return str(e), 409
-    except ResourceExistsError as e:
+    except (InvalidResourceError, ResourceExistsError ) as e:
         return str(e), 409
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
@@ -226,7 +227,7 @@ def delete_resource(uuid):
         leave_tstone = True
 
     try:
-        Ldpr.inst(uuid, repr_opts).delete(leave_tstone=leave_tstone)
+        Ldpr.outbound_inst(uuid, repr_opts).delete(leave_tstone=leave_tstone)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -274,7 +275,7 @@ def uuid_for_post(parent_uuid=None, slug=None):
     if not slug and not parent_uuid:
         return str(uuid4())
 
-    parent = Ldpr.inst(parent_uuid, repr_opts={'incl_children' : False})
+    parent = Ldpr.outbound_inst(parent_uuid, repr_opts={'incl_children' : False})
 
     # Set prefix.
     if parent_uuid:
@@ -301,6 +302,34 @@ def uuid_for_post(parent_uuid=None, slug=None):
         uuid = pfx + str(uuid4())
 
     return uuid
+
+
+def bitstream_from_req():
+    '''
+    Find how a binary file and its MIMEtype were uploaded in the request.
+    '''
+    logger.debug('Content type: {}'.format(request.mimetype))
+    logger.debug('files: {}'.format(request.files))
+    logger.debug('stream: {}'.format(request.stream))
+
+    if request.mimetype == 'multipart/form-data':
+        # This seems the "right" way to upload a binary file, with a
+        # multipart/form-data MIME type and the file in the `file`
+        # field. This however is not supported by FCREPO4.
+        stream = request.files.get('file').stream
+        mimetype = request.files.get('file').content_type
+        # @TODO This will turn out useful to provide metadata
+        # with the binary.
+        #metadata = request.files.get('metadata').stream
+        #provided_imr = [parse RDF here...]
+    else:
+        # This is a less clean way, with the file in the form body and
+        # the request as application/x-www-form-urlencoded.
+        # This is how FCREPO4 accepts binary uploads.
+        stream = request.stream
+        mimetype = request.mimetype
+
+    return stream, mimetype
 
 
 def _get_bitstream(rsrc):

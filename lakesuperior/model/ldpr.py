@@ -2,6 +2,7 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
+from copy import deepcopy
 from itertools import accumulate, groupby
 from uuid import uuid4
 
@@ -17,8 +18,8 @@ from rdflib.term import URIRef, Literal
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import InvalidResourceError, \
-        ResourceNotExistsError, ServerManagedTermError
+from lakesuperior.exceptions import (IncompatibleLdpTypeError,
+        InvalidResourceError, ResourceNotExistsError, ServerManagedTermError)
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.toolbox import Toolbox
 
@@ -94,6 +95,10 @@ class Ldpr(metaclass=ABCMeta):
     WRKF_INBOUND = '_workflow:inbound_'
     WRKF_OUTBOUND = '_workflow:outbound_'
 
+    # Default user to be used for the `createdBy` and `lastUpdatedBy` if a user
+    # is not provided.
+    DEFAULT_USER = Literal('BypassAdmin')
+
     RES_CREATED = '_create_'
     RES_DELETED = '_delete_'
     RES_UPDATED = '_update_'
@@ -110,7 +115,7 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def inst(cls, uuid, repr_opts=None, **kwargs):
+    def outbound_inst(cls, uuid, repr_opts=None, **kwargs):
         '''
         Create an instance for retrieval purposes.
 
@@ -146,7 +151,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @staticmethod
-    def inst_from_client_input(uuid, **kwargs):
+    def inbound_inst(uuid, content_length, mimetype, stream, **kwargs):
         '''
         Determine LDP type (and instance class) from request headers and body.
 
@@ -161,21 +166,18 @@ class Ldpr(metaclass=ABCMeta):
         urn = nsc['fcres'][uuid]
 
         logger = __class__._logger
-        logger.debug('Content type: {}'.format(request.mimetype))
-        logger.debug('files: {}'.format(request.files))
-        logger.debug('stream: {}'.format(request.stream))
 
-        if not request.content_length:
+        if not content_length:
             # Create empty LDPC.
             logger.debug('No data received in request. '
                     'Creating empty container.')
 
             return Ldpc(uuid, provided_imr=Resource(Graph(), urn), **kwargs)
 
-        if __class__.is_rdf_parsable(request.mimetype):
+        if __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
-            provided_g = Graph().parse(data=request.data.decode('utf-8'),
-                    format=request.mimetype, publicID=urn)
+            provided_g = Graph().parse(data=stream.read().decode('utf-8'),
+                    format=mimetype, publicID=urn)
             provided_imr = Resource(provided_g, urn)
 
             if Ldpr.MBR_RSRC_URI in provided_g.predicates() and \
@@ -188,31 +190,22 @@ class Ldpr(metaclass=ABCMeta):
                 cls = Ldpc
 
             inst = cls(uuid, provided_imr=provided_imr, **kwargs)
+
+            # Make sure we are not updating an LDP-RS with an LDP-NR.
+            if inst.is_stored and inst.LDP_NR_TYPE in inst.ldp_types:
+                raise IncompatibleLdpTypeError(uuid, mimetype)
+
             inst._check_mgd_terms(inst.provided_imr.graph)
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.
-            if request.mimetype == 'multipart/form-data':
-                # This seems the "right" way to upload a binary file, with a
-                # multipart/form-data MIME type and the file in the `file`
-                # field. This however is not supported by FCREPO4.
-                stream = request.files.get('file').stream
-                mimetype = request.file.get('file').content_type
-                provided_imr = Resource(Graph(), urn)
-                # @TODO This will turn out useful to provide metadata
-                # with the binary.
-                #metadata = request.files.get('metadata').stream
-                #provided_imr = [parse RDF here...]
-            else:
-                # This is a less clean way, with the file in the form body and
-                # the request as application/x-www-form-urlencoded.
-                # This is how FCREPO4 accepts binary uploads.
-                stream = request.stream
-                mimetype = request.mimetype
-                provided_imr = Resource(Graph(), urn)
-
+            provided_imr = Resource(Graph(), urn)
             inst = LdpNr(uuid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
+
+            # Make sure we are not updating an LDP-NR with an LDP-RS.
+            if inst.is_stored and inst.LDP_RS_TYPE in inst.ldp_types:
+                raise IncompatibleLdpTypeError(uuid, mimetype)
 
         logger.info('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
@@ -380,7 +373,10 @@ class Ldpr(metaclass=ABCMeta):
 
     @property
     def is_stored(self):
-        return self.rdfly.ask_rsrc_exists(self.urn)
+        if hasattr(self, '_imr'):
+            return len(self.imr.graph) > 0
+        else:
+            return self.rdfly.ask_rsrc_exists(self.urn)
 
 
     @property
@@ -390,7 +386,13 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
-            self._types = self.imr.graph[self.imr.identifier : RDF.type]
+            if hasattr(self, 'imr') and len(self.imr.graph):
+                imr = self.imr
+            elif hasattr(self, 'provided_imr') and \
+                    len(self.provided_imr.graph):
+                imr = provided_imr
+
+            self._types = set(imr.graph[self.urn : RDF.type])
 
         return self._types
 
@@ -402,7 +404,7 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_ldp_types'):
-            self._ldp_types = { t for t in self.types if t[:4] == 'ldp:' }
+            self._ldp_types = { t for t in self.types if nsc['ldp'] in t }
 
         return self._ldp_types
 
@@ -436,12 +438,22 @@ class Ldpr(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-    def post(self, *args, **kwargs):
-        raise NotImplementedError()
+    @atomic
+    def post(self):
+        '''
+        https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
+
+        Perform a POST action after a valid resource URI has been found.
+        '''
+        return self._create_or_replace_rsrc(create_only=True)
 
 
-    def put(self, *args, **kwargs):
-        raise NotImplementedError()
+    @atomic
+    def put(self):
+        '''
+        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
+        '''
+        return self._create_or_replace_rsrc()
 
 
     def patch(self, *args, **kwargs):
@@ -468,7 +480,7 @@ class Ldpr(metaclass=ABCMeta):
         ret = self._delete_rsrc(inbound, leave_tstone)
 
         for child_uri in children:
-            child_rsrc = Ldpr.inst(
+            child_rsrc = Ldpr.outbound_inst(
                 Toolbox().uri_to_uuid(child_uri.identifier),
                 repr_opts={'incl_children' : False})
             child_rsrc._delete_rsrc(inbound, leave_tstone,
@@ -493,6 +505,31 @@ class Ldpr(metaclass=ABCMeta):
 
 
     ## PROTECTED METHODS ##
+
+    def _create_or_replace_rsrc(self, create_only=False):
+        '''
+        Create or update a resource. PUT and POST methods, which are almost
+        identical, are wrappers for this method.
+
+        @param create_only (boolean) Whether this is a create-only operation.
+        '''
+        create = create_only or not self.is_stored
+
+        self._add_srv_mgd_triples(create)
+        self._ensure_single_subject_rdf(self.provided_imr.graph)
+        ref_int = self.rdfly.config['referential_integrity']
+        if ref_int:
+            self._check_ref_int(ref_int)
+
+        if create:
+            ev_type = self._create_rsrc()
+        else:
+            ev_type = self._replace_rsrc()
+
+        self._set_containment_rel()
+
+        return ev_type
+
 
     def _create_rsrc(self):
         '''
@@ -594,30 +631,163 @@ class Ldpr(metaclass=ABCMeta):
         })
 
 
+    def _ensure_single_subject_rdf(self, g):
+        '''
+        Ensure that a RDF payload for a POST or PUT has a single resource.
+        '''
+        for s in set(g.subjects()):
+            if not s == self.urn:
+                raise SingleSubjectError(s, self.uuid)
+
+
+    def _check_ref_int(self, config):
+        g = self.provided_imr.graph
+
+        for o in g.objects():
+            if isinstance(o, URIRef) and str(o).startswith(Toolbox().base_url)\
+                    and not self.rdfly.ask_rsrc_exists(o):
+                if config == 'strict':
+                    raise RefIntViolationError(o)
+                else:
+                    self._logger.info(
+                            'Removing link to non-existent repo resource: {}'
+                            .format(o))
+                    g.remove((None, None, o))
+
+
+    def _check_mgd_terms(self, g):
+        '''
+        Check whether server-managed terms are in a RDF payload.
+        '''
+        if self.handling == 'none':
+            return
+
+        offending_subjects = set(g.subjects()) & srv_mgd_subjects
+        if offending_subjects:
+            if self.handling=='strict':
+                raise ServerManagedTermError(offending_subjects, 's')
+            else:
+                for s in offending_subjects:
+                    self._logger.info('Removing offending subj: {}'.format(s))
+                    g.remove((s, None, None))
+
+        offending_predicates = set(g.predicates()) & srv_mgd_predicates
+        if offending_predicates:
+            if self.handling=='strict':
+                raise ServerManagedTermError(offending_predicates, 'p')
+            else:
+                for p in offending_predicates:
+                    self._logger.info('Removing offending pred: {}'.format(p))
+                    g.remove((None, p, None))
+
+        offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
+        if offending_types:
+            if self.handling=='strict':
+                raise ServerManagedTermError(offending_types, 't')
+            else:
+                for t in offending_types:
+                    self._logger.info('Removing offending type: {}'.format(t))
+                    g.remove((None, RDF.type, t))
+
+        self._logger.debug('Sanitized graph: {}'.format(g.serialize(
+            format='turtle').decode('utf-8')))
+        return g
+
+
+    def _sparql_delta(self, q):
+        '''
+        Calculate the delta obtained by a SPARQL Update operation.
+
+        This is a critical component of the SPARQL query prcess and does a
+        couple of things:
+
+        1. It ensures that no resources outside of the subject of the request
+        are modified (e.g. by variable subjects)
+        2. It verifies that none of the terms being modified is server managed.
+
+        This method extracts an in-memory copy of the resource and performs the
+        query on that once it has checked if any of the server managed terms is
+        in the delta. If it is, it raises an exception.
+
+        NOTE: This only checks if a server-managed term is effectively being
+        modified. If a server-managed term is present in the query but does not
+        cause any change in the updated resource, no error is raised.
+
+        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
+        with `BaseStoreLayout.update_resource` and/or recorded as separate
+        events in a provenance tracking system.
+        '''
+        pre_g = self.imr.graph
+
+        post_g = deepcopy(pre_g)
+        post_g.update(q)
+
+        remove_g, add_g = self._dedup_deltas(pre_g, post_g)
+
+        #self._logger.info('Removing: {}'.format(
+        #    remove_g.serialize(format='turtle').decode('utf8')))
+        #self._logger.info('Adding: {}'.format(
+        #    add_g.serialize(format='turtle').decode('utf8')))
+
+        remove_g = self._check_mgd_terms(remove_g)
+        add_g = self._check_mgd_terms(add_g)
+
+        return remove_g, add_g
+
+
+    def _add_srv_mgd_triples(self, create=False):
+        '''
+        Add server-managed triples to a provided IMR.
+
+        @param create (boolean) Whether the resource is being created.
+        '''
+        # Base LDP types.
+        for t in self.base_types:
+            self.provided_imr.add(RDF.type, t)
+
+        # Message digest.
+        cksum = Toolbox().rdf_cksum(self.provided_imr.graph)
+        self.provided_imr.set(nsc['premis'].hasMessageDigest,
+                URIRef('urn:sha1:{}'.format(cksum)))
+
+        # Create and modify timestamp.
+        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
+        if create:
+            self.provided_imr.set(nsc['fcrepo'].created, ts)
+            self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+
+        self.provided_imr.set(nsc['fcrepo'].lastModified, ts)
+        self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+
+
     def _set_containment_rel(self):
         '''Find the closest parent in the path indicated by the UUID and
         establish a containment triple.
 
-        E.g.
-
-        - If only urn:fcres:a (short: a) exists:
-          - If a/b/c/d is being created, a becomes container of a/b/c/d. Also,
-            pairtree nodes are created for a/b and a/b/c.
-          - If e is being created, the root node becomes container of e.
+        E.g. if only urn:fcres:a (short: a) exists:
+        - If a/b/c/d is being created, a becomes container of a/b/c/d. Also,
+          pairtree nodes are created for a/b and a/b/c.
+        - If e is being created, the root node becomes container of e.
         '''
-        if '/' in self.uuid:
+        # @FIXME Circular reference.
+        from lakesuperior.model.ldp_rs import Ldpc
+
+        if self.urn == self.ROOT_NODE_URN:
+            return
+        elif '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
             parent_uri = self._find_parent_or_create_pairtree(self.uuid)
-
-            if parent_uri:
-                self.rdfly.ds.add((parent_uri, nsc['ldp'].contains,
-                        self.rsrc.identifier))
-
-                # Direct or indirect container relationship.
-                self._add_ldp_dc_ic_rel(parent_uri)
         else:
-            self.rsrc.graph.add((nsc['fcsystem'].root, nsc['ldp'].contains,
-                    self.rsrc.identifier))
+            parent_uri = self.ROOT_NODE_URN
+
+        add_g = Graph()
+        add_g.add((parent_uri, nsc['ldp'].contains, self.urn))
+        parent_rsrc = Ldpc(parent_uri, repr_opts={
+                'incl_children' : False}, handling='none')
+        parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
+
+        # Direct or indirect container relationship.
+        self._add_ldp_dc_ic_rel(parent_uri)
 
 
     def _find_parent_or_create_pairtree(self, uuid):
@@ -697,7 +867,8 @@ class Ldpr(metaclass=ABCMeta):
         @param cont_uri (rdflib.term.URIRef)  The container URI.
         '''
         cont_uuid = Toolbox().uri_to_uuid(cont_uri)
-        cont_rsrc = Ldpr.inst(cont_uuid, repr_opts={'incl_children' : False})
+        cont_rsrc = Ldpr.outbound_inst(cont_uuid,
+                repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
         add_g = Graph()
 
