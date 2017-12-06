@@ -434,8 +434,12 @@ class Ldpr(metaclass=ABCMeta):
         return out_headers
 
 
-    def get(self, *args, **kwargs):
-        raise NotImplementedError()
+    def get(self):
+        '''
+        This gets the RDF metadata. The binary retrieval is handled directly
+        by the route.
+        '''
+        return self.out_graph.serialize(format='turtle')
 
 
     @atomic

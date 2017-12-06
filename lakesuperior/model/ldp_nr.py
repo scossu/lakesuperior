@@ -31,6 +31,7 @@ class LdpNr(Ldpr):
             self.workflow = self.WRKF_INBOUND
             self.stream = stream
         else:
+            self._imr_options = {}
             self.workflow = self.WRKF_OUTBOUND
 
         self.mimetype = mimetype
@@ -50,10 +51,6 @@ class LdpNr(Ldpr):
 
 
     ## LDP METHODS ##
-
-    def get(self, **kwargs):
-        return LdpRs(self.uuid).get(**kwargs)
-
 
     @atomic
     def _create_or_replace_rsrc(self, create_only=False):

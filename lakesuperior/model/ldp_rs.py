@@ -37,13 +37,6 @@ class LdpRs(Ldpr):
 
     ## LDP METHODS ##
 
-    def get(self):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
-        '''
-        return self.out_graph.serialize(format='turtle')
-
-
     @atomic
     def patch(self, update_str):
         '''
