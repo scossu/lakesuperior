@@ -7,16 +7,32 @@ implementation.
 
 LAKEsuperior aims at being an uncomplicated, efficient Fedora 4 implementation.
 
+Key features:
+
+- Drop-in replacement for Fedora4 (with some caveats: see
+  [Delta document](doc/notes/fcrepo4_deltas.md))—currently being tested with
+  Hyrax 2
+- Stores metadata in a graph store, binaries in filesystem
+- Strives to be faster than Modeshape implementation (benchmarks TBD)
+- Simple search and SPARQL Query API via back-end triplestore (alpha 2)
+- No performance issues storing many resources under the same container; no
+  [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
+  pairtree segmentation [1]
+- Mitigates "many member" issue: constant performance writing to a resource with
+  many children or members; option to omit children in retrieval
+- Flexible back-end layouts: options to organize information in back end
+- Migration tool (in alpha2)
+
 Implementation of the official Fedora API specs (Fedora 5.x and beyond) is not
-foreseen in the short term, however it may become a natural evolution of this
+foreseen in the short term, however it would be a natural evolution of this
 project if it gains support.
 
-Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas) for
+Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas.md) for
 divergences with the official Fedora4 implementation.
 
-Alpha 2 consists of less than 2200 lines of code and strives to maintain a
-linear, intuitive code structure to foster collaboration. *TODO link to tech
-overview and approach*
+Alpha 1 application code consists of less than 2200 lines and strives to
+maintain a linear, intuitive code structure to foster collaboration. *TODO link
+to tech overview and approach*
 
 ## Installation
 
@@ -61,3 +77,6 @@ for a rudimentary road map and status.
 ## Further documentation
 
 The design documents are in the [doc/pdf](doc/pdf) folder. *@TODO needs update*
+
+[1]: However if your client splits pairtrees upstream, such as Hyrax does, that
+obviously needs to change to get rid of the path segmants.

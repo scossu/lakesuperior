@@ -17,7 +17,7 @@
   - [D] Delete
 - [D] Refactor toolbox
 - [D] GUnicorn
-- [W] Tests
+- [D] Initial tests
   - [D] Framework + config
   - [D] HTTP layer
   - [D] Toolbox
@@ -25,9 +25,9 @@
 - [D] Bootstrap
 - [D] Messaging SPI
 - [D] Refactor structure and flow
-- [W] Support PUT and PATCH for LDP-NR metadata
+- [D] Support PUT and PATCH for LDP-NR metadata
 - [W] Hook up Hyrax
-- [W] Reformat documentation
+- [D] Reformat documentation
 
 # Alpha 2 TODO
 
