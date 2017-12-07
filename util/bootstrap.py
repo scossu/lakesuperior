@@ -31,7 +31,12 @@ def bootstrap_db(app):
             update_ep=dbconf['webroot'] + dbconf['update_ep'],
             autocommit=True)
 
+    print('Cleaning up graph store: {}'.format(dbconf['webroot']))
+    for g in db.ds.graphs():
+        db.ds.remove_graph(g)
+
     # @TODO Make configurable.
+    print('Populating graph store with base dataset.')
     db.ds.default_context.parse(source='data/bootstrap/simple_layout.nq',
             format='nquads')
 
@@ -48,6 +53,7 @@ def bootstrap_binary_store(app):
         shutil.rmtree(root_path)
     except FileNotFoundError:
         pass
+    print('Recreating binary store path: {}'.format(root_path))
     os.makedirs(root_path + '/tmp')
 
 
