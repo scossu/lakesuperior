@@ -181,7 +181,7 @@ def put_resource(uuid):
         return _tombstone_response(e, uuid)
 
     res_code = 201 if ret == Ldpr.RES_CREATED else 204
-    return '', res_code, rsp_headers
+    return rsrc.uri, res_code, rsp_headers
 
 
 @ldp.route('/<path:uuid>', methods=['PATCH'])

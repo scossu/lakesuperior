@@ -68,8 +68,33 @@ class TestLdp:
 
         assert self.client.get(path).resp.status_code == 200
 
-        assert self.client.put('/ldp/test_tree/a').resp.status_code == 409
-        assert self.client.post('/ldp/test_tree/a').resp.status_code == 201
+    def test_put_nested_tree(self, client):
+        '''
+        Verify that containment is set correctly in nested hierarchies.
+
+        First put a new hierarchy and verify that the root node is its
+        container; then put another hierarchy under it and verify that the
+        first hierarchy is the container of the second one.
+        '''
+        uuid1 = 'test_nested_tree/a/b/c/d'
+        uuid2 = uuid1 + '/e/f/g'
+        path1 = '/ldp/' + uuid1
+        path2 = '/ldp/' + uuid2
+
+        self.client.put(path1)
+
+        cont1_data = self.client.get('/ldp').data
+        g1 = Graph().parse(data=cont1_data, format='turtle')
+        assert g1[ URIRef(Toolbox().base_url + '/') : nsc['ldp'].contains : \
+                URIRef(Toolbox().base_url + '/' + uuid1) ]
+
+        self.client.put(path2)
+
+        cont2_data = self.client.get(path1).data
+        g1 = Graph().parse(data=cont2_data, format='turtle')
+        assert g1[ URIRef(Toolbox().base_url + '/' + uuid1) : \
+                nsc['ldp'].contains : \
+                URIRef(Toolbox().base_url + '/' + uuid2) ]
 
 
     def test_put_ldp_rs(self, client):
