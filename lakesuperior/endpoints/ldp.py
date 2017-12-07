@@ -168,6 +168,8 @@ def put_resource(uuid):
         rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
+    except InvalidResourceError as e:
+        return str(e), 409
     except ServerManagedTermError as e:
         return str(e), 412
     except IncompatibleLdpTypeError as e:
@@ -280,6 +282,10 @@ def uuid_for_post(parent_uuid=None, slug=None):
         return str(uuid4())
 
     parent = Ldpr.outbound_inst(parent_uuid, repr_opts={'incl_children' : False})
+
+    if nsc['fcrepo'].Pairtree in parent.types:
+        raise InvalidResourceError(parent.uuid,
+                'Resources cannot be created under a pairtree.')
 
     # Set prefix.
     if parent_uuid:

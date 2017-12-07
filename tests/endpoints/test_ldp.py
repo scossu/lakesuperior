@@ -41,8 +41,10 @@ class TestLdp:
         '''
         Check response headers for a PUT operation with empty payload.
         '''
-        res = self.client.put('/ldp/{}'.format(random_uuid))
-        assert res.status_code == 201
+        resp = self.client.put('/ldp/new_resource')
+        assert resp.status_code == 201
+        assert resp.data == bytes(
+                '{}/new_resource'.format(Toolbox().base_url), 'utf-8')
 
 
     def test_put_existing_resource(self, random_uuid):
@@ -51,9 +53,14 @@ class TestLdp:
         is empty.
         '''
         path = '/ldp/nonidempotent01'
-        assert self.client.put(path).status_code == 201
+        put1_resp = self.client.put(path)
+        assert put1_resp.status_code == 201
+
         assert self.client.get(path).status_code == 200
-        assert self.client.put(path).status_code == 204
+
+        put2_resp = self.client.put(path)
+        assert put2_resp.status_code == 204
+        assert put2_resp.data == b''
 
 
     def test_put_tree(self, client):
@@ -61,12 +68,16 @@ class TestLdp:
         PUT a resource with several path segments.
 
         The test should create intermediate path segments that are not
-        accessible to PUT but allow POST.
+        accessible to PUT or POST.
         '''
         path = '/ldp/test_tree/a/b/c/d/e/f/g'
         self.client.put(path)
 
-        assert self.client.get(path).resp.status_code == 200
+        assert self.client.get(path).status_code == 200
+
+        assert self.client.put('/ldp/test_tree/a').status_code == 409
+        assert self.client.post('/ldp/test_tree/a').status_code == 409
+
 
     def test_put_nested_tree(self, client):
         '''

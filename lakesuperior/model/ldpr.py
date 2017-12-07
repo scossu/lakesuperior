@@ -171,9 +171,9 @@ class Ldpr(metaclass=ABCMeta):
             logger.debug('No data received in request. '
                     'Creating empty container.')
 
-            return Ldpc(uuid, provided_imr=Resource(Graph(), urn), **kwargs)
+            inst = Ldpc(uuid, provided_imr=Resource(Graph(), urn), **kwargs)
 
-        if __class__.is_rdf_parsable(mimetype):
+        elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
             provided_g = Graph().parse(data=stream.read().decode('utf-8'),
                     format=mimetype, publicID=urn)
@@ -209,6 +209,13 @@ class Ldpr(metaclass=ABCMeta):
 
         logger.info('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
+
+        try:
+            types = inst.types
+        except:
+            types = set()
+        if nsc['fcrepo'].Pairtree in types:
+            raise InvalidResourceError(inst.uuid)
 
         return inst
 
@@ -804,8 +811,9 @@ class Ldpr(metaclass=ABCMeta):
         '''
         path_components = uuid.split('/')
 
+         # If there is only on element, the parent is the root node.
         if len(path_components) < 2:
-            return None
+            return self.ROOT_NODE_URN
 
         # Build search list, e.g. for a/b/c/d/e would be a/b/c/d, a/b/c, a/b, a
         self._logger.info('Path components: {}'.format(path_components))
@@ -825,7 +833,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._create_path_segment(cparent_uri, cur_child_uri)
                 cur_child_uri = cparent_uri
 
-        return None
+        return self.ROOT_NODE_URN
 
 
     def _dedup_deltas(self, remove_g, add_g):
@@ -855,6 +863,7 @@ class Ldpr(metaclass=ABCMeta):
         imr.add(RDF.type, nsc['ldp'].Container)
         imr.add(RDF.type, nsc['ldp'].BasicContainer)
         imr.add(RDF.type, nsc['ldp'].RDFSource)
+        imr.add(RDF.type, nsc['fcrepo'].Pairtree)
         imr.add(nsc['fcrepo'].contains, child_uri)
 
         # If the path segment is just below root
