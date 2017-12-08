@@ -277,9 +277,16 @@ def uuid_for_post(parent_uuid=None, slug=None):
     This may raise an exception resulting in a 404 if the parent is not
     found or a 409 if the parent is not a valid container.
     '''
+    def split_if_legacy(uuid):
+        if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
+            uuid = Toolbox().split_uuid(uuid)
+        return uuid
+
     # Shortcut!
     if not slug and not parent_uuid:
-        return str(uuid4())
+        uuid = split_if_legacy(str(uuid4()))
+
+        return uuid
 
     parent = Ldpr.outbound_inst(parent_uuid, repr_opts={'incl_children' : False})
 
@@ -305,11 +312,11 @@ def uuid_for_post(parent_uuid=None, slug=None):
     if slug:
         cnd_uuid = pfx + slug
         if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uuid]):
-            uuid = pfx + str(uuid4())
+            uuid = pfx + split_if_legacy(str(uuid4()))
         else:
             uuid = cnd_uuid
     else:
-        uuid = pfx + str(uuid4())
+        uuid = pfx + split_if_legacy(str(uuid4()))
 
     return uuid
 

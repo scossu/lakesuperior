@@ -43,6 +43,10 @@ store:
         #password: <set me>
         #ssl_verify: false
 
+        # This mimics Fedora4 behavior which segments an identifier on POST.
+        # Hyrax will break if this is off.
+        legacy_ptree_split: False
+
     # The path used to persist LDP-NR (bitstreams).
     # This is for now a POSIX filesystem. Other solutions such as HDFS may be
     # possible in the future.
