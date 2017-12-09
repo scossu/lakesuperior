@@ -73,7 +73,7 @@ def bp_url_value_preprocessor(endpoint, values):
 
 ## REST SERVICES ##
 
-@ldp.route('/<path:uuid>', methods=['GET'])
+@ldp.route('/<path:uuid>', methods=['GET'], strict_slashes=False)
 @ldp.route('/', defaults={'uuid': None}, methods=['GET'], strict_slashes=False)
 @ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['GET'])
@@ -111,7 +111,7 @@ def get_resource(uuid, force_rdf=False):
                     attachment_filename=rsrc.filename)
 
 
-@ldp.route('/<path:parent>', methods=['POST'])
+@ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
 @ldp.route('/', defaults={'parent': None}, methods=['POST'],
         strict_slashes=False)
 def post_resource(parent):
@@ -152,7 +152,7 @@ def post_resource(parent):
     return rsrc.uri, 201, out_headers
 
 
-@ldp.route('/<path:uuid>', methods=['PUT'])
+@ldp.route('/<path:uuid>', methods=['PUT'], strict_slashes=False)
 @ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['PUT'])
 def put_resource(uuid):
@@ -188,7 +188,7 @@ def put_resource(uuid):
     return rsrc.uri, res_code, rsp_headers
 
 
-@ldp.route('/<path:uuid>', methods=['PATCH'])
+@ldp.route('/<path:uuid>', methods=['PATCH'], strict_slashes=False)
 def patch_resource(uuid):
     '''
     Update an existing resource with a SPARQL-UPDATE payload.
