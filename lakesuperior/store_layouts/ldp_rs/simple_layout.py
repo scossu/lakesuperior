@@ -61,8 +61,13 @@ class SimpleLayout(BaseRdfLayout):
         CONSTRUCT {{
             ?s ?p ?o .{inb_cnst}
             {embed_chld_t}
+            ?s fcrepo:writable true ;
+              fcrepo:hasParent ?parent .
         }} WHERE {{
             ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+            OPTIONAL {{
+              ?parent ldp:contains ?s .
+            }}
         }}
         '''.format(inb_cnst=inbound_construct,
                 inb_qry=inbound_qry, incl_chld=incl_children_qry,

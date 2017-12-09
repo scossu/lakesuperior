@@ -58,6 +58,7 @@ class Ldpc(LdpRs):
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
         self.base_types.update({
+            nsc['fcrepo'].Container,
             nsc['ldp'].Container,
         })
 
