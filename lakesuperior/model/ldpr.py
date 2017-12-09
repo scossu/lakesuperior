@@ -176,14 +176,20 @@ class Ldpr(metaclass=ABCMeta):
 
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
-            provided_g = Graph().parse(data=stream.read().decode('utf-8'),
+            input_rdf = stream.read()
+            provided_g = Graph().parse(data=input_rdf,
                     format=mimetype, publicID=urn)
+            logger.debug('Provided graph: {}'.format(
+                    pformat(set(provided_g))))
             local_g = Toolbox().localize_graph(provided_g)
+            logger.debug('Parsed local graph: {}'.format(
+                    pformat(set(local_g))))
             provided_imr = Resource(local_g, urn)
 
-            if Ldpr.MBR_RSRC_URI in provided_g.predicates() and \
-                    Ldpr.MBR_REL_URI in provided_g.predicates():
-                if Ldpr.INS_CNT_REL_URI in provided_g.predicates():
+            # Determine whether it is a basic, direct or indirect container.
+            if Ldpr.MBR_RSRC_URI in local_g.predicates() and \
+                    Ldpr.MBR_REL_URI in local_g.predicates():
+                if Ldpr.INS_CNT_REL_URI in local_g.predicates():
                     cls = LdpIc
                 else:
                     cls = LdpDc
