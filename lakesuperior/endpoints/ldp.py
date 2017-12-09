@@ -1,6 +1,7 @@
 import logging
 
 from collections import defaultdict
+from pprint import pformat
 from uuid import uuid4
 
 from flask import Blueprint, current_app, g, request, send_file, url_for
@@ -89,7 +90,7 @@ def get_resource(uuid, force_rdf=False):
     repr_options = defaultdict(dict)
     if 'prefer' in request.headers:
         prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
-        logger.debug('Parsed Prefer header: {}'.format(prefer))
+        logger.debug('Parsed Prefer header: {}'.format(pformat(prefer)))
         if 'return' in prefer:
             repr_options = parse_repr_options(prefer['return'])
 
@@ -120,6 +121,7 @@ def post_resource(parent):
     out_headers = std_headers
     try:
         slug = request.headers['Slug']
+        logger.info('Slug: {}'.format(slug))
     except KeyError:
         slug = None
 
@@ -291,8 +293,7 @@ def uuid_for_post(parent_uuid=None, slug=None):
     if parent_uuid:
         parent_types = { t.identifier for t in \
                 parent.imr.objects(RDF.type) }
-        logger.debug('Parent types: {}'.format(
-                parent_types))
+        logger.debug('Parent types: {}'.format(pformat(parent_types)))
         if nsc['ldp'].Container not in parent_types:
             raise InvalidResourceError('Parent {} is not a container.'
                    .format(parent_uuid))
@@ -437,7 +438,7 @@ def parse_repr_options(retr_opts):
             if str(Ldpr.RETURN_SRV_MGD_RES_URI) in omit:
                     imr_options['incl_srv_mgd'] = False
 
-    logger.debug('Retrieval options: {}'.format(imr_options))
+    logger.debug('Retrieval options: {}'.format(pformat(imr_options)))
 
     return imr_options
 

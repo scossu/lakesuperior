@@ -1,9 +1,15 @@
 #!/usr/bin/env python
+import sys
 
 import arrow
 import requests
 
-n = 10000
+default_n = 10000
+
+sys.stdout.write('How many children? [{}] >'.format(default_n))
+choice = input().lower()
+
+n = choice or default_n
 
 # Generate 10,000 children of root node.
 

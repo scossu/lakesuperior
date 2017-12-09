@@ -88,7 +88,8 @@ class LdpNr(Ldpr):
 
         # File size.
         self._logger.debug('Data stream size: {}'.format(self.stream.limit))
-        self.provided_imr.set(nsc['premis'].hasSize, Literal(self.stream.limit))
+        self.provided_imr.set(nsc['premis'].hasSize,
+                Literal(self.stream.limit))
 
         # Checksum.
         cksum_term = URIRef('urn:sha1:{}'.format(self.digest))

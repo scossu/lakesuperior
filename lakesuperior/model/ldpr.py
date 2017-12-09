@@ -4,6 +4,7 @@ from abc import ABCMeta
 from collections import defaultdict
 from copy import deepcopy
 from itertools import accumulate, groupby
+from pprint import pformat
 from uuid import uuid4
 
 import arrow
@@ -43,7 +44,7 @@ def atomic(fn):
             self._logger.info('Committing transaction.')
             self.rdfly.store.commit()
             for ev in request.changelog:
-                self._logger.info('Message: {}'.format(ev))
+                self._logger.info('Message: {}'.format(pformat(ev)))
                 self._send_event_msg(*ev)
             return ret
 
@@ -126,9 +127,9 @@ class Ldpr(metaclass=ABCMeta):
 
         @param uuid UUID of the instance.
         '''
+        cls._logger.info('Retrieving stored resource: {}'.format(uuid))
         imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
 
-        cls._logger.debug('Representation options: {}'.format(repr_opts))
         imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
         rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
 

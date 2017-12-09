@@ -1,4 +1,5 @@
 from copy import deepcopy
+from pprint import pformat
 
 import arrow
 
@@ -111,8 +112,10 @@ class SimpleLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        self._logger.debug('Remove triples: {}'.format(set(remove_trp)))
-        self._logger.debug('Add triples: {}'.format(set(add_trp)))
+        self._logger.debug('Remove triples: {}'.format(pformat(
+                set(remove_trp))))
+        self._logger.debug('Add triples: {}'.format(pformat(
+                set(add_trp))))
 
         for t in remove_trp:
             self.ds.remove(t)
