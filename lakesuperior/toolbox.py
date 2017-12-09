@@ -240,4 +240,11 @@ class Toolbox:
 
         return hash
 
+    def split_uuid(self, uuid):
+        '''
+        Split a UUID into pairtree segments. This mimics FCREPO4 behavior.
+        '''
+        path = '{}/{}/{}/{}/{}'.format(uuid[:2], uuid[2:4],
+                uuid[4:6], uuid[6:8], uuid)
 
+        return path

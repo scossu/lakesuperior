@@ -79,4 +79,4 @@ for a rudimentary road map and status.
 The design documents are in the [doc/pdf](doc/pdf) folder. *@TODO needs update*
 
 [1]: However if your client splits pairtrees upstream, such as Hyrax does, that
-obviously needs to change to get rid of the path segmants.
+obviously needs to change to get rid of the path segments.
