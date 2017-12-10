@@ -10,7 +10,7 @@ from uuid import uuid4
 import arrow
 import rdflib
 
-from flask import current_app, request
+from flask import current_app, g, request
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF, XSD
@@ -131,6 +131,8 @@ class Ldpr(metaclass=ABCMeta):
         imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
 
         imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
+        cls._logger.debug('Extracted graph: {}'.format(
+                pformat(set(imr.graph))))
         rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
 
         if cls.LDP_NR_TYPE in rdf_types:
@@ -598,9 +600,8 @@ class Ldpr(metaclass=ABCMeta):
                 add_trp.add((self.urn, nsc['fcsystem'].tombstone,
                         tstone_pointer))
             else:
-                ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
                 add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
-                add_trp.add((self.urn, nsc['fcrepo'].created, ts))
+                add_trp.add((self.urn, nsc['fcrepo'].created, g.timestamp_term))
         else:
             self._logger.info('NOT leaving tombstone.')
 
@@ -643,7 +644,7 @@ class Ldpr(metaclass=ABCMeta):
 
         return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
             'ev_type' : ev_type,
-            'time' : arrow.utcnow(),
+            'time' : g.timestamp,
             'type' : type,
             'actor' : actor,
         })
@@ -769,12 +770,11 @@ class Ldpr(metaclass=ABCMeta):
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
-        ts = Literal(arrow.utcnow(), datatype=XSD.dateTime)
         if create:
-            self.provided_imr.set(nsc['fcrepo'].created, ts)
+            self.provided_imr.set(nsc['fcrepo'].created, g.timestamp_term)
             self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
 
-        self.provided_imr.set(nsc['fcrepo'].lastModified, ts)
+        self.provided_imr.set(nsc['fcrepo'].lastModified, g.timestamp_term)
         self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
 

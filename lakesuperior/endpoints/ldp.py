@@ -4,9 +4,12 @@ from collections import defaultdict
 from pprint import pformat
 from uuid import uuid4
 
+import arrow
+
 from flask import Blueprint, current_app, g, request, send_file, url_for
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
+from rdflib.term import Literal
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -71,6 +74,12 @@ def bp_url_value_preprocessor(endpoint, values):
     g.url_prefix = values.pop('url_prefix')
 
 
+@ldp.before_request
+def request_timestamp():
+    g.timestamp = arrow.utcnow()
+    g.timestamp_term = Literal(g.timestamp, datatype=XSD.dateTime)
+
+
 ## REST SERVICES ##
 
 @ldp.route('/<path:uuid>', methods=['GET'], strict_slashes=False)
@@ -130,6 +139,7 @@ def post_resource(parent):
 
     try:
         uuid = uuid_for_post(parent, slug)
+        logger.debug('Generated UUID for POST: {}'.format(uuid))
         rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
