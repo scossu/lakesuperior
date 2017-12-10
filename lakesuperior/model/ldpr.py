@@ -455,7 +455,7 @@ class Ldpr(metaclass=ABCMeta):
         This gets the RDF metadata. The binary retrieval is handled directly
         by the route.
         '''
-        return self.out_graph.serialize(format='turtle')
+        return self.out_graph
 
 
     @atomic

@@ -6,13 +6,15 @@ from uuid import uuid4
 
 import arrow
 
-from flask import Blueprint, current_app, g, request, send_file, url_for
+from flask import (Blueprint, current_app, g, render_template, request,
+        send_file, url_for)
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.term import Literal
 from werkzeug.datastructures import FileStorage
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import *
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
@@ -27,7 +29,8 @@ logger = logging.getLogger(__name__)
 # standard fcrepo4. Here, it is under `/ldp` but initially `/rest` can be kept
 # for backward compatibility.
 
-ldp = Blueprint('ldp', __name__)
+ldp = Blueprint('ldp', __name__, template_folder='templates',
+        static_url_path='/static', static_folder='../../static')
 
 accept_patch = (
     'application/sparql-update',
@@ -114,7 +117,12 @@ def get_resource(uuid, force_rdf=False):
         if isinstance(rsrc, LdpRs) \
                 or is_accept_hdr_rdf_parsable() \
                 or force_rdf:
-            return (rsrc.get(), out_headers)
+            resp = rsrc.get()
+            if request.accept_mimetypes.best == 'text/html':
+                rsrc = resp.resource(request.path)
+                return render_template('resource.html', rsrc=rsrc, nsm=nsm)
+            else:
+                return (resp.serialize(format='turtle'), out_headers)
         else:
             return send_file(rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename)

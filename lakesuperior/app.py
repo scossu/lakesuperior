@@ -7,8 +7,9 @@ from logging.config import dictConfig
 from flask import Flask
 
 from lakesuperior.endpoints.ldp import ldp
-from lakesuperior.messaging.messenger import Messenger
+from lakesuperior.endpoints.main import main
 from lakesuperior.endpoints.query import query
+from lakesuperior.messaging.messenger import Messenger
 from lakesuperior.toolbox import Toolbox
 
 
@@ -33,6 +34,7 @@ def create_app(app_conf, logging_conf):
 
     ## Configure endpoint blueprints here. ##
 
+    app.register_blueprint(main)
     app.register_blueprint(ldp, url_prefix='/ldp', url_defaults={
         'url_prefix': 'ldp'
     })
