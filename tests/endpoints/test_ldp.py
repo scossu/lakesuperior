@@ -3,7 +3,7 @@ import uuid
 
 from hashlib import sha1
 
-from flask import url_for
+from flask import url_for, g
 from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.term import Literal, URIRef
@@ -44,7 +44,7 @@ class TestLdp:
         resp = self.client.put('/ldp/new_resource')
         assert resp.status_code == 201
         assert resp.data == bytes(
-                '{}/new_resource'.format(Toolbox().base_url), 'utf-8')
+                '{}/new_resource'.format(g.webroot), 'utf-8')
 
 
     def test_put_existing_resource(self, random_uuid):
@@ -96,16 +96,16 @@ class TestLdp:
 
         cont1_data = self.client.get('/ldp').data
         g1 = Graph().parse(data=cont1_data, format='turtle')
-        assert g1[ URIRef(Toolbox().base_url + '/') : nsc['ldp'].contains : \
-                URIRef(Toolbox().base_url + '/' + uuid1) ]
+        assert g1[ URIRef(g.webroot + '/') : nsc['ldp'].contains : \
+                URIRef(g.webroot + '/' + uuid1) ]
 
         self.client.put(path2)
 
         cont2_data = self.client.get(path1).data
         g1 = Graph().parse(data=cont2_data, format='turtle')
-        assert g1[ URIRef(Toolbox().base_url + '/' + uuid1) : \
+        assert g1[ URIRef(g.webroot + '/' + uuid1) : \
                 nsc['ldp'].contains : \
-                URIRef(Toolbox().base_url + '/' + uuid2) ]
+                URIRef(g.webroot + '/' + uuid2) ]
 
 
     def test_put_ldp_rs(self, client):
@@ -119,9 +119,9 @@ class TestLdp:
                 headers={'accept' : 'text/turtle'})
         assert resp.status_code == 200
 
-        g = Graph().parse(data=resp.data, format='text/turtle')
+        gr = Graph().parse(data=resp.data, format='text/turtle')
         assert URIRef('http://vocab.getty.edu/ontology#Subject') in \
-                g.objects(None, RDF.type)
+                gr.objects(None, RDF.type)
 
 
     def test_put_ldp_nr(self, rnd_img):
@@ -203,12 +203,12 @@ class TestLdp:
         slug01_resp = self.client.post('/ldp', headers={'slug' : 'slug01'})
         assert slug01_resp.status_code == 201
         assert slug01_resp.headers['location'] == \
-                Toolbox().base_url + '/slug01'
+                g.webroot + '/slug01'
 
         slug02_resp = self.client.post('/ldp', headers={'slug' : 'slug01'})
         assert slug02_resp.status_code == 201
         assert slug02_resp.headers['location'] != \
-                Toolbox().base_url + '/slug01'
+                g.webroot + '/slug01'
 
 
     def test_post_404(self):
@@ -237,7 +237,7 @@ class TestLdp:
         path = '/ldp/test_patch01'
         self.client.put(path)
 
-        uri = Toolbox().base_url + '/test_patch01'
+        uri = g.webroot + '/test_patch01'
 
         with open('tests/data/sparql_update/simple_insert.sparql') as data:
             resp = self.client.patch(path,
@@ -247,16 +247,16 @@ class TestLdp:
         assert resp.status_code == 204
 
         resp = self.client.get(path)
-        g = Graph().parse(data=resp.data, format='text/turtle')
-        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
 
         self.client.patch(path,
                 data=open('tests/data/sparql_update/delete+insert+where.sparql'),
                 headers={'content-type' : 'application/sparql-update'})
 
         resp = self.client.get(path)
-        g = Graph().parse(data=resp.data, format='text/turtle')
-        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
 
 
     def test_patch_ldp_nr_metadata(self):
@@ -274,9 +274,9 @@ class TestLdp:
         resp = self.client.get(path + '/fcr:metadata')
         assert resp.status_code == 200
 
-        uri = Toolbox().base_url + '/ldpnr01'
-        g = Graph().parse(data=resp.data, format='text/turtle')
-        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+        uri = g.webroot + '/ldpnr01'
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
 
         with open(
                 'tests/data/sparql_update/delete+insert+where.sparql') as data:
@@ -288,8 +288,8 @@ class TestLdp:
         resp = self.client.get(path + '/fcr:metadata')
         assert resp.status_code == 200
 
-        g = Graph().parse(data=resp.data, format='text/turtle')
-        assert g[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
 
 
     def test_patch_ldp_nr(self, rnd_img):
@@ -325,7 +325,7 @@ class TestLdp:
         assert tstone_resp.status_code == 410
         assert tstone_resp.headers['Link'] == \
                 '<{}/test_delete01/fcr:tombstone>; rel="hasTombstone"'\
-                .format(Toolbox().base_url)
+                .format(g.webroot)
 
         tstone_path = '/ldp/test_delete01/fcr:tombstone'
         assert self.client.get(tstone_path).status_code == 405
@@ -350,7 +350,7 @@ class TestLdp:
         assert tstone_resp.status_code == 410
         assert tstone_resp.headers['Link'] == \
             '<{}/test_delete_recursive01/fcr:tombstone>; rel="hasTombstone"'\
-            .format(Toolbox().base_url)
+            .format(g.webroot)
 
         child_tstone_resp = self.client.get('/ldp/test_delete_recursive01/a')
         assert child_tstone_resp.status_code == tstone_resp.status_code
@@ -378,7 +378,7 @@ class TestPrefHeader:
         return {
             'path' : parent_path,
             'response' : self.client.get(parent_path),
-            'subject' : URIRef(Toolbox().base_url + '/test_parent')
+            'subject' : URIRef(g.webroot + '/test_parent')
         }
 
 
@@ -441,18 +441,18 @@ class TestPrefHeader:
 
         assert omit_embed_children_resp.data == cont_resp.data
 
-        incl_g = Graph().parse(
+        incl_gr = Graph().parse(
                 data=incl_embed_children_resp.data, format='turtle')
-        omit_g = Graph().parse(
+        omit_gr = Graph().parse(
                 data=omit_embed_children_resp.data, format='turtle')
 
-        children = set(incl_g[cont_subject : nsc['ldp'].contains])
+        children = set(incl_gr[cont_subject : nsc['ldp'].contains])
         assert len(children) == 3
 
-        children = set(incl_g[cont_subject : nsc['ldp'].contains])
+        children = set(incl_gr[cont_subject : nsc['ldp'].contains])
         for child_uri in children:
-            assert set(incl_g[ child_uri : : ])
-            assert not set(omit_g[ child_uri : : ])
+            assert set(incl_gr[ child_uri : : ])
+            assert not set(omit_gr[ child_uri : : ])
 
 
     def test_return_children(self, cont_structure):
@@ -474,12 +474,12 @@ class TestPrefHeader:
 
         assert incl_children_resp.data == cont_resp.data
 
-        incl_g = Graph().parse(data=incl_children_resp.data, format='turtle')
-        omit_g = Graph().parse(data=omit_children_resp.data, format='turtle')
+        incl_gr = Graph().parse(data=incl_children_resp.data, format='turtle')
+        omit_gr = Graph().parse(data=omit_children_resp.data, format='turtle')
 
-        children = incl_g[cont_subject : nsc['ldp'].contains]
+        children = incl_gr[cont_subject : nsc['ldp'].contains]
         for child_uri in children:
-            assert not omit_g[ cont_subject : nsc['ldp'].contains : child_uri ]
+            assert not omit_gr[ cont_subject : nsc['ldp'].contains : child_uri ]
 
 
     def test_inbound_rel(self, cont_structure):
@@ -501,11 +501,11 @@ class TestPrefHeader:
 
         assert omit_inbound_resp.data == cont_resp.data
 
-        incl_g = Graph().parse(data=incl_inbound_resp.data, format='turtle')
-        omit_g = Graph().parse(data=omit_inbound_resp.data, format='turtle')
+        incl_gr = Graph().parse(data=incl_inbound_resp.data, format='turtle')
+        omit_gr = Graph().parse(data=omit_inbound_resp.data, format='turtle')
 
-        assert set(incl_g[ : : cont_subject ])
-        assert not set(omit_g[ : : cont_subject ])
+        assert set(incl_gr[ : : cont_subject ])
+        assert not set(omit_gr[ : : cont_subject ])
 
 
     def test_srv_mgd_triples(self, cont_structure):
@@ -527,8 +527,8 @@ class TestPrefHeader:
 
         assert incl_srv_mgd_resp.data == cont_resp.data
 
-        incl_g = Graph().parse(data=incl_srv_mgd_resp.data, format='turtle')
-        omit_g = Graph().parse(data=omit_srv_mgd_resp.data, format='turtle')
+        incl_gr = Graph().parse(data=incl_srv_mgd_resp.data, format='turtle')
+        omit_gr = Graph().parse(data=omit_srv_mgd_resp.data, format='turtle')
 
         for pred in {
             nsc['fcrepo'].created,
@@ -537,16 +537,16 @@ class TestPrefHeader:
             nsc['fcrepo'].lastModifiedBy,
             nsc['ldp'].contains,
         }:
-            assert set(incl_g[ cont_subject : pred : ])
-            assert not set(omit_g[ cont_subject : pred : ])
+            assert set(incl_gr[ cont_subject : pred : ])
+            assert not set(omit_gr[ cont_subject : pred : ])
 
         for type in {
                 nsc['fcrepo'].Resource,
                 nsc['ldp'].Container,
                 nsc['ldp'].Resource,
         }:
-            assert incl_g[ cont_subject : RDF.type : type ]
-            assert not omit_g[ cont_subject : RDF.type : type ]
+            assert incl_gr[ cont_subject : RDF.type : type ]
+            assert not omit_gr[ cont_subject : RDF.type : type ]
 
 
     def test_delete_no_tstone(self):

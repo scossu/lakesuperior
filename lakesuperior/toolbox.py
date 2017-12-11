@@ -19,20 +19,12 @@ class Toolbox:
 
     ROOT_NODE_URN = nsc['fcsystem'].root
 
-    def __init__(self):
-        '''
-        Set the base URL for the requests. This class has to be instantiated
-        within a request context.
-       '''
-        self.base_url = request.host_url + g.url_prefix
-
-
     def uuid_to_uri(self, uuid):
         '''Convert a UUID to a URI.
 
         @return URIRef
         '''
-        uri = '{}/{}'.format(self.base_url, uuid) if uuid else self.base_url
+        uri = '{}/{}'.format(g.webroot, uuid) if uuid else g.webroot
 
         return URIRef(uri)
 
@@ -47,7 +39,7 @@ class Toolbox:
         elif uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:
-            return str(uri).replace(self.base_url, '').strip('/')
+            return str(uri).replace(g.webroot, '').strip('/')
 
 
     def localize_string(self, s):
@@ -57,10 +49,10 @@ class Toolbox:
 
         @return string
         '''
-        if s.strip('/') == self.base_url:
+        if s.strip('/') == g.webroot:
             return str(self.ROOT_NODE_URN)
         else:
-            return s.strip('/').replace(self.base_url+'/', str(nsc['fcres']))
+            return s.strip('/').replace(g.webroot+'/', str(nsc['fcres']))
 
 
     def localize_term(self, uri):
@@ -74,7 +66,7 @@ class Toolbox:
         return URIRef(self.localize_string(str(uri)))
 
 
-    def localize_graph(self, g):
+    def localize_graph(self, gr):
         '''
         Locbalize a graph.
         '''
@@ -92,18 +84,18 @@ class Toolbox:
               STRSTARTS(str(?o), "{0}/")
             ) .
           }}
-        }}'''.format(self.base_url)
-        flt_g = g.query(q)
+        }}'''.format(g.webroot)
+        flt_gr = gr.query(q)
 
-        for t in flt_g:
+        for t in flt_gr:
             local_s = self.localize_term(t[0])
             local_o = self.localize_term(t[2]) \
                     if isinstance(t[2], URIRef) \
                     else t[2]
-            g.remove(t)
-            g.add((local_s, t[1], local_o))
+            gr.remove(t)
+            gr.add((local_s, t[1], local_o))
 
-        return g
+        return gr
 
 
     def globalize_string(self, s):
@@ -113,7 +105,7 @@ class Toolbox:
 
         @return string
         '''
-        return s.replace(str(nsc['fcres']), self.base_url + '/')
+        return s.replace(str(nsc['fcres']), g.webroot + '/')
 
 
     def globalize_term(self, urn):
@@ -130,7 +122,7 @@ class Toolbox:
         return URIRef(self.globalize_string(str(urn)))
 
 
-    def globalize_graph(self, g):
+    def globalize_graph(self, gr):
         '''
         Globalize a graph.
         '''
@@ -149,30 +141,30 @@ class Toolbox:
             ) .
           }}
         }}'''.format(nsc['fcres'], self.ROOT_NODE_URN)
-        flt_g = g.query(q)
+        flt_gr = gr.query(q)
 
-        for t in flt_g:
+        for t in flt_gr:
             global_s = self.globalize_term(t[0])
             global_o = self.globalize_term(t[2]) \
                     if isinstance(t[2], URIRef) \
                     else t[2]
-            g.remove(t)
-            g.add((global_s, t[1], global_o))
+            gr.remove(t)
+            gr.add((global_s, t[1], global_o))
 
-        return g
+        return gr
 
 
     def globalize_rsrc(self, rsrc):
         '''
         Globalize a resource.
         '''
-        g = rsrc.graph
+        gr = rsrc.graph
         urn = rsrc.identifier
 
-        global_g = self.globalize_graph(g)
+        global_gr = self.globalize_graph(gr)
         global_uri = self.globalize_term(urn)
 
-        return global_g.resource(global_uri)
+        return global_gr.resource(global_uri)
 
 
     def parse_rfc7240(self, h_str):
@@ -212,7 +204,7 @@ class Toolbox:
         return parsed_hdr
 
 
-    def rdf_cksum(self, g):
+    def rdf_cksum(self, gr):
         '''
         Generate a checksum for a graph.
 
@@ -227,16 +219,16 @@ class Toolbox:
 
         @TODO This can be later reworked to use a custom hashing algorithm.
 
-        @param rdflib.Graph g The graph to be hashed.
+        @param rdflib.Graph gr The graph to be hashed.
 
         @return string SHA1 checksum.
         '''
         # Remove the messageDigest property, which very likely reflects the
         # previous state of the resource.
-        g.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
+        gr.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
 
-        ord_g = sorted(list(g), key=lambda x : (x[0], x[1], x[2]))
-        hash = sha1(pickle.dumps(ord_g)).hexdigest()
+        ord_gr = sorted(list(gr), key=lambda x : (x[0], x[1], x[2]))
+        hash = sha1(pickle.dumps(ord_gr)).hexdigest()
 
         return hash
 

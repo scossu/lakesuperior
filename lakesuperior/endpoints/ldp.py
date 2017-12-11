@@ -75,6 +75,7 @@ def bp_url_defaults(endpoint, values):
 @ldp.url_value_preprocessor
 def bp_url_value_preprocessor(endpoint, values):
     g.url_prefix = values.pop('url_prefix')
+    g.webroot = request.host_url + g.url_prefix
 
 
 @ldp.before_request

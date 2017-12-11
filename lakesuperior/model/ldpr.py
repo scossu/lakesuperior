@@ -179,19 +179,19 @@ class Ldpr(metaclass=ABCMeta):
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
             input_rdf = stream.read()
-            provided_g = Graph().parse(data=input_rdf,
+            provided_gr = Graph().parse(data=input_rdf,
                     format=mimetype, publicID=urn)
             logger.debug('Provided graph: {}'.format(
-                    pformat(set(provided_g))))
-            local_g = Toolbox().localize_graph(provided_g)
+                    pformat(set(provided_gr))))
+            local_gr = Toolbox().localize_graph(provided_gr)
             logger.debug('Parsed local graph: {}'.format(
-                    pformat(set(local_g))))
-            provided_imr = Resource(local_g, urn)
+                    pformat(set(local_gr))))
+            provided_imr = Resource(local_gr, urn)
 
             # Determine whether it is a basic, direct or indirect container.
-            if Ldpr.MBR_RSRC_URI in local_g.predicates() and \
-                    Ldpr.MBR_REL_URI in local_g.predicates():
-                if Ldpr.INS_CNT_REL_URI in local_g.predicates():
+            if Ldpr.MBR_RSRC_URI in local_gr.predicates() and \
+                    Ldpr.MBR_REL_URI in local_gr.predicates():
+                if Ldpr.INS_CNT_REL_URI in local_gr.predicates():
                     cls = LdpIc
                 else:
                     cls = LdpDc
@@ -379,12 +379,12 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.debug('Removing type: {}'.format(t))
                 self.imr.remove(RDF.type, t)
 
-        out_g = Toolbox().globalize_graph(self.imr.graph)
+        out_gr = Toolbox().globalize_graph(self.imr.graph)
         # Clear IMR because it's been pruned. In the rare case it is needed
         # after this method, it will be retrieved again.
         delattr(self, 'imr')
 
-        return out_g
+        return out_gr
 
 
     @property
@@ -632,14 +632,14 @@ class Ldpr(metaclass=ABCMeta):
                 remove_trp = set(remove_trp)
             if isinstance(add_trp, Graph):
                 add_trp = set(add_trp)
-            merge_g = remove_trp | add_trp
-            type = { trp[2] for trp in merge_g if trp[1] == RDF.type }
-            actor = { trp[2] for trp in merge_g \
+            merge_gr = remove_trp | add_trp
+            type = { trp[2] for trp in merge_gr if trp[1] == RDF.type }
+            actor = { trp[2] for trp in merge_gr \
                     if trp[1] == nsc['fcrepo'].createdBy }
         else:
-            merge_g = remove_trp | add_trp
-            type = merge_g[ self.urn : RDF.type ]
-            actor = merge_g[ self.urn : nsc['fcrepo'].createdBy ]
+            merge_gr = remove_trp | add_trp
+            type = merge_gr[ self.urn : RDF.type ]
+            actor = merge_gr[ self.urn : nsc['fcrepo'].createdBy ]
 
 
         return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
@@ -650,20 +650,20 @@ class Ldpr(metaclass=ABCMeta):
         })
 
 
-    def _ensure_single_subject_rdf(self, g):
+    def _ensure_single_subject_rdf(self, gr):
         '''
         Ensure that a RDF payload for a POST or PUT has a single resource.
         '''
-        for s in set(g.subjects()):
+        for s in set(gr.subjects()):
             if not s == self.urn:
                 raise SingleSubjectError(s, self.uuid)
 
 
     def _check_ref_int(self, config):
-        g = self.provided_imr.graph
+        gr = self.provided_imr.graph
 
-        for o in g.objects():
-            if isinstance(o, URIRef) and str(o).startswith(Toolbox().base_url)\
+        for o in gr.objects():
+            if isinstance(o, URIRef) and str(o).startswith(g.webroot)\
                     and not self.rdfly.ask_rsrc_exists(o):
                 if config == 'strict':
                     raise RefIntViolationError(o)
@@ -671,46 +671,46 @@ class Ldpr(metaclass=ABCMeta):
                     self._logger.info(
                             'Removing link to non-existent repo resource: {}'
                             .format(o))
-                    g.remove((None, None, o))
+                    gr.remove((None, None, o))
 
 
-    def _check_mgd_terms(self, g):
+    def _check_mgd_terms(self, gr):
         '''
         Check whether server-managed terms are in a RDF payload.
         '''
         if self.handling == 'none':
             return
 
-        offending_subjects = set(g.subjects()) & srv_mgd_subjects
+        offending_subjects = set(gr.subjects()) & srv_mgd_subjects
         if offending_subjects:
             if self.handling=='strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
                     self._logger.info('Removing offending subj: {}'.format(s))
-                    g.remove((s, None, None))
+                    gr.remove((s, None, None))
 
-        offending_predicates = set(g.predicates()) & srv_mgd_predicates
+        offending_predicates = set(gr.predicates()) & srv_mgd_predicates
         if offending_predicates:
             if self.handling=='strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
                 for p in offending_predicates:
                     self._logger.info('Removing offending pred: {}'.format(p))
-                    g.remove((None, p, None))
+                    gr.remove((None, p, None))
 
-        offending_types = set(g.objects(predicate=RDF.type)) & srv_mgd_types
+        offending_types = set(gr.objects(predicate=RDF.type)) & srv_mgd_types
         if offending_types:
             if self.handling=='strict':
                 raise ServerManagedTermError(offending_types, 't')
             else:
                 for t in offending_types:
                     self._logger.info('Removing offending type: {}'.format(t))
-                    g.remove((None, RDF.type, t))
+                    gr.remove((None, RDF.type, t))
 
-        self._logger.debug('Sanitized graph: {}'.format(g.serialize(
+        self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
             format='turtle').decode('utf-8')))
-        return g
+        return gr
 
 
     def _sparql_delta(self, q):
@@ -736,22 +736,22 @@ class Ldpr(metaclass=ABCMeta):
         with `BaseStoreLayout.update_resource` and/or recorded as separate
         events in a provenance tracking system.
         '''
-        pre_g = self.imr.graph
+        pre_gr = self.imr.graph
 
-        post_g = deepcopy(pre_g)
-        post_g.update(q)
+        post_gr = deepcopy(pre_gr)
+        post_gr.update(q)
 
-        remove_g, add_g = self._dedup_deltas(pre_g, post_g)
+        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
 
         #self._logger.info('Removing: {}'.format(
-        #    remove_g.serialize(format='turtle').decode('utf8')))
+        #    remove_gr.serialize(format='turtle').decode('utf8')))
         #self._logger.info('Adding: {}'.format(
-        #    add_g.serialize(format='turtle').decode('utf8')))
+        #    add_gr.serialize(format='turtle').decode('utf8')))
 
-        remove_g = self._check_mgd_terms(remove_g)
-        add_g = self._check_mgd_terms(add_g)
+        remove_gr = self._check_mgd_terms(remove_gr)
+        add_gr = self._check_mgd_terms(add_gr)
 
-        return remove_g, add_g
+        return remove_gr, add_gr
 
 
     def _add_srv_mgd_triples(self, create=False):
@@ -798,11 +798,11 @@ class Ldpr(metaclass=ABCMeta):
         else:
             parent_uri = self.ROOT_NODE_URN
 
-        add_g = Graph()
-        add_g.add((parent_uri, nsc['ldp'].contains, self.urn))
+        add_gr = Graph()
+        add_gr.add((parent_uri, nsc['ldp'].contains, self.urn))
         parent_rsrc = Ldpc(parent_uri, repr_opts={
                 'incl_children' : False}, handling='none')
-        parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
+        parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
         self._add_ldp_dc_ic_rel(parent_uri)
@@ -843,14 +843,14 @@ class Ldpr(metaclass=ABCMeta):
         return self.ROOT_NODE_URN
 
 
-    def _dedup_deltas(self, remove_g, add_g):
+    def _dedup_deltas(self, remove_gr, add_gr):
         '''
         Remove duplicate triples from add and remove delta graphs, which would
         otherwise contain unnecessary statements that annul each other.
         '''
         return (
-            remove_g - add_g,
-            add_g - remove_g
+            remove_gr - add_gr,
+            add_gr - remove_gr
         )
 
 
@@ -890,7 +890,7 @@ class Ldpr(metaclass=ABCMeta):
         cont_rsrc = Ldpr.outbound_inst(cont_uuid,
                 repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
-        add_g = Graph()
+        add_gr = Graph()
 
         self._logger.info('Checking direct or indirect containment.')
         self._logger.debug('Parent predicates: {}'.format(cont_p))
@@ -904,7 +904,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
-                add_g.add((s, p, self.urn))
+                add_gr.add((s, p, self.urn))
 
             elif cont_rsrc.imr[RDF.type : nsc['ldp'].IndirectContainer] \
                    and self.INS_CNT_REL_URI in cont_p:
@@ -914,13 +914,13 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.debug('Target URI: {}'.format(target_uri))
                 if target_uri:
                     self._logger.debug('Creating IC triples.')
-                    add_g.add((s, p, target_uri))
+                    add_gr.add((s, p, target_uri))
 
-        if len(add_g):
-            add_g = self._check_mgd_terms(add_g)
+        if len(add_gr):
+            add_gr = self._check_mgd_terms(add_gr)
             self._logger.debug('Adding DC/IC triples: {}'.format(
-                add_g.serialize(format='turtle').decode('utf-8')))
-            self._modify_rsrc(self.RES_UPDATED, add_trp=add_g)
+                add_gr.serialize(format='turtle').decode('utf-8')))
+            self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
 
     def _send_event_msg(self, remove_trp, add_trp, metadata):

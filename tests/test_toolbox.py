@@ -1,5 +1,6 @@
 import pytest
 
+from flask import g
 from rdflib.term import URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -27,15 +28,15 @@ class TestToolbox:
 
 
     def test_uuid_to_uri(self, tb):
-        assert tb.uuid_to_uri('1234') == URIRef(tb.base_url + '/1234')
-        assert tb.uuid_to_uri('') == URIRef(tb.base_url)
+        assert tb.uuid_to_uri('1234') == URIRef(g.webroot + '/1234')
+        assert tb.uuid_to_uri('') == URIRef(g.webroot)
 
 
     def test_uri_to_uuid(self, tb):
-        assert tb.uri_to_uuid(URIRef(tb.base_url) + '/test01') == 'test01'
-        assert tb.uri_to_uuid(URIRef(tb.base_url) + '/test01/test02') == \
+        assert tb.uri_to_uuid(URIRef(g.webroot) + '/test01') == 'test01'
+        assert tb.uri_to_uuid(URIRef(g.webroot) + '/test01/test02') == \
                 'test01/test02'
-        assert tb.uri_to_uuid(URIRef(tb.base_url)) == ''
+        assert tb.uri_to_uuid(URIRef(g.webroot)) == ''
         assert tb.uri_to_uuid(nsc['fcsystem'].root) == None
         assert tb.uri_to_uuid(nsc['fcres']['1234']) == '1234'
         assert tb.uri_to_uuid(nsc['fcres']['1234/5678']) == '1234/5678'
@@ -45,10 +46,10 @@ class TestToolbox:
         '''
         Test string localization.
         '''
-        assert tb.localize_string(tb.base_url + '/test/uid') == \
-                tb.localize_string(tb.base_url + '/test/uid/') == \
+        assert tb.localize_string(g.webroot + '/test/uid') == \
+                tb.localize_string(g.webroot + '/test/uid/') == \
                 str(nsc['fcres']['test/uid'])
-        assert tb.localize_string(tb.base_url) == str(nsc['fcsystem'].root)
+        assert tb.localize_string(g.webroot) == str(nsc['fcsystem'].root)
         assert tb.localize_string('http://bogus.org/test/uid') == \
                 'http://bogus.org/test/uid'
 
@@ -57,6 +58,6 @@ class TestToolbox:
         '''
         Test term localization.
         '''
-        assert tb.localize_term(tb.base_url + '/test/uid') == \
-                tb.localize_term(tb.base_url + '/test/uid/') == \
+        assert tb.localize_term(g.webroot + '/test/uid') == \
+                tb.localize_term(g.webroot + '/test/uid/') == \
                 nsc['fcres']['test/uid']
