@@ -21,7 +21,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import *
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
-from lakesuperior.toolbox import Toolbox
 
 
 def atomic(fn):
@@ -183,7 +182,7 @@ class Ldpr(metaclass=ABCMeta):
                     format=mimetype, publicID=urn)
             logger.debug('Provided graph: {}'.format(
                     pformat(set(provided_gr))))
-            local_gr = Toolbox().localize_graph(provided_gr)
+            local_gr = g.tbox.localize_graph(provided_gr)
             logger.debug('Parsed local graph: {}'.format(
                     pformat(set(local_gr))))
             provided_imr = Resource(local_gr, urn)
@@ -278,11 +277,11 @@ class Ldpr(metaclass=ABCMeta):
         operations isuch as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         '''
-        self.uuid = Toolbox().uri_to_uuid(uuid) \
+        self.uuid = g.tbox.uri_to_uuid(uuid) \
                 if isinstance(uuid, URIRef) else uuid
         self.urn = nsc['fcres'][uuid] \
                 if self.uuid else self.ROOT_NODE_URN
-        self.uri = Toolbox().uuid_to_uri(self.uuid)
+        self.uri = g.tbox.uuid_to_uri(self.uuid)
 
         self.rdfly = current_app.rdfly
         self.nonrdfly = current_app.nonrdfly
@@ -379,7 +378,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.debug('Removing type: {}'.format(t))
                 self.imr.remove(RDF.type, t)
 
-        out_gr = Toolbox().globalize_graph(self.imr.graph)
+        out_gr = g.tbox.globalize_graph(self.imr.graph)
         # Clear IMR because it's been pruned. In the rare case it is needed
         # after this method, it will be retrieved again.
         delattr(self, 'imr')
@@ -501,7 +500,7 @@ class Ldpr(metaclass=ABCMeta):
 
         for child_uri in children:
             child_rsrc = Ldpr.outbound_inst(
-                Toolbox().uri_to_uuid(child_uri.identifier),
+                g.tbox.uri_to_uuid(child_uri.identifier),
                 repr_opts={'incl_children' : False})
             child_rsrc._delete_rsrc(inbound, leave_tstone,
                     tstone_pointer=self.urn)
@@ -765,7 +764,7 @@ class Ldpr(metaclass=ABCMeta):
             self.provided_imr.add(RDF.type, t)
 
         # Message digest.
-        cksum = Toolbox().rdf_cksum(self.provided_imr.graph)
+        cksum = g.tbox.rdf_cksum(self.provided_imr.graph)
         self.provided_imr.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 
@@ -886,7 +885,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @param cont_uri (rdflib.term.URIRef)  The container URI.
         '''
-        cont_uuid = Toolbox().uri_to_uuid(cont_uri)
+        cont_uuid = g.tbox.uri_to_uuid(cont_uri)
         cont_rsrc = Ldpr.outbound_inst(cont_uuid,
                 repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
@@ -896,7 +895,7 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            s = Toolbox().localize_term(
+            s = self.g.tbox.localize_term(
                     cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)
             p = cont_rsrc.imr.value(self.MBR_REL_URI).identifier
 

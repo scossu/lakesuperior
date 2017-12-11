@@ -19,7 +19,6 @@ from lakesuperior.exceptions import *
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
-from lakesuperior.toolbox import Toolbox
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +78,11 @@ def bp_url_value_preprocessor(endpoint, values):
 
 
 @ldp.before_request
+def instantiate_toolbox():
+    g.tbox = Toolbox()
+
+
+@ldp.before_request
 def request_timestamp():
     g.timestamp = arrow.utcnow()
     g.timestamp_term = Literal(g.timestamp, datatype=XSD.dateTime)
@@ -102,7 +106,7 @@ def get_resource(uuid, force_rdf=False):
     out_headers = std_headers
     repr_options = defaultdict(dict)
     if 'prefer' in request.headers:
-        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
+        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(pformat(prefer)))
         if 'return' in prefer:
             repr_options = parse_repr_options(prefer['return'])
@@ -248,7 +252,7 @@ def delete_resource(uuid):
             if current_app.config['store']['ldp_rs']['referential_integrity'] \
             else {}
     if 'prefer' in request.headers:
-        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
+        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
         leave_tstone = 'no-tombstone' not in prefer
     else:
         leave_tstone = True
@@ -300,7 +304,7 @@ def uuid_for_post(parent_uuid=None, slug=None):
     '''
     def split_if_legacy(uuid):
         if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
-            uuid = Toolbox().split_uuid(uuid)
+            uuid = g.tbox.split_uuid(uuid)
         return uuid
 
     # Shortcut!
@@ -392,13 +396,13 @@ def set_post_put_params():
     '''
     handling = None
     if 'prefer' in request.headers:
-        prefer = Toolbox().parse_rfc7240(request.headers['prefer'])
+        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(prefer))
         if 'handling' in prefer:
             handling = prefer['handling']['value']
 
     try:
-        disposition = Toolbox().parse_rfc7240(
+        disposition = g.tbox.parse_rfc7240(
                 request.headers['content-disposition'])
     except KeyError:
         disposition = None

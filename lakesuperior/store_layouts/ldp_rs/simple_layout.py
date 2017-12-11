@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pprint import pformat
 
-from flask import current_app, request
+from flask import current_app, g, request
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.query import ResultException
@@ -15,7 +15,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import (srv_mgd_subjects,
 from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
         ResourceNotExistsError, TombstoneError)
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
-from lakesuperior.toolbox import Toolbox
 
 
 class SimpleLayout(BaseRdfLayout):
@@ -89,11 +88,11 @@ class SimpleLayout(BaseRdfLayout):
         # Check if resource is a tombstone.
         if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
             raise TombstoneError(
-                    Toolbox().uri_to_uuid(rsrc.identifier),
+                    g.tbox.uri_to_uuid(rsrc.identifier),
                     rsrc.value(nsc['fcrepo'].created))
         elif rsrc.value(nsc['fcsystem'].tombstone):
             raise TombstoneError(
-                    Toolbox().uri_to_uuid(
+                    g.tbox.uri_to_uuid(
                             rsrc.value(nsc['fcsystem'].tombstone).identifier),
                     rsrc.value(nsc['fcrepo'].created))
 
