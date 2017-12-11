@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}{{ rsrc.identifier }}{% endblock %}
+{% block content %}
+<h2>Namespaces</h2>
+ <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#nslist" aria-expanded="false" aria-controls="nsList">
+    Expand/Collapse
+</button>
+<div class="collapse" id="nslist">
+    <div class="card card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <td>Prefix</td>
+                    <td>URI</td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ns in nsm.namespaces() | sort %}
+                <tr>
+                    <td>{{ ns[0] }}</td>
+                    <td>{{ ns[1] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<h2>Resource</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <!--
+            <td>Subject</td>
+            -->
+            <td>Predicate</td>
+            <td>Object</td>
+        </tr>
+    </thead>
+    <tbody>
+    {% for t in rsrc.graph | sort %}
+        <tr>
+            <!--
+            <td>
+                <a href="{{ t[0] }}">
+                    {{ t[0].n3(namespace_manager=nsm) }}
+                </a>
+            </td>
+            -->
+            <td>
+                <a href="{{ t[1] }}">
+                    {{ t[1].n3(namespace_manager=nsm) }}
+                </a>
+            </td>
+            <td>
+            {% if 'Literal' in t[2].__class__.__name__ %}
+            "{{ t[2] }}"
+            {% if t[2].datatype %}
+            <span class="label label-primary">{{ t[2].datatype.n3(namespace_manager=nsm) }}</span>
+            {% endif %}
+            {% else %}
+                <a href="{{ t[2] }}">
+                    {{ t[2].n3(namespace_manager=nsm) }}
+                </a>
+            {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

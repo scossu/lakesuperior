@@ -1,8 +1,6 @@
 from copy import deepcopy
 from pprint import pformat
 
-import arrow
-
 from flask import current_app, request
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD

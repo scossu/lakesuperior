@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+    <head>
+        {% block head %}
+            <meta charset="utf-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+
+            <title>{% block title %}{% endblock %} :: LAKEsuperior</title>
+
+            <link href="{{url_for('ldp.static', filename='assets/css/bootstrap.min.css')}}" rel="stylesheet">
+        {% endblock %}
+    </head>
+    <body>
+        <div class="container">
+            <h1>{{ self.title() }}</h1>
+            {% block content %}{% endblock %}
+        </div>
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="{{url_for('ldp.static', filename='assets/js/jquery-3.2.1.min.js')}}"></script>
+        <!-- Include all compiled plugins (below), or include individual files as needed -->
+        <script src="{{url_for('ldp.static', filename='assets/js/bootstrap.min.js')}}"></script>
+    </body>
+</html>
