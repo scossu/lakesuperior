@@ -74,16 +74,16 @@ class SimpleLayout(BaseRdfLayout):
             qres = self._conn.query(q, initBindings={'s' : uri})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
-            g = Graph()
+            gr = Graph()
         else:
-            g = qres.graph
+            gr = qres.graph
 
         #self._logger.debug('Found resource: {}'.format(
-        #        g.serialize(format='turtle').decode('utf-8')))
-        if strict and not len(g):
+        #        gr.serialize(format='turtle').decode('utf-8')))
+        if strict and not len(gr):
             raise ResourceNotExistsError(uri)
 
-        rsrc = Resource(g, uri)
+        rsrc = Resource(gr, uri)
 
         # Check if resource is a tombstone.
         if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
