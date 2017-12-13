@@ -5,7 +5,15 @@ from rdflib.term import URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
+@pytest.fixture
+def app_ctx(client):
+    '''
+    Initialize the app context.
+    '''
+    return client.head('/ldp')
 
+
+@pytest.mark.usefixtures('app_ctx')
 class TestToolbox:
     '''
     Unit tests for toolbox methods.
@@ -17,7 +25,6 @@ class TestToolbox:
     #    assert g.tbox.camelcase('test_input_string') == 'TestInputString'
     #    assert g.tbox.camelcase('_test_input_string') == '_TestInputString'
     #    assert g.tbox.camelcase('test__input__string') == 'Test_Input_String'
-
 
     def test_uuid_to_uri(self):
         assert g.tbox.uuid_to_uri('1234') == URIRef(g.webroot + '/1234')
