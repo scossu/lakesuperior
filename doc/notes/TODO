@@ -26,8 +26,9 @@
 - [D] Messaging SPI
 - [D] Refactor structure and flow
 - [D] Support PUT and PATCH for LDP-NR metadata
-- [W] Hook up Hyrax
 - [D] Reformat documentation
+- [W] Hyrax compliance
+- [W] Versioning
 
 # Alpha 2 TODO
 
@@ -39,6 +40,7 @@
   - [ ] Range
   - [ ] Limit
   - [ ] (PUT) Digest
+  - [ ] Others
 - [ ] Query API
 
 # Alpha 3 TODO
@@ -51,7 +53,6 @@
 # Alpha 4 TODO
 
 - [ ] Full provenance layout
-- [ ] Versioning
 - [ ] AuthN/Z
   - [ ] Authentication
   - [ ] WebAC

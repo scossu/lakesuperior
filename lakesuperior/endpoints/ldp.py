@@ -6,19 +6,18 @@ from uuid import uuid4
 
 import arrow
 
-from flask import (Blueprint, current_app, g, make_response, render_template,
+from flask import (
+        Blueprint, current_app, g, make_response, render_template,
         request, send_file)
-from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.term import Literal
-from werkzeug.datastructures import FileStorage
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import *
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
-from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
+from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.toolbox import Toolbox
 
 
@@ -29,7 +28,8 @@ logger = logging.getLogger(__name__)
 # standard fcrepo4. Here, it is under `/ldp` but initially `/rest` can be kept
 # for backward compatibility.
 
-ldp = Blueprint('ldp', __name__, template_folder='templates',
+ldp = Blueprint(
+        'ldp', __name__, template_folder='templates',
         static_url_path='/static', static_folder='../../static')
 
 accept_patch = (
@@ -186,6 +186,21 @@ def post_resource(parent):
     out_headers.update(hdr)
 
     return rsrc.uri, 201, out_headers
+
+
+@ldp.route('/<path:uuid>/fcr:versions', methods=['POST'])
+def post_version(uuid):
+    slug = request.headers.setdefault('slug', None)
+    if not slug:
+        return 'Specify label for version.', 400
+
+    parent_uuid = uuid + '/fcr:versions'
+    try:
+        parent_rsrc = Ldpr.create_version(parent_uuid)
+    except InvalidResourceError as e:
+        return str(e), 409
+    else:
+        return '', 201, {'Location': parent_rsrc.uri}
 
 
 @ldp.route('/<path:uuid>', methods=['PUT'], strict_slashes=False)
