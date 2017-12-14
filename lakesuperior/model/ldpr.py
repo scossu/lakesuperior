@@ -677,8 +677,9 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Check whether server-managed terms are in a RDF payload.
         '''
-        if self.handling == 'none':
-            return
+        # @FIXME Need to be more consistent
+        if getattr(self, 'handling', 'none') == 'none':
+            return gr
 
         offending_subjects = set(gr.subjects()) & srv_mgd_subjects
         if offending_subjects:

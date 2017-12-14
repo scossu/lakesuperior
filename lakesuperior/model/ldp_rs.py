@@ -14,11 +14,11 @@ class LdpRs(Ldpr):
     }
 
 
-    def __init__(self, uuid, repr_opts={}, handling='strict', **kwargs):
+    def __init__(self, uuid, repr_opts={}, handling='lenient', **kwargs):
         '''
         Extends Ldpr.__init__ by adding LDP-RS specific parameters.
 
-        @param handling (string) One of `strict` (the default), `lenient` or
+        @param handling (string) One of `strict`, `lenient` (the default) or
         `none`. `strict` raises an error if a server-managed term is in the
         graph. `lenient` removes all sever-managed triples encountered. `none`
         skips all server-managed checks. It is used for internal modifications.
