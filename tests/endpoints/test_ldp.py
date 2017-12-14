@@ -3,14 +3,14 @@ import uuid
 
 from hashlib import sha1
 
-from flask import url_for, g
+from flask import g
 from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.term import Literal, URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.toolbox import Toolbox
+
 
 @pytest.fixture(scope='module')
 def random_uuid():

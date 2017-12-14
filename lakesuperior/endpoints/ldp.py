@@ -47,17 +47,6 @@ accept_rdf = (
     'text/rdf+n3',
     'text/turtle',
 )
-#allow = (
-#    'COPY',
-#    'DELETE',
-#    'GET',
-#    'HEAD',
-#    'MOVE',
-#    'OPTIONS',
-#    'PATCH',
-#    'POST',
-#    'PUT',
-#)
 
 std_headers = {
     'Accept-Patch' : ','.join(accept_patch),
@@ -78,6 +67,11 @@ def bp_url_value_preprocessor(endpoint, values):
 
 
 @ldp.before_request
+def log_request_start():
+    logger.info('\n\n** Start {} {} **'.format(request.method, request.url))
+
+
+@ldp.before_request
 def instantiate_toolbox():
     g.tbox = Toolbox()
 
@@ -86,6 +80,13 @@ def instantiate_toolbox():
 def request_timestamp():
     g.timestamp = arrow.utcnow()
     g.timestamp_term = Literal(g.timestamp, datatype=XSD.dateTime)
+
+
+@ldp.after_request
+def log_request_end(rsp):
+    logger.info('** End {} {} **\n\n'.format(request.method, request.url))
+
+    return rsp
 
 
 ## REST SERVICES ##
@@ -131,6 +132,7 @@ def get_resource(uuid, force_rdf=False):
         else:
             return send_file(rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename)
+            logger.info('Streaming out binary content.')
 
 
 @ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)

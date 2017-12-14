@@ -4,8 +4,8 @@ import pickle
 from collections import defaultdict
 from hashlib import sha1
 
-from flask import request, g
-from rdflib.term import Literal, URIRef, Variable
+from flask import g
+from rdflib.term import URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
