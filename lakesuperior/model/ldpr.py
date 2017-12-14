@@ -895,7 +895,7 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            s = self.g.tbox.localize_term(
+            s = g.tbox.localize_term(
                     cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)
             p = cont_rsrc.imr.value(self.MBR_REL_URI).identifier
 

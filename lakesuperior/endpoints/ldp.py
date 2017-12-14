@@ -6,8 +6,8 @@ from uuid import uuid4
 
 import arrow
 
-from flask import (Blueprint, current_app, g, render_template, request,
-        send_file, url_for)
+from flask import (Blueprint, current_app, g, make_response, render_template,
+        request, send_file)
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.term import Literal
@@ -19,6 +19,7 @@ from lakesuperior.exceptions import *
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
+from lakesuperior.toolbox import Toolbox
 
 
 logger = logging.getLogger(__name__)
@@ -130,9 +131,13 @@ def get_resource(uuid, force_rdf=False):
             else:
                 return (resp.serialize(format='turtle'), out_headers)
         else:
-            return send_file(rsrc.local_path, as_attachment=True,
-                    attachment_filename=rsrc.filename)
             logger.info('Streaming out binary content.')
+            rsp = make_response(send_file(rsrc.local_path, as_attachment=True,
+                    attachment_filename=rsrc.filename))
+            rsp.headers['Link'] = '<{}/fcr:metadata>; rel="describedby"'\
+                    .format(rsrc.uri)
+
+            return rsp
 
 
 @ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
@@ -170,9 +175,15 @@ def post_resource(parent):
     except ServerManagedTermError as e:
         return str(e), 412
 
-    out_headers.update({
+    hdr = {
         'Location' : rsrc.uri,
-    })
+    }
+
+    if isinstance(rsrc, LdpNr):
+        hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="<{0}>"'\
+                .format(rsrc.uri)
+
+    out_headers.update(hdr)
 
     return rsrc.uri, 201, out_headers
 
@@ -212,6 +223,9 @@ def put_resource(uuid):
     if ret == Ldpr.RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = rsrc.uri
+        if isinstance(rsrc, LdpNr):
+            rsp_headers['Link'] = '<{0}/fcr:metadata>; rel="describedby"'\
+                    .format(rsrc.uri)
     else:
         rsp_code = 204
         rsp_body = ''
