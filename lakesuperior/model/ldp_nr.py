@@ -27,11 +27,11 @@ class LdpNr(Ldpr):
         '''
         super().__init__(uuid, **kwargs)
 
+        self._imr_options = {}
         if stream:
             self.workflow = self.WRKF_INBOUND
             self.stream = stream
         else:
-            self._imr_options = {}
             self.workflow = self.WRKF_OUTBOUND
 
         self.mimetype = mimetype
