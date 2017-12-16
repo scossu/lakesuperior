@@ -194,13 +194,16 @@ def post_version(uuid):
     if not label:
         return 'Specify label for version.', 400
 
-    parent_uuid = uuid + '/fcr:versions'
     try:
-        parent_rsrc = Ldpr.create_version(parent_uuid)
+        ver_uri = Ldpr.outbound_inst(uuid).create_version(label)
+    except ResourceNotExistsError as e:
+        return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
     else:
-        return '', 201, {'Location': parent_rsrc.uri}
+        return '', 201, {'Location': ver_uri}
 
 
 @ldp.route('/<path:uuid>', methods=['PUT'], strict_slashes=False)

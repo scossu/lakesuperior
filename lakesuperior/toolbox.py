@@ -19,6 +19,23 @@ class Toolbox:
 
     ROOT_NODE_URN = nsc['fcsystem'].root
 
+    def replace_term_domain(self, term, search, replace):
+        '''
+        Replace the domain of a term.
+
+        @param term (URIRef) The term (URI) to change.
+        @param search (string) Domain string to replace.
+        @param replace (string) Domain string to use for replacement.
+
+        @return URIRef
+        '''
+        s = str(term)
+        if s.startswith(search):
+            s = s.replace(search, replace)
+
+        return URIRef(s)
+
+
     def uuid_to_uri(self, uuid):
         '''Convert a UUID to a URI.
 

@@ -102,6 +102,8 @@ class Ldpr(metaclass=ABCMeta):
     RES_DELETED = '_delete_'
     RES_UPDATED = '_update_'
 
+    RES_VER_CONT_LABEL = 'fcr:versions'
+
     protected_pred = (
         nsc['fcrepo'].created,
         nsc['fcrepo'].createdBy,
@@ -114,7 +116,7 @@ class Ldpr(metaclass=ABCMeta):
     ## STATIC & CLASS METHODS ##
 
     @classmethod
-    def outbound_inst(cls, uuid, repr_opts=None, **kwargs):
+    def outbound_inst(cls, uuid, repr_opts={}, **kwargs):
         '''
         Create an instance for retrieval purposes.
 
@@ -367,8 +369,9 @@ class Ldpr(metaclass=ABCMeta):
 
         Internal URNs are replaced by global URIs using the endpoint webroot.
         '''
-        # Remove digest hash.
+        # Remove digest hash and version information.
         self.imr.remove(nsc['premis'].hasMessageDigest)
+        self.imr.remove(nsc['fcrepo'].hasVersion)
 
         if not self._imr_options.get('incl_srv_mgd', True):
             for p in srv_mgd_predicates:
@@ -392,6 +395,16 @@ class Ldpr(metaclass=ABCMeta):
             return len(self.imr.graph) > 0
         else:
             return self.rdfly.ask_rsrc_exists(self.urn)
+
+
+    @property
+    def has_versions(self):
+        '''
+        Whether if a current resource has versions.
+
+        @return boolean
+        '''
+        return bool(self.imr.value(nsc['fcrepo'].hasVersions, any=False))
 
 
     @property
@@ -523,6 +536,49 @@ class Ldpr(metaclass=ABCMeta):
         self.rdfly.modify_dataset(remove_trp)
 
 
+    @atomic
+    def create_version(self, label):
+        '''
+        Create a new version of the resource.
+
+        NOTE: This creates an event only for the resource being updated (due
+        to the added `hasVersion` triple and possibly to the `hasVersions` one)
+        but not for the version being created.
+
+        @param label Version label. If already existing, an exception is
+        raised.
+        '''
+        add_gr = Graph()
+        vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
+        ver_uuid = '{}/{}'.format(vers_uuid, label)
+        ver_urn = nsc['fcres'][ver_uuid]
+        add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
+        for t in self.imr.graph:
+            if t[1] == RDF.type and t[2] in {
+                nsc['fcrepo'].Resource,
+                nsc['fcrepo'].Container,
+                nsc['fcrepo'].Binary,
+            }:
+                pass
+            else:
+                add_gr.add((
+                        g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
+                        t[1], t[2]))
+
+        self.rdfly.modify_dataset(add_trp=add_gr)
+
+        add_gr = Graph()
+        add_gr.add((
+            self.urn, nsc['fcrepo'].hasVersion, ver_urn))
+        if not self.has_versions:
+            add_gr.add((
+                self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
+
+        self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+
+        return g.tbox.uuid_to_uri(vers_uuid)
+
+
     ## PROTECTED METHODS ##
 
     def _create_or_replace_rsrc(self, create_only=False):
@@ -615,6 +671,18 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_DELETED
 
 
+    def _create_version_container(self):
+        '''
+        Create the relationship with `fcr:versions` the first time a version is
+        created.
+        '''
+        add_gr = Graph()
+        add_gr.add((self.urn, nsc['fcrepo'].hasVersions,
+                URIRef(str(self.urn) + '/fcr:versions')))
+
+        self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+
+
     def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph()):
         '''
         Low-level method to modify a graph for a single resource.
@@ -637,9 +705,8 @@ class Ldpr(metaclass=ABCMeta):
                     if trp[1] == nsc['fcrepo'].createdBy }
         else:
             merge_gr = remove_trp | add_trp
-            type = merge_gr[ self.urn : RDF.type ]
-            actor = merge_gr[ self.urn : nsc['fcrepo'].createdBy ]
-
+            type = merge_gr[self.urn : RDF.type]
+            actor = merge_gr[self.urn : nsc['fcrepo'].createdBy]
 
         return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
             'ev_type' : ev_type,
