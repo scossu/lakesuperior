@@ -124,5 +124,5 @@ class SimpleLayout(BaseRdfLayout):
         for t in add_trp:
             self.ds.add(t)
 
-        if current_app.config.setdefault('messaging') and metadata:
+        if current_app.config.get('messaging') and metadata:
             request.changelog.append((set(remove_trp), set(add_trp), metadata))

@@ -81,7 +81,7 @@ class ASResourceFormatter(BaseASFormatter):
                 'updated' : self.time,
                 'type' : self.type,
             },
-            'actor' : self.metadata.setdefault('actor', None),
+            'actor' : self.metadata.get('actor', None),
         }
 
         return json.dumps(ret)
@@ -108,7 +108,7 @@ class ASDeltaFormatter(BaseASFormatter):
                 'updated' : self.time,
                 'type' : self.type,
             },
-            'actor' : self.metadata.setdefault('actor', None),
+            'actor' : self.metadata.get('actor', None),
             'data' : self.data,
         }
 

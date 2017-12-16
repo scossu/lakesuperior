@@ -370,7 +370,7 @@ class Ldpr(metaclass=ABCMeta):
         # Remove digest hash.
         self.imr.remove(nsc['premis'].hasMessageDigest)
 
-        if not self._imr_options.setdefault('incl_srv_mgd', True):
+        if not self._imr_options.get('incl_srv_mgd', True):
             for p in srv_mgd_predicates:
                 self._logger.debug('Removing predicate: {}'.format(p))
                 self.imr.remove(p)

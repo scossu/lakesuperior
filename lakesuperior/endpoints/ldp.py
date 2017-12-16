@@ -190,8 +190,8 @@ def post_resource(parent):
 
 @ldp.route('/<path:uuid>/fcr:versions', methods=['POST'])
 def post_version(uuid):
-    slug = request.headers.setdefault('slug', None)
-    if not slug:
+    label = request.headers.get('slug', None)
+    if not label:
         return 'Specify label for version.', 400
 
     parent_uuid = uuid + '/fcr:versions'
@@ -469,7 +469,7 @@ def parse_repr_options(retr_opts):
     logger.debug('Parsing retrieval options: {}'.format(retr_opts))
     imr_options = {}
 
-    if retr_opts.setdefault('value') == 'minimal':
+    if retr_opts.get('value') == 'minimal':
         imr_options = {
             'embed_children' : False,
             'incl_children' : False,
