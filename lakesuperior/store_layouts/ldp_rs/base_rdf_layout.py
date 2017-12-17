@@ -121,7 +121,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     @abstractmethod
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
-            metadata=None):
+            types=set()):
         '''
         Adds and/or removes triples from the persistent data set.
 
@@ -130,6 +130,9 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         @param remove_trp (rdflib.Graph) Triples to be removed.
         @param add_trp (rdflib.Graph) Triples to be added.
+        @param types (iterable(rdflib.term.URIRef)) RDF types of the resource
+        that may be relevant to the layout strategy. These can be anything
+        since they are just used to inform the layout and not actually stored.
         '''
         pass
 

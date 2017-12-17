@@ -397,14 +397,14 @@ class Ldpr(metaclass=ABCMeta):
             return self.rdfly.ask_rsrc_exists(self.urn)
 
 
-    @property
-    def has_versions(self):
-        '''
-        Whether if a current resource has versions.
+    #@property
+    #def has_versions(self):
+    #    '''
+    #    Whether if a current resource has versions.
 
-        @return boolean
-        '''
-        return bool(self.imr.value(nsc['fcrepo'].hasVersions, any=False))
+    #    @return boolean
+    #    '''
+    #    return bool(self.imr.value(nsc['fcrepo'].hasVersions, any=False))
 
 
     @property
@@ -548,11 +548,12 @@ class Ldpr(metaclass=ABCMeta):
         @param label Version label. If already existing, an exception is
         raised.
         '''
-        add_gr = Graph()
+        # Create version resource from copying the current state.
+        ver_add_gr = Graph()
         vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
         ver_uuid = '{}/{}'.format(vers_uuid, label)
         ver_urn = nsc['fcres'][ver_uuid]
-        add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
+        ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
         for t in self.imr.graph:
             if t[1] == RDF.type and t[2] in {
                 nsc['fcrepo'].Resource,
@@ -561,21 +562,31 @@ class Ldpr(metaclass=ABCMeta):
             }:
                 pass
             else:
-                add_gr.add((
+                ver_add_gr.add((
                         g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
                         t[1], t[2]))
 
-        self.rdfly.modify_dataset(add_trp=add_gr)
+        self.rdfly.modify_dataset(
+                add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
 
-        # Update current resource with version relationship.
-        add_gr = Graph()
-        add_gr.add((
+        # Add version metadata.
+        meta_add_gr = Graph()
+        meta_add_gr.add((
             self.urn, nsc['fcrepo'].hasVersion, ver_urn))
-        if not self.has_versions:
-            add_gr.add((
-                self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
+        meta_add_gr.add(
+                (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
+        meta_add_gr.add(
+                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(label)))
 
-        self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+        self.rdfly.modify_dataset(
+                add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
+
+        # Update resource.
+        rsrc_add_gr = Graph()
+        rsrc_add_gr.add((
+            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
+
+        self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
         return g.tbox.uuid_to_uri(vers_uuid)
 
@@ -684,7 +695,8 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
 
-    def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph()):
+    def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph(),
+                     notify=True):
         '''
         Low-level method to modify a graph for a single resource.
 
@@ -715,7 +727,7 @@ class Ldpr(metaclass=ABCMeta):
 
         ret = self.rdfly.modify_dataset(remove_trp, add_trp)
 
-        if current_app.config.get('messaging'):
+        if notify and current_app.config.get('messaging'):
             request.changelog.append((set(remove_trp), set(add_trp), {
                 'ev_type' : ev_type,
                 'time' : g.timestamp,

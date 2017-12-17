@@ -114,7 +114,8 @@ class DefaultLayout(BaseRdfLayout):
                     's': urn, 'g': self.MAIN_GRAPH_URI}))
 
 
-    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph()):
+    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
+            types={nsc['fcrepo'].Resource}):
         '''
         See base_rdf_layout.update_rsrc.
         '''
@@ -123,7 +124,14 @@ class DefaultLayout(BaseRdfLayout):
         self._logger.debug('Add triples: {}'.format(pformat(
                 set(add_trp))))
 
+        if nsc['fcrepo'].Metadata in types:
+            target_gr = self.ds.graph(self.META_GRAPH_URI)
+        elif nsc['fcrepo'].Version in types:
+            target_gr = self.ds.graph(self.HIST_GRAPH_URI)
+        else:
+            target_gr = self.ds.graph(self.MAIN_GRAPH_URI)
+
         for t in remove_trp:
-            self.ds.graph(self.MAIN_GRAPH_URI).remove(t)
+            target_gr.remove(t)
         for t in add_trp:
-            self.ds.graph(self.MAIN_GRAPH_URI).add(t)
+            target_gr.add(t)
