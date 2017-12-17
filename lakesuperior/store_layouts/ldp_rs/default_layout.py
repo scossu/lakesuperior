@@ -114,8 +114,7 @@ class DefaultLayout(BaseRdfLayout):
                     's': urn, 'g': self.MAIN_GRAPH_URI}))
 
 
-    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
-            metadata=None):
+    def modify_dataset(self, remove_trp=Graph(), add_trp=Graph()):
         '''
         See base_rdf_layout.update_rsrc.
         '''
@@ -128,6 +127,3 @@ class DefaultLayout(BaseRdfLayout):
             self.ds.graph(self.MAIN_GRAPH_URI).remove(t)
         for t in add_trp:
             self.ds.graph(self.MAIN_GRAPH_URI).add(t)
-
-        if current_app.config.get('messaging') and metadata:
-            request.changelog.append((set(remove_trp), set(add_trp), metadata))

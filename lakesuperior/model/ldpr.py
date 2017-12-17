@@ -567,6 +567,7 @@ class Ldpr(metaclass=ABCMeta):
 
         self.rdfly.modify_dataset(add_trp=add_gr)
 
+        # Update current resource with version relationship.
         add_gr = Graph()
         add_gr.add((
             self.urn, nsc['fcrepo'].hasVersion, ver_urn))
@@ -687,6 +688,10 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Low-level method to modify a graph for a single resource.
 
+        This is a crucial point for messaging. Any write operation on the RDF
+        store that needs to be notified should be performed by invoking this
+        method.
+
         @param ev_type (string) The type of event (create, update, delete).
         @param remove_trp (rdflib.Graph) Triples to be removed.
         @param add_trp (rdflib.Graph) Triples to be added.
@@ -708,12 +713,17 @@ class Ldpr(metaclass=ABCMeta):
             type = merge_gr[self.urn : RDF.type]
             actor = merge_gr[self.urn : nsc['fcrepo'].createdBy]
 
-        return self.rdfly.modify_dataset(remove_trp, add_trp, metadata={
-            'ev_type' : ev_type,
-            'time' : g.timestamp,
-            'type' : type,
-            'actor' : actor,
-        })
+        ret = self.rdfly.modify_dataset(remove_trp, add_trp)
+
+        if current_app.config.get('messaging'):
+            request.changelog.append((set(remove_trp), set(add_trp), {
+                'ev_type' : ev_type,
+                'time' : g.timestamp,
+                'type' : type,
+                'actor' : actor,
+            }))
+
+        return ret
 
 
     def _ensure_single_subject_rdf(self, gr):

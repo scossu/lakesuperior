@@ -123,22 +123,13 @@ class BaseRdfLayout(metaclass=ABCMeta):
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
             metadata=None):
         '''
-        Adds and/or removes triples from the graph.
+        Adds and/or removes triples from the persistent data set.
 
-        This is a crucial point for messaging. Any write operation on the RDF
-        store that needs to be notified must be performed by invoking this
-        method.
+        NOTE: This method can apply to an arbitrary graph including multiple
+        resources.
 
-        NOTE: This method can apply to multiple resources. However, if
-        distinct resources are undergoing different operations (e.g. resource A
-        is being deleted and resource B is being updated) this method must be
-        called once for each operation.
-
-        @param remove_trp (Iterable) Triples to be removed. This can be a graph
-        @param add_trp (Iterable) Triples to be added. This can be a graph.
-        @param metadata (dict) Metadata related to the operation. At a minimum,
-        it should contain the name of the operation (create, update, delete).
-        If no metadata are passed, no messages are enqueued.
+        @param remove_trp (rdflib.Graph) Triples to be removed.
+        @param add_trp (rdflib.Graph) Triples to be added.
         '''
         pass
 
