@@ -24,7 +24,7 @@ store:
     ldp_rs:
         # Store layout. This corresponds to a sub-class of the
         # `lakesuperior.store_layouts.rdf.base_rdf_layout/BaseRdfLayout`.
-        layout: simple_layout
+        layout: default_layout
         # Whether to check if the object of a client-provided triple is the URI
         # of a repository-managed resource and veify if that exists.
         # If set to false, properties are allowed to point to resources in the

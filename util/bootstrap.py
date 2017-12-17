@@ -37,7 +37,7 @@ def bootstrap_db(app):
 
     # @TODO Make configurable.
     print('Populating graph store with base dataset.')
-    db.ds.default_context.parse(source='data/bootstrap/simple_layout.nq',
+    db.ds.default_context.parse(source='data/bootstrap/default_layout.nq',
             format='nquads')
 
     return db

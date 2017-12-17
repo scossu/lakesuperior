@@ -17,17 +17,18 @@ from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
 from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 
 
-class SimpleLayout(BaseRdfLayout):
+class DefaultLayout(BaseRdfLayout):
     '''
-    This is the simplest layout.
+    This is the default layout.
 
-    It uses a flat triple structure without named graphs aimed at performance.
-
-    Changes are destructive.
-
-    In theory it could be used on top of a triplestore instead of a quad-store
-    for (possible) improved speed and reduced storage.
+    Main triples are stored in a `main` graph; metadata in the `meta` graph;
+    and historic snapshots (versions) in `historic`.
     '''
+
+    HIST_GRAPH_URI = nsc['fcg'].historic
+    MAIN_GRAPH_URI = nsc['fcg'].main
+    META_GRAPH_URI = nsc['fcg'].metadata
+
 
     def extract_imr(self, uri, strict=False, incl_inbound=False,
                 incl_children=True, embed_children=False, incl_srv_mgd=True):
@@ -61,9 +62,11 @@ class SimpleLayout(BaseRdfLayout):
             ?s fcrepo:writable true ;
               fcrepo:hasParent ?parent .
         }} WHERE {{
-            ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
-            OPTIONAL {{
-              ?parent ldp:contains ?s .
+            GRAPH ?main_graph {{
+              ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+              OPTIONAL {{
+                ?parent ldp:contains ?s .
+              }}
             }}
         }}
         '''.format(inb_cnst=inbound_construct,
@@ -71,7 +74,8 @@ class SimpleLayout(BaseRdfLayout):
                 embed_chld_t=embed_children_trp, embed_chld=embed_children_qry)
 
         try:
-            qres = self._conn.query(q, initBindings={'s' : uri})
+            qres = self._conn.query(q, initBindings={
+                's': uri, 'main_graph': self.MAIN_GRAPH_URI})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             gr = Graph()
@@ -105,8 +109,9 @@ class SimpleLayout(BaseRdfLayout):
         '''
         self._logger.info('Checking if resource exists: {}'.format(urn))
 
-        return bool(self._conn.query('ASK { ?s ?p ?o . }', initBindings={
-            's' : urn}))
+        return bool(self._conn.query(
+                'ASK { GRAPH ?g { ?s ?p ?o . }}', initBindings={
+                    's': urn, 'g': self.MAIN_GRAPH_URI}))
 
 
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
@@ -120,9 +125,9 @@ class SimpleLayout(BaseRdfLayout):
                 set(add_trp))))
 
         for t in remove_trp:
-            self.ds.remove(t)
+            self.ds.graph(self.MAIN_GRAPH_URI).remove(t)
         for t in add_trp:
-            self.ds.add(t)
+            self.ds.graph(self.MAIN_GRAPH_URI).add(t)
 
         if current_app.config.get('messaging') and metadata:
             request.changelog.append((set(remove_trp), set(add_trp), metadata))
