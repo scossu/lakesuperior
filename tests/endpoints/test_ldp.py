@@ -34,7 +34,6 @@ class TestLdp:
 
         assert ldp_resp.status_code == 200
         assert rest_resp.status_code == 200
-        #assert ldp_resp.data == rest_resp.data
 
 
     def test_put_empty_resource(self, random_uuid):
@@ -95,15 +94,15 @@ class TestLdp:
         self.client.put(path1)
 
         cont1_data = self.client.get('/ldp').data
-        g1 = Graph().parse(data=cont1_data, format='turtle')
-        assert g1[ URIRef(g.webroot + '/') : nsc['ldp'].contains : \
+        gr1 = Graph().parse(data=cont1_data, format='turtle')
+        assert gr1[ URIRef(g.webroot + '/') : nsc['ldp'].contains : \
                 URIRef(g.webroot + '/' + uuid1) ]
 
         self.client.put(path2)
 
         cont2_data = self.client.get(path1).data
-        g1 = Graph().parse(data=cont2_data, format='turtle')
-        assert g1[ URIRef(g.webroot + '/' + uuid1) : \
+        gr2 = Graph().parse(data=cont2_data, format='turtle')
+        assert gr2[ URIRef(g.webroot + '/' + uuid1) : \
                 nsc['ldp'].contains : \
                 URIRef(g.webroot + '/' + uuid2) ]
 
