@@ -29,6 +29,14 @@
 - [D] Reformat documentation
 - [W] Hyrax compliance
 - [W] Versioning
+  - [D] Create version
+  - [D] Retrieve version info
+  - [D] Retrieve version
+  - [W] Revert to version
+  - [W] Slug behavior
+  - [W] Tests
+  - [W] Avoid duplicate versions
+  - [ ] Delete version
 
 # Alpha 2 TODO
 

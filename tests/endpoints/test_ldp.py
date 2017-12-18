@@ -564,3 +564,55 @@ class TestPrefHeader:
         child_resp = self.client.get('/ldp/test_delete_no_tstone01/a')
         assert child_resp.status_code == 404
 
+
+
+@pytest.mark.usefixtures('client_class')
+@pytest.mark.usefixtures('db')
+class TestVersion:
+    '''
+    Test version creation, retrieval and deletion.
+    '''
+    def test_create_versions(self):
+        '''
+        Test that POSTing multiple times to fcr:versions creates the
+        'hasVersions' triple and yields multiple version snapshots.
+        '''
+        self.client.put('/ldp/test_version')
+        create_rsp = self.client.post('/ldp/test_version/fcr:versions')
+
+        assert create_rsp.status_code == 201
+
+        rsrc_rsp = self.client.get('/ldp/test_version')
+        rsrc_gr = Graph().parse(data=rsrc_rsp.data, format='turtle')
+        assert len(set(rsrc_gr[: nsc['fcrepo'].hasVersions :])) == 1
+
+        info_rsp = self.client.get('/ldp/test_version/fcr:versions')
+        assert info_rsp.status_code == 200
+        info_gr = Graph().parse(data=info_rsp.data, format='turtle')
+        assert len(set(info_gr[: nsc['fcrepo'].hasVersion :])) == 1
+
+        self.client.post('/ldp/test_version/fcr:versions')
+        info2_rsp = self.client.get('/ldp/test_version/fcr:versions')
+
+        info2_gr = Graph().parse(data=info2_rsp.data, format='turtle')
+        assert len(set(info2_gr[: nsc['fcrepo'].hasVersion :])) == 2
+
+
+    def test_version_with_slug(self):
+        '''
+        Test a version with a slug.
+        '''
+        self.client.put('/ldp/test_version_slug')
+        create_rsp = self.client.post('/ldp/test_version_slug/fcr:versions',
+            headers={'slug' : 'v1'})
+        new_ver_uri = create_rsp.headers['Location']
+        assert new_ver_uri == g.webroot + '/test_version_slug/fcr:versions/v1'
+
+        info_rsp = self.client.get('/ldp/test_version_slug/fcr:versions')
+        info_gr = Graph().parse(data=info_rsp.data, format='turtle')
+        assert info_gr[
+            URIRef(new_ver_uri) :
+            nsc['fcrepo'].hasVersionLabel :
+            Literal('v1')]
+
+
