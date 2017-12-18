@@ -5,6 +5,7 @@ from hashlib import sha1
 
 from flask import g
 from rdflib import Graph
+from rdflib.compare import isomorphic
 from rdflib.namespace import RDF
 from rdflib.term import Literal, URIRef
 
@@ -471,10 +472,11 @@ class TestPrefHeader:
                     .format(Ldpr.RETURN_CHILD_RES_URI),
         })
 
-        assert incl_children_resp.data == cont_resp.data
-
+        default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_children_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_children_resp.data, format='turtle')
+
+        assert isomorphic(incl_gr, default_gr)
 
         children = incl_gr[cont_subject : nsc['ldp'].contains]
         for child_uri in children:
@@ -498,11 +500,11 @@ class TestPrefHeader:
                     .format(Ldpr.RETURN_INBOUND_REF_URI),
         })
 
-        assert omit_inbound_resp.data == cont_resp.data
-
+        default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_inbound_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_inbound_resp.data, format='turtle')
 
+        assert isomorphic(omit_gr, default_gr)
         assert set(incl_gr[ : : cont_subject ])
         assert not set(omit_gr[ : : cont_subject ])
 
@@ -536,6 +538,7 @@ class TestPrefHeader:
             nsc['fcrepo'].lastModifiedBy,
             nsc['ldp'].contains,
         }:
+
             assert set(incl_gr[ cont_subject : pred : ])
             assert not set(omit_gr[ cont_subject : pred : ])
 

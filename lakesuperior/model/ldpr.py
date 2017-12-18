@@ -373,25 +373,20 @@ class Ldpr(metaclass=ABCMeta):
 
         for t in self.imr.graph:
             if (
-                # Do not include digest hash and version information.
-                t[1] in {
+                # Exclude digest hash and version information.
+                t[1] not in {
                     nsc['premis'].hasMessageDigest,
                     nsc['fcrepo'].hasVersion,
                 }
-            ) or (
-                # Do not include server managed triples if explicitily omitted.
-                not self._imr_options.get('incl_srv_mgd', True)
-                and t[1] in srv_mgd_predicates
-                or t in srv_mgd_types
+            ) and (
+                # Only include server managed triples if requested.
+                self._imr_options.get('incl_srv_mgd', True)
+                or (
+                    not t[1] in srv_mgd_predicates
+                    and not (t[1] == RDF.type or t[2] in srv_mgd_types)
+                )
             ):
-                pass
-            else:
                 out_gr.add(t)
-
-        out_gr = self.imr.graph
-        # Clear IMR because it's been pruned. In the rare case it is needed
-        # after this method, it will be retrieved again.
-        delattr(self, 'imr')
 
         return out_gr
 
