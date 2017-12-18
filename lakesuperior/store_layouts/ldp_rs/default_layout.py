@@ -129,7 +129,12 @@ class DefaultLayout(BaseRdfLayout):
           }
         }
         '''
-        rsp = self.ds.query(q, initBindings={'s': urn})
+        try:
+            rsp = self.ds.query(q, initBindings={'s': urn})
+        except ResultException:
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
+            rsp = Graph()
+
         if not len(rsp):
             raise ResourceNotExistsError(
                     urn, 'No version found for this resource.')
@@ -154,8 +159,13 @@ class DefaultLayout(BaseRdfLayout):
           }
         }
         '''
-        rsp = self.ds.query(q, initBindings={
-            's': urn, 'uid': Literal(ver_uid)})
+        try:
+            rsp = self.ds.query(q, initBindings={
+                's': urn, 'uid': Literal(ver_uid)})
+        except ResultException:
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
+            rsp = Graph()
+
         if not len(rsp):
             raise ResourceNotExistsError(
                     urn,
