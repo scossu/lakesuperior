@@ -114,6 +114,55 @@ class DefaultLayout(BaseRdfLayout):
                     's': urn, 'g': self.MAIN_GRAPH_URI}))
 
 
+    def get_version_info(self, urn):
+        '''
+        See base_rdf_layout.get_vesion_info.
+        '''
+        q = '''
+        CONSTRUCT {
+          ?s fcrepo:hasVersion ?v .
+          ?v ?p ?o .
+        } WHERE {
+          GRAPH fcg:metadata {
+            ?s fcrepo:hasVersion ?v .
+            ?v ?p ?o .
+          }
+        }
+        '''
+        rsp = self.ds.query(q, initBindings={'s': urn})
+        if not len(rsp):
+            raise ResourceNotExistsError(
+                    urn, 'No version found for this resource.')
+        else:
+            return rsp.graph
+
+
+    def get_version(self, urn, label):
+        '''
+        See base_rdf_layout.get_vesion.
+        '''
+        q = '''
+        CONSTRUCT {
+          ?v ?p ?o .
+        } WHERE {
+          GRAPH fcg:metadata {
+            ?s fcrepo:hasVersion ?v .
+            ?v fcrepo:hasVersionLabel ?l .
+          }
+          GRAPH fcg:historic {
+            ?v ?p ?o .
+          }
+        }
+        '''
+        rsp = self.ds.query(q, initBindings={'s': urn, 'l': Literal(label)})
+        if not len(rsp):
+            raise ResourceNotExistsError(
+                    urn,
+                    'No version found for this resource with the given label.')
+        else:
+            return rsp.graph
+
+
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
             types={nsc['fcrepo'].Resource}):
         '''

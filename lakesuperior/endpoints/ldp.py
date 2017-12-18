@@ -188,6 +188,34 @@ def post_resource(parent):
     return rsrc.uri, 201, out_headers
 
 
+@ldp.route('/<path:uuid>/fcr:versions', methods=['GET'])
+def get_version_info(uuid):
+    try:
+        rsp = Ldpr(uuid).version_info
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    except InvalidResourceError as e:
+        return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
+    else:
+        return rsp.serialize(format='turtle'), 200
+
+
+@ldp.route('/<path:uuid>/fcr:versions/<label>', methods=['GET'])
+def get_version(uuid, label):
+    try:
+        rsp = Ldpr(uuid).get_version(label)
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    except InvalidResourceError as e:
+        return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
+    else:
+        return rsp.serialize(format='turtle'), 200
+
+
 @ldp.route('/<path:uuid>/fcr:versions', methods=['POST'])
 def post_version(uuid):
     label = request.headers.get('slug', None)

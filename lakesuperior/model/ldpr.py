@@ -390,6 +390,16 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
+    def version_info(self):
+        '''
+        Return version metadata (`fcr:versions`).
+        '''
+        rsp = self.rdfly.get_version_info(self.urn)
+
+        return g.tbox.globalize_graph(rsp)
+
+
+    @property
     def is_stored(self):
         if hasattr(self, '_imr'):
             return len(self.imr.graph) > 0
@@ -536,6 +546,15 @@ class Ldpr(metaclass=ABCMeta):
         self.rdfly.modify_dataset(remove_trp)
 
 
+    def get_version(self, label):
+        '''
+        Get a version by label.
+        '''
+        ver_graph = self.rdfly.get_version(self.urn, label)
+
+        return g.tbox.globalize_graph(ver_graph)
+
+
     @atomic
     def create_version(self, label):
         '''
@@ -555,11 +574,19 @@ class Ldpr(metaclass=ABCMeta):
         ver_urn = nsc['fcres'][ver_uuid]
         ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
         for t in self.imr.graph:
-            if t[1] == RDF.type and t[2] in {
-                nsc['fcrepo'].Resource,
-                nsc['fcrepo'].Container,
-                nsc['fcrepo'].Binary,
-            }:
+            if (
+                t[1] == RDF.type and t[2] in {
+                    nsc['fcrepo'].Binary,
+                    nsc['fcrepo'].Container,
+                    nsc['fcrepo'].Resource,
+                }
+            ) or (
+                t[1] in {
+                    nsc['fcrepo'].hasParent,
+                    nsc['fcrepo'].hasVersions,
+                    nsc['premis'].hasMessageDigest,
+                }
+            ):
                 pass
             else:
                 ver_add_gr.add((

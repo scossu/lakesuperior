@@ -107,6 +107,22 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
 
     @abstractmethod
+    def get_version_info(self, urn):
+        '''
+        Get version information about a resource (`fcr:versions`)
+        '''
+        pass
+
+
+    @abstractmethod
+    def get_version(self, urn):
+        '''
+        Get a historic snapshot (version) of a resource.
+        '''
+        pass
+
+
+    @abstractmethod
     def ask_rsrc_exists(self, urn):
         '''
         Ask if a resource is stored in the graph store.
