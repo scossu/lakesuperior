@@ -83,6 +83,19 @@ in LAKEsuperior in a 404.
 In both above cases, PUTting into `rest/a` yields a 409, POSTing to it results
 in a 201.
 
+## Non-mandatory slug in version POST
+
+FCREPO requires a `Slug` header to POST to `fcr:versions` to create a new
+version.
+
+LAKEsuperior adheres to the more general FCREPO POST rule and if no slug is
+provided, an automatic ID is generated instead. The ID is a UUID4.
+
+Also, note that internally this ID is not called "label" but "uid" since it is
+treated as a fully qualified identifier. The `fcrepo:hasVersionLabel` predicate
+has been kept as not worth changing until the adoption of Memento, which will
+change the retrieval mechanisms.
+
 
 ## Deprecation track
 

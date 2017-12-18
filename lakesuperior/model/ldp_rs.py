@@ -64,7 +64,6 @@ class Ldpc(LdpRs):
 
 
 
-
 class LdpBc(Ldpc):
     '''LDP-BC (LDP Basic Container).'''
     def __init__(self, uuid, *args, **kwargs):

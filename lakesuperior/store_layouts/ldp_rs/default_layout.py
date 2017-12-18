@@ -116,7 +116,7 @@ class DefaultLayout(BaseRdfLayout):
 
     def get_version_info(self, urn):
         '''
-        See base_rdf_layout.get_vesion_info.
+        See base_rdf_layout.get_version_info.
         '''
         q = '''
         CONSTRUCT {
@@ -137,9 +137,9 @@ class DefaultLayout(BaseRdfLayout):
             return rsp.graph
 
 
-    def get_version(self, urn, label):
+    def get_version(self, urn, ver_uid):
         '''
-        See base_rdf_layout.get_vesion.
+        See base_rdf_layout.get_version.
         '''
         q = '''
         CONSTRUCT {
@@ -147,14 +147,15 @@ class DefaultLayout(BaseRdfLayout):
         } WHERE {
           GRAPH fcg:metadata {
             ?s fcrepo:hasVersion ?v .
-            ?v fcrepo:hasVersionLabel ?l .
+            ?v fcrepo:hasVersionLabel ?uid .
           }
           GRAPH fcg:historic {
             ?v ?p ?o .
           }
         }
         '''
-        rsp = self.ds.query(q, initBindings={'s': urn, 'l': Literal(label)})
+        rsp = self.ds.query(q, initBindings={
+            's': urn, 'uid': Literal(ver_uid)})
         if not len(rsp):
             raise ResourceNotExistsError(
                     urn,

@@ -556,7 +556,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @atomic
-    def create_version(self, label):
+    def create_version(self, ver_uid):
         '''
         Create a new version of the resource.
 
@@ -564,13 +564,13 @@ class Ldpr(metaclass=ABCMeta):
         to the added `hasVersion` triple and possibly to the `hasVersions` one)
         but not for the version being created.
 
-        @param label Version label. If already existing, an exception is
+        @param ver_uid Version ver_uid. If already existing, an exception is
         raised.
         '''
         # Create version resource from copying the current state.
         ver_add_gr = Graph()
         vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
-        ver_uuid = '{}/{}'.format(vers_uuid, label)
+        ver_uuid = '{}/{}'.format(vers_uuid, ver_uid)
         ver_urn = nsc['fcres'][ver_uuid]
         ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
         for t in self.imr.graph:
@@ -603,7 +603,7 @@ class Ldpr(metaclass=ABCMeta):
         meta_add_gr.add(
                 (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
         meta_add_gr.add(
-                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(label)))
+                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
 
         self.rdfly.modify_dataset(
                 add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
@@ -615,7 +615,7 @@ class Ldpr(metaclass=ABCMeta):
 
         self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
-        return g.tbox.uuid_to_uri(vers_uuid)
+        return g.tbox.uuid_to_uri(ver_uuid)
 
 
     ## PROTECTED METHODS ##

@@ -190,6 +190,9 @@ def post_resource(parent):
 
 @ldp.route('/<path:uuid>/fcr:versions', methods=['GET'])
 def get_version_info(uuid):
+    '''
+    Get version info (`fcr:versions`).
+    '''
     try:
         rsp = Ldpr(uuid).version_info
     except ResourceNotExistsError as e:
@@ -202,10 +205,16 @@ def get_version_info(uuid):
         return rsp.serialize(format='turtle'), 200
 
 
-@ldp.route('/<path:uuid>/fcr:versions/<label>', methods=['GET'])
-def get_version(uuid, label):
+@ldp.route('/<path:uuid>/fcr:versions/<ver_uid>', methods=['GET'])
+def get_version(uuid, ver_uid):
+    '''
+    Get an individual resource version.
+
+    @param uuid (string) Resource UUID.
+    @param ver_uid (string) Version UID.
+    '''
     try:
-        rsp = Ldpr(uuid).get_version(label)
+        rsp = Ldpr(uuid).get_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -218,12 +227,15 @@ def get_version(uuid, label):
 
 @ldp.route('/<path:uuid>/fcr:versions', methods=['POST'])
 def post_version(uuid):
-    label = request.headers.get('slug', None)
-    if not label:
-        return 'Specify label for version.', 400
+    '''
+    Create a new resource version.
+    '''
+    ver_uid = request.headers.get('slug', None)
+    if not ver_uid:
+        ver_uid = str(uuid4())
 
     try:
-        ver_uri = Ldpr.outbound_inst(uuid).create_version(label)
+        ver_uri = Ldpr.outbound_inst(uuid).create_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
