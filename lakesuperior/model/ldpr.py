@@ -642,7 +642,7 @@ class Ldpr(metaclass=ABCMeta):
 
         self.provided_imr = revert_gr.resource(self.urn)
 
-        return self._replace_rsrc()
+        return self._create_or_replace_rsrc(create_only=False)
 
 
     ## PROTECTED METHODS ##

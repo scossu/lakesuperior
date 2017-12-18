@@ -439,12 +439,13 @@ class TestPrefHeader:
                     .format(Ldpr.EMBED_CHILD_RES_URI),
         })
 
-        assert omit_embed_children_resp.data == cont_resp.data
-
+        default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(
                 data=incl_embed_children_resp.data, format='turtle')
         omit_gr = Graph().parse(
                 data=omit_embed_children_resp.data, format='turtle')
+
+        assert isomorphic(omit_gr, default_gr)
 
         children = set(incl_gr[cont_subject : nsc['ldp'].contains])
         assert len(children) == 3
@@ -526,10 +527,11 @@ class TestPrefHeader:
                     .format(Ldpr.RETURN_SRV_MGD_RES_URI),
         })
 
-        assert incl_srv_mgd_resp.data == cont_resp.data
-
+        default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_srv_mgd_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_srv_mgd_resp.data, format='turtle')
+
+        assert isomorphic(incl_gr, default_gr)
 
         for pred in {
             nsc['fcrepo'].created,
@@ -619,3 +621,46 @@ class TestVersion:
             Literal('v1')]
 
 
+    def test_revert_version(self):
+        '''
+        Take a version snapshot, update a resource, and then revert to the
+        previous vresion.
+        '''
+        rsrc_path = '/ldp/test_revert_version'
+        payload1 = '<> <urn:demo:p1> <urn:demo:o1> .'
+        payload2 = '<> <urn:demo:p1> <urn:demo:o2> .'
+
+        self.client.put(rsrc_path, headers={
+            'content-type': 'text/turtle'}, data=payload1)
+        self.client.post(
+                rsrc_path + '/fcr:versions', headers={'slug': 'v1'})
+
+        v1_rsp = self.client.get(rsrc_path)
+        v1_gr = Graph().parse(data=v1_rsp.data, format='turtle')
+        assert v1_gr[
+            URIRef(g.webroot + '/test_revert_version')
+            : URIRef('urn:demo:p1')
+            : URIRef('urn:demo:o1')
+        ]
+
+        self.client.put(rsrc_path, headers={
+            'content-type': 'text/turtle'}, data=payload2)
+
+        v2_rsp = self.client.get(rsrc_path)
+        v2_gr = Graph().parse(data=v2_rsp.data, format='turtle')
+        assert v2_gr[
+            URIRef(g.webroot + '/test_revert_version')
+            : URIRef('urn:demo:p1')
+            : URIRef('urn:demo:o2')
+        ]
+
+        self.client.patch(rsrc_path + '/fcr:versions/v1')
+
+        revert_rsp = self.client.get(rsrc_path)
+        revert_gr = Graph().parse(data=revert_rsp.data, format='turtle')
+        #import pdb; pdb.set_trace()
+        assert revert_gr[
+            URIRef(g.webroot + '/test_revert_version')
+            : URIRef('urn:demo:p1')
+            : URIRef('urn:demo:o1')
+        ]
