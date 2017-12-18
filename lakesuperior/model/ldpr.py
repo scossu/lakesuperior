@@ -369,19 +369,26 @@ class Ldpr(metaclass=ABCMeta):
 
         Internal URNs are replaced by global URIs using the endpoint webroot.
         '''
-        # Remove digest hash and version information.
-        self.imr.remove(nsc['premis'].hasMessageDigest)
-        self.imr.remove(nsc['fcrepo'].hasVersion)
+        out_gr = Graph()
 
-        if not self._imr_options.get('incl_srv_mgd', True):
-            for p in srv_mgd_predicates:
-                self._logger.debug('Removing predicate: {}'.format(p))
-                self.imr.remove(p)
-            for t in srv_mgd_types:
-                self._logger.debug('Removing type: {}'.format(t))
-                self.imr.remove(RDF.type, t)
+        for t in self.imr.graph:
+            if (
+                # Do not include digest hash and version information.
+                t[1] in {
+                    nsc['premis'].hasMessageDigest,
+                    nsc['fcrepo'].hasVersion,
+                }
+            ) or (
+                # Do not include server managed triples if explicitily omitted.
+                not self._imr_options.get('incl_srv_mgd', True)
+                and t[1] in srv_mgd_predicates
+                or t in srv_mgd_types
+            ):
+                pass
+            else:
+                out_gr.add(t)
 
-        out_gr = g.tbox.globalize_graph(self.imr.graph)
+        out_gr = self.imr.graph
         # Clear IMR because it's been pruned. In the rare case it is needed
         # after this method, it will be retrieved again.
         delattr(self, 'imr')
@@ -477,7 +484,7 @@ class Ldpr(metaclass=ABCMeta):
         This gets the RDF metadata. The binary retrieval is handled directly
         by the route.
         '''
-        return self.out_graph
+        return g.tbox.globalize_graph(self.out_graph)
 
 
     @atomic
@@ -546,13 +553,13 @@ class Ldpr(metaclass=ABCMeta):
         self.rdfly.modify_dataset(remove_trp)
 
 
-    def get_version(self, label):
+    def get_version(self, ver_uid):
         '''
         Get a version by label.
         '''
-        ver_graph = self.rdfly.get_version(self.urn, label)
+        ver_gr = self.rdfly.get_version(self.urn, ver_uid)
 
-        return g.tbox.globalize_graph(ver_graph)
+        return g.tbox.globalize_graph(ver_gr)
 
 
     @atomic
@@ -616,6 +623,31 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
         return g.tbox.uuid_to_uri(ver_uuid)
+
+
+    @atomic
+    def revert_to_version(self, ver_uid):
+        '''
+        Revert to a previous version.
+
+        NOTE: this will create a new version.
+
+        @param ver_uid (string) Version UID.
+        '''
+        # Create a backup snapshot.
+        self.create_version(uuid4())
+
+        ver_gr = self.rdfly.get_version(self.urn, ver_uid)
+        revert_gr = Graph()
+        for t in ver_gr:
+            if t[1] not in srv_mgd_predicates and not(
+                t[1] == RDF.type and t[2] in srv_mgd_types
+            ):
+                revert_gr.add((self.urn, t[1], t[2]))
+
+        self.provided_imr = revert_gr.resource(self.urn)
+
+        return self._replace_rsrc()
 
 
     ## PROTECTED METHODS ##

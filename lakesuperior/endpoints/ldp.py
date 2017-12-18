@@ -246,6 +246,28 @@ def post_version(uuid):
         return '', 201, {'Location': ver_uri}
 
 
+@ldp.route('/<path:uuid>/fcr:versions/<ver_uid>', methods=['PATCH'])
+def patch_version(uuid, ver_uid):
+    '''
+    Revert to a previous version.
+
+    NOTE: This creates a new version snapshot.
+
+    @param uuid (string) Resource UUID.
+    @param ver_uid (string) Version UID.
+    '''
+    try:
+        Ldpr.outbound_inst(uuid).revert_to_version(ver_uid)
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    except InvalidResourceError as e:
+        return str(e), 409
+    except TombstoneError as e:
+        return _tombstone_response(e, uuid)
+    else:
+        return '', 204
+
+
 @ldp.route('/<path:uuid>', methods=['PUT'], strict_slashes=False)
 @ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['PUT'])

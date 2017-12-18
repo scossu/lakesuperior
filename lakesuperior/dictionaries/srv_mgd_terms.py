@@ -23,6 +23,7 @@ srv_mgd_types = {
     nsc['fcrepo'].Container,
     nsc['fcrepo'].Pairtree,
     nsc['fcrepo'].Resource,
+    nsc['fcrepo'].Version,
     nsc['ldp'].BasicContainer,
     nsc['ldp'].Container,
     nsc['ldp'].DirectContainer,
