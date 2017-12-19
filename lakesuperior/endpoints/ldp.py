@@ -194,7 +194,7 @@ def get_version_info(uuid):
     Get version info (`fcr:versions`).
     '''
     try:
-        rsp = Ldpr(uuid).version_info
+        rsp = Ldpr(uuid).get_version_info()
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -343,7 +343,16 @@ def patch_resource_metadata(uuid):
 @ldp.route('/<path:uuid>', methods=['DELETE'])
 def delete_resource(uuid):
     '''
-    Delete a resource.
+    Delete a resource and optionally leave a tombstone.
+
+    This behaves differently from FCREPO. A tombstone indicated that the
+    resource is no longer available at its current location, but its historic
+    snapshots still are. Also, deleting a resource with a tombstone creates
+    one more version snapshot of the resource prior to being deleted.
+
+    In order to completely wipe out all traces of a resource, the tombstone
+    must be deleted as well, or the `Prefer:no-tombstone` header can be used.
+    The latter will purge the resource immediately.
     '''
     headers = std_headers
 
@@ -374,7 +383,8 @@ def tombstone(uuid):
     '''
     Handle all tombstone operations.
 
-    The only allowed method is DELETE; any other verb will return a 405.
+    The only allowed methods are POST and DELETE; any other verb will return a
+    405.
     '''
     logger.debug('Deleting tombstone for {}.'.format(uuid))
     rsrc = Ldpr(uuid)
@@ -383,8 +393,15 @@ def tombstone(uuid):
     except TombstoneError as e:
         if request.method == 'DELETE':
             if e.uuid == uuid:
-                rsrc.delete_tombstone()
+                rsrc.purge()
                 return '', 204
+            else:
+                return _tombstone_response(e, uuid)
+        elif request.method == 'POST':
+            if e.uuid == uuid:
+                rsrc_uri = rsrc.resurrect()
+                headers = {'Location' : rsrc_uri}
+                return rsrc_uri, 201, headers
             else:
                 return _tombstone_response(e, uuid)
         else:

@@ -168,8 +168,8 @@ class DefaultLayout(BaseRdfLayout):
 
         if not len(rsp):
             raise ResourceNotExistsError(
-                    urn,
-                    'No version found for this resource with the given label.')
+                urn,
+                'No version found for this resource with the given label.')
         else:
             return rsp.graph
 
@@ -184,14 +184,26 @@ class DefaultLayout(BaseRdfLayout):
         self._logger.debug('Add triples: {}'.format(pformat(
                 set(add_trp))))
 
-        if nsc['fcrepo'].Metadata in types:
-            target_gr = self.ds.graph(self.META_GRAPH_URI)
+        if not types:
+            # @FIXME This is terrible, but I can't get Fuseki to update the
+            # default graph without using a vaiable.
+            #target_gr = self.ds.graph(self.UNION_GRAPH_URI)
+            target_gr = {
+                self.ds.graph(self.HIST_GRAPH_URI),
+                self.ds.graph(self.META_GRAPH_URI),
+                self.ds.graph(self.MAIN_GRAPH_URI),
+            }
+        elif nsc['fcrepo'].Metadata in types:
+            target_gr = {self.ds.graph(self.META_GRAPH_URI)}
         elif nsc['fcrepo'].Version in types:
-            target_gr = self.ds.graph(self.HIST_GRAPH_URI)
+            target_gr = {self.ds.graph(self.HIST_GRAPH_URI)}
         else:
-            target_gr = self.ds.graph(self.MAIN_GRAPH_URI)
+            target_gr = {self.ds.graph(self.MAIN_GRAPH_URI)}
 
-        for t in remove_trp:
-            target_gr.remove(t)
-        for t in add_trp:
-            target_gr.add(t)
+        for gr in target_gr:
+            gr -= remove_trp
+            gr += add_trp
+        #for t in remove_trp:
+        #    target_gr.remove(t)
+        #for t in add_trp:
+        #    target_gr.add(t)

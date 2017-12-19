@@ -1,6 +1,7 @@
 import logging
 
 from rdflib import Dataset
+from rdflib.term import URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLStore, SPARQLUpdateStore
 from SPARQLWrapper.Wrapper import POST
 
@@ -14,6 +15,9 @@ class GraphStoreConnector:
     This is indpendent from the application context (production/test) and can
     be passed any configuration options.
     '''
+
+    # N.B. This is Fuseki-specific.
+    UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
 
     _logger = logging.getLogger(__name__)
 

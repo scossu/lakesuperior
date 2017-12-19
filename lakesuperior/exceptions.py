@@ -146,8 +146,8 @@ class TombstoneError(RuntimeError):
         self.ts = ts
 
     def __str__(self):
-        return 'Discovered tombstone resource at /{}, departed: {}'.format(
-                self.uuid, self.ts)
-
-
-
+        return (
+            'Discovered tombstone resource at /{}, departed: {}\n'.format(
+                self.uuid, self.ts),
+            'To resurrect that resource, send a POST request to it.'
+        )

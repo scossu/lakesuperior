@@ -83,7 +83,7 @@ in LAKEsuperior in a 404.
 In both above cases, PUTting into `rest/a` yields a 409, POSTing to it results
 in a 201.
 
-## Non-mandatory slug in version POST
+### Non-mandatory slug in version POST
 
 FCREPO requires a `Slug` header to POST to `fcr:versions` to create a new
 version.
@@ -170,7 +170,18 @@ while leaving the other server-managed triples when retrieving a resource:
 
 The default behavior is including all children URIs.
 
-### Optional deletion without leaving tombstone
+### Soft-delete and purge
 
-In LAKEsuperior, setting the `Prefer:no-tombstone` header option allows to
-delete a resource without leaving a tombstone.
+In FCREPO4 a deleted resource leaves a tombstone deleting all traces of the
+previous resource.
+
+In LAKEsuperior, a normal DELETE creates a new version snapshot of the resource
+and puts a tombstone in its place. The resource versions are still available
+in the `fcr:versions` location. The resource can be "resurrected" by
+issuing a POST to its tombstone. This will result in a `201`.
+
+If a tombstone is deleted, the resource and its versions are completely deleted
+(purged).
+
+Moreover, setting the `Prefer:no-tombstone` header option on DELETE allows to
+delete a resource and its versions directly without leaving a tombstone.

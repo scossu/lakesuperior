@@ -396,9 +396,29 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Return version metadata (`fcr:versions`).
         '''
-        rsp = self.rdfly.get_version_info(self.urn)
+        if not hasattr(self, '_version_info'):
+            self._version_info = self.rdfly.get_version_info(self.urn)
 
-        return g.tbox.globalize_graph(rsp)
+        return self._version_info
+
+
+    @property
+    def versions(self):
+        '''
+        Return a generator of version URIs.
+        '''
+        return set(self.version_info[self.urn : nsc['fcrepo'].hasVersion :])
+
+
+    @property
+    def version_uids(self):
+        '''
+        Return a generator of version UIDs (relative to their parent resource).
+        '''
+        return set(self.version_info[
+            self.urn
+            : nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel
+            :])
 
 
     @property
@@ -407,16 +427,6 @@ class Ldpr(metaclass=ABCMeta):
             return len(self.imr.graph) > 0
         else:
             return self.rdfly.ask_rsrc_exists(self.urn)
-
-
-    #@property
-    #def has_versions(self):
-    #    '''
-    #    Whether if a current resource has versions.
-
-    #    @return boolean
-    #    '''
-    #    return bool(self.imr.value(nsc['fcrepo'].hasVersions, any=False))
 
 
     @property
@@ -521,31 +531,41 @@ class Ldpr(metaclass=ABCMeta):
         children = self.imr[nsc['ldp'].contains * '+'] \
                 if delete_children else []
 
-        ret = self._delete_rsrc(inbound, leave_tstone)
+        if leave_tstone:
+            ret = self._bury_rsrc(inbound)
+        else:
+            ret = self._purge_rsrc(inbound)
 
-        for child_uri in children:
-            child_rsrc = Ldpr.outbound_inst(
-                g.tbox.uri_to_uuid(child_uri.identifier),
-                repr_opts={'incl_children' : False})
-            child_rsrc._delete_rsrc(inbound, leave_tstone,
-                    tstone_pointer=self.urn)
+            for child_uri in children:
+                child_rsrc = Ldpr.outbound_inst(
+                    g.tbox.uri_to_uuid(child_uri.identifier),
+                    repr_opts={'incl_children' : False})
+                if leave_tstone:
+                    child_rsrc._bury_rsrc(inbound, tstone_pointer=self.urn)
+                else:
+                    child_rsrc._purge_rsrc(inbound)
 
         return ret
 
 
     @atomic
-    def delete_tombstone(self):
+    def purge(self, inbound=True):
         '''
-        Delete a tombstone.
+        Delete a tombstone and all historic snapstots.
 
         N.B. This does not trigger an event.
         '''
-        remove_trp = {
-            (self.urn, RDF.type, nsc['fcsystem'].Tombstone),
-            (self.urn, nsc['fcrepo'].created, None),
-            (None, nsc['fcsystem'].tombstone, self.urn),
-        }
-        self.rdfly.modify_dataset(remove_trp)
+        refint = current_app.config['store']['ldp_rs']['referential_integrity']
+        inbound = True if refint else inbound
+
+        return self._purge_rsrc(inbound)
+
+
+    def get_version_info(self):
+        '''
+        Get the `fcr:versions` graph.
+        '''
+        return g.tbox.globalize_graph(self.version_info)
 
 
     def get_version(self, ver_uid):
@@ -569,55 +589,7 @@ class Ldpr(metaclass=ABCMeta):
         @param ver_uid Version ver_uid. If already existing, an exception is
         raised.
         '''
-        # Create version resource from copying the current state.
-        ver_add_gr = Graph()
-        vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
-        ver_uuid = '{}/{}'.format(vers_uuid, ver_uid)
-        ver_urn = nsc['fcres'][ver_uuid]
-        ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
-        for t in self.imr.graph:
-            if (
-                t[1] == RDF.type and t[2] in {
-                    nsc['fcrepo'].Binary,
-                    nsc['fcrepo'].Container,
-                    nsc['fcrepo'].Resource,
-                }
-            ) or (
-                t[1] in {
-                    nsc['fcrepo'].hasParent,
-                    nsc['fcrepo'].hasVersions,
-                    nsc['premis'].hasMessageDigest,
-                }
-            ):
-                pass
-            else:
-                ver_add_gr.add((
-                        g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
-                        t[1], t[2]))
-
-        self.rdfly.modify_dataset(
-                add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
-
-        # Add version metadata.
-        meta_add_gr = Graph()
-        meta_add_gr.add((
-            self.urn, nsc['fcrepo'].hasVersion, ver_urn))
-        meta_add_gr.add(
-                (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
-        meta_add_gr.add(
-                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
-
-        self.rdfly.modify_dataset(
-                add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
-
-        # Update resource.
-        rsrc_add_gr = Graph()
-        rsrc_add_gr.add((
-            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
-
-        self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
-
-        return g.tbox.uuid_to_uri(ver_uuid)
+        return g.tbox.globalize_term(self._create_rsrc_version(ver_uid))
 
 
     @atomic
@@ -702,34 +674,32 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_UPDATED
 
 
-    def _delete_rsrc(self, inbound, leave_tstone=True, tstone_pointer=None):
+    def _bury_rsrc(self, inbound, tstone_pointer=None):
         '''
         Delete a single resource and create a tombstone.
 
         @param inbound (boolean) Whether to delete the inbound relationships.
         @param tstone_pointer (URIRef) If set to a URN, this creates a pointer
         to the tombstone of the resource that used to contain the deleted
-        resource. Otherwise the delete resource becomes a tombstone.
+        resource. Otherwise the deleted resource becomes a tombstone.
         '''
         self._logger.info('Removing resource {}'.format(self.urn))
+        # Create a backup snapshot for resurrection purposes.
+        self.create_version(uuid4())
 
         remove_trp = self.imr.graph
         add_trp = Graph()
 
-        if leave_tstone:
-            if tstone_pointer:
-                add_trp.add((self.urn, nsc['fcsystem'].tombstone,
-                        tstone_pointer))
-            else:
-                add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
-                add_trp.add((self.urn, nsc['fcrepo'].created, g.timestamp_term))
+        if tstone_pointer:
+            add_trp.add((self.urn, nsc['fcsystem'].tombstone,
+                    tstone_pointer))
         else:
-            self._logger.info('NOT leaving tombstone.')
+            add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
+            add_trp.add((self.urn, nsc['fcrepo'].created, g.timestamp_term))
 
         self._modify_rsrc(self.RES_DELETED, remove_trp, add_trp)
 
         if inbound:
-            remove_trp = set()
             for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
                 remove_trp = {(ib_rsrc_uri, None, self.urn)}
                 Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
@@ -737,16 +707,87 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_DELETED
 
 
-    def _create_version_container(self):
+    def _purge_rsrc(self, inbound):
         '''
-        Create the relationship with `fcr:versions` the first time a version is
-        created.
+        Remove all traces of a resource and versions.
         '''
-        add_gr = Graph()
-        add_gr.add((self.urn, nsc['fcrepo'].hasVersions,
-                URIRef(str(self.urn) + '/fcr:versions')))
+        self._logger.info('Purging resource {}'.format(self.urn))
 
-        self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+        import pdb; pdb.set_trace()
+        # Remove resource itself.
+        self.rdfly.modify_dataset({(self.urn, None, None)}, types=None)
+
+        # Remove snapshots.
+        for snap_urn in self.versions:
+            remove_trp = {
+                (snap_urn, None, None),
+                (None, None, snap_urn),
+            }
+            self.rdfly.modify_dataset(remove_trp, types={})
+
+        # Remove inbound references.
+        if inbound:
+            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
+                remove_trp = {(ib_rsrc_uri, None, self.urn)}
+                Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
+
+        # @TODO This could be a different event type.
+        return self.RES_DELETED
+
+
+    def _create_rsrc_version(self, ver_uid):
+        '''
+        Perform version creation and return the internal URN.
+        '''
+        # Create version resource from copying the current state.
+        ver_add_gr = Graph()
+        vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
+        ver_uuid = '{}/{}'.format(vers_uuid, ver_uid)
+        ver_urn = nsc['fcres'][ver_uuid]
+        ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
+        for t in self.imr.graph:
+            if (
+                t[1] == RDF.type and t[2] in {
+                    nsc['fcrepo'].Binary,
+                    nsc['fcrepo'].Container,
+                    nsc['fcrepo'].Resource,
+                }
+            ) or (
+                t[1] in {
+                    nsc['fcrepo'].hasParent,
+                    nsc['fcrepo'].hasVersions,
+                    nsc['premis'].hasMessageDigest,
+                }
+            ):
+                pass
+            else:
+                ver_add_gr.add((
+                        g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
+                        t[1], t[2]))
+
+        self.rdfly.modify_dataset(
+                add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
+
+        # Add version metadata.
+        meta_add_gr = Graph()
+        meta_add_gr.add((
+            self.urn, nsc['fcrepo'].hasVersion, ver_urn))
+        meta_add_gr.add(
+                (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
+        meta_add_gr.add(
+                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
+
+        self.rdfly.modify_dataset(
+                add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
+
+        # Update resource.
+        rsrc_add_gr = Graph()
+        rsrc_add_gr.add((
+            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
+
+        self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
+
+        return nsc['fcres'][ver_uuid]
 
 
     def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph(),
@@ -943,7 +984,8 @@ class Ldpr(metaclass=ABCMeta):
 
         add_gr = Graph()
         add_gr.add((parent_uri, nsc['ldp'].contains, self.urn))
-        parent_rsrc = Ldpc(parent_uri, repr_opts={
+        parent_rsrc = Ldpc.outbound_inst(
+                g.tbox.uri_to_uuid(parent_uri), repr_opts={
                 'incl_children' : False}, handling='none')
         parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 

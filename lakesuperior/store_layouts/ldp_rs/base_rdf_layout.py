@@ -69,6 +69,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         self.store = self._conn.store
 
+        self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI
         self.ds = self._conn.ds
         self.ds.namespace_manager = nsm
 
@@ -149,6 +150,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         @param types (iterable(rdflib.term.URIRef)) RDF types of the resource
         that may be relevant to the layout strategy. These can be anything
         since they are just used to inform the layout and not actually stored.
+        If this is an empty set, the merge graph is used.
         '''
         pass
 
