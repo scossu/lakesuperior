@@ -710,7 +710,6 @@ class TestVersion:
 
         laz_data = self.client.get(path).data
         laz_gr = Graph().parse(data=laz_data, format='turtle')
-        import pdb; pdb.set_trace()
         assert laz_gr[
             URIRef(g.webroot + '/test_lazarus')
             : URIRef('urn:demo:p1')

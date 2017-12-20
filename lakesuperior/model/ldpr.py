@@ -573,7 +573,7 @@ class Ldpr(metaclass=ABCMeta):
           ?latest fcrepo:hasVersionLabel ?uid ;
             fcrepo:created ?ts .
         }
-        ORDER BY ?ts
+        ORDER BY DESC(?ts)
         LIMIT 1
         ''')
         ver_uid = str(ver_rsp.bindings[0]['uid'])
