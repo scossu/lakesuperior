@@ -80,7 +80,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
     # implement.
 
     @abstractmethod
-    def extract_imr(self, uri, strict=False, incl_inbound=False,
+    def extract_imr(self, uri, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, incl_srv_mgd=True):
         '''
         Extract an in-memory resource from the dataset restricted to a subject.
@@ -93,7 +93,8 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
         @param uri (URIRef) Resource URI.
         @param strict (boolean) If set to True, an empty result graph will
-        raise a `ResourceNotExistsError`.
+        raise a `ResourceNotExistsError`; if a tombstone is found, a
+        `TombstoneError` is raised. Otherwise, the raw graph is returned.
         @param incl_inbound (boolean) Whether to pull triples that have the
         resource URI as their object.
         @param incl_children (boolean) Whether to include all children

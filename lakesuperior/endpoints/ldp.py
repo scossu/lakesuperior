@@ -231,9 +231,6 @@ def post_version(uuid):
     Create a new resource version.
     '''
     ver_uid = request.headers.get('slug', None)
-    if not ver_uid:
-        ver_uid = str(uuid4())
-
     try:
         ver_uri = Ldpr.outbound_inst(uuid).create_version(ver_uid)
     except ResourceNotExistsError as e:

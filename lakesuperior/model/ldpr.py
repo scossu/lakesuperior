@@ -104,6 +104,12 @@ class Ldpr(metaclass=ABCMeta):
 
     RES_VER_CONT_LABEL = 'fcr:versions'
 
+    base_types = {
+        nsc['fcrepo'].Resource,
+        nsc['ldp'].Resource,
+        nsc['ldp'].RDFSource,
+    }
+
     protected_pred = (
         nsc['fcrepo'].created,
         nsc['fcrepo'].createdBy,
@@ -397,7 +403,10 @@ class Ldpr(metaclass=ABCMeta):
         Return version metadata (`fcr:versions`).
         '''
         if not hasattr(self, '_version_info'):
-            self._version_info = self.rdfly.get_version_info(self.urn)
+            try:
+                self._version_info = self.rdfly.get_version_info(self.urn)
+            except ResourceNotExistsError as e:
+                self._version_info = Graph()
 
         return self._version_info
 
@@ -415,10 +424,12 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Return a generator of version UIDs (relative to their parent resource).
         '''
-        return set(self.version_info[
+        gen = self.version_info[
             self.urn
             : nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel
-            :])
+            :]
+
+        return { str(uid) for uid in gen }
 
 
     @property
@@ -536,16 +547,55 @@ class Ldpr(metaclass=ABCMeta):
         else:
             ret = self._purge_rsrc(inbound)
 
-            for child_uri in children:
-                child_rsrc = Ldpr.outbound_inst(
-                    g.tbox.uri_to_uuid(child_uri.identifier),
-                    repr_opts={'incl_children' : False})
-                if leave_tstone:
-                    child_rsrc._bury_rsrc(inbound, tstone_pointer=self.urn)
-                else:
-                    child_rsrc._purge_rsrc(inbound)
+        for child_uri in children:
+            child_rsrc = Ldpr.outbound_inst(
+                g.tbox.uri_to_uuid(child_uri.identifier),
+                repr_opts={'incl_children' : False})
+            if leave_tstone:
+                child_rsrc._bury_rsrc(inbound, tstone_pointer=self.urn)
+            else:
+                child_rsrc._purge_rsrc(inbound)
 
         return ret
+
+
+    @atomic
+    def resurrect(self):
+        '''
+        Resurrect a resource from a tombstone.
+
+        @EXPERIMENTAL
+        '''
+        tstone_trp = set(self.rdfly.extract_imr(self.urn, strict=False).graph)
+
+        ver_rsp = self.version_info.query('''
+        SELECT ?uid {
+          ?latest fcrepo:hasVersionLabel ?uid ;
+            fcrepo:created ?ts .
+        }
+        ORDER BY ?ts
+        LIMIT 1
+        ''')
+        ver_uid = str(ver_rsp.bindings[0]['uid'])
+        ver_trp = set(self.rdfly.get_version(self.urn, ver_uid))
+
+        laz_gr = Graph()
+        for t in ver_trp:
+            if t[1] != RDF.type or t[2] not in {
+                nsc['fcrepo'].Version,
+            }:
+                laz_gr.add((self.urn, t[1], t[2]))
+        laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Resource))
+        if nsc['ldp'].NonRdfSource in laz_gr[: RDF.type :]:
+            laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Binary))
+        elif nsc['ldp'].Container in laz_gr[: RDF.type :]:
+            laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Container))
+
+        self._modify_rsrc(self.RES_CREATED, tstone_trp, set(laz_gr))
+        self._set_containment_rel()
+
+        return self.uri
+
 
 
     @atomic
@@ -589,20 +639,26 @@ class Ldpr(metaclass=ABCMeta):
         @param ver_uid Version ver_uid. If already existing, an exception is
         raised.
         '''
+        if not ver_uid or ver_uid in self.version_uids:
+            ver_uid = str(uuid4())
+
         return g.tbox.globalize_term(self._create_rsrc_version(ver_uid))
 
 
     @atomic
-    def revert_to_version(self, ver_uid):
+    def revert_to_version(self, ver_uid, backup=True):
         '''
         Revert to a previous version.
 
         NOTE: this will create a new version.
 
         @param ver_uid (string) Version UID.
+        @param backup (boolean) Whether to create a backup copy. Default is
+        true.
         '''
         # Create a backup snapshot.
-        self.create_version(uuid4())
+        if backup:
+            self.create_version(uuid4())
 
         ver_gr = self.rdfly.get_version(self.urn, ver_uid)
         revert_gr = Graph()
@@ -685,7 +741,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Removing resource {}'.format(self.urn))
         # Create a backup snapshot for resurrection purposes.
-        self.create_version(uuid4())
+        self._create_rsrc_version(uuid4())
 
         remove_trp = self.imr.graph
         add_trp = Graph()
@@ -713,7 +769,6 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Purging resource {}'.format(self.urn))
 
-        import pdb; pdb.set_trace()
         # Remove resource itself.
         self.rdfly.modify_dataset({(self.urn, None, None)}, types=None)
 
@@ -727,7 +782,9 @@ class Ldpr(metaclass=ABCMeta):
 
         # Remove inbound references.
         if inbound:
-            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
+            imr = self.rdfly.extract_imr(
+                    self.urn, incl_inbound=True, strict=False)
+            for ib_rsrc_uri in imr.graph.subjects(None, self.urn):
                 remove_trp = {(ib_rsrc_uri, None, self.urn)}
                 Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
 

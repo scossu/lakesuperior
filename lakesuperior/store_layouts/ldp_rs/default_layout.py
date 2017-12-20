@@ -30,7 +30,7 @@ class DefaultLayout(BaseRdfLayout):
     META_GRAPH_URI = nsc['fcg'].metadata
 
 
-    def extract_imr(self, uri, strict=False, incl_inbound=False,
+    def extract_imr(self, uri, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, incl_srv_mgd=True):
         '''
         See base_rdf_layout.extract_imr.
@@ -90,15 +90,16 @@ class DefaultLayout(BaseRdfLayout):
         rsrc = Resource(gr, uri)
 
         # Check if resource is a tombstone.
-        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
-            raise TombstoneError(
-                    g.tbox.uri_to_uuid(rsrc.identifier),
-                    rsrc.value(nsc['fcrepo'].created))
-        elif rsrc.value(nsc['fcsystem'].tombstone):
-            raise TombstoneError(
-                    g.tbox.uri_to_uuid(
+        if strict:
+            if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+                raise TombstoneError(
+                        g.tbox.uri_to_uuid(rsrc.identifier),
+                        rsrc.value(nsc['fcrepo'].created))
+            elif rsrc.value(nsc['fcsystem'].tombstone):
+                raise TombstoneError(
+                        g.tbox.uri_to_uuid(
                             rsrc.value(nsc['fcsystem'].tombstone).identifier),
-                    rsrc.value(nsc['fcrepo'].created))
+                        rsrc.value(nsc['fcrepo'].created))
 
         return rsrc
 

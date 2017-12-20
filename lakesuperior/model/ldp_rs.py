@@ -6,14 +6,6 @@ class LdpRs(Ldpr):
 
     Definition: https://www.w3.org/TR/ldp/#ldprs
     '''
-
-    base_types = {
-        nsc['fcrepo'].Resource,
-        nsc['ldp'].Resource,
-        nsc['ldp'].RDFSource,
-    }
-
-
     def __init__(self, uuid, repr_opts={}, handling='lenient', **kwargs):
         '''
         Extends Ldpr.__init__ by adding LDP-RS specific parameters.

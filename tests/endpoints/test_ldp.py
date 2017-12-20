@@ -320,6 +320,8 @@ class TestLdp:
     def test_tombstone(self):
         '''
         Test tombstone behaviors.
+
+        For POST on a tombstone, check `test_resurrection`.
         '''
         tstone_resp = self.client.get('/ldp/test_delete01')
         assert tstone_resp.status_code == 410
@@ -330,7 +332,6 @@ class TestLdp:
         tstone_path = '/ldp/test_delete01/fcr:tombstone'
         assert self.client.get(tstone_path).status_code == 405
         assert self.client.put(tstone_path).status_code == 405
-        assert self.client.post(tstone_path).status_code == 405
         assert self.client.delete(tstone_path).status_code == 204
 
         assert self.client.get('/ldp/test_delete01').status_code == 404
@@ -621,6 +622,24 @@ class TestVersion:
             Literal('v1')]
 
 
+    def test_dupl_version(self):
+        '''
+        Make sure that two POSTs with the same slug result in two different
+        versions.
+        '''
+        path = '/ldp/test_duplicate_slug'
+        self.client.put(path)
+        v1_rsp = self.client.post(path + '/fcr:versions',
+            headers={'slug' : 'v1'})
+        v1_uri = v1_rsp.headers['Location']
+
+        dup_rsp = self.client.post(path + '/fcr:versions',
+            headers={'slug' : 'v1'})
+        dup_uri = dup_rsp.headers['Location']
+
+        assert v1_uri != dup_uri
+
+
     def test_revert_version(self):
         '''
         Take a version snapshot, update a resource, and then revert to the
@@ -658,9 +677,42 @@ class TestVersion:
 
         revert_rsp = self.client.get(rsrc_path)
         revert_gr = Graph().parse(data=revert_rsp.data, format='turtle')
-        #import pdb; pdb.set_trace()
         assert revert_gr[
             URIRef(g.webroot + '/test_revert_version')
             : URIRef('urn:demo:p1')
             : URIRef('urn:demo:o1')
+        ]
+
+
+    def test_resurrection(self):
+        '''
+        Delete and then resurrect a resource.
+
+        Make sure that the resource is resurrected to the latest version.
+        '''
+        path = '/ldp/test_lazarus'
+        self.client.put(path)
+
+        self.client.post(path + '/fcr:versions')
+        self.client.put(
+            path, headers={'content-type': 'text/turtle'},
+            data=b'<> <urn:demo:p1> <urn:demo:o1> .')
+        self.client.post(path + '/fcr:versions')
+        self.client.put(
+            path, headers={'content-type': 'text/turtle'},
+            data=b'<> <urn:demo:p1> <urn:demo:o2> .')
+
+        self.client.delete(path)
+
+        assert self.client.get(path).status_code == 410
+
+        self.client.post(path + '/fcr:tombstone')
+
+        laz_data = self.client.get(path).data
+        laz_gr = Graph().parse(data=laz_data, format='turtle')
+        import pdb; pdb.set_trace()
+        assert laz_gr[
+            URIRef(g.webroot + '/test_lazarus')
+            : URIRef('urn:demo:p1')
+            : URIRef('urn:demo:o2')
         ]

@@ -32,11 +32,15 @@
   - [D] Create version
   - [D] Retrieve version info
   - [D] Retrieve version
-  - [W] Revert to version
-  - [W] Slug behavior
+  - [D] Revert to version
+  - [D] Slug behavior
   - [W] Tests
-  - [W] Avoid duplicate versions
-  - [ ] Delete version
+  - [D] Avoid duplicate versions
+  - [D] Delete version
+- [W] Delete vs. purge
+  - [W] Resurrect
+  - [W] Resurrect recursive
+
 
 # Alpha 2 TODO
 
