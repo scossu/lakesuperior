@@ -8,19 +8,18 @@ from pprint import pformat
 from uuid import uuid4
 
 import arrow
-import rdflib
 
 from flask import current_app, g, request
 from rdflib import Graph
 from rdflib.resource import Resource
-from rdflib.namespace import RDF, XSD
+from rdflib.namespace import RDF
 from rdflib.term import URIRef, Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import *
-from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
+from lakesuperior.model.ldp_factory import LdpFactory
 
 
 def atomic(fn):
@@ -80,8 +79,6 @@ class Ldpr(metaclass=ABCMeta):
     EMBED_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
     FCREPO_PTREE_TYPE = nsc['fcrepo'].Pairtree
     INS_CNT_REL_URI = nsc['ldp'].insertedContentRelation
-    LDP_NR_TYPE = nsc['ldp'].NonRDFSource
-    LDP_RS_TYPE = nsc['ldp'].RDFSource
     MBR_RSRC_URI = nsc['ldp'].membershipResource
     MBR_REL_URI = nsc['ldp'].hasMemberRelation
     RETURN_CHILD_RES_URI = nsc['fcrepo'].Children
@@ -117,153 +114,6 @@ class Ldpr(metaclass=ABCMeta):
     )
 
     _logger = logging.getLogger(__name__)
-
-
-    ## STATIC & CLASS METHODS ##
-
-    @classmethod
-    def outbound_inst(cls, uuid, repr_opts={}, **kwargs):
-        '''
-        Create an instance for retrieval purposes.
-
-        This factory method creates and returns an instance of an LDPR subclass
-        based on information that needs to be queried from the underlying
-        graph store.
-
-        N.B. The resource must exist.
-
-        @param uuid UUID of the instance.
-        '''
-        cls._logger.info('Retrieving stored resource: {}'.format(uuid))
-        imr_urn = nsc['fcres'][uuid] if uuid else cls.ROOT_NODE_URN
-
-        imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
-        cls._logger.debug('Extracted graph: {}'.format(
-                pformat(set(imr.graph))))
-        rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
-
-        if cls.LDP_NR_TYPE in rdf_types:
-            from lakesuperior.model.ldp_nr import LdpNr
-            cls._logger.info('Resource is a LDP-NR.')
-            rsrc = LdpNr(uuid, repr_opts, **kwargs)
-        elif cls.LDP_RS_TYPE in rdf_types:
-            from lakesuperior.model.ldp_rs import LdpRs
-            cls._logger.info('Resource is a LDP-RS.')
-            rsrc = LdpRs(uuid, repr_opts, **kwargs)
-        else:
-            raise ResourceNotExistsError(uuid)
-
-        # Sneak in the already extracted IMR to save a query.
-        rsrc._imr = imr
-
-        return rsrc
-
-
-    @staticmethod
-    def inbound_inst(uuid, content_length, mimetype, stream, **kwargs):
-        '''
-        Determine LDP type (and instance class) from request headers and body.
-
-        This is used with POST and PUT methods.
-
-        @param uuid (string) UUID of the resource to be created or updated.
-        '''
-        # @FIXME Circular reference.
-        from lakesuperior.model.ldp_nr import LdpNr
-        from lakesuperior.model.ldp_rs import Ldpc, LdpDc, LdpIc, LdpRs
-
-        urn = nsc['fcres'][uuid]
-
-        logger = __class__._logger
-
-        if not content_length:
-            # Create empty LDPC.
-            logger.debug('No data received in request. '
-                    'Creating empty container.')
-
-            inst = Ldpc(uuid, provided_imr=Resource(Graph(), urn), **kwargs)
-
-        elif __class__.is_rdf_parsable(mimetype):
-            # Create container and populate it with provided RDF data.
-            input_rdf = stream.read()
-            provided_gr = Graph().parse(data=input_rdf,
-                    format=mimetype, publicID=urn)
-            logger.debug('Provided graph: {}'.format(
-                    pformat(set(provided_gr))))
-            local_gr = g.tbox.localize_graph(provided_gr)
-            logger.debug('Parsed local graph: {}'.format(
-                    pformat(set(local_gr))))
-            provided_imr = Resource(local_gr, urn)
-
-            # Determine whether it is a basic, direct or indirect container.
-            if Ldpr.MBR_RSRC_URI in local_gr.predicates() and \
-                    Ldpr.MBR_REL_URI in local_gr.predicates():
-                if Ldpr.INS_CNT_REL_URI in local_gr.predicates():
-                    cls = LdpIc
-                else:
-                    cls = LdpDc
-            else:
-                cls = Ldpc
-
-            inst = cls(uuid, provided_imr=provided_imr, **kwargs)
-
-            # Make sure we are not updating an LDP-RS with an LDP-NR.
-            if inst.is_stored and inst.LDP_NR_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uuid, mimetype)
-
-            inst._check_mgd_terms(inst.provided_imr.graph)
-
-        else:
-            # Create a LDP-NR and equip it with the binary file provided.
-            provided_imr = Resource(Graph(), urn)
-            inst = LdpNr(uuid, stream=stream, mimetype=mimetype,
-                    provided_imr=provided_imr, **kwargs)
-
-            # Make sure we are not updating an LDP-NR with an LDP-RS.
-            if inst.is_stored and inst.LDP_RS_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uuid, mimetype)
-
-        logger.info('Creating resource of type: {}'.format(
-                inst.__class__.__name__))
-
-        try:
-            types = inst.types
-        except:
-            types = set()
-        if nsc['fcrepo'].Pairtree in types:
-            raise InvalidResourceError(inst.uuid)
-
-        return inst
-
-
-    @staticmethod
-    def is_rdf_parsable(mimetype):
-        '''
-        Checks whether a MIME type support RDF parsing by a RDFLib plugin.
-
-        @param mimetype (string) MIME type to check.
-        '''
-        try:
-            rdflib.plugin.get(mimetype, rdflib.parser.Parser)
-        except rdflib.plugin.PluginException:
-            return False
-        else:
-            return True
-
-
-    @staticmethod
-    def is_rdf_serializable(mimetype):
-        '''
-        Checks whether a MIME type support RDF serialization by a RDFLib plugin
-
-        @param mimetype (string) MIME type to check.
-        '''
-        try:
-            rdflib.plugin.get(mimetype, rdflib.serializer.Serializer)
-        except rdflib.plugin.PluginException:
-            return False
-        else:
-            return True
 
 
     ## MAGIC METHODS ##
@@ -548,7 +398,7 @@ class Ldpr(metaclass=ABCMeta):
             ret = self._purge_rsrc(inbound)
 
         for child_uri in children:
-            child_rsrc = Ldpr.outbound_inst(
+            child_rsrc = LdpFactory.from_stored(
                 g.tbox.uri_to_uuid(child_uri.identifier),
                 repr_opts={'incl_children' : False})
             if leave_tstone:
@@ -1041,7 +891,7 @@ class Ldpr(metaclass=ABCMeta):
 
         add_gr = Graph()
         add_gr.add((parent_uri, nsc['ldp'].contains, self.urn))
-        parent_rsrc = Ldpc.outbound_inst(
+        parent_rsrc = LdpFactory.from_stored(
                 g.tbox.uri_to_uuid(parent_uri), repr_opts={
                 'incl_children' : False}, handling='none')
         parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
@@ -1129,7 +979,7 @@ class Ldpr(metaclass=ABCMeta):
         @param cont_uri (rdflib.term.URIRef)  The container URI.
         '''
         cont_uuid = g.tbox.uri_to_uuid(cont_uri)
-        cont_rsrc = Ldpr.outbound_inst(cont_uuid,
+        cont_rsrc = LdpFactory.from_stored(cont_uuid,
                 repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
         add_gr = Graph()

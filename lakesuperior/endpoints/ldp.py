@@ -15,9 +15,10 @@ from rdflib.term import Literal
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import *
-from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
+from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.toolbox import Toolbox
 
 
@@ -114,7 +115,7 @@ def get_resource(uuid, force_rdf=False):
             repr_options = parse_repr_options(prefer['return'])
 
     try:
-        rsrc = Ldpr.outbound_inst(uuid, repr_options)
+        rsrc = LdpFactory.from_stored(uuid, repr_options)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -160,7 +161,7 @@ def post_resource(parent):
     try:
         uuid = uuid_for_post(parent, slug)
         logger.debug('Generated UUID for POST: {}'.format(uuid))
-        rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
+        rsrc = LdpFactory.from_provided(uuid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except ResourceNotExistsError as e:
@@ -232,7 +233,7 @@ def post_version(uuid):
     '''
     ver_uid = request.headers.get('slug', None)
     try:
-        ver_uri = Ldpr.outbound_inst(uuid).create_version(ver_uid)
+        ver_uri = LdpFactory.from_stored(uuid).create_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -254,7 +255,7 @@ def patch_version(uuid, ver_uid):
     @param ver_uid (string) Version UID.
     '''
     try:
-        Ldpr.outbound_inst(uuid).revert_to_version(ver_uid)
+        LdpFactory.from_stored(uuid).revert_to_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -280,7 +281,7 @@ def put_resource(uuid):
     stream, mimetype = bitstream_from_req()
 
     try:
-        rsrc = Ldpr.inbound_inst(uuid, content_length=request.content_length,
+        rsrc = LdpFactory.from_provided(uuid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except InvalidResourceError as e:
@@ -365,7 +366,7 @@ def delete_resource(uuid):
         leave_tstone = True
 
     try:
-        Ldpr.outbound_inst(uuid, repr_opts).delete(leave_tstone=leave_tstone)
+        LdpFactory.from_stored(uuid, repr_opts).delete(leave_tstone=leave_tstone)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
@@ -428,7 +429,7 @@ def uuid_for_post(parent_uuid=None, slug=None):
 
         return uuid
 
-    parent = Ldpr.outbound_inst(parent_uuid, repr_opts={'incl_children' : False})
+    parent = LdpFactory.from_stored(parent_uuid, repr_opts={'incl_children' : False})
 
     if nsc['fcrepo'].Pairtree in parent.types:
         raise InvalidResourceError(parent.uuid,
@@ -531,7 +532,7 @@ def is_accept_hdr_rdf_parsable():
     format.
     '''
     for mimetype in request.accept_mimetypes.values():
-        if Ldpr.is_rdf_parsable(mimetype):
+        if LdpFactory.is_rdf_parsable(mimetype):
             return True
     return False
 
