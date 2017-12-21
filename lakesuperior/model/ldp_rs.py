@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from flask import g
+
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, atomic
 
@@ -40,7 +42,11 @@ class LdpRs(Ldpr):
 
         @param update_str (string) SPARQL-Update staements.
         '''
-        delta = self._sparql_delta(update_str.replace('<>', self.urn.n3()))
+        local_update_str = update_str.replace('<>', self.urn.n3()).replace(
+                g.webroot + '/', nsc['fcres']).replace(
+                g.webroot, nsc['fcres'])
+        delta = self._sparql_delta(local_update_str)
+        self._ensure_single_subject_rdf(delta[0] | delta[1])
 
         return self._modify_rsrc(self.RES_UPDATED, *delta)
 

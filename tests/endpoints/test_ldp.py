@@ -259,6 +259,36 @@ class TestLdp:
         assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
 
 
+    def test_patch_ssr(self):
+        '''
+        Test patching a resource violating the single-subject rule.
+        '''
+        path = '/ldp/test_patch_ssr'
+        self.client.put(path)
+
+        uri = g.webroot + '/test_patch_ssr'
+
+        nossr_qry = 'INSERT { <http://bogus.org> a <urn:ns:A> . } WHERE {}'
+        abs_qry = 'INSERT {{ <{}> a <urn:ns:A> . }} WHERE {{}}'.format(uri)
+        frag_qry = 'INSERT {{ <{}#frag> a <urn:ns:A> . }} WHERE {{}}'\
+                .format(uri)
+
+        assert self.client.patch(
+            path, data=nossr_qry,
+            headers={'content-type' : 'application/sparql-update'}
+        ).status_code == 412
+
+        assert self.client.patch(
+            path, data=abs_qry,
+            headers={'content-type' : 'application/sparql-update'}
+        ).status_code == 204
+
+        assert self.client.patch(
+            path, data=frag_qry,
+            headers={'content-type' : 'application/sparql-update'}
+        ).status_code == 204
+
+
     def test_patch_ldp_nr_metadata(self):
         '''
         Test patching a LDP-NR metadata resource, both from the fcr:metadata

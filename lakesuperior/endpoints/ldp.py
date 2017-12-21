@@ -286,14 +286,14 @@ def put_resource(uuid):
                 disposition=disposition)
     except InvalidResourceError as e:
         return str(e), 409
-    except ServerManagedTermError as e:
+    except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
     except IncompatibleLdpTypeError as e:
         return str(e), 415
 
     try:
         ret = rsrc.put()
-    except (InvalidResourceError, ResourceExistsError ) as e:
+    except (InvalidResourceError, ResourceExistsError) as e:
         return str(e), 409
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
@@ -327,7 +327,7 @@ def patch_resource(uuid):
         return str(e), 404
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
-    except ServerManagedTermError as e:
+    except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
 
     return '', 204, headers
