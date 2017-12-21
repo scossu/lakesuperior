@@ -2,7 +2,6 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
-from copy import deepcopy
 from itertools import accumulate, groupby
 from pprint import pformat
 from uuid import uuid4
@@ -802,47 +801,6 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
             format='turtle').decode('utf-8')))
         return gr
-
-
-    def _sparql_delta(self, q):
-        '''
-        Calculate the delta obtained by a SPARQL Update operation.
-
-        This is a critical component of the SPARQL query prcess and does a
-        couple of things:
-
-        1. It ensures that no resources outside of the subject of the request
-        are modified (e.g. by variable subjects)
-        2. It verifies that none of the terms being modified is server managed.
-
-        This method extracts an in-memory copy of the resource and performs the
-        query on that once it has checked if any of the server managed terms is
-        in the delta. If it is, it raises an exception.
-
-        NOTE: This only checks if a server-managed term is effectively being
-        modified. If a server-managed term is present in the query but does not
-        cause any change in the updated resource, no error is raised.
-
-        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
-        with `BaseStoreLayout.update_resource` and/or recorded as separate
-        events in a provenance tracking system.
-        '''
-        pre_gr = self.imr.graph
-
-        post_gr = deepcopy(pre_gr)
-        post_gr.update(q)
-
-        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
-
-        #self._logger.info('Removing: {}'.format(
-        #    remove_gr.serialize(format='turtle').decode('utf8')))
-        #self._logger.info('Adding: {}'.format(
-        #    add_gr.serialize(format='turtle').decode('utf8')))
-
-        remove_gr = self._check_mgd_terms(remove_gr)
-        add_gr = self._check_mgd_terms(add_gr)
-
-        return remove_gr, add_gr
 
 
     def _add_srv_mgd_triples(self, create=False):

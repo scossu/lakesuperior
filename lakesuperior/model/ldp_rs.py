@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, atomic
 
@@ -41,6 +43,48 @@ class LdpRs(Ldpr):
         delta = self._sparql_delta(update_str.replace('<>', self.urn.n3()))
 
         return self._modify_rsrc(self.RES_UPDATED, *delta)
+
+
+    def _sparql_delta(self, q):
+        '''
+        Calculate the delta obtained by a SPARQL Update operation.
+
+        This is a critical component of the SPARQL query prcess and does a
+        couple of things:
+
+        1. It ensures that no resources outside of the subject of the request
+        are modified (e.g. by variable subjects)
+        2. It verifies that none of the terms being modified is server managed.
+
+        This method extracts an in-memory copy of the resource and performs the
+        query on that once it has checked if any of the server managed terms is
+        in the delta. If it is, it raises an exception.
+
+        NOTE: This only checks if a server-managed term is effectively being
+        modified. If a server-managed term is present in the query but does not
+        cause any change in the updated resource, no error is raised.
+
+        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
+        with `BaseStoreLayout.update_resource` and/or recorded as separate
+        events in a provenance tracking system.
+        '''
+        self._logger.debug('Provided SPARQL query: {}'.format(q))
+        pre_gr = self.imr.graph
+
+        post_gr = deepcopy(pre_gr)
+        post_gr.update(q)
+
+        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+
+        #self._logger.info('Removing: {}'.format(
+        #    remove_gr.serialize(format='turtle').decode('utf8')))
+        #self._logger.info('Adding: {}'.format(
+        #    add_gr.serialize(format='turtle').decode('utf8')))
+
+        remove_gr = self._check_mgd_terms(remove_gr)
+        add_gr = self._check_mgd_terms(add_gr)
+
+        return remove_gr, add_gr
 
 
 

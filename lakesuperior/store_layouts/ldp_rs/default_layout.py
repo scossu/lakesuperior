@@ -90,16 +90,21 @@ class DefaultLayout(BaseRdfLayout):
         rsrc = Resource(gr, uri)
 
         # Check if resource is a tombstone.
-        if strict:
-            if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+            if strict:
                 raise TombstoneError(
                         g.tbox.uri_to_uuid(rsrc.identifier),
                         rsrc.value(nsc['fcrepo'].created))
-            elif rsrc.value(nsc['fcsystem'].tombstone):
+            else:
+                self._logger.info('No resource found: {}'.format(uri))
+        elif rsrc.value(nsc['fcsystem'].tombstone):
+            if strict:
                 raise TombstoneError(
                         g.tbox.uri_to_uuid(
                             rsrc.value(nsc['fcsystem'].tombstone).identifier),
                         rsrc.value(nsc['fcrepo'].created))
+            else:
+                self._logger.info('Tombstone found: {}'.format(uri))
 
         return rsrc
 
