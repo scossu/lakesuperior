@@ -78,7 +78,7 @@ class LdpFactory:
 
         if not content_length:
             # Create empty LDPC.
-            logger.debug('No data received in request. '
+            logger.info('No data received in request. '
                     'Creating empty container.')
             inst = model.ldp_rs.Ldpc(
                     uuid, provided_imr=Resource(Graph(), urn), **kwargs)

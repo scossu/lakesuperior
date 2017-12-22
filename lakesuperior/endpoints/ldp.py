@@ -275,7 +275,8 @@ def put_resource(uuid):
     '''
     # Parse headers.
     logger.info('Request headers: {}'.format(request.headers))
-    rsp_headers = std_headers
+
+    rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
 
     handling, disposition = set_post_put_params()
     stream, mimetype = bitstream_from_req()
@@ -284,6 +285,9 @@ def put_resource(uuid):
         rsrc = LdpFactory.from_provided(uuid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
+        if not request.content_length and rsrc.is_stored:
+            raise InvalidResourceError(
+                rsrc.uuid, 'Resource already exists and no data was provided.')
     except InvalidResourceError as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
@@ -298,6 +302,7 @@ def put_resource(uuid):
     except TombstoneError as e:
         return _tombstone_response(e, uuid)
 
+    rsp_headers.update(rsrc.head())
     if ret == Ldpr.RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = rsrc.uri
@@ -315,7 +320,7 @@ def patch_resource(uuid):
     '''
     Update an existing resource with a SPARQL-UPDATE payload.
     '''
-    headers = std_headers
+    rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
     rsrc = LdpRs(uuid)
     if request.mimetype != 'application/sparql-update':
         return 'Provided content type is not a valid parsable format: {}'\
@@ -329,8 +334,9 @@ def patch_resource(uuid):
         return _tombstone_response(e, uuid)
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
-
-    return '', 204, headers
+    else:
+        rsp_headers.update(rsrc.head())
+        return '', 204, rsp_headers
 
 
 @ldp.route('/<path:uuid>/fcr:metadata', methods=['PATCH'])

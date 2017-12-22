@@ -20,6 +20,10 @@ class LdpRs(Ldpr):
         skips all server-managed checks. It is used for internal modifications.
         '''
         super().__init__(uuid, **kwargs)
+        self.base_types = super().base_types | {
+            nsc['fcrepo'].Container,
+            nsc['ldp'].Container,
+        }
 
         # provided_imr can be empty. If None, it is an outbound resource.
         if self.provided_imr is not None:
@@ -99,10 +103,10 @@ class Ldpc(LdpRs):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types.update({
+        self.base_types = super().base_types | {
             nsc['fcrepo'].Container,
             nsc['ldp'].Container,
-        })
+        }
 
 
 
@@ -110,9 +114,9 @@ class LdpBc(Ldpc):
     '''LDP-BC (LDP Basic Container).'''
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types.update({
+        self.base_types = super().base_types | {
             nsc['ldp'].BasicContainer,
-        })
+        }
 
 
 
@@ -121,9 +125,9 @@ class LdpDc(Ldpc):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types.update({
+        self.base_types = super().base_types | {
             nsc['ldp'].DirectContainer,
-        })
+        }
 
 
 
@@ -132,9 +136,9 @@ class LdpIc(Ldpc):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types.update({
+        self.base_types = super().base_types | {
             nsc['ldp'].IndirectContainer,
-        })
+        }
 
 
 

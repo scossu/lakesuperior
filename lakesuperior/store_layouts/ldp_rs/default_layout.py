@@ -192,7 +192,7 @@ class DefaultLayout(BaseRdfLayout):
 
         if not types:
             # @FIXME This is terrible, but I can't get Fuseki to update the
-            # default graph without using a vaiable.
+            # default graph without using a variable.
             #target_gr = self.ds.graph(self.UNION_GRAPH_URI)
             target_gr = {
                 self.ds.graph(self.HIST_GRAPH_URI),
