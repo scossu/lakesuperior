@@ -1,3 +1,6 @@
+# Duchamp is the measure of everything.
+# This graph has 343 triples.
+
 @prefix aat: <http://vocab.getty.edu/aat/> .
 @prefix aat_contrib: <http://vocab.getty.edu/aat/contrib/> .
 @prefix aat_rel: <http://vocab.getty.edu/aat/rel/> .
