@@ -7,8 +7,8 @@ sys.path.append('.')
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.ldp_rs.graph_store_connector import \
-        GraphStoreConnector
+from lakesuperior.store_layouts.ldp_rs.bdb_connector import \
+        BdbConnector
 from lakesuperior.model.ldpr import Ldpr
 
 __doc__ = '''
@@ -24,23 +24,19 @@ def bootstrap_db(app):
     '''
     Initialize RDF store.
     '''
-    dbconf = app.config['store']['ldp_rs']
-    print('Resetting RDF store to base data set: {}'.format(dbconf['webroot']))
-    db = GraphStoreConnector(
-            query_ep=dbconf['webroot'] + dbconf['query_ep'],
-            update_ep=dbconf['webroot'] + dbconf['update_ep'],
-            autocommit=True)
-
-    print('Cleaning up graph store: {}'.format(dbconf['webroot']))
-    for g in db.ds.graphs():
-        db.ds.remove_graph(g)
+    print('Cleaning up graph store: {}'.format(
+            app.config['store']['ldp_rs']['connector']['options']['location']))
+    for g in app.rdfly.ds.graphs():
+        app.rdfly.ds.remove_graph(g)
 
     # @TODO Make configurable.
     print('Populating graph store with base dataset.')
-    db.ds.default_context.parse(source='data/bootstrap/default_layout.nq',
-            format='nquads')
+    app.rdfly.ds.default_context.parse(
+            source='data/bootstrap/default_layout.nq', format='nquads')
 
-    return db
+    app.rdfly.ds.store.commit()
+
+    return app.rdfly
 
 
 def bootstrap_binary_store(app):

@@ -35,6 +35,8 @@ def db(app):
     for g in db.ds.graphs():
         db.ds.remove_graph(g)
 
+    db.ds.store.commit()
+
 
 @pytest.fixture
 def rnd_img():

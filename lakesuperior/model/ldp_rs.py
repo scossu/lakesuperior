@@ -74,7 +74,7 @@ class LdpRs(Ldpr):
         with `BaseStoreLayout.update_resource` and/or recorded as separate
         events in a provenance tracking system.
         '''
-        self._logger.debug('Provided SPARQL query: {}'.format(q))
+        #self._logger.debug('Provided SPARQL query: {}'.format(q))
         pre_gr = self.imr.graph
 
         post_gr = deepcopy(pre_gr)

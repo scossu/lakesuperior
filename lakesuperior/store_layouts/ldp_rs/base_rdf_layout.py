@@ -2,6 +2,7 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
+from flask import current_app
 from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
@@ -11,8 +12,8 @@ from rdflib.term import URIRef
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import ResourceNotExistsError
-from lakesuperior.store_layouts.ldp_rs.graph_store_connector import \
-        GraphStoreConnector
+from lakesuperior.store_layouts.ldp_rs.bdb_connector import BdbConnector
+from lakesuperior.store_layouts.ldp_rs.sqlite_connector import SqliteConnector
 from lakesuperior.toolbox import Toolbox
 
 
@@ -53,7 +54,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, config):
+    def __init__(self, conn, config):
         '''Initialize the graph store and a layout.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
@@ -63,10 +64,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         which is currently the reference implementation.
         '''
         self.config = config
-        self._conn = GraphStoreConnector(
-                query_ep=config['webroot'] + config['query_ep'],
-                update_ep=config['webroot'] + config['update_ep'])
-
+        self._conn = conn
         self.store = self._conn.store
 
         self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI

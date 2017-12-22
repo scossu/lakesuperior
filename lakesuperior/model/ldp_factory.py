@@ -37,13 +37,13 @@ class LdpFactory:
 
         @param uuid UUID of the instance.
         '''
-        __class__._logger.info('Retrieving stored resource: {}'.format(uuid))
+        #__class__._logger.info('Retrieving stored resource: {}'.format(uuid))
         imr_urn = nsc['fcres'][uuid] if uuid else (
                 model.ldpr.Ldpr.ROOT_NODE_URN)
 
         imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
-        __class__._logger.debug('Extracted graph: {}'.format(
-                pformat(set(imr.graph))))
+        #__class__._logger.debug('Extracted graph: {}'.format(
+        #        pformat(set(imr.graph))))
         rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
 
         if __class__.LDP_NR_TYPE in rdf_types:
@@ -88,11 +88,11 @@ class LdpFactory:
             input_rdf = stream.read()
             provided_gr = Graph().parse(data=input_rdf,
                     format=mimetype, publicID=urn)
-            logger.debug('Provided graph: {}'.format(
-                    pformat(set(provided_gr))))
+            #logger.debug('Provided graph: {}'.format(
+            #        pformat(set(provided_gr))))
             local_gr = g.tbox.localize_graph(provided_gr)
-            logger.debug('Parsed local graph: {}'.format(
-                    pformat(set(local_gr))))
+            #logger.debug('Parsed local graph: {}'.format(
+            #        pformat(set(local_gr))))
             provided_imr = Resource(local_gr, urn)
 
             # Determine whether it is a basic, direct or indirect container.

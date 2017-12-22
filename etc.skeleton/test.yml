@@ -4,13 +4,15 @@
 
 store:
     ldp_rs:
-        webroot: http://localhost:9999/namespace/fcrepo_test/
-        query_ep: sparql
-        update_ep: sparql
-        # Optional
-        #username: <set me>
-        #password: <set me>
-        #ssl_verify: false
+        connector:
+            options:
+                location: http://localhost:3030/fcrepo-test/
+                query_ep: query
+                update_ep: update
+                # Optional
+                #username: <set me>
+                #password: <set me>
+                #ssl_verify: false
     ldp_nr:
         path: /tmp/fcrepo_test/ldpnr_store
 

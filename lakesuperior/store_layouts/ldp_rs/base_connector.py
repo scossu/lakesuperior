@@ -1,14 +1,13 @@
 import logging
 
-from rdflib import Dataset
+from abc import ABCMeta, abstractmethod
+
 from rdflib.term import URIRef
-from rdflib.plugins.stores.sparqlstore import SPARQLStore, SPARQLUpdateStore
-from SPARQLWrapper.Wrapper import POST
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
 
-class GraphStoreConnector:
+class BaseConnector(metaclass=ABCMeta):
     '''
     Handles the connection and dataset information.
 
@@ -16,30 +15,25 @@ class GraphStoreConnector:
     be passed any configuration options.
     '''
 
-    # N.B. This is Fuseki-specific.
-    UNION_GRAPH_URI = URIRef('urn:x-arq:UnionGraph')
+    UNION_GRAPH_URI = URIRef('urn:x-rdflib:default')
 
     _logger = logging.getLogger(__name__)
 
-    def __init__(self, query_ep, update_ep=None, autocommit=False):
+    def __init__(self, *args, **kwargs):
         '''
         Initialize the connection to the SPARQL endpoint.
 
         If `update_ep` is not specified, the store is initialized as read-only.
         '''
-        if update_ep:
-            self.store = SPARQLUpdateStore(
-                    queryEndpoint=query_ep,
-                    update_endpoint=update_ep,
-                    autocommit=autocommit,
-                    dirty_reads=not autocommit)
+        self._init_connection(*args, **kwargs)
 
-            self.readonly = False
-        else:
-            self.store = SPARQLStore(query_ep, default_query_method=POST)
-            self.readonly = True
 
-        self.ds = Dataset(self.store, default_union=True)
+    @abstractmethod
+    def _init_connection(self, *args, **kwargs):
+        '''
+        Interface method. Connection steps go here.
+        '''
+        pass
 
 
     def query(self, q, initBindings=None, nsc=nsc):

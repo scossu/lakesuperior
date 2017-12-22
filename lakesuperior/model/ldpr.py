@@ -41,7 +41,7 @@ def atomic(fn):
             self._logger.info('Committing transaction.')
             self.rdfly.store.commit()
             for ev in request.changelog:
-                self._logger.info('Message: {}'.format(pformat(ev)))
+                #self._logger.info('Message: {}'.format(pformat(ev)))
                 self._send_event_msg(*ev)
             return ret
 
@@ -172,7 +172,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                self._logger.debug('IMR options: {}'.format(self._imr_options))
+                #self._logger.debug('IMR options: {}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -194,7 +194,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                self._logger.debug('IMR options: {}'.format(self._imr_options))
+                #self._logger.debug('IMR options: {}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -801,8 +801,8 @@ class Ldpr(metaclass=ABCMeta):
                     self._logger.info('Removing offending type: {}'.format(t))
                     gr.remove((None, RDF.type, t))
 
-        self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
-            format='turtle').decode('utf-8')))
+        #self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
+        #    format='turtle').decode('utf-8')))
         return gr
 
 
@@ -946,7 +946,7 @@ class Ldpr(metaclass=ABCMeta):
         add_gr = Graph()
 
         self._logger.info('Checking direct or indirect containment.')
-        self._logger.debug('Parent predicates: {}'.format(cont_p))
+        #self._logger.debug('Parent predicates: {}'.format(cont_p))
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = g.tbox.localize_term(
@@ -971,8 +971,8 @@ class Ldpr(metaclass=ABCMeta):
 
         if len(add_gr):
             add_gr = self._check_mgd_terms(add_gr)
-            self._logger.debug('Adding DC/IC triples: {}'.format(
-                add_gr.serialize(format='turtle').decode('utf-8')))
+            #self._logger.debug('Adding DC/IC triples: {}'.format(
+            #    add_gr.serialize(format='turtle').decode('utf-8')))
             self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
 

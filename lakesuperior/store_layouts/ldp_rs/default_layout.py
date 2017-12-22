@@ -185,10 +185,10 @@ class DefaultLayout(BaseRdfLayout):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        self._logger.debug('Remove triples: {}'.format(pformat(
-                set(remove_trp))))
-        self._logger.debug('Add triples: {}'.format(pformat(
-                set(add_trp))))
+        #self._logger.debug('Remove triples: {}'.format(pformat(
+        #        set(remove_trp))))
+        #self._logger.debug('Add triples: {}'.format(pformat(
+        #        set(add_trp))))
 
         if not types:
             # @FIXME This is terrible, but I can't get Fuseki to update the

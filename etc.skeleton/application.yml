@@ -22,30 +22,37 @@ store:
     # The semantic store used for persisting LDP-RS (RDF Source) resources.
     # MUST support SPARQL 1.1 query and update.
     ldp_rs:
-        # Store layout. This corresponds to a sub-class of the
-        # `lakesuperior.store_layouts.rdf.base_rdf_layout/BaseRdfLayout`.
+        # Connector class. This corresponds to a sub-class of the
+        # `lakesuperior.store_layouts.rdf.base_connector.BaseConnector`.
+        connector:
+            module: sparql_connector
+            options:
+                # `location` must be consistent for all connector types. Other
+                # options may vary.
+                location: http://localhost:3030/fcrepo/
+                query_ep: query
+                update_ep: update
+                # Optional
+                #username: <set me>
+                #password: <set me>
+                #ssl_verify: false
+
+        # store layout. this corresponds to a sub-class of the
+        # `lakesuperior.store_layouts.rdf.base_rdf_layout/baserdflayout`.
         layout: default_layout
-        # Whether to check if the object of a client-provided triple is the URI
+        # whether to check if the object of a client-provided triple is the uri
         # of a repository-managed resource and veify if that exists.
-        # If set to false, properties are allowed to point to resources in the
-        # repositoy that do not exist. Also, if a resource is deleted, inbound
+        # if set to false, properties are allowed to point to resources in the
+        # repositoy that do not exist. also, if a resource is deleted, inbound
         # relationships may not be cleaned up.
-        # This can be one of `False` (boolean), `lenient` or `strict`. `False`
+        # this can be one of `false` (boolean), `lenient` or `strict`. `false`
         # does not check for referential integrity. `lenient` quietly drops a
         # user-provided triple if its object violates referential integrity.
         # `strict` raises an exception.
         referential_integrity: lenient
-        webroot: http://localhost:3030/fcrepo
-        query_ep: query
-        update_ep: update
-        # Optional
-        #username: <set me>
-        #password: <set me>
-        #ssl_verify: false
-
-        # This mimics Fedora4 behavior which segments an identifier on POST.
-        # Hyrax will break if this is off.
-        legacy_ptree_split: False
+        # this mimics fedora4 behavior which segments an identifier on post.
+        # hyrax will break if this is off.
+        legacy_ptree_split: false
 
     # The path used to persist LDP-NR (bitstreams).
     # This is for now a POSIX filesystem. Other solutions such as HDFS may be
