@@ -21,7 +21,7 @@ from lakesuperior.toolbox import Toolbox
 class BaseRdfLayout(metaclass=ABCMeta):
     '''
     This class exposes an interface to build graph store layouts. It also
-    provides the baics of the triplestore connection.
+    provides the basics of the triplestore connection.
 
     Some store layouts are provided. New ones aimed at specific uses
     and optimizations of the repository may be developed by extending this

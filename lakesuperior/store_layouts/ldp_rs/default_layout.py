@@ -59,14 +59,10 @@ class DefaultLayout(BaseRdfLayout):
         CONSTRUCT {{
             ?s ?p ?o .{inb_cnst}
             {embed_chld_t}
-            ?s fcrepo:writable true ;
-              fcrepo:hasParent ?parent .
+            ?s fcrepo:writable true .
         }} WHERE {{
             GRAPH ?main_graph {{
               ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
-              OPTIONAL {{
-                ?parent ldp:contains ?s .
-              }}
             }}
         }}
         '''.format(inb_cnst=inbound_construct,
@@ -116,8 +112,8 @@ class DefaultLayout(BaseRdfLayout):
         self._logger.info('Checking if resource exists: {}'.format(urn))
 
         return bool(self._conn.query(
-                'ASK { GRAPH ?g { ?s ?p ?o . }}', initBindings={
-                    's': urn, 'g': self.MAIN_GRAPH_URI}))
+            'ASK { GRAPH ?g { ?s a fcrepo:Resource . }}', initBindings={
+                's': urn, 'g': self.MAIN_GRAPH_URI}))
 
 
     def get_version_info(self, urn):

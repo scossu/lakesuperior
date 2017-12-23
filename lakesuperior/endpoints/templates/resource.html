@@ -38,6 +38,7 @@
     </thead>
     <tbody>
     {% for t in rsrc.graph | sort %}
+        {% if t[1] not in blacklist %}
         <tr>
             <!--
             <td>
@@ -64,6 +65,7 @@
             {% endif %}
             </td>
         </tr>
+        {% endif %}
     {% endfor %}
     </tbody>
 </table>

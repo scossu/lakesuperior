@@ -801,8 +801,8 @@ class Ldpr(metaclass=ABCMeta):
                     self._logger.info('Removing offending type: {}'.format(t))
                     gr.remove((None, RDF.type, t))
 
-        #self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
-        #    format='turtle').decode('utf-8')))
+        self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
+            format='turtle').decode('utf-8')))
         return gr
 
 
@@ -839,14 +839,11 @@ class Ldpr(metaclass=ABCMeta):
           pairtree nodes are created for a/b and a/b/c.
         - If e is being created, the root node becomes container of e.
         '''
-        # @FIXME Circular reference.
-        from lakesuperior.model.ldp_rs import Ldpc
-
         if self.urn == self.ROOT_NODE_URN:
             return
         elif '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
-            parent_uri = self._find_parent_or_create_pairtree(self.uuid)
+            parent_uri = self._find_parent_or_create_pairtree()
         else:
             parent_uri = self.ROOT_NODE_URN
 
@@ -861,7 +858,7 @@ class Ldpr(metaclass=ABCMeta):
         self._add_ldp_dc_ic_rel(parent_uri)
 
 
-    def _find_parent_or_create_pairtree(self, uuid):
+    def _find_parent_or_create_pairtree(self):
         '''
         Check the path-wise parent of the new resource. If it exists, return
         its URI. Otherwise, create pairtree resources up the path until an
@@ -869,7 +866,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @return rdflib.term.URIRef
         '''
-        path_components = uuid.split('/')
+        path_components = self.uuid.split('/')
 
          # If there is only on element, the parent is the root node.
         if len(path_components) < 2:
@@ -883,17 +880,26 @@ class Ldpr(metaclass=ABCMeta):
         )
         rev_search_order = reversed(list(fwd_search_order))
 
-        cur_child_uri = nsc['fcres'][uuid]
+        cur_child_uri = nsc['fcres'][self.uuid]
+        parent_uri = None
+        segments = []
         for cparent_uuid in rev_search_order:
             cparent_uri = nsc['fcres'][cparent_uuid]
 
             if self.rdfly.ask_rsrc_exists(cparent_uri):
-                return cparent_uri
+                parent_uri = cparent_uri
+                break
             else:
-                self._create_path_segment(cparent_uri, cur_child_uri)
+                segments.append((cparent_uri, cur_child_uri))
                 cur_child_uri = cparent_uri
 
-        return self.ROOT_NODE_URN
+        if parent_uri is None:
+            parent_uri = self.ROOT_NODE_URN
+
+        for uri, child_uri in segments:
+            self._create_path_segment(uri, child_uri, parent_uri)
+
+        return parent_uri
 
 
     def _dedup_deltas(self, remove_gr, add_gr):
@@ -907,7 +913,7 @@ class Ldpr(metaclass=ABCMeta):
         )
 
 
-    def _create_path_segment(self, uri, child_uri):
+    def _create_path_segment(self, uri, child_uri, real_parent_uri):
         '''
         Create a path segment with a non-LDP containment statement.
 
@@ -925,6 +931,8 @@ class Ldpr(metaclass=ABCMeta):
         imr.add(RDF.type, nsc['ldp'].RDFSource)
         imr.add(RDF.type, nsc['fcrepo'].Pairtree)
         imr.add(nsc['fcrepo'].contains, child_uri)
+        imr.add(nsc['ldp'].contains, self.urn)
+        imr.add(nsc['fcrepo'].hasParent, real_parent_uri)
 
         # If the path segment is just below root
         if '/' not in str(uri):
@@ -948,6 +956,7 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.info('Checking direct or indirect containment.')
         #self._logger.debug('Parent predicates: {}'.format(cont_p))
 
+        add_gr.add((self.urn, nsc['fcrepo'].hasParent, cont_uri))
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = g.tbox.localize_term(
                     cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)
@@ -970,7 +979,7 @@ class Ldpr(metaclass=ABCMeta):
                     add_gr.add((s, p, target_uri))
 
         if len(add_gr):
-            add_gr = self._check_mgd_terms(add_gr)
+            #add_gr = self._check_mgd_terms(add_gr)
             #self._logger.debug('Adding DC/IC triples: {}'.format(
             #    add_gr.serialize(format='turtle').decode('utf-8')))
             self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)

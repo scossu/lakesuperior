@@ -56,6 +56,11 @@ std_headers = {
     #'Allow' : ','.join(allow),
 }
 
+'''Predicates excluded by view.'''
+vw_blacklist = {
+    nsc['fcrepo'].contains,
+}
+
 @ldp.url_defaults
 def bp_url_defaults(endpoint, values):
     url_prefix = getattr(g, 'url_prefix', None)
@@ -128,8 +133,12 @@ def get_resource(uuid, force_rdf=False):
             resp = rsrc.get()
             if request.accept_mimetypes.best == 'text/html':
                 rsrc = resp.resource(request.path)
-                return render_template('resource.html', rsrc=rsrc, nsm=nsm)
+                return render_template(
+                        'resource.html', rsrc=rsrc, nsm=nsm,
+                        blacklist = vw_blacklist)
             else:
+                for p in vw_blacklist:
+                    resp.remove((None, p, None))
                 return (resp.serialize(format='turtle'), out_headers)
         else:
             logger.info('Streaming out binary content.')
