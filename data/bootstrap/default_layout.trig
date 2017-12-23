@@ -3,8 +3,8 @@
 @prefix ldp: <http://www.w3.org/ns/ldp#> .
 @prefix fcrepo: <http://fedora.info/definitions/v4/repository#> .
 
-<urn:fcgraph:main> {
-  <urn:fcsystem:root>
+<info:fcgraph:main> {
+  <info:fcsystem:root>
     a ldp:RDFSource , ldp:Container , ldp:BasicContainer ,
       fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ;
     .

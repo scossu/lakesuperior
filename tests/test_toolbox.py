@@ -72,30 +72,30 @@ class TestToolbox:
 
         FREE GRATUITOUS {{
           <#blah> a <{0}/type#A> .
-          <> <urn:ex:p> <xyz> .
+          <> <info:ex:p> <xyz> .
           <#c#r#a#zy> ex:virtue <?blah#e> .
           <{0}> <{0}/go#lala>
             <{0}/heythere/gulp> .
         }} GARB AGE TOKENS {{
           <{0}/hey?there#hoho> <https://goglyeyes.com#cearch>
             <{0}#hehe> .
-          <{0}?there#haha> <urn:auth:blok> "Hi I'm a strong" .
+          <{0}?there#haha> <info:auth:blok> "Hi I'm a strong" .
         }}
         '''.format(g.webroot)
         exp_output = '''
         @prefix bogus: <http://bogs.r.us#>
-        @prefix ex: <urn:fcres:ns#>
+        @prefix ex: <info:fcres:ns#>
 
         FREE GRATUITOUS {
-          <urn:fcres:123#blah> a <urn:fcres:type#A> .
-          <urn:fcres:123> <urn:ex:p> <xyz> .
-          <urn:fcres:123#c#r#a#zy> ex:virtue <urn:fcres:123?blah#e> .
-          <urn:fcsystem:root> <urn:fcres:go#lala>
-            <urn:fcres:heythere/gulp> .
+          <info:fcres:123#blah> a <info:fcres:type#A> .
+          <info:fcres:123> <info:ex:p> <xyz> .
+          <info:fcres:123#c#r#a#zy> ex:virtue <info:fcres:123?blah#e> .
+          <info:fcsystem:root> <info:fcres:go#lala>
+            <info:fcres:heythere/gulp> .
         } GARB AGE TOKENS {
-          <urn:fcres:hey?there#hoho> <https://goglyeyes.com#cearch>
-            <urn:fcsystem:root#hehe> .
-          <urn:fcsystem:root?there#haha> <urn:auth:blok> "Hi I'm a strong" .
+          <info:fcres:hey?there#hoho> <https://goglyeyes.com#cearch>
+            <info:fcsystem:root#hehe> .
+          <info:fcsystem:root?there#haha> <info:auth:blok> "Hi I'm a strong" .
         }
         '''
 
