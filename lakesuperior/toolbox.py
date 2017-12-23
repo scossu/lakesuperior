@@ -1,5 +1,6 @@
 import logging
 import pickle
+import re
 
 from collections import defaultdict
 from hashlib import sha1
@@ -113,6 +114,35 @@ class Toolbox:
             gr.add((local_s, t[1], local_o))
 
         return gr
+
+
+    def localize_ext_str(self, s, urn):
+        '''
+        Convert global URIs to local in a SPARQL or RDF string.
+
+        Also replace empty URIs (`<>`) with a fixed local URN and take care
+        of fragments and relative URIs.
+
+        This is a 3-pass replacement. First, global URIs whose webroot matches
+        the application ones are replaced with local URNs. Then, relative URIs
+        are converted to absolute using the URN as the base; finally, the
+        root node is appropriately addressed.
+        '''
+        esc_webroot = g.webroot.replace('/', '\\/')
+        #loc_ptn = r'<({}\/?)?(.*?)?(\?.*?)?(#.*?)?>'.format(esc_webroot)
+        loc_ptn1 = r'<{}\/?(.*?)>'.format(esc_webroot)
+        loc_sub1 = '<{}\\1>'.format(nsc['fcres'])
+        s1 = re.sub(loc_ptn1, loc_sub1, s)
+
+        loc_ptn2 = r'<([#?].*?)?>'
+        loc_sub2 = '<{}\\1>'.format(urn)
+        s2 = re.sub(loc_ptn2, loc_sub2, s1)
+
+        loc_ptn3 = r'<{}([#?].*?)?>'.format(nsc['fcres'])
+        loc_sub3 = '<{}\\1>'.format(self.ROOT_NODE_URN)
+        s3 = re.sub(loc_ptn3, loc_sub3, s2)
+
+        return s3
 
 
     def globalize_string(self, s):

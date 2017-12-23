@@ -59,8 +59,13 @@ class TestLdp:
         assert self.client.get(path).status_code == 200
 
         put2_resp = self.client.put(path)
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            put2_resp = self.client.put(
+                    path, data=f, content_type='text/turtle')
         assert put2_resp.status_code == 204
-        assert put2_resp.data == b''
+
+        put2_resp = self.client.put(path)
+        assert put2_resp.status_code == 409
 
 
     def test_put_tree(self, client):
@@ -426,7 +431,7 @@ class TestPrefHeader:
         path = '/ldp/put_pref_header01'
         assert self.client.put(path).status_code == 201
         assert self.client.get(path).status_code == 200
-        assert self.client.put(path).status_code == 204
+        assert self.client.put(path).status_code == 409
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
             rsp_len = self.client.put(
                 path,

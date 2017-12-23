@@ -46,9 +46,7 @@ class LdpRs(Ldpr):
 
         @param update_str (string) SPARQL-Update staements.
         '''
-        local_update_str = update_str.replace('<>', self.urn.n3()).replace(
-                g.webroot + '/', nsc['fcres']).replace(
-                g.webroot, nsc['fcres'])
+        local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
         delta = self._sparql_delta(local_update_str)
         self._ensure_single_subject_rdf(delta[0] | delta[1])
 

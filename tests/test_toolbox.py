@@ -60,3 +60,44 @@ class TestToolbox:
         assert g.tbox.localize_term(g.webroot + '/test/uid') == \
                 g.tbox.localize_term(g.webroot + '/test/uid/') == \
                 nsc['fcres']['test/uid']
+
+
+    def test_localize_ext_str(self):
+        '''
+        Test extended string localization.
+        '''
+        input = '''
+        @prefix bogus: <http://bogs.r.us#>
+        @prefix ex: <{0}/ns#>
+
+        FREE GRATUITOUS {{
+          <#blah> a <{0}/type#A> .
+          <> <urn:ex:p> <xyz> .
+          <#c#r#a#zy> ex:virtue <?blah#e> .
+          <{0}> <{0}/go#lala>
+            <{0}/heythere/gulp> .
+        }} GARB AGE TOKENS {{
+          <{0}/hey?there#hoho> <https://goglyeyes.com#cearch>
+            <{0}#hehe> .
+          <{0}?there#haha> <urn:auth:blok> "Hi I'm a strong" .
+        }}
+        '''.format(g.webroot)
+        exp_output = '''
+        @prefix bogus: <http://bogs.r.us#>
+        @prefix ex: <urn:fcres:ns#>
+
+        FREE GRATUITOUS {
+          <urn:fcres:123#blah> a <urn:fcres:type#A> .
+          <urn:fcres:123> <urn:ex:p> <xyz> .
+          <urn:fcres:123#c#r#a#zy> ex:virtue <urn:fcres:123?blah#e> .
+          <urn:fcsystem:root> <urn:fcres:go#lala>
+            <urn:fcres:heythere/gulp> .
+        } GARB AGE TOKENS {
+          <urn:fcres:hey?there#hoho> <https://goglyeyes.com#cearch>
+            <urn:fcsystem:root#hehe> .
+          <urn:fcsystem:root?there#haha> <urn:auth:blok> "Hi I'm a strong" .
+        }
+        '''
+
+        assert g.tbox.localize_ext_str(
+                input, nsc['fcres']['123']) == exp_output
