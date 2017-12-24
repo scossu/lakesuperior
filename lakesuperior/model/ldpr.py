@@ -739,7 +739,7 @@ class Ldpr(metaclass=ABCMeta):
         return ret
 
 
-    def _ensure_single_subject_rdf(self, gr):
+    def _ensure_single_subject_rdf(self, gr, add_fragment=True):
         '''
         Ensure that a RDF payload for a POST or PUT has a single resource.
         '''
@@ -749,7 +749,10 @@ class Ldpr(metaclass=ABCMeta):
                 parts = s.split('#')
                 frag = s
                 s = URIRef(parts[0])
-                gr.add((frag, nsc['fcsystem'].fragmentOf, s))
+                if add_fragment:
+                    # @TODO This is added to the main graph. It should be added
+                    # to the metadata graph.
+                    gr.add((frag, nsc['fcsystem'].fragmentOf, s))
             if not s == self.urn:
                 raise SingleSubjectError(s, self.uuid)
 

@@ -1,0 +1,7 @@
+PREFIX : <http://ex.org/>
+DELETE {
+  <#hash1234> ?p ?o .
+}
+WHERE {
+  <#hash1234> ?p ?o .
+}

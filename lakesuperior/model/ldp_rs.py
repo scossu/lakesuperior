@@ -48,7 +48,8 @@ class LdpRs(Ldpr):
         '''
         local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
         delta = self._sparql_delta(local_update_str)
-        self._ensure_single_subject_rdf(delta[0] | delta[1])
+        self._ensure_single_subject_rdf(delta[0], add_fragment=False)
+        self._ensure_single_subject_rdf(delta[1])
 
         return self._modify_rsrc(self.RES_UPDATED, *delta)
 

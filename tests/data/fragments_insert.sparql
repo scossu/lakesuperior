@@ -1,0 +1,5 @@
+PREFIX : <http://ex.org/>
+INSERT {
+  <#hash1234> :p3 :o3 .
+}
+WHERE {}

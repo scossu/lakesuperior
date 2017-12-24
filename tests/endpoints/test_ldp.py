@@ -395,7 +395,7 @@ class TestLdp:
 
     def test_put_fragments(self):
         '''
-        Test the correct handling of fragment URIs.
+        Test the correct handling of fragment URIs on PUT and GET.
         '''
         with open('tests/data/fragments.ttl', 'rb') as f:
             self.client.put(
@@ -411,6 +411,41 @@ class TestLdp:
         assert gr[
                 URIRef(g.webroot + '/test_fragment01#hash1')
                 : URIRef('http://ex.org/p2') : URIRef('http://ex.org/o2')]
+
+
+    def test_patch_fragments(self):
+        '''
+        Test the correct handling of fragment URIs on PATCH.
+        '''
+        self.client.put('/ldp/test_fragment_patch')
+
+        with open('tests/data/fragments_insert.sparql', 'rb') as f:
+            self.client.patch(
+                '/ldp/test_fragment_patch',
+                headers={
+                    'Content-Type' : 'application/sparql-update',
+                },
+                data=f
+            )
+        ins_rsp = self.client.get('/ldp/test_fragment_patch')
+        ins_gr = Graph().parse(data=ins_rsp.data, format='text/turtle')
+        assert ins_gr[
+                URIRef(g.webroot + '/test_fragment_patch#hash1234')
+                : URIRef('http://ex.org/p3') : URIRef('http://ex.org/o3')]
+
+        with open('tests/data/fragments_delete.sparql', 'rb') as f:
+            self.client.patch(
+                '/ldp/test_fragment_patch',
+                headers={
+                    'Content-Type' : 'application/sparql-update',
+                },
+                data=f
+            )
+        del_rsp = self.client.get('/ldp/test_fragment_patch')
+        del_gr = Graph().parse(data=del_rsp.data, format='text/turtle')
+        assert not del_gr[
+                URIRef(g.webroot + '/test_fragment_patch#hash1234')
+                : URIRef('http://ex.org/p3') : URIRef('http://ex.org/o3')]
 
 
 @pytest.mark.usefixtures('client_class')
