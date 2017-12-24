@@ -23,26 +23,38 @@
   - [D] Toolbox
   - [D] LDP layer
 - [D] Bootstrap
+
+
+# Alpha 2 TODO
+
 - [D] Messaging SPI
 - [D] Refactor structure and flow
 - [D] Support PUT and PATCH for LDP-NR metadata
 - [D] Reformat documentation
 - [W] Hyrax compliance
-- [W] Versioning
+- [D] Versioning
   - [D] Create version
   - [D] Retrieve version info
   - [D] Retrieve version
   - [D] Revert to version
   - [D] Slug behavior
-  - [W] Tests
   - [D] Avoid duplicate versions
   - [D] Delete version
-- [W] Delete vs. purge
-  - [W] Resurrect
-  - [W] Resurrect recursive
+  - [D] Tests
+- [D] Delete vs. purge
+  - [D] Resurrect
+  - [D] Resurrect recursive
+- [D] Configurable store back ends
+  - [D] Framework
+  - [D] Add embedded DB (PoC)
+- [D] Hash URIs
+  - [D] PUT+POST
+  - [D] GET
+  - [D] PATCH
+  - [D] DELETE (Purge)
 
 
-# Alpha 2 TODO
+# Alpha 3 TODO
 
 - [ ] Migration tool
 - [ ] Complete header handling
@@ -55,21 +67,17 @@
   - [ ] Others
 - [ ] Query API
 
-# Alpha 3 TODO
+# Alpha 4 TODO
 
 - [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 4 TODO
+# Alpha 5 TODO
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z
   - [ ] Authentication
   - [ ] WebAC
-
-# Alpha 5 TODO
-
-- Blank nodes
-- Hash URIs
+- [ ] Blank nodes
