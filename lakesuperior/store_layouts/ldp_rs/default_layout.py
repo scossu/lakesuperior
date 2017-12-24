@@ -29,6 +29,20 @@ class DefaultLayout(BaseRdfLayout):
     MAIN_GRAPH_URI = nsc['fcg'].main
     META_GRAPH_URI = nsc['fcg'].metadata
 
+    # @TODO This will allow routing triples to certain named graphs depending
+    # on predicates and types.
+    term_routes = {
+        'p': {
+            nsc['fcrepo'].contains: META_GRAPH_URI,
+            nsc['fcrepo'].hasVersion: META_GRAPH_URI,
+            nsc['fcrepo'].hasVersionLabel: META_GRAPH_URI,
+            nsc['fcsystem'].fragmentOf: META_GRAPH_URI,
+            nsc['premis'].hasMessageDigest: META_GRAPH_URI,
+        },
+        't': {
+        },
+    }
+
 
     def extract_imr(self, uri, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, incl_srv_mgd=True):
@@ -60,18 +74,24 @@ class DefaultLayout(BaseRdfLayout):
             ?s ?p ?o .{inb_cnst}
             {embed_chld_t}
             ?s fcrepo:writable true .
-        }} WHERE {{
-            GRAPH ?main_graph {{
-              ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
-            }}
+            ?f ?fp ?fo .
+        }}
+        FROM fcg:main
+        FROM fcg:historic
+        FROM fcg:metadata
+        WHERE {{
+          ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+          OPTIONAL {{
+            ?f fcsystem:fragmentOf ?s ;
+              ?fp ?fo .
+          }}
         }}
         '''.format(inb_cnst=inbound_construct,
                 inb_qry=inbound_qry, incl_chld=incl_children_qry,
                 embed_chld_t=embed_children_trp, embed_chld=embed_children_qry)
 
         try:
-            qres = self._conn.query(q, initBindings={
-                's': uri, 'main_graph': self.MAIN_GRAPH_URI})
+            qres = self._conn.query(q, initBindings={'s': uri})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             gr = Graph()
@@ -205,7 +225,14 @@ class DefaultLayout(BaseRdfLayout):
         for gr in target_gr:
             gr -= remove_trp
             gr += add_trp
-        #for t in remove_trp:
-        #    target_gr.remove(t)
+
+        # @TODO Override by triple.
         #for t in add_trp:
-        #    target_gr.add(t)
+        #    # Override target graph by triple.
+        #    if t[1] in self.term_routes['p']:
+        #        trp_target_gr = self.ds.graph(self.term_routes['p'][t[1]])
+        #    elif t[1] == RDF.type and t[2] in self.term_routes['t']:
+        #        trp_target_gr = self.ds.graph(self.term_routes['t'][t[2]])
+        #    else:
+        #        trp_target_gr = target_gr
+        #    trp_target_gr.add(t)

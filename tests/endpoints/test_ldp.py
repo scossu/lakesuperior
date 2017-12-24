@@ -393,6 +393,25 @@ class TestLdp:
         assert 'Link' not in child_tstone_resp.headers.keys()
 
 
+    def test_put_fragments(self):
+        '''
+        Test the correct handling of fragment URIs.
+        '''
+        with open('tests/data/fragments.ttl', 'rb') as f:
+            self.client.put(
+                '/ldp/test_fragment01',
+                headers={
+                    'Content-Type' : 'text/turtle',
+                },
+                data=f
+            )
+
+        rsp = self.client.get('/ldp/test_fragment01')
+        gr = Graph().parse(data=rsp.data, format='text/turtle')
+        assert gr[
+                URIRef(g.webroot + '/test_fragment01#hash1')
+                : URIRef('http://ex.org/p2') : URIRef('http://ex.org/o2')]
+
 
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')

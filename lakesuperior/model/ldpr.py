@@ -744,9 +744,12 @@ class Ldpr(metaclass=ABCMeta):
         Ensure that a RDF payload for a POST or PUT has a single resource.
         '''
         for s in set(gr.subjects()):
-            # Remove fragment and query components
+            # Fragment components
             if '#' in s:
-               s = URIRef(s.split('#')[0])
+                parts = s.split('#')
+                frag = s
+                s = URIRef(parts[0])
+                gr.add((frag, nsc['fcsystem'].fragmentOf, s))
             if not s == self.urn:
                 raise SingleSubjectError(s, self.uuid)
 
