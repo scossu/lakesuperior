@@ -617,9 +617,16 @@ class Ldpr(metaclass=ABCMeta):
         Remove all traces of a resource and versions.
         '''
         self._logger.info('Purging resource {}'.format(self.urn))
+        imr = self.rdfly.extract_imr(
+                self.urn, incl_inbound=True, strict=False)
 
         # Remove resource itself.
         self.rdfly.modify_dataset({(self.urn, None, None)}, types=None)
+
+        # Remove fragments.
+        for frag_urn in imr.graph[
+                : nsc['fcsystem'].fragmentOf : self.urn]:
+            self.rdfly.modify_dataset({(frag_urn, None, None)}, types={})
 
         # Remove snapshots.
         for snap_urn in self.versions:
@@ -631,8 +638,6 @@ class Ldpr(metaclass=ABCMeta):
 
         # Remove inbound references.
         if inbound:
-            imr = self.rdfly.extract_imr(
-                    self.urn, incl_inbound=True, strict=False)
             for ib_rsrc_uri in imr.graph.subjects(None, self.urn):
                 remove_trp = {(ib_rsrc_uri, None, self.urn)}
                 Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
