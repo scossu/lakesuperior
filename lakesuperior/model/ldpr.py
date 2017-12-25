@@ -182,6 +182,29 @@ class Ldpr(metaclass=ABCMeta):
         return self._imr
 
 
+    @imr.setter
+    def imr(self, v):
+        '''
+        Replace in-memory buffered resource.
+
+        @param v (set | rdflib.Graph) New set of triples to populate the IMR
+        with.
+        '''
+        if isinstance(v, Resource):
+            v = v.graph
+        self._imr = Resource(Graph(), self.urn)
+        gr = self._imr.graph
+        gr += v
+
+
+    @imr.deleter
+    def imr(self):
+        '''
+        Delete in-memory buffered resource.
+        '''
+        delattr(self, '_imr')
+
+
     @property
     def stored_or_new_imr(self):
         '''
@@ -207,14 +230,6 @@ class Ldpr(metaclass=ABCMeta):
                     self.imr.add(RDF.type, t)
 
         return self._imr
-
-
-    @imr.deleter
-    def imr(self):
-        '''
-        Delete in-memory buffered resource.
-        '''
-        delattr(self, '_imr')
 
 
     @property
@@ -283,10 +298,13 @@ class Ldpr(metaclass=ABCMeta):
 
     @property
     def is_stored(self):
-        if hasattr(self, '_imr'):
-            return len(self.imr.graph) > 0
-        else:
-            return self.rdfly.ask_rsrc_exists(self.urn)
+        if not hasattr(self, '_is_stored'):
+            if hasattr(self, '_imr'):
+                self._is_stored = len(self.imr.graph) > 0
+            else:
+                self._is_stored = self.rdfly.ask_rsrc_exists(self.urn)
+
+        return self._is_stored
 
 
     @property
@@ -556,6 +574,9 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
 
+        # Set the IMR contents to the "add" triples.
+        self.imr = self.provided_imr.graph
+
         return self.RES_CREATED
 
 
@@ -573,8 +594,8 @@ class Ldpr(metaclass=ABCMeta):
         delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
         self._modify_rsrc(self.RES_UPDATED, *delta)
 
-        # Reset the IMR because it has changed.
-        delattr(self, 'imr')
+        # Set the IMR contents to the "add" triples.
+        self.imr = delta[1]
 
         return self.RES_UPDATED
 
@@ -812,8 +833,8 @@ class Ldpr(metaclass=ABCMeta):
                     self._logger.info('Removing offending type: {}'.format(t))
                     gr.remove((None, RDF.type, t))
 
-        self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
-            format='turtle').decode('utf-8')))
+        #self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
+        #    format='turtle').decode('utf-8')))
         return gr
 
 
@@ -866,7 +887,7 @@ class Ldpr(metaclass=ABCMeta):
         parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
-        self._add_ldp_dc_ic_rel(parent_uri)
+        self._add_ldp_dc_ic_rel(parent_rsrc)
 
 
     def _find_parent_or_create_pairtree(self):
@@ -952,22 +973,19 @@ class Ldpr(metaclass=ABCMeta):
         self.rdfly.modify_dataset(add_trp=imr.graph)
 
 
-    def _add_ldp_dc_ic_rel(self, cont_uri):
+    def _add_ldp_dc_ic_rel(self, cont_rsrc):
         '''
         Add relationship triples from a parent direct or indirect container.
 
-        @param cont_uri (rdflib.term.URIRef)  The container URI.
+        @param cont_rsrc (rdflib.resource.Resouce)  The container resource.
         '''
-        cont_uuid = g.tbox.uri_to_uuid(cont_uri)
-        cont_rsrc = LdpFactory.from_stored(cont_uuid,
-                repr_opts={'incl_children' : False})
         cont_p = set(cont_rsrc.imr.graph.predicates())
         add_gr = Graph()
 
         self._logger.info('Checking direct or indirect containment.')
         #self._logger.debug('Parent predicates: {}'.format(cont_p))
 
-        add_gr.add((self.urn, nsc['fcrepo'].hasParent, cont_uri))
+        add_gr.add((self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn))
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = g.tbox.localize_term(
                     cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)

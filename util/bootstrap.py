@@ -35,6 +35,7 @@ def bootstrap_db(app):
             source='data/bootstrap/default_layout.nq', format='nquads')
 
     app.rdfly.ds.store.commit()
+    app.rdfly.ds.close()
 
     return app.rdfly
 
@@ -51,6 +52,7 @@ def bootstrap_binary_store(app):
         pass
     print('Recreating binary store path: {}'.format(root_path))
     os.makedirs(root_path + '/tmp')
+    print('Binary store initialized.')
 
 
 if __name__=='__main__':

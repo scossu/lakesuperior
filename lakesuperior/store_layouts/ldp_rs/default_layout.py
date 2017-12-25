@@ -76,14 +76,13 @@ class DefaultLayout(BaseRdfLayout):
             ?s fcrepo:writable true .
             ?f ?fp ?fo .
         }}
-        FROM fcg:main
-        FROM fcg:historic
-        FROM fcg:metadata
         WHERE {{
-          ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
-          OPTIONAL {{
-            ?f fcsystem:fragmentOf ?s ;
-              ?fp ?fo .
+          GRAPH ?g {{
+            ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+            OPTIONAL {{
+              ?f fcsystem:fragmentOf ?s ;
+                ?fp ?fo .
+            }}
           }}
         }}
         '''.format(inb_cnst=inbound_construct,

@@ -20,17 +20,21 @@ class BdbConnector(BaseConnector):
 
     _logger = logging.getLogger(__name__)
 
-    def _init_connection(self, path):
+    def _init_connection(self, location):
         '''
-        Initialize the connection to the SPARQL endpoint.
+        Initialize the connection to the BerkeleyDB (Sleepycat) store.
 
-        If `update_ep` is not specified, the store is initialized as read-only.
+        Also open the store, which must be closed by the __del__ method.
         '''
-        self.store = plugin.get('Sleepycat', Store)(
-                identifier=URIRef('urn:fcsystem:lsup'))
-        self.store.open(path, create=True)
-        self.ds = Dataset(self.store, default_union=True)
+        #self.store = plugin.get('Sleepycat', Store)(
+        #        identifier=URIRef('urn:fcsystem:lsup'))
+        self.ds = Dataset('Sleepycat', default_union=True)
+        self.store = self.ds.store
+        self.ds.open(location, create=True)
 
 
     def __del__(self):
-        self.store.close()
+        '''
+        Close store connection.
+        '''
+        self.ds.close(commit_pending_transaction=False)

@@ -37,6 +37,11 @@ store:
                 #password: <set me>
                 #ssl_verify: false
 
+            # Connector for BerkeleyDB embedded store.
+            #module: bdb_connector
+            #options:
+            #    location: /data/fcrepo/ldprs_store/bdb
+
         # store layout. this corresponds to a sub-class of the
         # `lakesuperior.store_layouts.rdf.base_rdf_layout/baserdflayout`.
         layout: default_layout

@@ -13,17 +13,17 @@ Key features:
   [Delta document](doc/notes/fcrepo4_deltas.md))—currently being tested with
   Hyrax 2
 - Stores metadata in a graph store, binaries in filesystem
-- Strives to be faster than Modeshape implementation (benchmarks TBD)
 - Simple search and SPARQL Query API via back-end triplestore (alpha 2)
 - No performance issues storing many resources under the same container; no
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
-  pairtree segmentation [1]
+  pairtree segmentation <sup id="a1">[1](#f1)</sup>
 - Mitigates "many member" issue: constant performance writing to a resource with
   many children or members; option to omit children in retrieval
 - Flexible back-end layouts: options to organize information in back end
-- Migration tool (in alpha2)
+- Migration tool (in alpha3)
 
-Implementation of the official Fedora API specs (Fedora 5.x and beyond) is not
+Implementation of the official [Fedora API specs](https://fedora.info/spec/)
+(Fedora 5.x and beyond) is not
 foreseen in the short term, however it would be a natural evolution of this
 project if it gains support.
 
@@ -78,5 +78,6 @@ for a rudimentary road map and status.
 
 The design documents are in the [doc/pdf](doc/pdf) folder. *@TODO needs update*
 
-[1]: However if your client splits pairtrees upstream, such as Hyrax does, that
-obviously needs to change to get rid of the path segments.
+<b id="f1">1</b> However if your client splits pairtrees upstream, such as
+Hyrax does, that obviously needs to change to get rid of the path
+segments. [↩](#a1)

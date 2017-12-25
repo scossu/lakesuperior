@@ -56,7 +56,7 @@ class LdpFactory:
             raise ResourceNotExistsError(uuid)
 
         # Sneak in the already extracted IMR to save a query.
-        rsrc._imr = imr
+        rsrc.imr = imr
 
         return rsrc
 

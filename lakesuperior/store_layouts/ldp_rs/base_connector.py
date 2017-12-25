@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from abc import ABCMeta, abstractmethod
 
@@ -19,17 +20,17 @@ class BaseConnector(metaclass=ABCMeta):
 
     _logger = logging.getLogger(__name__)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, location, *args, **kwargs):
         '''
         Initialize the connection to the SPARQL endpoint.
 
         If `update_ep` is not specified, the store is initialized as read-only.
         '''
-        self._init_connection(*args, **kwargs)
+        self._init_connection(location, *args, **kwargs)
 
 
     @abstractmethod
-    def _init_connection(self, *args, **kwargs):
+    def _init_connection(self, location, *args, **kwargs):
         '''
         Interface method. Connection steps go here.
         '''
@@ -46,6 +47,10 @@ class BaseConnector(metaclass=ABCMeta):
 
         @return rdflib.query.Result
         '''
+        #self._logger.debug('Sending SPARQL Query: {}\nBindings: {}'.format(
+        #    q, initBindings))
+        #self._logger.debug('From:\n{}'.format(
+        #    (''.join(traceback.format_stack(limit=5)))))
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 
@@ -61,7 +66,10 @@ class BaseConnector(metaclass=ABCMeta):
 
         @return None
         '''
-        self._logger.debug('Sending SPARQL update: {}'.format(q))
+        #self._logger.debug('Sending SPARQL Update: {}\nBindings: {}'.format(
+        #    q, initBindings))
+        #self._logger.debug('From:\n{}'.format(
+        #    (''.join(traceback.format_stack(limit=5)))))
         return self.ds.query(q, initBindings=initBindings, initNs=nsc)
 
 
