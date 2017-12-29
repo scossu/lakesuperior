@@ -26,10 +26,10 @@ class BdbConnector(BaseConnector):
 
         Also open the store, which must be closed by the __del__ method.
         '''
-        #self.store = plugin.get('Sleepycat', Store)(
-        #        identifier=URIRef('urn:fcsystem:lsup'))
+        self.store = plugin.get('Sleepycat', Store)(
+                identifier=URIRef('urn:fcsystem:lsup'))
         self.ds = Dataset('Sleepycat', default_union=True)
-        self.store = self.ds.store
+        #self.store = self.ds.store
         self.ds.open(location, create=True)
 
 
@@ -37,4 +37,4 @@ class BdbConnector(BaseConnector):
         '''
         Close store connection.
         '''
-        self.ds.close(commit_pending_transaction=False)
+        self.store.close(commit_pending_transaction=False)

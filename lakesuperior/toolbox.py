@@ -37,18 +37,18 @@ class Toolbox:
         return URIRef(s)
 
 
-    def uuid_to_uri(self, uuid):
-        '''Convert a UUID to a URI.
+    def uuid_to_uri(self, uid):
+        '''Convert a UID to a URI.
 
         @return URIRef
         '''
-        uri = '{}/{}'.format(g.webroot, uuid) if uuid else g.webroot
+        uri = '{}/{}'.format(g.webroot, uid) if uid else g.webroot
 
         return URIRef(uri)
 
 
     def uri_to_uuid(self, uri):
-        '''Convert an absolute URI (internal or external) to a UUID.
+        '''Convert an absolute URI (internal or external) to a UID.
 
         @return string
         '''
@@ -272,7 +272,7 @@ class Toolbox:
 
     def split_uuid(self, uuid):
         '''
-        Split a UUID into pairtree segments. This mimics FCREPO4 behavior.
+        Split a UID into pairtree segments. This mimics FCREPO4 behavior.
         '''
         path = '{}/{}/{}/{}/{}'.format(uuid[:2], uuid[2:4],
                 uuid[4:6], uuid[6:8], uuid)

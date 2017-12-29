@@ -98,15 +98,15 @@ def log_request_end(rsp):
 
 ## REST SERVICES ##
 
-@ldp.route('/<path:uuid>', methods=['GET'], strict_slashes=False)
-@ldp.route('/', defaults={'uuid': ''}, methods=['GET'], strict_slashes=False)
-@ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
+@ldp.route('/<path:uid>', methods=['GET'], strict_slashes=False)
+@ldp.route('/', defaults={'uid': ''}, methods=['GET'], strict_slashes=False)
+@ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['GET'])
-def get_resource(uuid, force_rdf=False):
+def get_resource(uid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
 
-    @param uuid (string) UID of resource to retrieve. The repository root has
+    @param uid (string) UID of resource to retrieve. The repository root has
     an empty string for UID.
     @param force_rdf (boolean) Whether to retrieve RDF even if the resource is
     a LDP-NR. This is not available in the API but is used e.g. by the
@@ -121,11 +121,11 @@ def get_resource(uuid, force_rdf=False):
             repr_options = parse_repr_options(prefer['return'])
 
     try:
-        rsrc = LdpFactory.from_stored(uuid, repr_options)
+        rsrc = LdpFactory.from_stored(uid, repr_options)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     else:
         out_headers.update(rsrc.head())
         if isinstance(rsrc, LdpRs) \
@@ -169,9 +169,9 @@ def post_resource(parent):
     stream, mimetype = bitstream_from_req()
 
     try:
-        uuid = uuid_for_post(parent, slug)
-        logger.debug('Generated UUID for POST: {}'.format(uuid))
-        rsrc = LdpFactory.from_provided(uuid, content_length=request.content_length,
+        uid = uuid_for_post(parent, slug)
+        logger.debug('Generated UID for POST: {}'.format(uid))
+        rsrc = LdpFactory.from_provided(uid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except ResourceNotExistsError as e:
@@ -179,7 +179,7 @@ def post_resource(parent):
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
 
     try:
         rsrc.post()
@@ -199,87 +199,87 @@ def post_resource(parent):
     return rsrc.uri, 201, out_headers
 
 
-@ldp.route('/<path:uuid>/fcr:versions', methods=['GET'])
-def get_version_info(uuid):
+@ldp.route('/<path:uid>/fcr:versions', methods=['GET'])
+def get_version_info(uid):
     '''
     Get version info (`fcr:versions`).
     '''
     try:
-        rsp = Ldpr(uuid).get_version_info()
+        rsp = Ldpr(uid).get_version_info()
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     else:
         return rsp.serialize(format='turtle'), 200
 
 
-@ldp.route('/<path:uuid>/fcr:versions/<ver_uid>', methods=['GET'])
-def get_version(uuid, ver_uid):
+@ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
+def get_version(uid, ver_uid):
     '''
     Get an individual resource version.
 
-    @param uuid (string) Resource UUID.
+    @param uid (string) Resource UID.
     @param ver_uid (string) Version UID.
     '''
     try:
-        rsp = Ldpr(uuid).get_version(ver_uid)
+        rsp = Ldpr(uid).get_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     else:
         return rsp.serialize(format='turtle'), 200
 
 
-@ldp.route('/<path:uuid>/fcr:versions', methods=['POST'])
-def post_version(uuid):
+@ldp.route('/<path:uid>/fcr:versions', methods=['POST'])
+def post_version(uid):
     '''
     Create a new resource version.
     '''
     ver_uid = request.headers.get('slug', None)
     try:
-        ver_uri = LdpFactory.from_stored(uuid).create_version(ver_uid)
+        ver_uri = LdpFactory.from_stored(uid).create_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     else:
         return '', 201, {'Location': ver_uri}
 
 
-@ldp.route('/<path:uuid>/fcr:versions/<ver_uid>', methods=['PATCH'])
-def patch_version(uuid, ver_uid):
+@ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['PATCH'])
+def patch_version(uid, ver_uid):
     '''
     Revert to a previous version.
 
     NOTE: This creates a new version snapshot.
 
-    @param uuid (string) Resource UUID.
+    @param uid (string) Resource UID.
     @param ver_uid (string) Version UID.
     '''
     try:
-        LdpFactory.from_stored(uuid).revert_to_version(ver_uid)
+        LdpFactory.from_stored(uid).revert_to_version(ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     else:
         return '', 204
 
 
-@ldp.route('/<path:uuid>', methods=['PUT'], strict_slashes=False)
-@ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
+@ldp.route('/<path:uid>', methods=['PUT'], strict_slashes=False)
+@ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['PUT'])
-def put_resource(uuid):
+def put_resource(uid):
     '''
     Add a new resource at a specified URI.
     '''
@@ -292,12 +292,12 @@ def put_resource(uuid):
     stream, mimetype = bitstream_from_req()
 
     try:
-        rsrc = LdpFactory.from_provided(uuid, content_length=request.content_length,
+        rsrc = LdpFactory.from_provided(uid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
         if not request.content_length and rsrc.is_stored:
             raise InvalidResourceError(
-                rsrc.uuid, 'Resource already exists and no data was provided.')
+                rsrc.uid, 'Resource already exists and no data was provided.')
     except InvalidResourceError as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
@@ -310,7 +310,7 @@ def put_resource(uuid):
     except (InvalidResourceError, ResourceExistsError) as e:
         return str(e), 409
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
 
     rsp_headers.update(rsrc.head())
     if ret == Ldpr.RES_CREATED:
@@ -325,13 +325,13 @@ def put_resource(uuid):
     return rsp_body, rsp_code, rsp_headers
 
 
-@ldp.route('/<path:uuid>', methods=['PATCH'], strict_slashes=False)
-def patch_resource(uuid):
+@ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
+def patch_resource(uid):
     '''
     Update an existing resource with a SPARQL-UPDATE payload.
     '''
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
-    rsrc = LdpRs(uuid)
+    rsrc = LdpRs(uid)
     if request.mimetype != 'application/sparql-update':
         return 'Provided content type is not a valid parsable format: {}'\
                 .format(request.mimetype), 415
@@ -341,7 +341,7 @@ def patch_resource(uuid):
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
     else:
@@ -349,13 +349,13 @@ def patch_resource(uuid):
         return '', 204, rsp_headers
 
 
-@ldp.route('/<path:uuid>/fcr:metadata', methods=['PATCH'])
-def patch_resource_metadata(uuid):
-    return patch_resource(uuid)
+@ldp.route('/<path:uid>/fcr:metadata', methods=['PATCH'])
+def patch_resource_metadata(uid):
+    return patch_resource(uid)
 
 
-@ldp.route('/<path:uuid>', methods=['DELETE'])
-def delete_resource(uuid):
+@ldp.route('/<path:uid>', methods=['DELETE'])
+def delete_resource(uid):
     '''
     Delete a resource and optionally leave a tombstone.
 
@@ -382,42 +382,42 @@ def delete_resource(uuid):
         leave_tstone = True
 
     try:
-        LdpFactory.from_stored(uuid, repr_opts).delete(leave_tstone=leave_tstone)
+        LdpFactory.from_stored(uid, repr_opts).delete(leave_tstone=leave_tstone)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
-        return _tombstone_response(e, uuid)
+        return _tombstone_response(e, uid)
 
     return '', 204, headers
 
 
-@ldp.route('/<path:uuid>/fcr:tombstone', methods=['GET', 'POST', 'PUT',
+@ldp.route('/<path:uid>/fcr:tombstone', methods=['GET', 'POST', 'PUT',
         'PATCH', 'DELETE'])
-def tombstone(uuid):
+def tombstone(uid):
     '''
     Handle all tombstone operations.
 
     The only allowed methods are POST and DELETE; any other verb will return a
     405.
     '''
-    logger.debug('Deleting tombstone for {}.'.format(uuid))
-    rsrc = Ldpr(uuid)
+    logger.debug('Deleting tombstone for {}.'.format(uid))
+    rsrc = Ldpr(uid)
     try:
         imr = rsrc.imr
     except TombstoneError as e:
         if request.method == 'DELETE':
-            if e.uuid == uuid:
+            if e.uid == uid:
                 rsrc.purge()
                 return '', 204
             else:
-                return _tombstone_response(e, uuid)
+                return _tombstone_response(e, uid)
         elif request.method == 'POST':
-            if e.uuid == uuid:
+            if e.uid == uid:
                 rsrc_uri = rsrc.resurrect()
                 headers = {'Location' : rsrc_uri}
                 return rsrc_uri, 201, headers
             else:
-                return _tombstone_response(e, uuid)
+                return _tombstone_response(e, uid)
         else:
             return 'Method Not Allowed.', 405
     except ResourceNotExistsError as e:
@@ -429,26 +429,26 @@ def tombstone(uuid):
 def uuid_for_post(parent_uuid=None, slug=None):
     '''
     Validate conditions to perform a POST and return an LDP resource
-    UUID for using with the `post` method.
+    UID for using with the `post` method.
 
     This may raise an exception resulting in a 404 if the parent is not
     found or a 409 if the parent is not a valid container.
     '''
-    def split_if_legacy(uuid):
+    def split_if_legacy(uid):
         if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
-            uuid = g.tbox.split_uuid(uuid)
-        return uuid
+            uid = g.tbox.split_uuid(uid)
+        return uid
 
     # Shortcut!
     if not slug and not parent_uuid:
-        uuid = split_if_legacy(str(uuid4()))
+        uid = split_if_legacy(str(uuid4()))
 
-        return uuid
+        return uid
 
     parent = LdpFactory.from_stored(parent_uuid, repr_opts={'incl_children' : False})
 
     if nsc['fcrepo'].Pairtree in parent.types:
-        raise InvalidResourceError(parent.uuid,
+        raise InvalidResourceError(parent.uid,
                 'Resources cannot be created under a pairtree.')
 
     # Set prefix.
@@ -464,17 +464,17 @@ def uuid_for_post(parent_uuid=None, slug=None):
     else:
         pfx = ''
 
-    # Create candidate UUID and validate.
+    # Create candidate UID and validate.
     if slug:
         cnd_uuid = pfx + slug
         if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uuid]):
-            uuid = pfx + split_if_legacy(str(uuid4()))
+            uid = pfx + split_if_legacy(str(uuid4()))
         else:
-            uuid = cnd_uuid
+            uid = cnd_uuid
     else:
-        uuid = pfx + split_if_legacy(str(uuid4()))
+        uid = pfx + split_if_legacy(str(uuid4()))
 
-    return uuid
+    return uid
 
 
 def bitstream_from_req():
@@ -514,10 +514,10 @@ def _get_bitstream(rsrc):
             attachment_filename=rsrc.filename)
 
 
-def _tombstone_response(e, uuid):
+def _tombstone_response(e, uid):
     headers = {
         'Link' : '<{}/fcr:tombstone>; rel="hasTombstone"'.format(request.url),
-    } if e.uuid == uuid else {}
+    } if e.uid == uid else {}
     return str(e), 410, headers
 
 

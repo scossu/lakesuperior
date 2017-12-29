@@ -43,18 +43,13 @@ class RsrcCentricLayout(BaseRdfLayout):
         '''
         Delete all graphs and insert the basic triples.
         '''
-        #requests.post(self.UPDATE_LOC, data='DROP SILENT ALL', headers={
-        #    'content-type': 'application/sparql-update'})
-
         self._logger.info('Deleting all data from the graph store.')
         self.ds.update('DROP SILENT ALL')
 
         self._logger.info('Initializing the graph store with system data.')
         self.ds.default_context.parse(
                 source='data/bootstrap/rsrc_centric_layout.nq', format='nquads')
-        #with open('data/bootstrap/rsrc_centric_layout.nq', 'rb') as f:
-        #    requests.put(self.GRAPH_LOC, data=f, headers={
-        #        'content-type': 'application/n-quads'})
+
         self.ds.store.close()
 
 
@@ -85,7 +80,7 @@ class RsrcCentricLayout(BaseRdfLayout):
             if embed_children:
                 embed_children_trp = '?c ?cp ?co .'
                 embed_children_qry = '''
-                OPTIONAL {{
+                UNION {{
                   ?s ldp:contains ?c .
                   {}
                 }}
@@ -98,13 +93,14 @@ class RsrcCentricLayout(BaseRdfLayout):
             ?meta_s ?meta_p ?meta_o .
             ?s ?p ?o .{inb_cnst}
             {embed_chld_t}
-            ?s fcrepo:writable true .
+            #?s fcrepo:writable true .
         }}
         WHERE {{
-          GRAPH ?mg {{
-            ?meta_s ?meta_p ?meta_o .
-          }}
-          OPTIONAL {{
+          {{
+            GRAPH ?mg {{
+              ?meta_s ?meta_p ?meta_o .
+            }}
+          }} UNION {{
             GRAPH ?sg {{
               ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
             }}
@@ -117,8 +113,9 @@ class RsrcCentricLayout(BaseRdfLayout):
                 )
 
         mg = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
+        #import pdb; pdb.set_trace()
         try:
-            qres = self.store.query(q, initBindings={'mg': mg,
+            qres = self.ds.query(q, initBindings={'mg': mg,
                 'sg': self._state_uri(uid, ver_uid)})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
@@ -164,12 +161,47 @@ class RsrcCentricLayout(BaseRdfLayout):
 
     def get_metadata(self, uid):
         '''
-        See base_rdf_layout.get_version_info.
+        This is an optimized query to get everything the application needs to
+        insert new contents, and nothing more.
         '''
-        gr_uri = ROOT_GRAPH_URI if uid == ROOT_UID else nsc['fcmeta'][uid]
-        meta_gr = self.ds.graph(gr_uri)
+        rsrc_uri = nsc['fcres'][uid]
+        meta_uri = ROOT_GRAPH_URI if uid == ROOT_UID else nsc['fcmeta'][uid]
+        state_uri = ROOT_GRAPH_URI if uid == ROOT_UID else nsc['fcmeta'][uid]
+        meta_gr = self.ds.graph(meta_uri)
+        state_gr = self.ds.graph(state_uri)
+        cont_qry = '''
+        CONSTRUCT {
+          ?s ldp:membershipResource ?mr ;
+            ldp:hasMemberRelation ?hmr ;
+            ldp:insertedContentRelation ?icr ;
+              ?p ?o .
+        } WHERE {
+          {
+            GRAPH ?mg {
+              ?s ?p ?o .
+            }
+          } UNION {
+            GRAPH ?sg {
+              {
+                ?s ldp:membershipResource ?mr ;
+                  ldp:hasMemberRelation ?hmr .
+              } UNION {
+                ?s ldp:insertedContentRelation ?icr .
+              }
+            }
+          }
+        }
+        '''
+        try:
+            qres = self.ds.query(cont_qry, initBindings={
+                    's': rsrc_uri, 'mg': meta_uri, 'sg': state_uri})
+        except ResultException:
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
+            gr = Graph()
+        else:
+            gr = qres.graph
 
-        return Resource(meta_gr | Graph(), nsc['fcres'][uid])
+        return Resource(gr, rsrc_uri)
 
 
     def get_version(self, uid, ver_uid):
@@ -252,7 +284,6 @@ class RsrcCentricLayout(BaseRdfLayout):
                 l for l in self.store._edits
                 if not l.startswith('PREFIX')]
         #opt_edits = list(ns_pfx_sparql.values()) + opt_edits
-        #import pdb; pdb.set_trace()
         self.store._edits = opt_edits
         self._logger.debug('Changes to be committed: {}'.format(
             pformat(self.store._edits)))

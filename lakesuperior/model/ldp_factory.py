@@ -25,7 +25,7 @@ class LdpFactory:
     _logger = logging.getLogger(__name__)
 
     @staticmethod
-    def from_stored(uuid, repr_opts={}, **kwargs):
+    def from_stored(uid, repr_opts={}, **kwargs):
         '''
         Create an instance for retrieval purposes.
 
@@ -35,44 +35,44 @@ class LdpFactory:
 
         N.B. The resource must exist.
 
-        @param uuid UID of the instance.
+        @param uid UID of the instance.
         '''
-        #__class__._logger.info('Retrieving stored resource: {}'.format(uuid))
-        imr_urn = nsc['fcres'][uuid] if uuid else (
+        #__class__._logger.info('Retrieving stored resource: {}'.format(uid))
+        imr_urn = nsc['fcres'][uid] if uid else (
                 model.ldpr.ROOT_RSRC_URI)
 
-        imr = current_app.rdfly.extract_imr(uuid, **repr_opts)
-        #__class__._logger.debug('Extracted graph: {}'.format(
-        #        pformat(set(imr.graph))))
-        rdf_types = set(imr.graph.objects(imr_urn, RDF.type))
+        rsrc_meta = current_app.rdfly.get_metadata(uid)
+        #__class__._logger.debug('Extracted metadata: {}'.format(
+        #        pformat(set(rsrc_meta.graph))))
+        rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
 
         if __class__.LDP_NR_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-NR.')
-            rsrc = model.ldp_nr.LdpNr(uuid, repr_opts, **kwargs)
+            rsrc = model.ldp_nr.LdpNr(uid, repr_opts, **kwargs)
         elif __class__.LDP_RS_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-RS.')
-            rsrc = model.ldp_rs.LdpRs(uuid, repr_opts, **kwargs)
+            rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
         else:
-            raise ResourceNotExistsError(uuid)
+            raise ResourceNotExistsError(uid)
 
-        # Sneak in the already extracted IMR to save a query.
-        rsrc.imr = imr
+        # Sneak in the already extracted metadata to save a query.
+        rsrc._metadata = rsrc_meta
 
         return rsrc
 
 
     @staticmethod
-    def from_provided(uuid, content_length, mimetype, stream, **kwargs):
+    def from_provided(uid, content_length, mimetype, stream, **kwargs):
         '''
         Determine LDP type from request content.
 
-        @param uuid (string) UUID of the resource to be created or updated.
+        @param uid (string) UID of the resource to be created or updated.
         @param content_length (int) The provided content length.
         @param mimetype (string) The provided content MIME type.
         @param stream (IOStream) The provided data stream. This can be RDF or
         non-RDF content.
         '''
-        urn = nsc['fcres'][uuid]
+        urn = nsc['fcres'][uid]
 
         logger = __class__._logger
 
@@ -81,7 +81,7 @@ class LdpFactory:
             logger.info('No data received in request. '
                     'Creating empty container.')
             inst = model.ldp_rs.Ldpc(
-                    uuid, provided_imr=Resource(Graph(), urn), **kwargs)
+                    uid, provided_imr=Resource(Graph(), urn), **kwargs)
 
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
@@ -106,23 +106,23 @@ class LdpFactory:
             else:
                 cls = model.ldp_rs.Ldpc
 
-            inst = cls(uuid, provided_imr=provided_imr, **kwargs)
+            inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
             # Make sure we are not updating an LDP-RS with an LDP-NR.
             if inst.is_stored and __class__.LDP_NR_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uuid, mimetype)
+                raise IncompatibleLdpTypeError(uid, mimetype)
 
             inst._check_mgd_terms(inst.provided_imr.graph)
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.
             provided_imr = Resource(Graph(), urn)
-            inst = model.ldp_nr.LdpNr(uuid, stream=stream, mimetype=mimetype,
+            inst = model.ldp_nr.LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 
             # Make sure we are not updating an LDP-NR with an LDP-RS.
             if inst.is_stored and __class__.LDP_RS_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uuid, mimetype)
+                raise IncompatibleLdpTypeError(uid, mimetype)
 
         logger.info('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
@@ -132,7 +132,7 @@ class LdpFactory:
         except:
             types = set()
         if nsc['fcrepo'].Pairtree in types:
-            raise InvalidResourceError(inst.uuid)
+            raise InvalidResourceError(inst.uid)
 
         return inst
 

@@ -44,7 +44,8 @@ def atomic(fn):
             raise
         else:
             self._logger.info('Committing transaction.')
-            self.rdfly.optimize_edits()
+            if hasattr(self.rdfly.store, '_edits'):
+                self.rdfly.optimize_edits()
             self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
@@ -121,7 +122,7 @@ class Ldpr(metaclass=ABCMeta):
 
     ## MAGIC METHODS ##
 
-    def __init__(self, uuid, repr_opts={}, provided_imr=None, **kwargs):
+    def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
 
@@ -129,7 +130,7 @@ class Ldpr(metaclass=ABCMeta):
         layout should commit an open transaction. Methods are wrapped in a
         transaction by using the `@atomic` decorator.
 
-        @param uuid (string) UUID of the resource. If None (must be explicitly
+        @param uid (string) uid of the resource. If None (must be explicitly
         set) it refers to the root node. It can also be the full URI or URN,
         in which case it will be converted.
         @param repr_opts (dict) Options used to retrieve the IMR. See
@@ -138,11 +139,11 @@ class Ldpr(metaclass=ABCMeta):
         operations isuch as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         '''
-        self.uuid = g.tbox.uri_to_uuid(uuid) \
-                if isinstance(uuid, URIRef) else uuid
-        self.urn = nsc['fcres'][uuid] \
-                if self.uuid else ROOT_RSRC_URI
-        self.uri = g.tbox.uuid_to_uri(self.uuid)
+        self.uid = g.tbox.uri_to_uuid(uid) \
+                if isinstance(uid, URIRef) else uid
+        self.urn = nsc['fcres'][uid] \
+                if self.uid else ROOT_RSRC_URI
+        self.uri = g.tbox.uuid_to_uri(self.uid)
 
         self.rdfly = current_app.rdfly
         self.nonrdfly = current_app.nonrdfly
@@ -181,7 +182,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 imr_options = {}
             options = dict(imr_options, strict=True)
-            self._imr = self.rdfly.extract_imr(self.uuid, **options)
+            self._imr = self.rdfly.extract_imr(self.uid, **options)
 
         return self._imr
 
@@ -215,7 +216,7 @@ class Ldpr(metaclass=ABCMeta):
         Get resource metadata.
         '''
         if not hasattr(self, '_metadata'):
-            self._metadata = self.rdfly.get_metadata(self.uuid)
+            self._metadata = self.rdfly.get_metadata(self.uid)
 
         return self._metadata
 
@@ -248,7 +249,7 @@ class Ldpr(metaclass=ABCMeta):
                 imr_options = {}
             options = dict(imr_options, strict=True)
             try:
-                self._imr = self.rdfly.extract_imr(self.uuid, **options)
+                self._imr = self.rdfly.extract_imr(self.uid, **options)
             except ResourceNotExistsError:
                 self._imr = Resource(Graph(), self.urn)
                 for t in self.base_types:
@@ -327,7 +328,7 @@ class Ldpr(metaclass=ABCMeta):
             if hasattr(self, '_imr'):
                 self._is_stored = len(self.imr.graph) > 0
             else:
-                self._is_stored = self.rdfly.ask_rsrc_exists(self.uuid)
+                self._is_stored = self.rdfly.ask_rsrc_exists(self.uid)
 
         return self._is_stored
 
@@ -339,9 +340,10 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
+            #import pdb; pdb.set_trace()
             if hasattr(self, '_imr') and len(self.imr.graph):
                 imr = self.imr
-            elif hasattr(self, 'provided_imr') and \
+            elif getattr(self, 'provided_imr', None) and \
                     len(self.provided_imr.graph):
                 imr = self.provided_imr
             else:
@@ -460,7 +462,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @EXPERIMENTAL
         '''
-        tstone_trp = set(self.rdfly.extract_imr(self.uuid, strict=False).graph)
+        tstone_trp = set(self.rdfly.extract_imr(self.uid, strict=False).graph)
 
         ver_rsp = self.version_info.query('''
         SELECT ?uid {
@@ -584,8 +586,7 @@ class Ldpr(metaclass=ABCMeta):
         if ref_int:
             self._check_ref_int(ref_int)
 
-        import pdb; pdb.set_trace()
-        self.rdfly.create_or_replace_rsrc(self.uuid, self.provided_imr.graph,
+        self.rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph,
                 self.metadata.graph)
 
         self._set_containment_rel()
@@ -665,16 +666,16 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Purging resource {}'.format(self.urn))
         imr = self.rdfly.extract_imr(
-                self.uuid, incl_inbound=True, strict=False)
+                self.uid, incl_inbound=True, strict=False)
 
         # Remove resource itself.
-        self.rdfly.modify_dataset(self.uuid, {(self.urn, None, None)}, types=None)
+        self.rdfly.modify_dataset(self.uid, {(self.urn, None, None)}, types=None)
 
         # Remove fragments.
         for frag_urn in imr.graph[
                 : nsc['fcsystem'].fragmentOf : self.urn]:
             self.rdfly.modify_dataset(
-                    self.uuid, {(frag_urn, None, None)}, types={})
+                    self.uid, {(frag_urn, None, None)}, types={})
 
         # Remove snapshots.
         for snap_urn in self.versions:
@@ -682,7 +683,7 @@ class Ldpr(metaclass=ABCMeta):
                 (snap_urn, None, None),
                 (None, None, snap_urn),
             }
-            self.rdfly.modify_dataset(self.uuid, remove_trp, types={})
+            self.rdfly.modify_dataset(self.uid, remove_trp, types={})
 
         # Remove inbound references.
         if inbound:
@@ -700,7 +701,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         # Create version resource from copying the current state.
         ver_add_gr = Graph()
-        vers_uuid = '{}/{}'.format(self.uuid, self.RES_VER_CONT_LABEL)
+        vers_uuid = '{}/{}'.format(self.uid, self.RES_VER_CONT_LABEL)
         ver_uuid = '{}/{}'.format(vers_uuid, ver_uid)
         ver_urn = nsc['fcres'][ver_uuid]
         ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
@@ -725,7 +726,7 @@ class Ldpr(metaclass=ABCMeta):
                         t[1], t[2]))
 
         self.rdfly.modify_dataset(
-                self.uuid, add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
+                self.uid, add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
 
         # Add version metadata.
         meta_add_gr = Graph()
@@ -737,7 +738,7 @@ class Ldpr(metaclass=ABCMeta):
                 (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
 
         self.rdfly.modify_dataset(
-                self.uuid, add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
+                self.uid, add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
 
         # Update resource.
         rsrc_add_gr = Graph()
@@ -772,7 +773,7 @@ class Ldpr(metaclass=ABCMeta):
         type = self.types
         actor = self.metadata.value(nsc['fcrepo'].createdBy)
 
-        ret = self.rdfly.modify_dataset(self.uuid, remove_trp, add_trp,
+        ret = self.rdfly.modify_dataset(self.uid, remove_trp, add_trp,
                 remove_meta, add_meta)
 
         if notify and current_app.config.get('messaging'):
@@ -801,7 +802,7 @@ class Ldpr(metaclass=ABCMeta):
                     # to the metadata graph.
                     gr.add((frag, nsc['fcsystem'].fragmentOf, s))
             if not s == self.urn:
-                raise SingleSubjectError(s, self.uuid)
+                raise SingleSubjectError(s, self.uid)
 
 
     def _check_ref_int(self, config):
@@ -892,7 +893,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     def _set_containment_rel(self):
-        '''Find the closest parent in the path indicated by the UUID and
+        '''Find the closest parent in the path indicated by the uid and
         establish a containment triple.
 
         E.g. if only urn:fcres:a (short: a) exists:
@@ -902,7 +903,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if self.urn == ROOT_RSRC_URI:
             return
-        elif '/' in self.uuid:
+        elif '/' in self.uid:
             # Traverse up the hierarchy to find the parent.
             parent_uid = self._find_parent_or_create_pairtree()
         else:
@@ -927,7 +928,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @return string Resource UID.
         '''
-        path_components = self.uuid.split('/')
+        path_components = self.uid.split('/')
 
          # If there is only one element, the parent is the root node.
         if len(path_components) < 2:
@@ -941,7 +942,7 @@ class Ldpr(metaclass=ABCMeta):
         )
         rev_search_order = reversed(list(fwd_search_order))
 
-        cur_child_uid = self.uuid
+        cur_child_uid = self.uid
         parent_uid = ROOT_UID # Defaults to root
         segments = []
         for cparent_uid in rev_search_order:
@@ -980,21 +981,29 @@ class Ldpr(metaclass=ABCMeta):
         between a and a/b and between a/b and a/b/c in order to maintain the
         `containment chain.
         '''
-        imr = Resource(Graph(), nsc['fcres'][uid])
-        imr.add(RDF.type, nsc['ldp'].Container)
-        imr.add(RDF.type, nsc['ldp'].BasicContainer)
-        imr.add(RDF.type, nsc['ldp'].RDFSource)
-        imr.add(RDF.type, nsc['fcrepo'].Pairtree)
-        imr.add(nsc['fcrepo'].contains, nsc['fcres'][child_uid])
-        imr.add(nsc['ldp'].contains, self.urn)
-        imr.add(nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid])
+        rsrc_uri = nsc['fcres'][uid]
+
+        state_trp = {
+            (rsrc_uri, nsc['fcrepo'].contains, nsc['fcres'][child_uid]),
+            (rsrc_uri, nsc['ldp'].contains, self.urn),
+        }
+
+        meta_trp = {
+            (rsrc_uri, RDF.type, nsc['ldp'].Container),
+            (rsrc_uri, RDF.type, nsc['ldp'].BasicContainer),
+            (rsrc_uri, RDF.type, nsc['ldp'].RDFSource),
+            (rsrc_uri, RDF.type, nsc['fcrepo'].Pairtree),
+            (rsrc_uri, nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid]),
+        }
+
+        self.rdfly.modify_dataset(
+                uid, add_trp=state_trp, add_meta=meta_trp)
 
         # If the path segment is just below root
         if '/' not in uid:
-            imr.graph.addN((nsc['fcsystem'].root, nsc['fcrepo'].contains,
-                    nsc['fcres'][uid], ROOT_GRAPH_URI))
-
-        self.rdfly.modify_dataset(self.uuid, add_trp=imr.graph)
+            self.rdfly.modify_dataset(ROOT_UID, add_meta={
+                (ROOT_RSRC_URI, nsc['fcrepo'].contains, nsc['fcres'][uid])
+            })
 
 
     def _add_ldp_dc_ic_rel(self, cont_rsrc):
@@ -1003,11 +1012,11 @@ class Ldpr(metaclass=ABCMeta):
 
         @param cont_rsrc (rdflib.resource.Resouce)  The container resource.
         '''
-        cont_p = set(cont_rsrc.imr.graph.predicates())
+        cont_p = set(cont_rsrc.metadata.graph.predicates())
         add_gr = Graph()
 
         self._logger.info('Checking direct or indirect containment.')
-        #self._logger.debug('Parent predicates: {}'.format(cont_p))
+        self._logger.debug('Parent predicates: {}'.format(cont_p))
 
         add_gr.add((self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn))
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:

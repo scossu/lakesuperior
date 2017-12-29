@@ -8,7 +8,7 @@ import requests
 
 default_n = 10000
 webroot = 'http://localhost:8000/ldp'
-#webroot = 'http://lake.devbox.local/fcrepo/rest'
+#webroot = 'http://localhost:8080/fcrepo/rest'
 container = webroot + '/pomegranate'
 datafile = 'tests/data/marcel_duchamp_single_subject.ttl'
 
@@ -34,8 +34,9 @@ print('Inserting {} children.'.format(n))
 data = open(datafile, 'rb').read()
 try:
     for i in range(1, n):
-        requests.put('{}/{}'.format(container, uuid4()), data=data, headers={
-            'content-type': 'text/turtle'})
+        rsp = requests.put('{}/{}'.format(container, uuid4()), data=data,
+                headers={ 'content-type': 'text/turtle'})
+        rsp.raise_for_status()
         if i % 10 == 0:
             now = arrow.utcnow()
             tdelta = now - ckpt
