@@ -1,40 +1,52 @@
 #!/usr/bin/env python
 import sys
 
+from random import randrange
 from uuid import uuid4
 
 import arrow
 
 from rdflib import Dataset
+from rdflib import plugin
+from rdflib.store import Store
 from rdflib.term import URIRef
 
 default_n = 100000
 sys.stdout.write('How many resources? [{}] >'.format(default_n))
 choice = input().lower()
 n = int(choice) if choice else default_n
+store_uid = randrange(8192)
+store_name = '/tmp/lsup_{}.db'.format(store_uid)
 
-ds = Dataset('Sleepycat')
-ds.open('/tmp/lsup_bdb.db')
-gr = ds.graph('http://ex.org/graph#g1')
+store = plugin.get('Sleepycat', Store)()
+ds = Dataset(store)
+store.open(store_name)
 
 start = arrow.utcnow()
 ckpt = start
 
 for i in range(1, n):
-    if i % 100 == 0:
-        print('inserted {} resources.'.format(i))
-    subj = URIRef('http://ex.org/rdf/{}'.format(uuid4()))
-    gr.add((subj, URIRef('http://ex.org/p1'), URIRef('http://ex.org/o1')))
-    gr.add((URIRef('http://ex.org/s1'), URIRef('http://ex.org/p2'), subj))
+    try:
+        subj = URIRef('http://ex.org/rdf/{}'.format(uuid4()))
+        gr = ds.graph('http://ex.org/graph#g{}'.format(i))
+        for ii in range(1, 100):
+            gr.add((subj, URIRef('http://ex.org/p1'),
+                URIRef('http://ex.org/random#'.format(randrange(2048)))))
+        gr.add((URIRef('http://ex.org/s1'), URIRef('http://ex.org/p2'), subj))
 
-    now = arrow.utcnow()
-    tdelta = now - ckpt
-    ckpt = now
-    print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
+        now = arrow.utcnow()
+        tdelta = now - ckpt
+        ckpt = now
+        if i % 100 == 0:
+            print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
+    except KeyboardInterrupt:
+        print('Interrupted after {} iterations.'.format(i))
+        break
 
 tdelta = arrow.utcnow() - start
+print('Store name: {}'.format(store_name))
 print('Total elapsed time: {}'.format(tdelta))
-print('Average time per resource: {}'.format(tdelta.total_seconds()/n))
+print('Average time per resource: {}'.format(tdelta.total_seconds()/i))
 print('Graph size: {}'.format(len(gr)))
 
-ds.close()
+store.close()

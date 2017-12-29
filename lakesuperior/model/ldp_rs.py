@@ -80,7 +80,7 @@ class LdpRs(Ldpr):
         #self._logger.debug('Provided SPARQL query: {}'.format(q))
         pre_gr = self.imr.graph
 
-        post_gr = deepcopy(pre_gr)
+        post_gr = pre_g | Graph()
         post_gr.update(q)
 
         remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)

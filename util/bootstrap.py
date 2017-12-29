@@ -20,26 +20,6 @@ Additional, scaffolding files may be parsed to create initial contents.
 '''
 
 
-def bootstrap_db(app):
-    '''
-    Initialize RDF store.
-    '''
-    print('Cleaning up graph store: {}'.format(
-            app.config['store']['ldp_rs']['connector']['options']['location']))
-    for g in app.rdfly.ds.graphs():
-        app.rdfly.ds.remove_graph(g)
-
-    # @TODO Make configurable.
-    print('Populating graph store with base dataset.')
-    app.rdfly.ds.default_context.parse(
-            source='data/bootstrap/default_layout.nq', format='nquads')
-
-    app.rdfly.ds.store.commit()
-    app.rdfly.ds.close()
-
-    return app.rdfly
-
-
 def bootstrap_binary_store(app):
     '''
     Initialize binary file store.
@@ -65,5 +45,5 @@ if __name__=='__main__':
         sys.exit()
 
     app = create_app(config['application'], config['logging'])
-    bootstrap_db(app)
+    app.rdfly.bootstrap()
     bootstrap_binary_store(app)

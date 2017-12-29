@@ -6,7 +6,11 @@ from lakesuperior.config_parser import config
 
 fcrepo = create_app(config['application'], config['logging'])
 
-fcrepo.wsgi_app = ProfilerMiddleware(fcrepo.wsgi_app, restrictions=[30])
+options = {
+    'restrictions': [30],
+    'profile_dir': '/tmp/lsup_profiling'
+}
+fcrepo.wsgi_app = ProfilerMiddleware(fcrepo.wsgi_app, **options)
 fcrepo.config['PROFILE'] = True
 fcrepo.run(debug = True)
 

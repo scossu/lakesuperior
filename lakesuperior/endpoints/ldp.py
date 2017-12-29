@@ -99,14 +99,15 @@ def log_request_end(rsp):
 ## REST SERVICES ##
 
 @ldp.route('/<path:uuid>', methods=['GET'], strict_slashes=False)
-@ldp.route('/', defaults={'uuid': None}, methods=['GET'], strict_slashes=False)
+@ldp.route('/', defaults={'uuid': ''}, methods=['GET'], strict_slashes=False)
 @ldp.route('/<path:uuid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['GET'])
 def get_resource(uuid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
 
-    @param uuid (string) UUID of resource to retrieve.
+    @param uuid (string) UID of resource to retrieve. The repository root has
+    an empty string for UID.
     @param force_rdf (boolean) Whether to retrieve RDF even if the resource is
     a LDP-NR. This is not available in the API but is used e.g. by the
     `*/fcr:metadata` endpoint. The default is False.

@@ -1,0 +1,115 @@
+# Resource-centric layout. This separates resources into separate named
+# graphs and follows the graph-per-resource pattern
+# (http://patterns.dataincubator.org/book/graph-per-resource.html). This aligns
+# quite well with the resource-centrism of LDP and of the SPARQL Graph Store
+# Protocol (https://www.w3.org/TR/sparql11-http-rdf-update/) which should be
+# used by the software implementation to minimize data structure translation.
+#
+# A graph identified by the resource UID is the current state of that resource.
+# Other resources (graphs) can be present representing various previous states
+# of the resource and are identified by the resource UUID with a `:` (colon)
+# and the version UID appended.
+# E.g. a resource with a UID of `a/b/c` will be internally stored within a
+# named graph `info:fcstate/a/b/c`; the subject will be `info:fcres/a/b/c`;
+# a previous version could be `info:fcstate/a/b/c:version1` and the publicly
+# exposed URL could be http://webroot.org/ldp/a/b/c`.
+#
+# The relationships between resources and thir versions and other metadata not
+# meant to be directly exposed by the LDP API are in one "metadata" graph.
+
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX fcrepo: <http://fedora.info/definitions/v4/repository#>
+PREFIX fcsystem: <info:fcsystem/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX ldp: <http://www.w3.org/ns/ldp#>
+PREFIX ns: <http://example.edu/lakesuperior/ns#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+# Metadata graph. This is a companion of the content graph.
+fcsystem:meta {
+  <info:fcstate/a/b/c> a fcrepo:Resource ;
+    # This may be redundant if we use naming conventions, but still good LD practice.
+    fcsystem:currentStateOf <info:fcres/a/b/c> ;
+    fcsystem:hasVersion
+      <info:fcstate/a/b/c:v1> , <info:fcstate/a/b/c:v2> , <info:fcstate/a/b/c:v3> ;
+  .
+
+  <info:fcstate/a/b/c:v1> a fcrepo:Version ;
+    fcrepo:created "2017-12-24T20:57:51.952535+00:00"^^xsd:dateTime .
+
+  <info:fcstate/a/b/c:v2> a fcrepo:Version ;
+    fcrepo:created "2017-12-25T20:57:51.952535+00:00"^^xsd:dateTime .
+
+  <info:fcstate/a/b/c:v3> a fcrepo:Version ;
+    fcrepo:created "2017-12-26T20:57:51.952535+00:00"^^xsd:dateTime .
+
+  # Pairtree information not passed to the client but used to mimic
+  # hierarchical structures.
+  <info:fcstate/a>
+    a fcrepo:Pairtree ;
+    fcsystem:contains <info:fcres/a/b> ;
+  .
+
+  <info:fcstate/a/b>
+    a fcrepo:Pairtree ;
+    fcsystem:contains <info:fcres/a/b/c> ;
+  .
+
+}
+
+# System root. It cannot be deleted.
+fcsystem:root {
+    fcsystem:root a
+        fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ,
+        ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
+    .
+}
+
+# Resource graph. These statements are returned to the client.
+# Note that "fragments"  or hash URIs are stored within the same graph.
+<info:fcstate/a/b/c> {
+  <info:fcres/a/b/c> a ns:Book ;
+    fcrepo:hasParent <info:fcres/a> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melville" ;
+    dc:subject "Fishing" ;
+    .
+
+  <info:fcres/a/b/c#chapter1> a ns:BookChapter ;
+    dc:title "Loomings." ;
+    .
+
+  <info:fcres/a/b/c#chapter2> a ns:BookChapter ;
+    dc:title "The Carpet-Bag." ;
+    .
+}
+
+# Previous states (versions) of a resource.
+<info:fcstate/a/b/c:v1> {
+  <info:fcres/a/b/c> a ns:Book ;
+    fcrepo:hasParent <info:fcres/a> ;
+    dc:title "Moby Dick" ;
+    .
+}
+
+<info:fcstate/a/b/c:v2> {
+  <info:fcres/a/b/c> a ns:Book ;
+    fcrepo:hasParent <info:fcres/a> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melvil" ;
+    .
+}
+
+<info:fcstate/a/b/c:v3> {
+  <info:fcres/a/b/c> a ns:Book ;
+    fcrepo:hasParent <info:fcres/a> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melville" ;
+    .
+}
+
+# Only the direct link to the LDP-contained resource is explicitly asserted.
+<info:fcstate/a> {
+  <info:fcres/a> a ldp:Container , ldp:BasicContainer , ldp:Resource , ldp:RDFSSource ;
+    ldp:contains <info:fcres/a/b/c> .
+}

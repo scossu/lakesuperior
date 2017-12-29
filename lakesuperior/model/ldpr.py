@@ -21,6 +21,11 @@ from lakesuperior.exceptions import *
 from lakesuperior.model.ldp_factory import LdpFactory
 
 
+ROOT_UID = ''
+ROOT_GRAPH_URI = nsc['fcsystem']['__root__']
+ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
+
+
 def atomic(fn):
     '''
     Handle atomic operations in an RDF store.
@@ -39,6 +44,7 @@ def atomic(fn):
             raise
         else:
             self._logger.info('Committing transaction.')
+            self.rdfly.optimize_edits()
             self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
@@ -46,7 +52,6 @@ def atomic(fn):
             return ret
 
     return wrapper
-
 
 
 class Ldpr(metaclass=ABCMeta):
@@ -83,7 +88,6 @@ class Ldpr(metaclass=ABCMeta):
     RETURN_CHILD_RES_URI = nsc['fcrepo'].Children
     RETURN_INBOUND_REF_URI = nsc['fcrepo'].InboundReferences
     RETURN_SRV_MGD_RES_URI = nsc['fcrepo'].ServerManaged
-    ROOT_NODE_URN = nsc['fcsystem'].root
 
     # Workflow type. Inbound means that the resource is being written to the
     # store, outbounnd is being retrieved for output.
@@ -137,7 +141,7 @@ class Ldpr(metaclass=ABCMeta):
         self.uuid = g.tbox.uri_to_uuid(uuid) \
                 if isinstance(uuid, URIRef) else uuid
         self.urn = nsc['fcres'][uuid] \
-                if self.uuid else self.ROOT_NODE_URN
+                if self.uuid else ROOT_RSRC_URI
         self.uri = g.tbox.uuid_to_uri(self.uuid)
 
         self.rdfly = current_app.rdfly
@@ -177,7 +181,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 imr_options = {}
             options = dict(imr_options, strict=True)
-            self._imr = self.rdfly.extract_imr(self.urn, **options)
+            self._imr = self.rdfly.extract_imr(self.uuid, **options)
 
         return self._imr
 
@@ -206,6 +210,27 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
+    def metadata(self):
+        '''
+        Get resource metadata.
+        '''
+        if not hasattr(self, '_metadata'):
+            self._metadata = self.rdfly.get_metadata(self.uuid)
+
+        return self._metadata
+
+
+    @metadata.setter
+    def metadata(self, rsrc):
+        '''
+        Set resource metadata.
+        '''
+        if not isinstance(rsrc, Resource):
+            raise TypeError('Provided metadata is not a Resource object.')
+        self._metadata = rsrc
+
+
+    @property
     def stored_or_new_imr(self):
         '''
         Extract an in-memory resource for harmless manipulation and output.
@@ -223,7 +248,7 @@ class Ldpr(metaclass=ABCMeta):
                 imr_options = {}
             options = dict(imr_options, strict=True)
             try:
-                self._imr = self.rdfly.extract_imr(self.urn, **options)
+                self._imr = self.rdfly.extract_imr(self.uuid, **options)
             except ResourceNotExistsError:
                 self._imr = Resource(Graph(), self.urn)
                 for t in self.base_types:
@@ -302,7 +327,7 @@ class Ldpr(metaclass=ABCMeta):
             if hasattr(self, '_imr'):
                 self._is_stored = len(self.imr.graph) > 0
             else:
-                self._is_stored = self.rdfly.ask_rsrc_exists(self.urn)
+                self._is_stored = self.rdfly.ask_rsrc_exists(self.uuid)
 
         return self._is_stored
 
@@ -314,11 +339,13 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
-            if hasattr(self, 'imr') and len(self.imr.graph):
+            if hasattr(self, '_imr') and len(self.imr.graph):
                 imr = self.imr
             elif hasattr(self, 'provided_imr') and \
                     len(self.provided_imr.graph):
-                imr = provided_imr
+                imr = self.provided_imr
+            else:
+                return set()
 
             self._types = set(imr.graph[self.urn : RDF.type])
 
@@ -345,12 +372,12 @@ class Ldpr(metaclass=ABCMeta):
         '''
         out_headers = defaultdict(list)
 
-        digest = self.imr.value(nsc['premis'].hasMessageDigest)
+        digest = self.metadata.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
             out_headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = self.imr.value(nsc['fcrepo'].lastModified)
+        last_updated_term = self.metadata.value(nsc['fcrepo'].lastModified)
         if last_updated_term:
             out_headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -433,7 +460,7 @@ class Ldpr(metaclass=ABCMeta):
 
         @EXPERIMENTAL
         '''
-        tstone_trp = set(self.rdfly.extract_imr(self.urn, strict=False).graph)
+        tstone_trp = set(self.rdfly.extract_imr(self.uuid, strict=False).graph)
 
         ver_rsp = self.version_info.query('''
         SELECT ?uid {
@@ -551,20 +578,19 @@ class Ldpr(metaclass=ABCMeta):
         '''
         create = create_only or not self.is_stored
 
-        self._add_srv_mgd_triples(create)
-        self._ensure_single_subject_rdf(self.provided_imr.graph)
+        self.metadata = self._srv_mgd_triples(create)
+        #self._ensure_single_subject_rdf(self.provided_imr.graph)
         ref_int = self.rdfly.config['referential_integrity']
         if ref_int:
             self._check_ref_int(ref_int)
 
-        if create:
-            ev_type = self._create_rsrc()
-        else:
-            ev_type = self._replace_rsrc()
+        import pdb; pdb.set_trace()
+        self.rdfly.create_or_replace_rsrc(self.uuid, self.provided_imr.graph,
+                self.metadata.graph)
 
         self._set_containment_rel()
 
-        return ev_type
+        return self.RES_CREATED if create else self.RES_UPDATED
 
 
     def _create_rsrc(self):
@@ -575,7 +601,7 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
 
         # Set the IMR contents to the "add" triples.
-        self.imr = self.provided_imr.graph
+        #self.imr = self.provided_imr.graph
 
         return self.RES_CREATED
 
@@ -595,7 +621,7 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(self.RES_UPDATED, *delta)
 
         # Set the IMR contents to the "add" triples.
-        self.imr = delta[1]
+        #self.imr = delta[1]
 
         return self.RES_UPDATED
 
@@ -639,15 +665,16 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Purging resource {}'.format(self.urn))
         imr = self.rdfly.extract_imr(
-                self.urn, incl_inbound=True, strict=False)
+                self.uuid, incl_inbound=True, strict=False)
 
         # Remove resource itself.
-        self.rdfly.modify_dataset({(self.urn, None, None)}, types=None)
+        self.rdfly.modify_dataset(self.uuid, {(self.urn, None, None)}, types=None)
 
         # Remove fragments.
         for frag_urn in imr.graph[
                 : nsc['fcsystem'].fragmentOf : self.urn]:
-            self.rdfly.modify_dataset({(frag_urn, None, None)}, types={})
+            self.rdfly.modify_dataset(
+                    self.uuid, {(frag_urn, None, None)}, types={})
 
         # Remove snapshots.
         for snap_urn in self.versions:
@@ -655,7 +682,7 @@ class Ldpr(metaclass=ABCMeta):
                 (snap_urn, None, None),
                 (None, None, snap_urn),
             }
-            self.rdfly.modify_dataset(remove_trp, types={})
+            self.rdfly.modify_dataset(self.uuid, remove_trp, types={})
 
         # Remove inbound references.
         if inbound:
@@ -698,7 +725,7 @@ class Ldpr(metaclass=ABCMeta):
                         t[1], t[2]))
 
         self.rdfly.modify_dataset(
-                add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
+                self.uuid, add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
 
         # Add version metadata.
         meta_add_gr = Graph()
@@ -710,7 +737,7 @@ class Ldpr(metaclass=ABCMeta):
                 (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
 
         self.rdfly.modify_dataset(
-                add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
+                self.uuid, add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
 
         # Update resource.
         rsrc_add_gr = Graph()
@@ -722,8 +749,8 @@ class Ldpr(metaclass=ABCMeta):
         return nsc['fcres'][ver_uuid]
 
 
-    def _modify_rsrc(self, ev_type, remove_trp=Graph(), add_trp=Graph(),
-                     notify=True):
+    def _modify_rsrc(self, ev_type, remove_trp=set(), add_trp=set(),
+             remove_meta=set(), add_meta=set(), notify=True):
         '''
         Low-level method to modify a graph for a single resource.
 
@@ -732,27 +759,21 @@ class Ldpr(metaclass=ABCMeta):
         method.
 
         @param ev_type (string) The type of event (create, update, delete).
-        @param remove_trp (rdflib.Graph) Triples to be removed.
-        @param add_trp (rdflib.Graph) Triples to be added.
+        @param remove_trp (set) Triples to be removed.
+        @param add_trp (set) Triples to be added.
+        @param remove_meta (set) Metadata triples to be removed.
+        @param add_meta (set) Metadata triples to be added.
+        @param notify (boolean) Whether to send a message about the change.
         '''
-        # If one of the triple sets is not a graph, do a set merge and
-        # filtering. This is necessary to support non-RDF terms (e.g.
-        # variables).
-        if not isinstance(remove_trp, Graph) or not isinstance(add_trp, Graph):
-            if isinstance(remove_trp, Graph):
-                remove_trp = set(remove_trp)
-            if isinstance(add_trp, Graph):
-                add_trp = set(add_trp)
-            merge_gr = remove_trp | add_trp
-            type = { trp[2] for trp in merge_gr if trp[1] == RDF.type }
-            actor = { trp[2] for trp in merge_gr \
-                    if trp[1] == nsc['fcrepo'].createdBy }
-        else:
-            merge_gr = remove_trp | add_trp
-            type = merge_gr[self.urn : RDF.type]
-            actor = merge_gr[self.urn : nsc['fcrepo'].createdBy]
+        #for trp in [remove_trp, add_trp, remove_meta, add_meta]:
+        #    if not isinstance(trp, set):
+        #        trp = set(trp)
 
-        ret = self.rdfly.modify_dataset(remove_trp, add_trp)
+        type = self.types
+        actor = self.metadata.value(nsc['fcrepo'].createdBy)
+
+        ret = self.rdfly.modify_dataset(self.uuid, remove_trp, add_trp,
+                remove_meta, add_meta)
 
         if notify and current_app.config.get('messaging'):
             request.changelog.append((set(remove_trp), set(add_trp), {
@@ -838,28 +859,36 @@ class Ldpr(metaclass=ABCMeta):
         return gr
 
 
-    def _add_srv_mgd_triples(self, create=False):
+    def _srv_mgd_triples(self, create=False):
         '''
         Add server-managed triples to a provided IMR.
 
         @param create (boolean) Whether the resource is being created.
         '''
+        metadata = Resource(Graph(), self.urn)
         # Base LDP types.
         for t in self.base_types:
-            self.provided_imr.add(RDF.type, t)
+            metadata.add(RDF.type, t)
 
         # Message digest.
         cksum = g.tbox.rdf_cksum(self.provided_imr.graph)
-        self.provided_imr.set(nsc['premis'].hasMessageDigest,
+        metadata.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
         if create:
-            self.provided_imr.set(nsc['fcrepo'].created, g.timestamp_term)
-            self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+            metadata.set(nsc['fcrepo'].created, g.timestamp_term)
+            metadata.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+        else:
+            metadata.set(nsc['fcrepo'].created, self.metadata.value(
+                    nsc['fcrepo'].created))
+            metadata.set(nsc['fcrepo'].createdBy, self.metadata.value(
+                    nsc['fcrepo'].createdBy))
 
-        self.provided_imr.set(nsc['fcrepo'].lastModified, g.timestamp_term)
-        self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+        metadata.set(nsc['fcrepo'].lastModified, g.timestamp_term)
+        metadata.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+
+        return metadata
 
 
     def _set_containment_rel(self):
@@ -871,18 +900,18 @@ class Ldpr(metaclass=ABCMeta):
           pairtree nodes are created for a/b and a/b/c.
         - If e is being created, the root node becomes container of e.
         '''
-        if self.urn == self.ROOT_NODE_URN:
+        if self.urn == ROOT_RSRC_URI:
             return
         elif '/' in self.uuid:
             # Traverse up the hierarchy to find the parent.
-            parent_uri = self._find_parent_or_create_pairtree()
+            parent_uid = self._find_parent_or_create_pairtree()
         else:
-            parent_uri = self.ROOT_NODE_URN
+            parent_uid = ROOT_UID
 
         add_gr = Graph()
-        add_gr.add((parent_uri, nsc['ldp'].contains, self.urn))
+        add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.urn))
         parent_rsrc = LdpFactory.from_stored(
-                g.tbox.uri_to_uuid(parent_uri), repr_opts={
+                parent_uid, repr_opts={
                 'incl_children' : False}, handling='none')
         parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
@@ -893,16 +922,16 @@ class Ldpr(metaclass=ABCMeta):
     def _find_parent_or_create_pairtree(self):
         '''
         Check the path-wise parent of the new resource. If it exists, return
-        its URI. Otherwise, create pairtree resources up the path until an
+        its UID. Otherwise, create pairtree resources up the path until an
         actual resource or the root node is found.
 
-        @return rdflib.term.URIRef
+        @return string Resource UID.
         '''
         path_components = self.uuid.split('/')
 
-         # If there is only on element, the parent is the root node.
+         # If there is only one element, the parent is the root node.
         if len(path_components) < 2:
-            return self.ROOT_NODE_URN
+            return ROOT_UID
 
         # Build search list, e.g. for a/b/c/d/e would be a/b/c/d, a/b/c, a/b, a
         self._logger.info('Path components: {}'.format(path_components))
@@ -912,26 +941,23 @@ class Ldpr(metaclass=ABCMeta):
         )
         rev_search_order = reversed(list(fwd_search_order))
 
-        cur_child_uri = nsc['fcres'][self.uuid]
-        parent_uri = None
+        cur_child_uid = self.uuid
+        parent_uid = ROOT_UID # Defaults to root
         segments = []
-        for cparent_uuid in rev_search_order:
-            cparent_uri = nsc['fcres'][cparent_uuid]
+        for cparent_uid in rev_search_order:
+            cparent_uid = cparent_uid
 
-            if self.rdfly.ask_rsrc_exists(cparent_uri):
-                parent_uri = cparent_uri
+            if self.rdfly.ask_rsrc_exists(cparent_uid):
+                parent_uid = cparent_uid
                 break
             else:
-                segments.append((cparent_uri, cur_child_uri))
-                cur_child_uri = cparent_uri
+                segments.append((cparent_uid, cur_child_uid))
+                cur_child_uid = cparent_uid
 
-        if parent_uri is None:
-            parent_uri = self.ROOT_NODE_URN
+        for uid, child_uid in segments:
+            self._create_path_segment(uid, child_uid, parent_uid)
 
-        for uri, child_uri in segments:
-            self._create_path_segment(uri, child_uri, parent_uri)
-
-        return parent_uri
+        return parent_uid
 
 
     def _dedup_deltas(self, remove_gr, add_gr):
@@ -945,32 +971,30 @@ class Ldpr(metaclass=ABCMeta):
         )
 
 
-    def _create_path_segment(self, uri, child_uri, real_parent_uri):
+    def _create_path_segment(self, uid, child_uid, real_parent_uid):
         '''
         Create a path segment with a non-LDP containment statement.
-
-        This diverges from the default fcrepo4 behavior which creates pairtree
-        resources.
 
         If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
         fcres:a/b exists, we have to create two "hidden" containment statements
         between a and a/b and between a/b and a/b/c in order to maintain the
         `containment chain.
         '''
-        imr = Resource(Graph(), uri)
+        imr = Resource(Graph(), nsc['fcres'][uid])
         imr.add(RDF.type, nsc['ldp'].Container)
         imr.add(RDF.type, nsc['ldp'].BasicContainer)
         imr.add(RDF.type, nsc['ldp'].RDFSource)
         imr.add(RDF.type, nsc['fcrepo'].Pairtree)
-        imr.add(nsc['fcrepo'].contains, child_uri)
+        imr.add(nsc['fcrepo'].contains, nsc['fcres'][child_uid])
         imr.add(nsc['ldp'].contains, self.urn)
-        imr.add(nsc['fcrepo'].hasParent, real_parent_uri)
+        imr.add(nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid])
 
         # If the path segment is just below root
-        if '/' not in str(uri):
-            imr.graph.add((nsc['fcsystem'].root, nsc['fcrepo'].contains, uri))
+        if '/' not in uid:
+            imr.graph.addN((nsc['fcsystem'].root, nsc['fcrepo'].contains,
+                    nsc['fcres'][uid], ROOT_GRAPH_URI))
 
-        self.rdfly.modify_dataset(add_trp=imr.graph)
+        self.rdfly.modify_dataset(self.uuid, add_trp=imr.graph)
 
 
     def _add_ldp_dc_ic_rel(self, cont_rsrc):

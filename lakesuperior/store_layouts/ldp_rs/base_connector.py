@@ -70,7 +70,7 @@ class BaseConnector(metaclass=ABCMeta):
         #    q, initBindings))
         #self._logger.debug('From:\n{}'.format(
         #    (''.join(traceback.format_stack(limit=5)))))
-        return self.ds.query(q, initBindings=initBindings, initNs=nsc)
+        return self.ds.query(q, initBindings=initBindings)
 
 
 

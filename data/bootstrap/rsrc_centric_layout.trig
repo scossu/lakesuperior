@@ -1,0 +1,12 @@
+PREFIX fcrepo: <http://fedora.info/definitions/v4/repository#>
+PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+<info:fcsystem/meta> {
+}
+
+<info:fcsystem/__root__> {
+    <info:fcres/> a
+        fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ,
+        ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
+    .
+}

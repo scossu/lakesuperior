@@ -1,0 +1,7 @@
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#RDFSource> <info:fcsystem/__root__> .
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#Container> <info:fcsystem/__root__> .
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/ldp#BasicContainer> <info:fcsystem/__root__> .
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#RepositoryRoot> <info:fcsystem/__root__> .
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#Resource> <info:fcsystem/__root__> .
+<info:fcres/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://fedora.info/definitions/v4/repository#Container> <info:fcsystem/__root__> .
+

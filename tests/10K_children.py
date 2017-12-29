@@ -32,15 +32,18 @@ ckpt = start
 print('Inserting {} children.'.format(n))
 
 data = open(datafile, 'rb').read()
-for i in range(1, n):
-    requests.put('{}/{}'.format(container, uuid4()), data=data, headers={
-        'content-type': 'text/turtle'})
-    if i % 100 == 0:
-        now = arrow.utcnow()
-        tdelta = now - ckpt
-        ckpt = now
-        print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
+try:
+    for i in range(1, n):
+        requests.put('{}/{}'.format(container, uuid4()), data=data, headers={
+            'content-type': 'text/turtle'})
+        if i % 10 == 0:
+            now = arrow.utcnow()
+            tdelta = now - ckpt
+            ckpt = now
+            print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
+except KeyboardInterrupt:
+    print('Interruped after {} iterations.'.format(i))
 
 tdelta = arrow.utcnow() - start
 print('Total elapsed time: {}'.format(tdelta))
-print('Average time per resource: {}'.format(tdelta.total_seconds()/n))
+print('Average time per resource: {}'.format(tdelta.total_seconds()/i))

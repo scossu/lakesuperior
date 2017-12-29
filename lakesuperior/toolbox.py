@@ -6,9 +6,11 @@ from collections import defaultdict
 from hashlib import sha1
 
 from flask import g
+from rdflib import Graph
 from rdflib.term import URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.model.ldpr import ROOT_GRAPH_URI, ROOT_RSRC_URI
 
 
 class Toolbox:
@@ -17,8 +19,6 @@ class Toolbox:
     '''
 
     _logger = logging.getLogger(__name__)
-
-    ROOT_NODE_URN = nsc['fcsystem'].root
 
     def replace_term_domain(self, term, search, replace):
         '''
@@ -52,7 +52,7 @@ class Toolbox:
 
         @return string
         '''
-        if uri == self.ROOT_NODE_URN:
+        if uri == ROOT_GRAPH_URI or uri == ROOT_RSRC_URI:
             return None
         elif uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
@@ -68,14 +68,14 @@ class Toolbox:
         @return string
         '''
         if s.strip('/') == g.webroot:
-            return str(self.ROOT_NODE_URN)
+            return str(ROOT_RSRC_URI)
         else:
             return s.strip('/').replace(g.webroot+'/', str(nsc['fcres']))
 
 
     def localize_term(self, uri):
         '''
-        Convert an URI into an URN.
+        Localize an individual term.
 
         @param rdflib.term.URIRef urn Input URI.
 
@@ -84,36 +84,32 @@ class Toolbox:
         return URIRef(self.localize_string(str(uri)))
 
 
+    def localize_triple(self, trp):
+        '''
+        Localize terms in a triple.
+
+        @param trp (tuple(rdflib.term.URIRef)) The triple to be converted
+
+        @return tuple(rdflib.term.URIRef)
+        '''
+        s, p, o = trp
+        if s.startswith(g.webroot):
+            s = self.localize_term(s)
+        if o.startswith(g.webroot):
+            o = self.localize_term(o)
+
+        return s, p, o
+
+
     def localize_graph(self, gr):
         '''
-        Locbalize a graph.
+        Localize a graph.
         '''
-        q = '''
-        CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
-          {{
-            ?s ?p ?o .
-            FILTER (
-              STRSTARTS(str(?s), "{0}")
-              ||
-              STRSTARTS(str(?o), "{0}")
-              ||
-              STRSTARTS(str(?s), "{0}/")
-              ||
-              STRSTARTS(str(?o), "{0}/")
-            ) .
-          }}
-        }}'''.format(g.webroot)
-        flt_gr = gr.query(q)
+        l_gr = Graph()
+        for trp in gr:
+            l_gr.add(self.localize_triple(trp))
 
-        for t in flt_gr:
-            local_s = self.localize_term(t[0])
-            local_o = self.localize_term(t[2]) \
-                    if isinstance(t[2], URIRef) \
-                    else t[2]
-            gr.remove(t)
-            gr.add((local_s, t[1], local_o))
-
-        return gr
+        return l_gr
 
 
     def localize_ext_str(self, s, urn):
@@ -139,7 +135,7 @@ class Toolbox:
         s2 = re.sub(loc_ptn2, loc_sub2, s1)
 
         loc_ptn3 = r'<{}([#?].*?)?>'.format(nsc['fcres'])
-        loc_sub3 = '<{}\\1>'.format(self.ROOT_NODE_URN)
+        loc_sub3 = '<{}\\1>'.format(ROOT_RSRC_URI)
         s3 = re.sub(loc_ptn3, loc_sub3, s2)
 
         return s3
@@ -163,42 +159,38 @@ class Toolbox:
 
         @return rdflib.term.URIRef
         '''
-        if urn == self.ROOT_NODE_URN:
+        if urn == ROOT_RSRC_URI:
             urn = nsc['fcres']
 
         return URIRef(self.globalize_string(str(urn)))
+
+
+    def globalize_triple(self, trp):
+        '''
+        Globalize terms in a triple.
+
+        @param trp (tuple(rdflib.term.URIRef)) The triple to be converted
+
+        @return tuple(rdflib.term.URIRef)
+        '''
+        s, p, o = trp
+        if s.startswith(nsc['fcres']):
+            s = self.globalize_term(s)
+        if o.startswith(nsc['fcres']):
+            o = self.globalize_term(o)
+
+        return s, p, o
 
 
     def globalize_graph(self, gr):
         '''
         Globalize a graph.
         '''
-        q = '''
-        CONSTRUCT {{ ?s ?p ?o . }} WHERE {{
-          {{
-            ?s ?p ?o .
-            FILTER (
-              STRSTARTS(str(?s), "{0}")
-              ||
-              STRSTARTS(str(?o), "{0}")
-              ||
-              STRSTARTS(str(?s), "{1}")
-              ||
-              STRSTARTS(str(?o), "{1}")
-            ) .
-          }}
-        }}'''.format(nsc['fcres'], self.ROOT_NODE_URN)
-        flt_gr = gr.query(q)
+        g_gr = Graph()
+        for trp in gr:
+            g_gr.add(self.globalize_triple(trp))
 
-        for t in flt_gr:
-            global_s = self.globalize_term(t[0])
-            global_o = self.globalize_term(t[2]) \
-                    if isinstance(t[2], URIRef) \
-                    else t[2]
-            gr.remove(t)
-            gr.add((global_s, t[1], global_o))
-
-        return gr
+        return g_gr
 
 
     def globalize_rsrc(self, rsrc):
@@ -240,7 +232,6 @@ class Toolbox:
 
             for param_token in token_list:
                 # If the token list had a ';' the preference has a parameter.
-                print('Param token: {}'.format(param_token))
                 param_parts = [ prm.strip().strip('"') \
                         for prm in param_token.split('=') ]
                 param_value = param_parts[1] if len(param_parts) > 1 else None

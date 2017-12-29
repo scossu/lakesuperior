@@ -35,16 +35,16 @@ class LdpFactory:
 
         N.B. The resource must exist.
 
-        @param uuid UUID of the instance.
+        @param uuid UID of the instance.
         '''
         #__class__._logger.info('Retrieving stored resource: {}'.format(uuid))
         imr_urn = nsc['fcres'][uuid] if uuid else (
-                model.ldpr.Ldpr.ROOT_NODE_URN)
+                model.ldpr.ROOT_RSRC_URI)
 
-        imr = current_app.rdfly.extract_imr(imr_urn, **repr_opts)
+        imr = current_app.rdfly.extract_imr(uuid, **repr_opts)
         #__class__._logger.debug('Extracted graph: {}'.format(
         #        pformat(set(imr.graph))))
-        rdf_types = set(imr.graph.objects(imr.identifier, RDF.type))
+        rdf_types = set(imr.graph.objects(imr_urn, RDF.type))
 
         if __class__.LDP_NR_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-NR.')

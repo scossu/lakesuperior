@@ -67,7 +67,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         self._conn = conn
         self.store = self._conn.store
 
-        self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI
+        #self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI
         self.ds = self._conn.ds
         self.ds.namespace_manager = nsm
 
@@ -106,7 +106,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         pass
 
 
-    @abstractmethod
+    #@abstractmethod
     def get_version_info(self, urn):
         '''
         Get version information about a resource (`fcr:versions`)
@@ -114,7 +114,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         pass
 
 
-    @abstractmethod
+    #@abstractmethod
     def get_version(self, urn):
         '''
         Get a historic snapshot (version) of a resource.
@@ -135,7 +135,7 @@ class BaseRdfLayout(metaclass=ABCMeta):
         pass
 
 
-    @abstractmethod
+    #@abstractmethod
     def modify_dataset(self, remove_trp=Graph(), add_trp=Graph(),
             types=set()):
         '''
