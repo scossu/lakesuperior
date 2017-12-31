@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 from flask import g
+from rdflib import Graph
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, atomic
@@ -80,7 +81,7 @@ class LdpRs(Ldpr):
         #self._logger.debug('Provided SPARQL query: {}'.format(q))
         pre_gr = self.imr.graph
 
-        post_gr = pre_g | Graph()
+        post_gr = pre_gr | Graph()
         post_gr.update(q)
 
         remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
@@ -93,7 +94,7 @@ class LdpRs(Ldpr):
         remove_gr = self._check_mgd_terms(remove_gr)
         add_gr = self._check_mgd_terms(add_gr)
 
-        return remove_gr, add_gr
+        return set(remove_gr), set(add_gr)
 
 
 

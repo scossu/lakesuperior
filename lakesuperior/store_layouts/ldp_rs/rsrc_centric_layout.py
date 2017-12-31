@@ -58,14 +58,22 @@ class RsrcCentricLayout:
 
     attr_map = {
         nsc['fcmeta']: {
-            # List of metadata predicates. Triples bearing one of these
+            # List of server-managed predicates. Triples bearing one of these
             # predicates will go in the metadata graph.
             'p': {
                 nsc['fcrepo'].created,
                 nsc['fcrepo'].createdBy,
+                nsc['fcrepo'].hasParent,
                 nsc['fcrepo'].lastModified,
                 nsc['fcrepo'].lastModifiedBy,
+                # The following 3 are set by the user but still in this group
+                # for convenience.
+                nsc['ldp'].membershipResource,
+                nsc['ldp'].hasMemberRelation,
+                nsc['ldp'].insertedContentRelation,
+                nsc['iana'].describedBy,
                 nsc['premis'].hasMessageDigest,
+                nsc['premis'].hasSize,
             },
             # List of metadata RDF types. Triples bearing one of these types in
             # the object will go in the metadata graph.
@@ -86,7 +94,6 @@ class RsrcCentricLayout:
         nsc['fcstruct']: {
             # These are placed in a separate graph for optimization purposees.
             'p': {
-                nsc['fcrepo'].hasParent,
                 nsc['fcsystem'].contains,
                 nsc['ldp'].contains,
             }
@@ -155,67 +162,35 @@ class RsrcCentricLayout:
         See base_rdf_layout.extract_imr.
         '''
         # @TODO Remove inbound functionality in favor of SPARQL query endpoint?
-        inbound_construct = '\n?s1 ?p1 ?s .' if incl_inbound else ''
-        inbound_qry = '''
-        UNION {
-          GRAPH ?g {
-            ?s1 ?p1 ?s .
-          }
-          GRAPH ?mg {
-            ?g a fcsystem:CurrentState .
-          }
-        }
-        ''' if incl_inbound else ''
-
-        # Include and/or embed children.
-        incl_children_qry = embed_children_trp = embed_children_qry = ''
-        if incl_children:
-            incl_children_qry = '''
-            UNION {
-              GRAPH ?strg {
-                ?str_s ?str_p ?str_o .
-              }
-            }
-            '''
-            # Embed children.
-            if embed_children:
-                embed_children_trp = '?c ?cp ?co .'
-                embed_children_qry = '''
-                UNION {{
-                  ?s ldp:contains ?c .
-                  {}
-                }}
-                '''.format(embed_children_trp) # @TODO incomplete
-
-        q = '''
-        CONSTRUCT {{
-            ?meta_s ?meta_p ?meta_o .
-            ?s ?p ?o .{inb_cnst}
-            ?str_s ?str_p ?str_o .
-            {embed_chld_t}
-            #?s fcrepo:writable true .
-        }}
-        WHERE {{
-          {{
-            GRAPH ?mg {{
-              ?meta_s ?meta_p ?meta_o .
-            }}
-          }}{incl_chld}{embed_chld}
-          UNION {{
-            GRAPH ?sg {{
-              ?s ?p ?o .{inb_qry}
-            }}
-          }}{inb_qry}
-        }}
-        '''.format(
-                inb_cnst=inbound_construct, inb_qry=inbound_qry,
-                incl_chld=incl_children_qry, embed_chld_t=embed_children_trp,
-                embed_chld=embed_children_qry,
-                )
-
+        #inbound_construct = '\n?s1 ?p1 ?s .' if incl_inbound else ''
+        #inbound_qry = '''
+        #UNION {
+        #  GRAPH ?g {
+        #    ?s1 ?p1 ?s .
+        #  }
+        #  GRAPH ?mg {
+        #    ?g a fcsystem:CurrentState .
+        #  }
+        #}
+        #''' if incl_inbound else ''
         mg = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
         strg = ROOT_GRAPH_URI if uid == '' else nsc['fcstruct'][uid]
         sg = self._state_uri(uid, ver_uid)
+
+        if incl_children:
+            incl_child_qry = 'FROM {}'.format(strg.n3())
+            if embed_children:
+                pass # Not implemented. May never be.
+        else:
+            incl_child_qry = ''
+
+        q = '''
+        CONSTRUCT
+        FROM {mg}
+        FROM {sg}
+        {chld}
+        WHERE {{ ?s ?p ?o . }}
+        '''.format(mg=mg.n3(), sg=sg.n3(), chld=incl_child_qry)
         try:
             qres = self.ds.query(q, initBindings={'mg': mg, 'strg': strg,
                 'sg': sg})
@@ -261,49 +236,14 @@ class RsrcCentricLayout:
                 meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
 
 
-    def get_metadata(self, uid):
+    def get_metadata(self, uid, ver_uid=None):
         '''
         This is an optimized query to get everything the application needs to
         insert new contents, and nothing more.
         '''
-        rsrc_uri = nsc['fcres'][uid]
-        meta_uri = ROOT_GRAPH_URI if uid == ROOT_UID else nsc['fcmeta'][uid]
-        state_uri = ROOT_GRAPH_URI if uid == ROOT_UID else nsc['fcmeta'][uid]
-        meta_gr = self.ds.graph(meta_uri)
-        state_gr = self.ds.graph(state_uri)
-        cont_qry = '''
-        CONSTRUCT {
-          ?s ldp:membershipResource ?mr ;
-            ldp:hasMemberRelation ?hmr ;
-            ldp:insertedContentRelation ?icr ;
-              ?p ?o .
-        } WHERE {
-          {
-            GRAPH ?mg {
-              ?s ?p ?o .
-            }
-          } UNION {
-            GRAPH ?sg {
-              {
-                ?s ldp:membershipResource ?mr ;
-                  ldp:hasMemberRelation ?hmr .
-              } UNION {
-                ?s ldp:insertedContentRelation ?icr .
-              }
-            }
-          }
-        }
-        '''
-        try:
-            qres = self.ds.query(cont_qry, initBindings={
-                    's': rsrc_uri, 'mg': meta_uri, 'sg': state_uri})
-        except ResultException:
-            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
-            gr = Graph()
-        else:
-            gr = qres.graph
+        gr = self.ds.graph(self._meta_uri(uid, ver_uid)) | Graph()
 
-        return Resource(gr, rsrc_uri)
+        return Resource(gr, nsc['fcres'][uid])
 
 
     def get_version(self, uid, ver_uid):
@@ -364,7 +304,7 @@ class RsrcCentricLayout:
 
     ## PROTECTED MEMBERS ##
 
-    def _state_uri(self, uid, version_uid=None):
+    def _state_uri(self, uid, ver_uid=None):
         '''
         Convert a UID into a request URL to the graph store.
         '''
@@ -373,8 +313,8 @@ class RsrcCentricLayout:
             #        'Repository root does not accept user-defined properties.')
             return ROOT_GRAPH_URI
 
-        if version_uid:
-            uid += ':' + version_uid
+        if ver_uid:
+            uid += ':' + ver_uid
 
         return nsc['fcstate'][uid]
 
@@ -386,8 +326,8 @@ class RsrcCentricLayout:
         if not uid:
             return ROOT_GRAPH_URI
 
-        if version_uid:
-            uid += ':' + version_uid
+        if ver_uid:
+            uid += ':' + ver_uid
 
         return nsc['fcmeta'][uid]
 
