@@ -1,5 +1,6 @@
 import logging
 
+from collections import defaultdict
 from copy import deepcopy
 from urllib.parse import quote
 
@@ -72,6 +73,7 @@ class RsrcCentricLayout:
                 nsc['fcrepo'].Binary,
                 nsc['fcrepo'].Container,
                 nsc['fcrepo'].Pairtree,
+                nsc['fcrepo'].Resource,
                 nsc['ldp'].BasicContainer,
                 nsc['ldp'].Container,
                 nsc['ldp'].DirectContainer,
@@ -148,13 +150,14 @@ class RsrcCentricLayout:
 
     def extract_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
-                incl_children=True, embed_children=False, incl_srv_mgd=True):
+                incl_children=True, embed_children=False):
         '''
         See base_rdf_layout.extract_imr.
         '''
+        # @TODO Remove inbound functionality in favor of SPARQL query endpoint?
         inbound_construct = '\n?s1 ?p1 ?s .' if incl_inbound else ''
         inbound_qry = '''
-        OPTIONAL {
+        UNION {
           GRAPH ?g {
             ?s1 ?p1 ?s .
           }
@@ -165,8 +168,8 @@ class RsrcCentricLayout:
         ''' if incl_inbound else ''
 
         # Include and/or embed children.
-        embed_children_trp = embed_children_qry = ''
-        if incl_srv_mgd and incl_children:
+        incl_children_qry = embed_children_trp = embed_children_qry = ''
+        if incl_children:
             incl_children_qry = '''
             UNION {
               GRAPH ?strg {
@@ -174,7 +177,6 @@ class RsrcCentricLayout:
               }
             }
             '''
-
             # Embed children.
             if embed_children:
                 embed_children_trp = '?c ?cp ?co .'
@@ -183,9 +185,7 @@ class RsrcCentricLayout:
                   ?s ldp:contains ?c .
                   {}
                 }}
-                '''.format(embed_children_trp)
-        else:
-            incl_children_qry = ''
+                '''.format(embed_children_trp) # @TODO incomplete
 
         q = '''
         CONSTRUCT {{
@@ -215,9 +215,10 @@ class RsrcCentricLayout:
 
         mg = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
         strg = ROOT_GRAPH_URI if uid == '' else nsc['fcstruct'][uid]
+        sg = self._state_uri(uid, ver_uid)
         try:
             qres = self.ds.query(q, initBindings={'mg': mg, 'strg': strg,
-                'sg': self._state_uri(uid, ver_uid)})
+                'sg': sg})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             gr = Graph()
@@ -314,7 +315,7 @@ class RsrcCentricLayout:
         return Resource(gr | Graph(), nsc['fcres'][uid])
 
 
-    def create_or_replace_rsrc(self, uid, data, metadata, ver_uid=None):
+    def create_or_replace_rsrc(self, uid, trp, ver_uid=None):
         '''
         Create a new resource or replace an existing one.
         '''
@@ -330,23 +331,35 @@ class RsrcCentricLayout:
 
         self.ds.update(drop_qry)
 
-        sg = self.ds.graph(sg_uri)
-        sg += data
-        mg = self.ds.graph(mg_uri)
-        mg += metadata
+        return self.modify_rsrc(uid, add_trp=trp)
+        #sg = self.ds.graph(sg_uri)
+        #sg += data
+        #mg = self.ds.graph(mg_uri)
+        #mg += metadata
 
 
     def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        for t in remove_trp:
-            target_gr = self.ds.graph(self._map_graph_uri(t, uid))
-            target_gr.remove(t)
+        remove_routes = defaultdict(set)
+        add_routes = defaultdict(set)
 
+        # Create add and remove sets for each graph.
+        for t in remove_trp:
+            target_gr_uri = self._map_graph_uri(t, uid)
+            remove_routes[target_gr_uri].add(t)
         for t in add_trp:
-            target_gr = self.ds.graph(self._map_graph_uri(t, uid))
-            target_gr.add(t)
+            target_gr_uri = self._map_graph_uri(t, uid)
+            add_routes[target_gr_uri].add(t)
+
+        # Remove and add triple sets from each graph.
+        for gr_uri, trp in remove_routes.items():
+            gr = self.ds.graph(gr_uri)
+            gr -= trp
+        for gr_uri, trp in add_routes.items():
+            gr = self.ds.graph(gr_uri)
+            gr += trp
 
 
     ## PROTECTED MEMBERS ##
@@ -359,20 +372,24 @@ class RsrcCentricLayout:
             #raise InvalidResourceError(uid,
             #        'Repository root does not accept user-defined properties.')
             return ROOT_GRAPH_URI
+
         if version_uid:
             uid += ':' + version_uid
-        else:
-            return nsc['fcstate'][uid]
+
+        return nsc['fcstate'][uid]
 
 
-    def _meta_uri(self, uid):
+    def _meta_uri(self, uid, ver_uid=None):
         '''
         Convert a UID into a request URL to the graph store.
         '''
         if not uid:
             return ROOT_GRAPH_URI
-        else:
-            return nsc['fcmeta'][uid]
+
+        if version_uid:
+            uid += ':' + version_uid
+
+        return nsc['fcmeta'][uid]
 
 
     def _map_graph_uri(self, t, uid):

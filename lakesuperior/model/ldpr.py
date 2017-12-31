@@ -581,51 +581,50 @@ class Ldpr(metaclass=ABCMeta):
         '''
         create = create_only or not self.is_stored
 
-        self.metadata = self._srv_mgd_triples(create)
+        self._add_srv_mgd_triples(create)
         #self._ensure_single_subject_rdf(self.provided_imr.graph)
         ref_int = self.rdfly.config['referential_integrity']
         if ref_int:
             self._check_ref_int(ref_int)
 
-        self.rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph,
-                self.metadata.graph)
+        self.rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph)
 
         self._set_containment_rel()
 
         return self.RES_CREATED if create else self.RES_UPDATED
 
 
-    def _create_rsrc(self):
-        '''
-        Create a new resource by comparing an empty graph with the provided
-        IMR graph.
-        '''
-        self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
+    #def _create_rsrc(self):
+    #    '''
+    #    Create a new resource by comparing an empty graph with the provided
+    #    IMR graph.
+    #    '''
+    #    self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
 
-        # Set the IMR contents to the "add" triples.
-        #self.imr = self.provided_imr.graph
+    #    # Set the IMR contents to the "add" triples.
+    #    #self.imr = self.provided_imr.graph
 
-        return self.RES_CREATED
+    #    return self.RES_CREATED
 
 
-    def _replace_rsrc(self):
-        '''
-        Replace a resource.
+    #def _replace_rsrc(self):
+    #    '''
+    #    Replace a resource.
 
-        The existing resource graph is removed except for the protected terms.
-        '''
-        # The extracted IMR is used as a "minus" delta, so protected predicates
-        # must be removed.
-        for p in self.protected_pred:
-            self.imr.remove(p)
+    #    The existing resource graph is removed except for the protected terms.
+    #    '''
+    #    # The extracted IMR is used as a "minus" delta, so protected predicates
+    #    # must be removed.
+    #    for p in self.protected_pred:
+    #        self.imr.remove(p)
 
-        delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
-        self._modify_rsrc(self.RES_UPDATED, *delta)
+    #    delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
+    #    self._modify_rsrc(self.RES_UPDATED, *delta)
 
-        # Set the IMR contents to the "add" triples.
-        #self.imr = delta[1]
+    #    # Set the IMR contents to the "add" triples.
+    #    #self.imr = delta[1]
 
-        return self.RES_UPDATED
+    #    return self.RES_UPDATED
 
 
     def _bury_rsrc(self, inbound, tstone_pointer=None):
@@ -672,11 +671,11 @@ class Ldpr(metaclass=ABCMeta):
         # Remove resource itself.
         self.rdfly.modify_rsrc(self.uid, {(self.urn, None, None)}, types=None)
 
-        # Remove fragments.
-        for frag_urn in imr.graph[
-                : nsc['fcsystem'].fragmentOf : self.urn]:
-            self.rdfly.modify_rsrc(
-                    self.uid, {(frag_urn, None, None)}, types={})
+        ## Remove fragments.
+        #for frag_urn in imr.graph[
+        #        : nsc['fcsystem'].fragmentOf : self.urn]:
+        #    self.rdfly.modify_rsrc(
+        #            self.uid, {(frag_urn, None, None)}, types={})
 
         # Remove snapshots.
         for snap_urn in self.versions:
@@ -858,36 +857,33 @@ class Ldpr(metaclass=ABCMeta):
         return gr
 
 
-    def _srv_mgd_triples(self, create=False):
+    def _add_srv_mgd_triples(self, create=False):
         '''
         Add server-managed triples to a provided IMR.
 
         @param create (boolean) Whether the resource is being created.
         '''
-        metadata = Resource(Graph(), self.urn)
         # Base LDP types.
         for t in self.base_types:
-            metadata.add(RDF.type, t)
+            self.provided_imr.add(RDF.type, t)
 
         # Message digest.
         cksum = g.tbox.rdf_cksum(self.provided_imr.graph)
-        metadata.set(nsc['premis'].hasMessageDigest,
+        self.provided_imr.set(nsc['premis'].hasMessageDigest,
                 URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
         if create:
-            metadata.set(nsc['fcrepo'].created, g.timestamp_term)
-            metadata.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+            self.provided_imr.set(nsc['fcrepo'].created, g.timestamp_term)
+            self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
         else:
-            metadata.set(nsc['fcrepo'].created, self.metadata.value(
+            self.provided_imr.set(nsc['fcrepo'].created, self.metadata.value(
                     nsc['fcrepo'].created))
-            metadata.set(nsc['fcrepo'].createdBy, self.metadata.value(
+            self.provided_imr.set(nsc['fcrepo'].createdBy, self.metadata.value(
                     nsc['fcrepo'].createdBy))
 
-        metadata.set(nsc['fcrepo'].lastModified, g.timestamp_term)
-        metadata.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
-
-        return metadata
+        self.provided_imr.set(nsc['fcrepo'].lastModified, g.timestamp_term)
+        self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
 
     def _set_containment_rel(self):

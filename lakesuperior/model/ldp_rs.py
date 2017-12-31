@@ -58,7 +58,7 @@ class LdpRs(Ldpr):
         '''
         Calculate the delta obtained by a SPARQL Update operation.
 
-        This is a critical component of the SPARQL query prcess and does a
+        This is a critical component of the SPARQL update prcess and does a
         couple of things:
 
         1. It ensures that no resources outside of the subject of the request
