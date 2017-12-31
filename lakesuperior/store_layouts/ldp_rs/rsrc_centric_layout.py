@@ -1,7 +1,6 @@
 import logging
 
 from copy import deepcopy
-from pprint import pformat
 from urllib.parse import quote
 
 import requests
@@ -18,26 +17,120 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.namespaces import ns_pfx_sparql
 from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.store_layouts.ldp_rs.base_rdf_layout import BaseRdfLayout
 from lakesuperior.model.ldpr import ROOT_UID, ROOT_GRAPH_URI, ROOT_RSRC_URI
 
 
-class RsrcCentricLayout(BaseRdfLayout):
+class RsrcCentricLayout:
     '''
-    Resource-centric layout.
+    This class exposes an interface to build graph store layouts. It also
+    provides the basics of the triplestore connection.
 
-    See http://patterns.dataincubator.org/book/graph-per-resource.html
-    This implementation places each resource and its fragments within a named
-    graph. Version snapshots are also stored in individual graphs and are named
-    related in a metadata graph.
+    Some store layouts are provided. New ones aimed at specific uses
+    and optimizations of the repository may be developed by extending this
+    class and implementing all its abstract methods.
 
-    This layout is best used not with a connector that uses RDFlib but rather
-    with one that employs a direct interaction with the Graph Store Protocol,
-    either via HTTP or, ideally, using native API bindings.
+    A layout is implemented via application configuration. However, once
+    contents are ingested in a repository, changing a layout will most likely
+    require a migration.
+
+    The custom layout must be in the lakesuperior.store_layouts.rdf
+    package and the class implementing the layout must be called
+    `StoreLayout`. The module name is the one defined in the app
+    configuration.
+
+    E.g. if the configuration indicates `simple_layout` the application will
+    look for
+    `lakesuperior.store_layouts.rdf.simple_layout.SimpleLayout`.
+
+    Some method naming conventions:
+
+    - Methods starting with `get_` return a resource.
+    - Methods starting with `list_` return an iterable or generator of URIs.
+    - Methods starting with `select_` return an iterable or generator with
+      table-like data such as from a SELECT statement.
+    - Methods starting with `ask_` return a boolean value.
     '''
+
     _logger = logging.getLogger(__name__)
 
     META_GRAPH_URI = nsc['fcsystem'].meta
+
+    attr_map = {
+        nsc['fcmeta']: {
+            # List of metadata predicates. Triples bearing one of these
+            # predicates will go in the metadata graph.
+            'p': {
+                nsc['fcrepo'].created,
+                nsc['fcrepo'].createdBy,
+                nsc['fcrepo'].lastModified,
+                nsc['fcrepo'].lastModifiedBy,
+                nsc['premis'].hasMessageDigest,
+            },
+            # List of metadata RDF types. Triples bearing one of these types in
+            # the object will go in the metadata graph.
+            't': {
+                nsc['fcrepo'].Binary,
+                nsc['fcrepo'].Container,
+                nsc['fcrepo'].Pairtree,
+                nsc['ldp'].BasicContainer,
+                nsc['ldp'].Container,
+                nsc['ldp'].DirectContainer,
+                nsc['ldp'].IndirectContainer,
+                nsc['ldp'].NonRDFSource,
+                nsc['ldp'].RDFSource,
+                nsc['ldp'].Resource,
+            },
+        },
+        nsc['fcstruct']: {
+            # These are placed in a separate graph for optimization purposees.
+            'p': {
+                nsc['fcrepo'].hasParent,
+                nsc['fcsystem'].contains,
+                nsc['ldp'].contains,
+            }
+        },
+    }
+
+
+    ## MAGIC METHODS ##
+
+    def __init__(self, conn, config):
+        '''Initialize the graph store and a layout.
+
+        NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
+        for Graph Store HTTP protocol
+        (https://www.w3.org/TR/sparql11-http-rdf-update/). Blazegraph supports
+        this only in the (currently unreleased) 2.2 branch. It works with Jena,
+        which is currently the reference implementation.
+        '''
+        self.config = config
+        self._conn = conn
+        self.store = self._conn.store
+
+        #self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI
+        self.ds = self._conn.ds
+        self.ds.namespace_manager = nsm
+
+
+    @property
+    def attr_routes(self):
+        '''
+        This is a map that allows specific triples to go to certain graphs.
+        It is a machine-friendly version of the static attribute `attr_map`
+        which is formatted for human readability and to avoid repetition.
+        The attributes not mapped here (usually user-provided triples with no
+        special meaning to the application) go to the `fcstate:` graph.
+        '''
+        if not hasattr(self, '_attr_routes'):
+            self._attr_routes = {'p': {}, 't': {}}
+            for dest in self.attr_map.keys():
+                for term_k, terms in self.attr_map[dest].items():
+                    self._attr_routes[term_k].update(
+                            {term: dest for term in terms})
+
+        return self._attr_routes
+
+
 
     def bootstrap(self):
         '''
@@ -74,7 +167,13 @@ class RsrcCentricLayout(BaseRdfLayout):
         # Include and/or embed children.
         embed_children_trp = embed_children_qry = ''
         if incl_srv_mgd and incl_children:
-            incl_children_qry = ''
+            incl_children_qry = '''
+            UNION {
+              GRAPH ?strg {
+                ?str_s ?str_p ?str_o .
+              }
+            }
+            '''
 
             # Embed children.
             if embed_children:
@@ -86,12 +185,13 @@ class RsrcCentricLayout(BaseRdfLayout):
                 }}
                 '''.format(embed_children_trp)
         else:
-            incl_children_qry = '\nFILTER ( ?p != ldp:contains )' \
+            incl_children_qry = ''
 
         q = '''
         CONSTRUCT {{
             ?meta_s ?meta_p ?meta_o .
             ?s ?p ?o .{inb_cnst}
+            ?str_s ?str_p ?str_o .
             {embed_chld_t}
             #?s fcrepo:writable true .
         }}
@@ -100,9 +200,10 @@ class RsrcCentricLayout(BaseRdfLayout):
             GRAPH ?mg {{
               ?meta_s ?meta_p ?meta_o .
             }}
-          }} UNION {{
+          }}{incl_chld}{embed_chld}
+          UNION {{
             GRAPH ?sg {{
-              ?s ?p ?o .{inb_qry}{incl_chld}{embed_chld}
+              ?s ?p ?o .{inb_qry}
             }}
           }}{inb_qry}
         }}
@@ -113,9 +214,9 @@ class RsrcCentricLayout(BaseRdfLayout):
                 )
 
         mg = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
-        #import pdb; pdb.set_trace()
+        strg = ROOT_GRAPH_URI if uid == '' else nsc['fcstruct'][uid]
         try:
-            qres = self.ds.query(q, initBindings={'mg': mg,
+            qres = self.ds.query(q, initBindings={'mg': mg, 'strg': strg,
                 'sg': self._state_uri(uid, ver_uid)})
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
@@ -218,7 +319,7 @@ class RsrcCentricLayout(BaseRdfLayout):
         Create a new resource or replace an existing one.
         '''
         sg_uri = self._state_uri(uid)
-        mg_uri = self._meta_uri(uid)
+        mg_uri = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
         if ver_uid:
             ver_uri = self._state_uri(uid, ver_uid)
             drop_qry = 'MOVE SILENT {sg} TO {vg};\n'.format(
@@ -235,22 +336,17 @@ class RsrcCentricLayout(BaseRdfLayout):
         mg += metadata
 
 
-    def modify_dataset(self, uid, remove_trp=set(), add_trp=set(),
-            remove_meta=set(), add_meta=set(), **kwargs):
+    def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
         '''
         See base_rdf_layout.update_rsrc.
         '''
-        gr = self.ds.graph(self._state_uri(uid))
-        if len(remove_trp):
-            gr -= remove_trp
-        if len(add_trp):
-            gr += add_trp
+        for t in remove_trp:
+            target_gr = self.ds.graph(self._map_graph_uri(t, uid))
+            target_gr.remove(t)
 
-        meta_gr = self.ds.graph(self._meta_uri(uid))
-        if len(remove_meta):
-            gr -= remove_meta
-        if len(add_meta):
-            gr += add_meta
+        for t in add_trp:
+            target_gr = self.ds.graph(self._map_graph_uri(t, uid))
+            target_gr.add(t)
 
 
     ## PROTECTED MEMBERS ##
@@ -279,12 +375,16 @@ class RsrcCentricLayout(BaseRdfLayout):
             return nsc['fcmeta'][uid]
 
 
-    def optimize_edits(self):
-        opt_edits = [
-                l for l in self.store._edits
-                if not l.startswith('PREFIX')]
-        #opt_edits = list(ns_pfx_sparql.values()) + opt_edits
-        self.store._edits = opt_edits
-        self._logger.debug('Changes to be committed: {}'.format(
-            pformat(self.store._edits)))
+    def _map_graph_uri(self, t, uid):
+        '''
+        Map a triple to a namespace prefix corresponding to a graph.
+        '''
+        if not uid:
+            return ROOT_GRAPH_URI
 
+        if t[1] in self.attr_routes['p'].keys():
+            return self.attr_routes['p'][t[1]][uid]
+        elif t[1] == RDF.type and t[2] in self.attr_routes['t'].keys():
+            return self.attr_routes['t'][t[2]][uid]
+        else:
+            return nsc['fcstate'][uid]

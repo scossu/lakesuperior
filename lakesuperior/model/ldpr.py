@@ -45,7 +45,8 @@ def atomic(fn):
         else:
             self._logger.info('Committing transaction.')
             if hasattr(self.rdfly.store, '_edits'):
-                self.rdfly.optimize_edits()
+                # @FIXME ugly.
+                self.rdfly._conn.optimize_edits()
             self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
@@ -341,15 +342,15 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_types'):
             #import pdb; pdb.set_trace()
-            if hasattr(self, '_imr') and len(self.imr.graph):
-                imr = self.imr
+            if len(self.metadata.graph):
+                metadata = self.metadata
             elif getattr(self, 'provided_imr', None) and \
                     len(self.provided_imr.graph):
-                imr = self.provided_imr
+                metadata = self.provided_imr
             else:
                 return set()
 
-            self._types = set(imr.graph[self.urn : RDF.type])
+            self._types = set(metadata.graph[self.urn : RDF.type])
 
         return self._types
 
@@ -669,12 +670,12 @@ class Ldpr(metaclass=ABCMeta):
                 self.uid, incl_inbound=True, strict=False)
 
         # Remove resource itself.
-        self.rdfly.modify_dataset(self.uid, {(self.urn, None, None)}, types=None)
+        self.rdfly.modify_rsrc(self.uid, {(self.urn, None, None)}, types=None)
 
         # Remove fragments.
         for frag_urn in imr.graph[
                 : nsc['fcsystem'].fragmentOf : self.urn]:
-            self.rdfly.modify_dataset(
+            self.rdfly.modify_rsrc(
                     self.uid, {(frag_urn, None, None)}, types={})
 
         # Remove snapshots.
@@ -683,7 +684,7 @@ class Ldpr(metaclass=ABCMeta):
                 (snap_urn, None, None),
                 (None, None, snap_urn),
             }
-            self.rdfly.modify_dataset(self.uid, remove_trp, types={})
+            self.rdfly.modify_rsrc(self.uid, remove_trp, types={})
 
         # Remove inbound references.
         if inbound:
@@ -725,20 +726,19 @@ class Ldpr(metaclass=ABCMeta):
                         g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
                         t[1], t[2]))
 
-        self.rdfly.modify_dataset(
+        self.rdfly.modify_rsrc(
                 self.uid, add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
 
         # Add version metadata.
-        meta_add_gr = Graph()
-        meta_add_gr.add((
-            self.urn, nsc['fcrepo'].hasVersion, ver_urn))
-        meta_add_gr.add(
-                (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
-        meta_add_gr.add(
+        add_gr = set()
+        add_gr.add((
+        elf.urn, nsc['fcrepo'].hasVersion, ver_urn))
+        add_gr.add(
+           (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
+        add_gr.add(
                 (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
 
-        self.rdfly.modify_dataset(
-                self.uid, add_trp=meta_add_gr, types={nsc['fcrepo'].Metadata})
+        self.rdfly.modify_rsrc(self.uid, add_trp=add_gr)
 
         # Update resource.
         rsrc_add_gr = Graph()
@@ -751,7 +751,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     def _modify_rsrc(self, ev_type, remove_trp=set(), add_trp=set(),
-             remove_meta=set(), add_meta=set(), notify=True):
+             notify=True):
         '''
         Low-level method to modify a graph for a single resource.
 
@@ -762,19 +762,16 @@ class Ldpr(metaclass=ABCMeta):
         @param ev_type (string) The type of event (create, update, delete).
         @param remove_trp (set) Triples to be removed.
         @param add_trp (set) Triples to be added.
-        @param remove_meta (set) Metadata triples to be removed.
-        @param add_meta (set) Metadata triples to be added.
         @param notify (boolean) Whether to send a message about the change.
         '''
-        #for trp in [remove_trp, add_trp, remove_meta, add_meta]:
+        #for trp in [remove_trp, add_trp]:
         #    if not isinstance(trp, set):
         #        trp = set(trp)
 
         type = self.types
         actor = self.metadata.value(nsc['fcrepo'].createdBy)
 
-        ret = self.rdfly.modify_dataset(self.uid, remove_trp, add_trp,
-                remove_meta, add_meta)
+        ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
         if notify and current_app.config.get('messaging'):
             request.changelog.append((set(remove_trp), set(add_trp), {
@@ -787,22 +784,23 @@ class Ldpr(metaclass=ABCMeta):
         return ret
 
 
-    def _ensure_single_subject_rdf(self, gr, add_fragment=True):
-        '''
-        Ensure that a RDF payload for a POST or PUT has a single resource.
-        '''
-        for s in set(gr.subjects()):
-            # Fragment components
-            if '#' in s:
-                parts = s.split('#')
-                frag = s
-                s = URIRef(parts[0])
-                if add_fragment:
-                    # @TODO This is added to the main graph. It should be added
-                    # to the metadata graph.
-                    gr.add((frag, nsc['fcsystem'].fragmentOf, s))
-            if not s == self.urn:
-                raise SingleSubjectError(s, self.uid)
+    # Not used. @TODO Deprecate or reimplement depending on requirements.
+    #def _ensure_single_subject_rdf(self, gr, add_fragment=True):
+    #    '''
+    #    Ensure that a RDF payload for a POST or PUT has a single resource.
+    #    '''
+    #    for s in set(gr.subjects()):
+    #        # Fragment components
+    #        if '#' in s:
+    #            parts = s.split('#')
+    #            frag = s
+    #            s = URIRef(parts[0])
+    #            if add_fragment:
+    #                # @TODO This is added to the main graph. It should be added
+    #                # to the metadata graph.
+    #                gr.add((frag, nsc['fcsystem'].fragmentOf, s))
+    #        if not s == self.urn:
+    #            raise SingleSubjectError(s, self.uid)
 
 
     def _check_ref_int(self, config):
@@ -983,12 +981,9 @@ class Ldpr(metaclass=ABCMeta):
         '''
         rsrc_uri = nsc['fcres'][uid]
 
-        state_trp = {
-            (rsrc_uri, nsc['fcrepo'].contains, nsc['fcres'][child_uid]),
+        add_trp = {
+            (rsrc_uri, nsc['fcsystem'].contains, nsc['fcres'][child_uid]),
             (rsrc_uri, nsc['ldp'].contains, self.urn),
-        }
-
-        meta_trp = {
             (rsrc_uri, RDF.type, nsc['ldp'].Container),
             (rsrc_uri, RDF.type, nsc['ldp'].BasicContainer),
             (rsrc_uri, RDF.type, nsc['ldp'].RDFSource),
@@ -996,13 +991,13 @@ class Ldpr(metaclass=ABCMeta):
             (rsrc_uri, nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid]),
         }
 
-        self.rdfly.modify_dataset(
-                uid, add_trp=state_trp, add_meta=meta_trp)
+        self.rdfly.modify_rsrc(
+                uid, add_trp=add_trp)
 
         # If the path segment is just below root
         if '/' not in uid:
-            self.rdfly.modify_dataset(ROOT_UID, add_meta={
-                (ROOT_RSRC_URI, nsc['fcrepo'].contains, nsc['fcres'][uid])
+            self.rdfly.modify_rsrc(ROOT_UID, add_trp={
+                (ROOT_RSRC_URI, nsc['fcsystem'].contains, nsc['fcres'][uid])
             })
 
 
@@ -1013,38 +1008,37 @@ class Ldpr(metaclass=ABCMeta):
         @param cont_rsrc (rdflib.resource.Resouce)  The container resource.
         '''
         cont_p = set(cont_rsrc.metadata.graph.predicates())
-        add_gr = Graph()
+        add_trp = set()
 
         self._logger.info('Checking direct or indirect containment.')
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
-        add_gr.add((self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn))
+        add_trp.add((self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn))
+
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = g.tbox.localize_term(
-                    cont_rsrc.imr.value(self.MBR_RSRC_URI).identifier)
-            p = cont_rsrc.imr.value(self.MBR_REL_URI).identifier
+                    cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier)
+            p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
 
-            if cont_rsrc.imr[RDF.type : nsc['ldp'].DirectContainer]:
+            if cont_rsrc.metadata[RDF.type : nsc['ldp'].DirectContainer]:
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
-                add_gr.add((s, p, self.urn))
+                add_trp.add((s, p, self.urn))
 
-            elif cont_rsrc.imr[RDF.type : nsc['ldp'].IndirectContainer] \
+            elif cont_rsrc.metadata[RDF.type : nsc['ldp'].IndirectContainer] \
                    and self.INS_CNT_REL_URI in cont_p:
                 self._logger.info('Parent is an indirect container.')
-                cont_rel_uri = cont_rsrc.imr.value(self.INS_CNT_REL_URI).identifier
-                target_uri = self.provided_imr.value(cont_rel_uri).identifier
+                cont_rel_uri = cont_rsrc.metadata.value(
+                        self.INS_CNT_REL_URI).identifier
+                target_uri = self.provided_metadata.value(
+                        cont_rel_uri).identifier
                 self._logger.debug('Target URI: {}'.format(target_uri))
                 if target_uri:
                     self._logger.debug('Creating IC triples.')
-                    add_gr.add((s, p, target_uri))
+                    add_trp.add((s, p, target_uri))
 
-        if len(add_gr):
-            #add_gr = self._check_mgd_terms(add_gr)
-            #self._logger.debug('Adding DC/IC triples: {}'.format(
-            #    add_gr.serialize(format='turtle').decode('utf-8')))
-            self._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+        self._modify_rsrc(self.RES_UPDATED, add_trp=add_trp)
 
 
     def _send_event_msg(self, remove_trp, add_trp, metadata):

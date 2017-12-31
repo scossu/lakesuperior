@@ -23,6 +23,7 @@ core_namespaces = {
     'fcres' : Namespace('info:fcres/'),
     'fcmeta' : Namespace('info:fcmeta/'),
     'fcstate' : Namespace('info:fcstate/'),
+    'fcstruct' : Namespace('info:fcstruct/'),
     'fcsystem' : Namespace('info:fcsystem/'),
     'webac' : Namespace('http://www.w3.org/ns/auth/acl#'),
     'xml' : Namespace('http://www.w3.org/XML/1998/namespace'),

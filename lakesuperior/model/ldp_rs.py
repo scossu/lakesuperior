@@ -48,8 +48,8 @@ class LdpRs(Ldpr):
         '''
         local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
         delta = self._sparql_delta(local_update_str)
-        self._ensure_single_subject_rdf(delta[0], add_fragment=False)
-        self._ensure_single_subject_rdf(delta[1])
+        #self._ensure_single_subject_rdf(delta[0], add_fragment=False)
+        #self._ensure_single_subject_rdf(delta[1])
 
         return self._modify_rsrc(self.RES_UPDATED, *delta)
 
@@ -85,9 +85,9 @@ class LdpRs(Ldpr):
 
         remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
 
-        #self._logger.info('Removing: {}'.format(
+        #self._logger.debug('Removing: {}'.format(
         #    remove_gr.serialize(format='turtle').decode('utf8')))
-        #self._logger.info('Adding: {}'.format(
+        #self._logger.debug('Adding: {}'.format(
         #    add_gr.serialize(format='turtle').decode('utf8')))
 
         remove_gr = self._check_mgd_terms(remove_gr)

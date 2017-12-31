@@ -1,6 +1,7 @@
 import logging
 
 from abc import ABCMeta
+from pprint import pformat
 
 from rdflib import Dataset
 from rdflib.term import URIRef
@@ -45,3 +46,13 @@ class SparqlConnector(BaseConnector):
             self.readonly = True
 
         self.ds = Dataset(self.store, default_union=True)
+
+
+    def optimize_edits(self):
+        opt_edits = [
+                l for l in self.store._edits
+                if not l.startswith('PREFIX')]
+        #opt_edits = list(ns_pfx_sparql.values()) + opt_edits
+        self.store._edits = opt_edits
+        self._logger.debug('Changes to be committed: {}'.format(
+            pformat(self.store._edits)))

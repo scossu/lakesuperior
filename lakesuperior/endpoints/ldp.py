@@ -403,7 +403,7 @@ def tombstone(uid):
     logger.debug('Deleting tombstone for {}.'.format(uid))
     rsrc = Ldpr(uid)
     try:
-        imr = rsrc.imr
+        metadata = rsrc.metadata
     except TombstoneError as e:
         if request.method == 'DELETE':
             if e.uid == uid:
@@ -426,7 +426,7 @@ def tombstone(uid):
         return '', 404
 
 
-def uuid_for_post(parent_uuid=None, slug=None):
+def uuid_for_post(parent_uid=None, slug=None):
     '''
     Validate conditions to perform a POST and return an LDP resource
     UID for using with the `post` method.
@@ -440,37 +440,36 @@ def uuid_for_post(parent_uuid=None, slug=None):
         return uid
 
     # Shortcut!
-    if not slug and not parent_uuid:
+    if not slug and not parent_uid:
         uid = split_if_legacy(str(uuid4()))
 
         return uid
 
-    parent = LdpFactory.from_stored(parent_uuid, repr_opts={'incl_children' : False})
+    parent = LdpFactory.from_stored(parent_uid,
+            repr_opts={'incl_children' : False})
 
     if nsc['fcrepo'].Pairtree in parent.types:
         raise InvalidResourceError(parent.uid,
                 'Resources cannot be created under a pairtree.')
 
     # Set prefix.
-    if parent_uuid:
-        parent_types = { t.identifier for t in \
-                parent.imr.objects(RDF.type) }
-        logger.debug('Parent types: {}'.format(pformat(parent_types)))
-        if nsc['ldp'].Container not in parent_types:
-            raise InvalidResourceError('Parent {} is not a container.'
-                   .format(parent_uuid))
+    if parent_uid:
+        logger.debug('Parent types: {}'.format(pformat(parent.types)))
+        if nsc['ldp'].Container not in parent.types:
+            raise InvalidResourceError(parent_uid,
+                    'Parent {} is not a container.'.format(parent_uid))
 
-        pfx = parent_uuid + '/'
+        pfx = parent_uid + '/'
     else:
         pfx = ''
 
     # Create candidate UID and validate.
     if slug:
-        cnd_uuid = pfx + slug
-        if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uuid]):
+        cnd_uid = pfx + slug
+        if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uid]):
             uid = pfx + split_if_legacy(str(uuid4()))
         else:
-            uid = cnd_uuid
+            uid = cnd_uid
     else:
         uid = pfx + split_if_legacy(str(uuid4()))
 
