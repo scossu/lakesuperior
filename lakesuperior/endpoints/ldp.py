@@ -382,7 +382,8 @@ def delete_resource(uid):
         leave_tstone = True
 
     try:
-        LdpFactory.from_stored(uid, repr_opts).delete(leave_tstone=leave_tstone)
+        LdpFactory.from_stored(uid, repr_opts).delete(
+                leave_tstone=leave_tstone)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:

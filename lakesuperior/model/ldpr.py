@@ -539,7 +539,7 @@ class Ldpr(metaclass=ABCMeta):
         if not ver_uid or ver_uid in self.version_uids:
             ver_uid = str(uuid4())
 
-        return g.tbox.globalize_term(self._create_rsrc_version(ver_uid))
+        return g.tbox.globalize_term(self.create_rsrc_snapshot(ver_uid))
 
 
     @atomic
@@ -638,7 +638,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self._logger.info('Removing resource {}'.format(self.urn))
         # Create a backup snapshot for resurrection purposes.
-        self._create_rsrc_version(uuid4())
+        self.create_rsrc_snapshot(uuid4())
 
         remove_trp = self.imr.graph
         add_trp = Graph()
@@ -695,17 +695,17 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_DELETED
 
 
-    def _create_rsrc_version(self, ver_uid):
+    def create_rsrc_snapshot(self, ver_uid):
         '''
         Perform version creation and return the internal URN.
         '''
         # Create version resource from copying the current state.
         ver_add_gr = Graph()
-        vers_uuid = '{}/{}'.format(self.uid, self.RES_VER_CONT_LABEL)
-        ver_uuid = '{}/{}'.format(vers_uuid, ver_uid)
-        ver_urn = nsc['fcres'][ver_uuid]
-        ver_add_gr.add((ver_urn, RDF.type, nsc['fcrepo'].Version))
-        for t in self.imr.graph:
+        vers_uid = '{}/{}'.format(self.uid, self.RES_VER_CONT_LABEL)
+        ver_uid = '{}/{}'.format(vers_uid, ver_uid)
+        ver_uri = nsc['fcres'][ver_uid]
+        ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
+        for t in self.metadata.graph:
             if (
                 t[1] == RDF.type and t[2] in {
                     nsc['fcrepo'].Binary,
@@ -722,7 +722,7 @@ class Ldpr(metaclass=ABCMeta):
                 pass
             else:
                 ver_add_gr.add((
-                        g.tbox.replace_term_domain(t[0], self.urn, ver_urn),
+                        g.tbox.replace_term_domain(t[0], self.urn, ver_uri),
                         t[1], t[2]))
 
         self.rdfly.modify_rsrc(
@@ -731,22 +731,22 @@ class Ldpr(metaclass=ABCMeta):
         # Add version metadata.
         add_gr = set()
         add_gr.add((
-        elf.urn, nsc['fcrepo'].hasVersion, ver_urn))
+        elf.urn, nsc['fcrepo'].hasVersion, ver_uri))
         add_gr.add(
-           (ver_urn, nsc['fcrepo'].created, g.timestamp_term))
+           (ver_uri, nsc['fcrepo'].created, g.timestamp_term))
         add_gr.add(
-                (ver_urn, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
+                (ver_uri, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
 
         self.rdfly.modify_rsrc(self.uid, add_trp=add_gr)
 
         # Update resource.
         rsrc_add_gr = Graph()
         rsrc_add_gr.add((
-            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uuid]))
+            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]))
 
         self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
-        return nsc['fcres'][ver_uuid]
+        return nsc['fcres'][ver_uid]
 
 
     def _modify_rsrc(self, ev_type, remove_trp=set(), add_trp=set(),

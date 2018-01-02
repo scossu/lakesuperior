@@ -12,7 +12,7 @@ srv_mgd_predicates = {
     nsc['fcrepo'].lastModified,
     nsc['fcrepo'].lastModifiedBy,
     nsc['fcrepo'].writable,
-    nsc['fcsystem'].fragmentOf,
+    #nsc['fcsystem'].fragmentOf,
     nsc['iana'].describedBy,
     nsc['ldp'].contains,
     nsc['premis'].hasMessageDigest,
