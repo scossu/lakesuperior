@@ -1,0 +1,22 @@
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX fcrepo: <http://fedora.info/definitions/v4/repository#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+INSERT DATA {
+  GRAPH <info:fcsystem/graph/userdata/_main/> {
+      <info:fcres/> dcterms:title "Repository Root" .
+  }
+
+  GRAPH <info:fcsystem/graph/admin/> {
+    <info:fcres/> a
+      fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ,
+      ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
+    .
+  }
+
+  GRAPH <info:fcsystem/meta> {
+    <info:fcsystem/graph/admin/> foaf:primaryTopic <info:fcres/> .
+    <info:fcsystem/graph/userdata/_main/> foaf:primaryTopic <info:fcres/> .
+  }
+}

@@ -10,7 +10,7 @@ from rdflib import Graph
 from rdflib.term import URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import ROOT_GRAPH_URI, ROOT_RSRC_URI
+from lakesuperior.model.ldpr import ROOT_RSRC_URI
 
 
 class Toolbox:
@@ -52,9 +52,7 @@ class Toolbox:
 
         @return string
         '''
-        if uri == ROOT_GRAPH_URI or uri == ROOT_RSRC_URI:
-            return None
-        elif uri.startswith(nsc['fcres']):
+        if uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:
             return str(uri).replace(g.webroot, '').strip('/')

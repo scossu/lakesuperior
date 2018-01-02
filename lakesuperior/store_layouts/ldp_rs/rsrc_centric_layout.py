@@ -18,7 +18,6 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.namespaces import ns_pfx_sparql
 from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.model.ldpr import ROOT_UID, ROOT_GRAPH_URI, ROOT_RSRC_URI
 
 
 class RsrcCentricLayout:
@@ -54,10 +53,8 @@ class RsrcCentricLayout:
 
     _logger = logging.getLogger(__name__)
 
-    META_GRAPH_URI = nsc['fcsystem'].meta
-
     attr_map = {
-        nsc['fcmeta']: {
+        nsc['fcadmin']: {
             # List of server-managed predicates. Triples bearing one of these
             # predicates will go in the metadata graph.
             'p': {
@@ -92,10 +89,11 @@ class RsrcCentricLayout:
             },
         },
         nsc['fcstruct']: {
-            # These are placed in a separate graph for optimization purposees.
+            # These are placed in a separate graph for optimization purposes.
             'p': {
                 nsc['fcsystem'].contains,
                 nsc['ldp'].contains,
+                nsc['pcdm'].hasMember,
             }
         },
     }
@@ -128,7 +126,7 @@ class RsrcCentricLayout:
         It is a machine-friendly version of the static attribute `attr_map`
         which is formatted for human readability and to avoid repetition.
         The attributes not mapped here (usually user-provided triples with no
-        special meaning to the application) go to the `fcstate:` graph.
+        special meaning to the application) go to the `fcmain:` graph.
         '''
         if not hasattr(self, '_attr_routes'):
             self._attr_routes = {'p': {}, 't': {}}
@@ -149,9 +147,12 @@ class RsrcCentricLayout:
         self.ds.update('DROP SILENT ALL')
 
         self._logger.info('Initializing the graph store with system data.')
-        self.ds.default_context.parse(
-                source='data/bootstrap/rsrc_centric_layout.nq', format='nquads')
+        #self.ds.default_context.parse(
+        #        source='data/bootstrap/rsrc_centric_layout.nq', format='nquads')
+        with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
+            self.ds.update(f.read())
 
+        self.ds.store.commit()
         self.ds.store.close()
 
 
@@ -173,9 +174,9 @@ class RsrcCentricLayout:
         #  }
         #}
         #''' if incl_inbound else ''
-        mg = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
-        strg = ROOT_GRAPH_URI if uid == '' else nsc['fcstruct'][uid]
-        sg = self._state_uri(uid, ver_uid)
+        mg = self._admin_uri(uid, ver_uid)
+        strg = nsc['fcstruct'][uid]
+        sg = self._main_uri(uid, ver_uid)
 
         if incl_children:
             incl_child_qry = 'FROM {}'.format(strg.n3())
@@ -231,7 +232,7 @@ class RsrcCentricLayout:
         '''
         See base_rdf_layout.ask_rsrc_exists.
         '''
-        meta_gr = self.ds.graph(nsc['fcmeta'][uid])
+        meta_gr = self.ds.graph(self._admin_uri(uid))
         return bool(
                 meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
 
@@ -241,9 +242,21 @@ class RsrcCentricLayout:
         This is an optimized query to get everything the application needs to
         insert new contents, and nothing more.
         '''
-        gr = self.ds.graph(self._meta_uri(uid, ver_uid)) | Graph()
+        gr = self.ds.graph(self._admin_uri(uid, ver_uid)) | Graph()
 
         return Resource(gr, nsc['fcres'][uid])
+
+
+    def create_snapshot(self, uid, ver_uid):
+        '''
+        Create a version snapshot.
+        '''
+        state_gr = self.ds.graph(self._main_uri(uid))
+        state_ver_gr = self.ds.graph(self._main_uri(uid, ver_uid))
+        meta_gr = self.ds.graph(self._admin_uri(uid))
+        meta_ver_gr = self.ds.graph(self._admin_uri(uid, ver_uid))
+
+
 
 
     def get_version(self, uid, ver_uid):
@@ -251,7 +264,7 @@ class RsrcCentricLayout:
         See base_rdf_layout.get_version.
         '''
         # @TODO
-        gr = self.ds.graph(self._state_uri(uid, ver_uid))
+        gr = self.ds.graph(self._main_uri(uid, ver_uid))
         return Resource(gr | Graph(), nsc['fcres'][uid])
 
 
@@ -259,10 +272,10 @@ class RsrcCentricLayout:
         '''
         Create a new resource or replace an existing one.
         '''
-        sg_uri = self._state_uri(uid)
-        mg_uri = ROOT_GRAPH_URI if uid == '' else nsc['fcmeta'][uid]
+        sg_uri = self._main_uri(uid)
+        mg_uri = self._admin_uri(uid)
         if ver_uid:
-            ver_uri = self._state_uri(uid, ver_uid)
+            ver_uri = self._main_uri(uid, ver_uid)
             drop_qry = 'MOVE SILENT {sg} TO {vg};\n'.format(
                     sg=sg_uri.n3(), vg=ver_uri.n3())
         else:
@@ -304,44 +317,33 @@ class RsrcCentricLayout:
 
     ## PROTECTED MEMBERS ##
 
-    def _state_uri(self, uid, ver_uid=None):
+    def _main_uri(self, uid, ver_uid=None):
         '''
         Convert a UID into a request URL to the graph store.
         '''
-        if not uid:
-            #raise InvalidResourceError(uid,
-            #        'Repository root does not accept user-defined properties.')
-            return ROOT_GRAPH_URI
-
         if ver_uid:
             uid += ':' + ver_uid
 
-        return nsc['fcstate'][uid]
+        return nsc['fcmain'][uid]
 
 
-    def _meta_uri(self, uid, ver_uid=None):
+    def _admin_uri(self, uid, ver_uid=None):
         '''
         Convert a UID into a request URL to the graph store.
         '''
-        if not uid:
-            return ROOT_GRAPH_URI
-
         if ver_uid:
             uid += ':' + ver_uid
 
-        return nsc['fcmeta'][uid]
+        return nsc['fcadmin'][uid]
 
 
     def _map_graph_uri(self, t, uid):
         '''
         Map a triple to a namespace prefix corresponding to a graph.
         '''
-        if not uid:
-            return ROOT_GRAPH_URI
-
         if t[1] in self.attr_routes['p'].keys():
             return self.attr_routes['p'][t[1]][uid]
         elif t[1] == RDF.type and t[2] in self.attr_routes['t'].keys():
             return self.attr_routes['t'][t[2]][uid]
         else:
-            return nsc['fcstate'][uid]
+            return nsc['fcmain'][uid]

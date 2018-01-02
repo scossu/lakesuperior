@@ -12,7 +12,6 @@ geo : http://www.w3.org/2003/01/geo/wgs84_pos#
 hw : http://projecthydra.org/works/models#
 oa : http://www.w3.org/ns/oa#
 ore : http://www.openarchives.org/ore/terms/
-pcdm : http://pcdm.org/models#
 rel : http://id.loc.gov/vocabulary/relators/
 skos : http://www.w3.org/2004/02/skos/core
 

@@ -22,7 +22,6 @@ from lakesuperior.model.ldp_factory import LdpFactory
 
 
 ROOT_UID = ''
-ROOT_GRAPH_URI = nsc['fcsystem']['__root__']
 ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
 
 
@@ -142,8 +141,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         self.uid = g.tbox.uri_to_uuid(uid) \
                 if isinstance(uid, URIRef) else uid
-        self.urn = nsc['fcres'][uid] \
-                if self.uid else ROOT_RSRC_URI
+        self.urn = nsc['fcres'][uid]
         self.uri = g.tbox.uuid_to_uri(self.uid)
 
         self.rdfly = current_app.rdfly
@@ -341,7 +339,6 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_types'):
-            #import pdb; pdb.set_trace()
             if len(self.metadata.graph):
                 metadata = self.metadata
             elif getattr(self, 'provided_imr', None) and \
@@ -671,12 +668,6 @@ class Ldpr(metaclass=ABCMeta):
         # Remove resource itself.
         self.rdfly.modify_rsrc(self.uid, {(self.urn, None, None)}, types=None)
 
-        ## Remove fragments.
-        #for frag_urn in imr.graph[
-        #        : nsc['fcsystem'].fragmentOf : self.urn]:
-        #    self.rdfly.modify_rsrc(
-        #            self.uid, {(frag_urn, None, None)}, types={})
-
         # Remove snapshots.
         for snap_urn in self.versions:
             remove_trp = {
@@ -895,9 +886,7 @@ class Ldpr(metaclass=ABCMeta):
           pairtree nodes are created for a/b and a/b/c.
         - If e is being created, the root node becomes container of e.
         '''
-        if self.urn == ROOT_RSRC_URI:
-            return
-        elif '/' in self.uid:
+        if '/' in self.uid:
             # Traverse up the hierarchy to find the parent.
             parent_uid = self._find_parent_or_create_pairtree()
         else:

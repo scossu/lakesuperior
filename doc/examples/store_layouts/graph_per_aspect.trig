@@ -1,0 +1,175 @@
+# This layout follows the graph-per-aspect pattern
+# (http://patterns.dataincubator.org/book/graph-per-aspect.html).
+
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX fcrepo: <http://fedora.info/definitions/v4/repository#>
+PREFIX fcsystem: <info:fcsystem/>
+PREFIX fcg: <info:fcsystem/graph/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX ldp: <http://www.w3.org/ns/ldp#>
+PREFIX ns: <http://example.edu/lakesuperior/ns#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+# Admin data graphs.
+# Triples used by the application business logic are stored here.
+# These are a convenient way to get resource metadata (e.g. with a HEAD
+# request) without loading large graphs, e.g. ones with many children
+# or many user-provided properties.
+
+# System root.
+<info:fcsystem/graph/admin/> {
+  <info:fcres/> a
+    fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ,
+    ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
+  .
+}
+
+<info:fcsystem/graph/admin/a/b/c> {
+  <info:fcres/a/b/c> a fcrepo:Resource ;
+    # Timestamps are simplified for readability.
+    fcrepo:created "2017-11-23"^^xsd:date ;
+    fcrepo:lastModified "2017-11-27"^^xsd:date ;
+    fcrepo:hasVersion
+      <info:fcres/a/b/c;v1> , <info:fcres/a/b/c;v2> , <info:fcres/a/b/c;v3> ;
+    .
+}
+
+<info:fcsystem/graph/admin/a/b/c;v1> {
+  <info:fcres/a/b/c;v1> a fcrepo:Version ;
+    fcrepo:created "2017-11-23"^^xsd:date ;
+    fcrepo:lastModified "2017-11-23"^^xsd:date ;
+  .
+}
+
+<info:fcsystem/graph/admin/a/b/c;v2> {
+  <info:fcres/a/b/c;v2> a fcrepo:Version ;
+    fcrepo:created "2017-11-23"^^xsd:date ;
+    fcrepo:lastModified "2017-11-24"^^xsd:date ;
+  .
+}
+
+<info:fcsystem/graph/admin/a/b/c;v3> {
+  <info:fcres/a/b/c;v3> a fcrepo:Version ;
+    fcrepo:created "2017-11-23"^^xsd:date ;
+    fcrepo:lastModified "2017-11-25"^^xsd:date ;
+  .
+}
+
+# Pairtree information used to mimic hierarchical structures.
+<info:fcsystem/graph/admin/a> {
+  <info:fcres/a>
+    a ldp:Container , ldp:BasicContainer , ldp:Resource , ldp:RDFSSource ;
+    a fcrepo:Pairtree ;
+}
+
+<info:fcsystem/graph/admin/a/b> {
+  <info:fcres/a/b>
+    a ldp:Container , ldp:BasicContainer , ldp:Resource , ldp:RDFSSource ;
+    a fcrepo:Pairtree ;
+  .
+}
+
+# "Structural" data. This separation is made mostly to optimize retrieval of
+# information needed by the application business logic without having to
+# retrieve or filter out predicates with potentially large amounts of objects,
+# such as `ldp:contains`.
+<info:fcsystem/graph/structure/> {
+  <info:fcres/> ldp:contains <info:fcres/a/b/c> .
+  # fcsystem:contains is used to mimic path hierarchies. It does not coincide
+  # with LDP containment.
+  <info:fcres/> fcsystem:contains <info:fcres/a> .
+}
+
+<info:fcsystem/graph/structure/a> {
+  <info:fcres/a> fcsystem:contains <info:fcres/a/b> .
+}
+
+<info:fcsystem/graph/structure/a/b> {
+  <info:fcres/a/b> fcsystem:contains <info:fcres/a/b/c> .
+}
+
+# Resource graphs. These statements are user-provided and not used for any
+# application business logic.
+# Note that "fragments", i.e. hash URIs, are stored within the same graph.
+<info:fcsystem/graph/userdata/_main/a/b/c> {
+  <info:fcres/a/b/c> a ns:Book ;
+    fcrepo:hasParent <info:fcres/a> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melville" ;
+    dc:subject "Fishing" ;
+    .
+  <info:fcres/a/b/c#chapter1> a ns:BookChapter ;
+    dc:title "Loomings." ;
+    .
+  <info:fcres/a/b/c#chapter2> a ns:BookChapter ;
+    dc:title "The Carpet-Bag." ;
+    .
+}
+
+# Previous states (versions) of a resource.
+<info:fcsystem/graph/userdata/_main/a/b/c;v1> {
+  <info:fcres/a/b/c;v1> a ns:Book ;
+    fcrepo:hasParent <info:fcres/> ;
+    dc:title "Moby Dick" ;
+    .
+}
+
+<info:fcsystem/graph/userdata/_main/a/b/c;v2> {
+  <info:fcres/a/b/c;v2> a ns:Book ;
+    fcrepo:hasParent <info:fcres/> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melvil" ;
+    .
+}
+
+<info:fcsystem/graph/userdata/_main/a/b/c;v3> {
+  <info:fcres/a/b/c;v3> a ns:Book ;
+    fcrepo:hasParent <info:fcres/> ;
+    dc:title "Moby Dick" ;
+    dc:creator "Herman Melville" ;
+    .
+}
+
+# Metadata graph. This contains information about graphs and their
+# relationships.
+<info:fcsystem/graph/meta> {
+  # This may not be used by the application logic if we use naming
+  # conventions, but is still good LD practice.
+  <info:fcsystem/graph/admin/> foaf:primaryTopic <info:fcres/> .
+  <info:fcsystem/graph/userdata/_main/> foaf:primaryTopic <info:fcres/> .
+  <info:fcsystem/graph/structure/> foaf:primaryTopic <info:fcres/> .
+
+  <info:fcsystem/graph/admin/a/b/c> foaf:primaryTopic <info:fcres/a/b/c> .
+  <info:fcsystem/graph/userdata/_main/a/b/c> foaf:primaryTopic <info:fcres/a/b/c> .
+  # Pairtree information is kept in one graph so no metadata are needed.
+}
+
+# Historic version metadata. This is kept separate to optimize current resource
+# lookups.
+<info:fcsystem/graph/historic>  {
+  <info:fcsystem/graph/admin/a/b/c;v1>
+    foaf:primaryTopic <info:fcres/a/b/c;v1> ;
+    fcrepo:created "2017-11-24"^^xsd:date ;
+  .
+  <info:fcsystem/graph/admin/a/b/c;v2>
+    foaf:primaryTopic <info:fcres/a/b/c;v2> ;
+    fcrepo:created "2017-11-25"^^xsd:date ;
+  .
+  <info:fcsystem/graph/admin/a/b/c;v3>
+    foaf:primaryTopic <info:fcres/a/b/c;v3> ;
+    fcrepo:created "2017-11-26"^^xsd:date ;
+  .
+
+  <info:fcsystem/graph/userdata/_main/a/b/c;v1>
+    foaf:primaryTopic <info:fcres/a/b/c;v1> ;
+    fcrepo:created "2017-11-24"^^xsd:date ;
+  .
+  <info:fcsystem/graph/userdata/_main/a/b/c;v2>
+    foaf:primaryTopic <info:fcres/a/b/c;v2> ;
+    fcrepo:created "2017-11-25"^^xsd:date ;
+  .
+  <info:fcsystem/graph/userdata/_main/a/b/c;v3>
+    foaf:primaryTopic <info:fcres/a/b/c;v3> ;
+    fcrepo:created "2017-11-26"^^xsd:date ;
+  .
+}

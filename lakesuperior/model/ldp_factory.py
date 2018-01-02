@@ -38,8 +38,7 @@ class LdpFactory:
         @param uid UID of the instance.
         '''
         #__class__._logger.info('Retrieving stored resource: {}'.format(uid))
-        imr_urn = nsc['fcres'][uid] if uid else (
-                model.ldpr.ROOT_RSRC_URI)
+        imr_urn = nsc['fcres'][uid]
 
         rsrc_meta = current_app.rdfly.get_metadata(uid)
         #__class__._logger.debug('Extracted metadata: {}'.format(
