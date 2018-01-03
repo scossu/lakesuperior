@@ -15,6 +15,7 @@ from rdflib.namespace import RDF
 from rdflib.term import URIRef, Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import *
@@ -43,9 +44,10 @@ def atomic(fn):
             raise
         else:
             self._logger.info('Committing transaction.')
-            if hasattr(self.rdfly.store, '_edits'):
-                # @FIXME ugly.
-                self.rdfly._conn.optimize_edits()
+            import pdb; pdb.set_trace()
+            #if hasattr(self.rdfly.store, '_edits'):
+            #    # @FIXME ugly.
+            #    self.rdfly._conn.optimize_edits()
             self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
@@ -394,7 +396,10 @@ class Ldpr(metaclass=ABCMeta):
         This gets the RDF metadata. The binary retrieval is handled directly
         by the route.
         '''
-        return g.tbox.globalize_graph(self.out_graph)
+        global_gr = g.tbox.globalize_graph(self.out_graph)
+        global_gr.namespace_manager = nsm
+
+        return global_gr
 
 
     @atomic

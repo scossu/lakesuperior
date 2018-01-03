@@ -20,6 +20,7 @@ core_namespaces = {
     'fcmain' : Namespace('info:fcsystem/graph/userdata/_main/'),
     'fcstruct' : Namespace('info:fcsystem/graph/structure/'),
     'fcsystem' : Namespace('info:fcsystem/'),
+    'foaf': Namespace('http://xmlns.com/foaf/0.1/'),
     'iana' : Namespace('http://www.iana.org/assignments/relation/'),
     'ldp' : Namespace('http://www.w3.org/ns/ldp#'),
     # This is used in the layout attribute router.
