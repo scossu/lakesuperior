@@ -51,7 +51,7 @@ class SparqlConnector(BaseConnector):
     def optimize_edits(self):
         opt_edits = [
                 l for l in self.store._edits
-                if not l.startswith('PREFIX')]
+                if not l.strip().startswith('PREFIX')]
         #opt_edits = list(ns_pfx_sparql.values()) + opt_edits
         self.store._edits = opt_edits
         self._logger.debug('Changes to be committed: {}'.format(

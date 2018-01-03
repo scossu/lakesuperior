@@ -20,6 +20,10 @@ from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
         ResourceNotExistsError, TombstoneError)
 
 
+META_GR_URI = nsc['fcsystem']['meta']
+HIST_GR_URI = nsc['fcsystem']['historic']
+
+
 class RsrcCentricLayout:
     '''
     This class exposes an interface to build graph store layouts. It also
@@ -53,6 +57,7 @@ class RsrcCentricLayout:
 
     _logger = logging.getLogger(__name__)
 
+    # @TODO Move to a config file?
     attr_map = {
         nsc['fcadmin']: {
             # List of server-managed predicates. Triples bearing one of these
@@ -158,28 +163,12 @@ class RsrcCentricLayout:
 
     def extract_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
-                incl_children=True, embed_children=False):
+                incl_children=True, embed_children=False, **kwargs):
         '''
         See base_rdf_layout.extract_imr.
         '''
-        # @TODO Remove inbound functionality in favor of SPARQL query endpoint?
-        #inbound_construct = '\n?s1 ?p1 ?s .' if incl_inbound else ''
-        #inbound_qry = '''
-        #UNION {
-        #  GRAPH ?g {
-        #    ?s1 ?p1 ?s .
-        #  }
-        #  GRAPH ?mg {
-        #    ?g a fcsystem:CurrentState .
-        #  }
-        #}
-        #''' if incl_inbound else ''
-        mg = self._admin_uri(uid, ver_uid)
-        strg = nsc['fcstruct'][uid]
-        sg = self._main_uri(uid, ver_uid)
-
         if incl_children:
-            incl_child_qry = 'FROM {}'.format(strg.n3())
+            incl_child_qry = 'FROM {}'.format(self._struct_uri(uid).n3())
             if embed_children:
                 pass # Not implemented. May never be.
         else:
@@ -187,19 +176,26 @@ class RsrcCentricLayout:
 
         q = '''
         CONSTRUCT
-        FROM {mg}
+        FROM {ag}
         FROM {sg}
         {chld}
         WHERE {{ ?s ?p ?o . }}
-        '''.format(mg=mg.n3(), sg=sg.n3(), chld=incl_child_qry)
+        '''.format(
+                ag=self._admin_uri(uid).n3(),
+                sg=self._main_uri(uid).n3(),
+                chld=incl_child_qry,
+            )
         try:
-            qres = self.ds.query(q, initBindings={'mg': mg, 'strg': strg,
-                'sg': sg})
+            qres = self.ds.query(q, initBindings={
+            })
         except ResultException:
             # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
             gr = Graph()
         else:
             gr = qres.graph
+
+        if incl_inbound and len(gr):
+            gr += self.get_inbound_rel(nsc['fcres'][uid])
 
         #self._logger.debug('Found resource: {}'.format(
         #        gr.serialize(format='turtle').decode('utf-8')))
@@ -247,6 +243,33 @@ class RsrcCentricLayout:
         return Resource(gr, nsc['fcres'][uid])
 
 
+    def get_inbound_rel(self, uri):
+        '''
+        Query inbound relationships for a subject.
+
+        @param subj_uri Subject URI.
+        '''
+        qry = '''
+        CONSTRUCT { ?s1 ?p1 ?s }
+        WHERE {
+          GRAPH ?g {
+            ?s1 ?p1 ?s .
+          }
+          GRAPH ?mg {
+            ?g foaf:primaryTopic ?s1 .
+          }
+        }
+        '''
+
+        try:
+            qres = self.ds.query(qry, initBindings={'s': uri})
+        except ResultException:
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
+            return Graph()
+        else:
+            return qres.graph
+
+
     def create_snapshot(self, uid, ver_uid):
         '''
         Create a version snapshot.
@@ -268,27 +291,71 @@ class RsrcCentricLayout:
         return Resource(gr | Graph(), nsc['fcres'][uid])
 
 
-    def create_or_replace_rsrc(self, uid, trp, ver_uid=None):
+    def purge_rsrc(self, uid, inbound=True, backup_uid=None):
+        '''
+        Completely delete a resource and (optionally) its references.
+        '''
+        target_gr_qry = '''
+        SELECT ?g ?mg ?s WHERE {
+            GRAPH ?mg { ?g foaf:primaryTopic ?s . }
+            GRAPH ?g { ?s ?p ?o }
+        }
+        '''
+        target_gr_rsp = self.ds.query(target_gr_qry, initBindings={
+            's': nsc['fcres'][uid]})
+
+        drop_list = set()
+        delete_list = set()
+        for b in target_gr_rsp:
+            drop_list.add('DROP SILENT GRAPH {}'.format(b['g'].n3()))
+            delete_list.add('{g} ?p ?o .'.format(
+                g=b['mg'].n3()))
+
+        qry = '''
+        {drop_stmt};
+        DELETE WHERE
+        {{
+          GRAPH {mg} {{
+            {delete_stmt}
+          }}
+          GRAPH {hg} {{
+            {delete_stmt}
+          }}
+        }}
+        '''.format(
+            drop_stmt=';\n'.join(drop_list),
+            delete_stmt=';\n'.join(delete_list),
+            mg=META_GR_URI.n3(),
+            hg=HIST_GR_URI.n3())
+
+        import pdb; pdb.set_trace()
+        if inbound:
+            # Gather ALL subjects in the user graph. There may be fragments.
+            #subj_gen = self.ds.graph(self._main_uri(uid)).subjects()
+            subj_set = set(target_gr_rsp['s'])
+            subj_stmt = ', '.join(subj_set)
+
+            # Do not delete inbound references from historic graphs
+            qry += ''';
+            DELETE {{ GRAPH ?g {{ ?s1 ?p1 ?s . }} }}
+            WHERE {{
+              GRAPH ?g {{ ?s1 ?p1 ?s . }}
+              FILTER (?s IN ({subj}))
+              GRAPH {mg} {{ ?g foaf:primaryTopic ?s1 . }}
+            }}'''.format(
+            mg=META_GR_URI.n3(),
+            subj=subj_stmt)
+
+        self.ds.update(qry)
+
+
+    def create_or_replace_rsrc(self, uid, trp, backup_uid=None):
         '''
         Create a new resource or replace an existing one.
         '''
-        sg_uri = self._main_uri(uid)
-        mg_uri = self._admin_uri(uid)
-        if ver_uid:
-            ver_uri = self._main_uri(uid, ver_uid)
-            drop_qry = 'MOVE SILENT {sg} TO {vg};\n'.format(
-                    sg=sg_uri.n3(), vg=ver_uri.n3())
-        else:
-            drop_qry = 'DROP SILENT GRAPH {};\n'.format(sg_uri.n3())
-        drop_qry += 'DROP SILENT GRAPH {}\n'.format(mg_uri.n3())
-
-        self.ds.update(drop_qry)
+        self.delete_rsrc_data(uid, backup_uid)
 
         return self.modify_rsrc(uid, add_trp=trp)
-        #sg = self.ds.graph(sg_uri)
-        #sg += data
-        #mg = self.ds.graph(mg_uri)
-        #mg += metadata
 
 
     def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
@@ -313,6 +380,25 @@ class RsrcCentricLayout:
         for gr_uri, trp in add_routes.items():
             gr = self.ds.graph(gr_uri)
             gr += trp
+            self.ds.graph(META_GR_URI).add((
+                gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
+
+
+    def delete_rsrc_data(self, uid, backup_uid=None):
+        ag_uri = self._admin_uri(uid)
+        mg_uri = self._main_uri(uid)
+        sg_uri = self._struct_uri(uid)
+
+        if backup_uid:
+            backup_uri = self._main_uri(uid, backup_uid)
+            drop_qry = 'MOVE SILENT {mg} TO {vg};\n'.format(
+                    mg=mg_uri.n3(), vg=backup_uri.n3())
+        else:
+            drop_qry = 'DROP SILENT GRAPH {};\n'.format(mg_uri.n3())
+        drop_qry += 'DROP SILENT GRAPH {mg};\nDROP SILENT GRAPH {sg}'.format(
+                mg=mg_uri.n3(), sg=sg_uri.n3())
+
+        self.ds.update(drop_qry)
 
 
     ## PROTECTED MEMBERS ##
@@ -335,6 +421,16 @@ class RsrcCentricLayout:
             uid += ':' + ver_uid
 
         return nsc['fcadmin'][uid]
+
+
+    def _struct_uri(self, uid, ver_uid=None):
+        '''
+        Convert a UID into a request URL to the graph store.
+        '''
+        if ver_uid:
+            uid += ':' + ver_uid
+
+        return nsc['fcstruct'][uid]
 
 
     def _map_graph_uri(self, t, uid):

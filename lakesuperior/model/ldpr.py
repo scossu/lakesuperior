@@ -642,15 +642,16 @@ class Ldpr(metaclass=ABCMeta):
         # Create a backup snapshot for resurrection purposes.
         self.create_rsrc_snapshot(uuid4())
 
-        remove_trp = self.imr.graph
-        add_trp = Graph()
+        remove_trp = set(self.imr.graph)
 
         if tstone_pointer:
-            add_trp.add((self.urn, nsc['fcsystem'].tombstone,
-                    tstone_pointer))
+            add_trp = {(self.urn, nsc['fcsystem'].tombstone,
+                    tstone_pointer)}
         else:
-            add_trp.add((self.urn, RDF.type, nsc['fcsystem'].Tombstone))
-            add_trp.add((self.urn, nsc['fcrepo'].created, g.timestamp_term))
+            add_trp = {
+                (self.urn, RDF.type, nsc['fcsystem'].Tombstone),
+                (self.urn, nsc['fcrepo'].created, g.timestamp_term),
+            }
 
         self._modify_rsrc(self.RES_DELETED, remove_trp, add_trp)
 
@@ -671,21 +672,7 @@ class Ldpr(metaclass=ABCMeta):
                 self.uid, incl_inbound=True, strict=False)
 
         # Remove resource itself.
-        self.rdfly.modify_rsrc(self.uid, {(self.urn, None, None)}, types=None)
-
-        # Remove snapshots.
-        for snap_urn in self.versions:
-            remove_trp = {
-                (snap_urn, None, None),
-                (None, None, snap_urn),
-            }
-            self.rdfly.modify_rsrc(self.uid, remove_trp, types={})
-
-        # Remove inbound references.
-        if inbound:
-            for ib_rsrc_uri in imr.graph.subjects(None, self.urn):
-                remove_trp = {(ib_rsrc_uri, None, self.urn)}
-                Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
+        self.rdfly.purge_rsrc(self.uid, inbound)
 
         # @TODO This could be a different event type.
         return self.RES_DELETED
