@@ -388,20 +388,12 @@ class RsrcCentricLayout:
 
 
     def delete_rsrc_data(self, uid, backup_uid=None):
-        ag_uri = self._admin_uri(uid)
-        mg_uri = self._main_uri(uid)
-        sg_uri = self._struct_uri(uid)
-
         if backup_uid:
-            backup_uri = self._main_uri(uid, backup_uid)
-            drop_qry = 'MOVE SILENT {mg} TO {vg};\n'.format(
-                    mg=mg_uri.n3(), vg=backup_uri.n3())
-        else:
-            drop_qry = 'DROP SILENT GRAPH {};\n'.format(mg_uri.n3())
-        drop_qry += 'DROP SILENT GRAPH {mg};\nDROP SILENT GRAPH {sg}'.format(
-                mg=mg_uri.n3(), sg=sg_uri.n3())
+            self.create_snapshot(uid, backup_uid)
+        ag_uri.n3(), mg=mg_uri.n3(), sg=sg_uri.n3())
 
-        self.ds.update(drop_qry)
+        for guid in ('fcadmin', 'fcmain', 'fcstruct'):
+            self.ds.remove_graph(self.ds.graph(nsc[guid][uid])
 
 
     ## PROTECTED MEMBERS ##
@@ -411,7 +403,7 @@ class RsrcCentricLayout:
         Convert a UID into a request URL to the graph store.
         '''
         if ver_uid:
-            uid += ':' + ver_uid
+            uid += ';' + ver_uid
 
         return nsc['fcmain'][uid]
 
@@ -421,7 +413,7 @@ class RsrcCentricLayout:
         Convert a UID into a request URL to the graph store.
         '''
         if ver_uid:
-            uid += ':' + ver_uid
+            uid += ';' + ver_uid
 
         return nsc['fcadmin'][uid]
 
@@ -431,7 +423,7 @@ class RsrcCentricLayout:
         Convert a UID into a request URL to the graph store.
         '''
         if ver_uid:
-            uid += ':' + ver_uid
+            uid += ';' + ver_uid
 
         return nsc['fcstruct'][uid]
 
