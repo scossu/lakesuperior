@@ -44,7 +44,6 @@ def atomic(fn):
             raise
         else:
             self._logger.info('Committing transaction.')
-            import pdb; pdb.set_trace()
             #if hasattr(self.rdfly.store, '_edits'):
             #    # @FIXME ugly.
             #    self.rdfly._conn.optimize_edits()

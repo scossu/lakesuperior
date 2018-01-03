@@ -296,9 +296,9 @@ class RsrcCentricLayout:
         Completely delete a resource and (optionally) its references.
         '''
         target_gr_qry = '''
-        SELECT ?g ?mg ?s WHERE {
+        SELECT DISTINCT ?g ?mg ?s1 WHERE {
             GRAPH ?mg { ?g foaf:primaryTopic ?s . }
-            GRAPH ?g { ?s ?p ?o }
+            GRAPH ?g { ?s1 ?p ?o }
         }
         '''
         target_gr_rsp = self.ds.query(target_gr_qry, initBindings={
@@ -306,25 +306,28 @@ class RsrcCentricLayout:
 
         drop_list = set()
         delete_list = set()
-        for b in target_gr_rsp:
-            drop_list.add('DROP SILENT GRAPH {}'.format(b['g'].n3()))
-            delete_list.add('{g} ?p ?o .'.format(
-                g=b['mg'].n3()))
+        for row in target_gr_rsp:
+            drop_list.add('DROP SILENT GRAPH {}'.format(row['g'].n3()))
+            delete_list.add('{} ?p ?o .'.format(row['g'].n3()))
 
         qry = '''
         {drop_stmt};
-        DELETE WHERE
+        DELETE
         {{
-          GRAPH {mg} {{
-            {delete_stmt}
-          }}
-          GRAPH {hg} {{
+          GRAPH ?g {{
             {delete_stmt}
           }}
         }}
+        WHERE
+        {{
+          GRAPH ?g {{
+            {delete_stmt}
+          }}
+          FILTER (?g in ( {mg}, {hg}))
+        }}
         '''.format(
             drop_stmt=';\n'.join(drop_list),
-            delete_stmt=';\n'.join(delete_list),
+            delete_stmt='\n'.join(delete_list),
             mg=META_GR_URI.n3(),
             hg=HIST_GR_URI.n3())
 
@@ -332,7 +335,7 @@ class RsrcCentricLayout:
         if inbound:
             # Gather ALL subjects in the user graph. There may be fragments.
             #subj_gen = self.ds.graph(self._main_uri(uid)).subjects()
-            subj_set = set(target_gr_rsp['s'])
+            subj_set = set({row.s1.n3() for row in target_gr_rsp})
             subj_stmt = ', '.join(subj_set)
 
             # Do not delete inbound references from historic graphs
