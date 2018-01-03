@@ -20,6 +20,8 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import *
 from lakesuperior.model.ldp_factory import LdpFactory
+from lakesuperior.store_layouts.ldp_rs.rsrc_centric_layout import (
+        VERS_CONT_LABEL)
 
 
 ROOT_UID = ''
@@ -103,8 +105,6 @@ class Ldpr(metaclass=ABCMeta):
     RES_CREATED = '_create_'
     RES_DELETED = '_delete_'
     RES_UPDATED = '_update_'
-
-    RES_VER_CONT_LABEL = 'fcr:versions'
 
     base_types = {
         nsc['fcrepo'].Resource,
@@ -294,7 +294,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_version_info'):
             try:
-                self._version_info = self.rdfly.get_version_info(self.urn)
+                self._version_info = self.rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
                 self._version_info = Graph()
 
@@ -395,10 +395,32 @@ class Ldpr(metaclass=ABCMeta):
         This gets the RDF metadata. The binary retrieval is handled directly
         by the route.
         '''
-        global_gr = g.tbox.globalize_graph(self.out_graph)
-        global_gr.namespace_manager = nsm
+        gr = g.tbox.globalize_graph(self.out_graph)
+        gr.namespace_manager = nsm
 
-        return global_gr
+        return gr
+
+
+    def get_version_info(self):
+        '''
+        Get the `fcr:versions` graph.
+        '''
+        gr = g.tbox.globalize_graph(self.version_info)
+        gr.namespace_manager = nsm
+
+        return gr
+
+
+    def get_version(self, ver_uid):
+        '''
+        Get a version by label.
+        '''
+        ver_gr = self.rdfly.get_metadata(self.uid, ver_uid).graph
+
+        gr = g.tbox.globalize_graph(ver_gr)
+        gr.namespace_manager = nsm
+
+        return gr
 
 
     @atomic
@@ -475,7 +497,7 @@ class Ldpr(metaclass=ABCMeta):
         LIMIT 1
         ''')
         ver_uid = str(ver_rsp.bindings[0]['uid'])
-        ver_trp = set(self.rdfly.get_version(self.urn, ver_uid))
+        ver_trp = set(self.rdfly.get_metadata(self.urn, ver_uid))
 
         laz_gr = Graph()
         for t in ver_trp:
@@ -507,22 +529,6 @@ class Ldpr(metaclass=ABCMeta):
         inbound = True if refint else inbound
 
         return self._purge_rsrc(inbound)
-
-
-    def get_version_info(self):
-        '''
-        Get the `fcr:versions` graph.
-        '''
-        return g.tbox.globalize_graph(self.version_info)
-
-
-    def get_version(self, ver_uid):
-        '''
-        Get a version by label.
-        '''
-        ver_gr = self.rdfly.get_version(self.urn, ver_uid)
-
-        return g.tbox.globalize_graph(ver_gr)
 
 
     @atomic
@@ -558,7 +564,7 @@ class Ldpr(metaclass=ABCMeta):
         if backup:
             self.create_version(uuid4())
 
-        ver_gr = self.rdfly.get_version(self.urn, ver_uid)
+        ver_gr = self.rdfly.get_metadata(self.urn, ver_uid)
         revert_gr = Graph()
         for t in ver_gr:
             if t[1] not in srv_mgd_predicates and not(
@@ -682,8 +688,8 @@ class Ldpr(metaclass=ABCMeta):
         Perform version creation and return the internal URN.
         '''
         # Create version resource from copying the current state.
-        ver_add_gr = Graph()
-        vers_uid = '{}/{}'.format(self.uid, self.RES_VER_CONT_LABEL)
+        ver_add_gr = set()
+        vers_uid = '{}/{}'.format(self.uid, VERS_CONT_LABEL)
         ver_uid = '{}/{}'.format(vers_uid, ver_uid)
         ver_uri = nsc['fcres'][ver_uid]
         ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
@@ -707,25 +713,13 @@ class Ldpr(metaclass=ABCMeta):
                         g.tbox.replace_term_domain(t[0], self.urn, ver_uri),
                         t[1], t[2]))
 
-        self.rdfly.modify_rsrc(
-                self.uid, add_trp=ver_add_gr, types={nsc['fcrepo'].Version})
+        self.rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
 
-        # Add version metadata.
-        add_gr = set()
-        add_gr.add((
-        elf.urn, nsc['fcrepo'].hasVersion, ver_uri))
-        add_gr.add(
-           (ver_uri, nsc['fcrepo'].created, g.timestamp_term))
-        add_gr.add(
-                (ver_uri, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
-
-        self.rdfly.modify_rsrc(self.uid, add_trp=add_gr)
-
-        # Update resource.
-        rsrc_add_gr = Graph()
-        rsrc_add_gr.add((
-            self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]))
-
+        # Update resource admin data.
+        rsrc_add_gr = {
+            (self.urn, nsc['fcrepo'].hasVersion, ver_uri),
+            (self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
+        }
         self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
         return nsc['fcres'][ver_uid]

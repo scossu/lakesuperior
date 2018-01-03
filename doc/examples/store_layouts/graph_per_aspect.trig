@@ -8,6 +8,7 @@ PREFIX fcg: <info:fcsystem/graph/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX ldp: <http://www.w3.org/ns/ldp#>
 PREFIX ns: <http://example.edu/lakesuperior/ns#>
+PREFIX premis: <http://www.loc.gov/premis/rdf/v1#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 # Admin data graphs.
@@ -30,26 +31,26 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     fcrepo:created "2017-11-23"^^xsd:date ;
     fcrepo:lastModified "2017-11-27"^^xsd:date ;
     fcrepo:hasVersion
-      <info:fcres/a/b/c;v1> , <info:fcres/a/b/c;v2> , <info:fcres/a/b/c;v3> ;
+      <info:fcres/a/b/c/fcr:versions/v1> , <info:fcres/a/b/c;v2> , <info:fcres/a/b/c;v3> ;
     .
 }
 
-<info:fcsystem/graph/admin/a/b/c;v1> {
-  <info:fcres/a/b/c;v1> a fcrepo:Version ;
+<info:fcsystem/graph/admin/a/b/c/fcr:versions/v1> {
+  <info:fcres/a/b/c/fcr:versions/v1> a fcrepo:Version ;
     fcrepo:created "2017-11-23"^^xsd:date ;
     fcrepo:lastModified "2017-11-23"^^xsd:date ;
   .
 }
 
-<info:fcsystem/graph/admin/a/b/c;v2> {
-  <info:fcres/a/b/c;v2> a fcrepo:Version ;
+<info:fcsystem/graph/admin/a/b/c/fcr:versions/v2> {
+  <info:fcres/a/b/c/fcr:versions/v2> a fcrepo:Version ;
     fcrepo:created "2017-11-23"^^xsd:date ;
     fcrepo:lastModified "2017-11-24"^^xsd:date ;
   .
 }
 
-<info:fcsystem/graph/admin/a/b/c;v3> {
-  <info:fcres/a/b/c;v3> a fcrepo:Version ;
+<info:fcsystem/graph/admin/a/b/c/fcr:versions/v3> {
+  <info:fcres/a/b/c/fcr:versions/v3> a fcrepo:Version ;
     fcrepo:created "2017-11-23"^^xsd:date ;
     fcrepo:lastModified "2017-11-25"^^xsd:date ;
   .
@@ -107,23 +108,23 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 }
 
 # Previous states (versions) of a resource.
-<info:fcsystem/graph/userdata/_main/a/b/c;v1> {
-  <info:fcres/a/b/c;v1> a ns:Book ;
+<info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v1> {
+  <info:fcres/a/b/c/fcr:versions/v1> a ns:Book ;
     fcrepo:hasParent <info:fcres/> ;
     dc:title "Moby Dick" ;
     .
 }
 
-<info:fcsystem/graph/userdata/_main/a/b/c;v2> {
-  <info:fcres/a/b/c;v2> a ns:Book ;
+<info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v2> {
+  <info:fcres/a/b/c/fcr:versions/v2> a ns:Book ;
     fcrepo:hasParent <info:fcres/> ;
     dc:title "Moby Dick" ;
     dc:creator "Herman Melvil" ;
     .
 }
 
-<info:fcsystem/graph/userdata/_main/a/b/c;v3> {
-  <info:fcres/a/b/c;v3> a ns:Book ;
+<info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v3> {
+  <info:fcres/a/b/c/fcr:versions/v3> a ns:Book ;
     fcrepo:hasParent <info:fcres/> ;
     dc:title "Moby Dick" ;
     dc:creator "Herman Melville" ;
@@ -147,29 +148,37 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 # Historic version metadata. This is kept separate to optimize current resource
 # lookups.
 <info:fcsystem/graph/historic>  {
-  <info:fcsystem/graph/admin/a/b/c;v1>
-    foaf:primaryTopic <info:fcres/a/b/c;v1> ;
+  <info:fcsystem/graph/admin/a/b/c/fcr:versions/v1>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v1> ;
     fcrepo:created "2017-11-24"^^xsd:date ;
+    fcrepo:hasVersionLabel "v1" ;
   .
-  <info:fcsystem/graph/admin/a/b/c;v2>
-    foaf:primaryTopic <info:fcres/a/b/c;v2> ;
+  <info:fcsystem/graph/admin/a/b/c/fcr:versions/v2>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v2> ;
     fcrepo:created "2017-11-25"^^xsd:date ;
+    fcrepo:hasVersionLabel "v2" ;
   .
-  <info:fcsystem/graph/admin/a/b/c;v3>
-    foaf:primaryTopic <info:fcres/a/b/c;v3> ;
+  <info:fcsystem/graph/admin/a/b/c/fcr:versions/v3>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v3> ;
     fcrepo:created "2017-11-26"^^xsd:date ;
+    fcrepo:hasVersionLabel "v3" ;
   .
 
-  <info:fcsystem/graph/userdata/_main/a/b/c;v1>
-    foaf:primaryTopic <info:fcres/a/b/c;v1> ;
+  <info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v1>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v1> ;
     fcrepo:created "2017-11-24"^^xsd:date ;
+    fcrepo:hasVersionLabel "v1" ;
+    # Provenance data can also be added.
+    premis:actor <http://ex.org/user/1325> ;
   .
-  <info:fcsystem/graph/userdata/_main/a/b/c;v2>
-    foaf:primaryTopic <info:fcres/a/b/c;v2> ;
+  <info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v2>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v2> ;
     fcrepo:created "2017-11-25"^^xsd:date ;
+    fcrepo:hasVersionLabel "v2" ;
   .
-  <info:fcsystem/graph/userdata/_main/a/b/c;v3>
-    foaf:primaryTopic <info:fcres/a/b/c;v3> ;
+  <info:fcsystem/graph/userdata/_main/a/b/c/fcr:versions/v3>
+    foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v3> ;
     fcrepo:created "2017-11-26"^^xsd:date ;
+    fcrepo:hasVersionLabel "v3" ;
   .
 }

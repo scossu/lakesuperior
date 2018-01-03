@@ -131,16 +131,8 @@ def get_resource(uid, force_rdf=False):
         if isinstance(rsrc, LdpRs) \
                 or is_accept_hdr_rdf_parsable() \
                 or force_rdf:
-            resp = rsrc.get()
-            if request.accept_mimetypes.best == 'text/html':
-                rsrc = resp.resource(request.path)
-                return render_template(
-                        'resource.html', rsrc=rsrc, nsm=nsm,
-                        blacklist = vw_blacklist)
-            else:
-                for p in vw_blacklist:
-                    resp.remove((None, p, None))
-                return (resp.serialize(format='turtle'), out_headers)
+            rsp = rsrc.get()
+            return negotiate_content(rsp, out_headers)
         else:
             logger.info('Streaming out binary content.')
             rsp = make_response(send_file(rsrc.local_path, as_attachment=True,
@@ -213,7 +205,7 @@ def get_version_info(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return rsp.serialize(format='turtle'), 200
+        return negotiate_content(rsp)
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
@@ -233,7 +225,7 @@ def get_version(uid, ver_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return rsp.serialize(format='turtle'), 200
+        return negotiate_content(rsp)
 
 
 @ldp.route('/<path:uid>/fcr:versions', methods=['POST'])
@@ -425,6 +417,21 @@ def tombstone(uid):
         return str(e), 404
     else:
         return '', 404
+
+
+def negotiate_content(rsp, headers=None):
+    '''
+    Return HTML or serialized RDF depending on accept headers.
+    '''
+    if request.accept_mimetypes.best == 'text/html':
+        rsrc = rsp.resource(request.path)
+        return render_template(
+                'resource.html', rsrc=rsrc, nsm=nsm,
+                blacklist = vw_blacklist)
+    else:
+        for p in vw_blacklist:
+            rsp.remove((None, p, None))
+        return (rsp.serialize(format='turtle'), headers)
 
 
 def uuid_for_post(parent_uid=None, slug=None):

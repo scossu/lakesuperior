@@ -6,12 +6,12 @@ from urllib.parse import quote
 
 import requests
 
-from flask import current_app
+from flask import g
 from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
-from rdflib.term import URIRef
+from rdflib.term import URIRef, Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
@@ -22,6 +22,7 @@ from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
 
 META_GR_URI = nsc['fcsystem']['meta']
 HIST_GR_URI = nsc['fcsystem']['historic']
+VERS_CONT_LABEL = 'fcr:versions'
 
 
 class RsrcCentricLayout:
@@ -56,6 +57,7 @@ class RsrcCentricLayout:
     '''
 
     _logger = logging.getLogger(__name__)
+    _graph_uids = ('fcadmin', 'fcmain', 'fcstruct')
 
     # @TODO Move to a config file?
     attr_map = {
@@ -66,6 +68,7 @@ class RsrcCentricLayout:
                 nsc['fcrepo'].created,
                 nsc['fcrepo'].createdBy,
                 nsc['fcrepo'].hasParent,
+                nsc['fcrepo'].hasVersion,
                 nsc['fcrepo'].lastModified,
                 nsc['fcrepo'].lastModifiedBy,
                 # The following 3 are set by the user but still in this group
@@ -168,7 +171,7 @@ class RsrcCentricLayout:
         See base_rdf_layout.extract_imr.
         '''
         if incl_children:
-            incl_child_qry = 'FROM {}'.format(self._struct_uri(uid).n3())
+            incl_child_qry = 'FROM {}'.format(nsc['fcstruct'][uid].n3())
             if embed_children:
                 pass # Not implemented. May never be.
         else:
@@ -181,8 +184,8 @@ class RsrcCentricLayout:
         {chld}
         WHERE {{ ?s ?p ?o . }}
         '''.format(
-                ag=self._admin_uri(uid).n3(),
-                sg=self._main_uri(uid).n3(),
+                ag=nsc['fcadmin'][uid].n3(),
+                sg=nsc['fcmain'][uid].n3(),
                 chld=incl_child_qry,
             )
         try:
@@ -228,7 +231,7 @@ class RsrcCentricLayout:
         '''
         See base_rdf_layout.ask_rsrc_exists.
         '''
-        meta_gr = self.ds.graph(self._admin_uri(uid))
+        meta_gr = self.ds.graph(nsc['fcadmin'][uid])
         return bool(
                 meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
 
@@ -238,9 +241,34 @@ class RsrcCentricLayout:
         This is an optimized query to get everything the application needs to
         insert new contents, and nothing more.
         '''
-        gr = self.ds.graph(self._admin_uri(uid, ver_uid)) | Graph()
+        if ver_uid:
+            uid = self.snapshot_uid(uid, ver_uid)
+        gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
 
         return Resource(gr, nsc['fcres'][uid])
+
+
+    def get_version_info(self, uid):
+        '''
+        Get all metadata about a resource's versions.
+        '''
+        # @NOTE This pretty much bends the ontology—it replaces the graph URI
+        # with the subject URI. But the concepts of data and metadata in Fedora
+        # are quite fluid anyways...
+        qry = '''
+        CONSTRUCT {?v ?p ?o .} {
+          GRAPH ?ag {
+            ?s fcrepo:hasVersion ?v .
+          }
+          GRAPH fcsystem:historic {
+            ?vm foaf:primaryTopic ?v .
+            ?vm  ?p ?o .
+            FILTER (?o != ?v)
+          }
+        }'''
+
+        return self.ds.query(qry, initBindings={'ag': nsc['fcadmin'][uid],
+            's': nsc['fcres'][uid]}).graph
 
 
     def get_inbound_rel(self, uri):
@@ -268,27 +296,6 @@ class RsrcCentricLayout:
             return Graph()
         else:
             return qres.graph
-
-
-    def create_snapshot(self, uid, ver_uid):
-        '''
-        Create a version snapshot.
-        '''
-        state_gr = self.ds.graph(self._main_uri(uid))
-        state_ver_gr = self.ds.graph(self._main_uri(uid, ver_uid))
-        meta_gr = self.ds.graph(self._admin_uri(uid))
-        meta_ver_gr = self.ds.graph(self._admin_uri(uid, ver_uid))
-
-
-
-
-    def get_version(self, uid, ver_uid):
-        '''
-        See base_rdf_layout.get_version.
-        '''
-        # @TODO
-        gr = self.ds.graph(self._main_uri(uid, ver_uid))
-        return Resource(gr | Graph(), nsc['fcres'][uid])
 
 
     def purge_rsrc(self, uid, inbound=True, backup_uid=None):
@@ -331,7 +338,6 @@ class RsrcCentricLayout:
             mg=META_GR_URI.n3(),
             hg=HIST_GR_URI.n3())
 
-        import pdb; pdb.set_trace()
         if inbound:
             # Gather ALL subjects in the user graph. There may be fragments.
             #subj_gen = self.ds.graph(self._main_uri(uid)).subjects()
@@ -352,21 +358,26 @@ class RsrcCentricLayout:
         self.ds.update(qry)
 
 
-    def create_or_replace_rsrc(self, uid, trp, backup_uid=None):
+    def create_or_replace_rsrc(self, uid, trp):
         '''
         Create a new resource or replace an existing one.
         '''
-        self.delete_rsrc_data(uid, backup_uid)
+        self.delete_rsrc_data(uid)
 
         return self.modify_rsrc(uid, add_trp=trp)
 
 
     def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
         '''
-        See base_rdf_layout.update_rsrc.
+        Modify triples about a subject.
+
+        This method adds and removes triple sets from specific graphs,
+        indicated by the term rotuer. It also adds metadata about the changed
+        graphs.
         '''
         remove_routes = defaultdict(set)
         add_routes = defaultdict(set)
+        historic = VERS_CONT_LABEL in uid
 
         # Create add and remove sets for each graph.
         for t in remove_trp:
@@ -376,6 +387,8 @@ class RsrcCentricLayout:
             target_gr_uri = self._map_graph_uri(t, uid)
             add_routes[target_gr_uri].add(t)
 
+        # Decide if metadata go into historic or current graph.
+        meta_uri = HIST_GR_URI if historic else META_GR_URI
         # Remove and add triple sets from each graph.
         for gr_uri, trp in remove_routes.items():
             gr = self.ds.graph(gr_uri)
@@ -383,50 +396,35 @@ class RsrcCentricLayout:
         for gr_uri, trp in add_routes.items():
             gr = self.ds.graph(gr_uri)
             gr += trp
-            self.ds.graph(META_GR_URI).add((
+            # Add metadata.
+            self.ds.graph(meta_uri).set((
                 gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
+            self.ds.graph(meta_uri).set((
+                gr_uri, nsc['fcrepo'].created, g.timestamp_term))
+            if historic:
+                # @FIXME Ugly reverse engineering.
+                ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')
+                self.ds.graph(meta_uri).set((
+                    gr_uri, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
+            # @TODO More provenance metadata can be added here.
 
 
-    def delete_rsrc_data(self, uid, backup_uid=None):
-        if backup_uid:
-            self.create_snapshot(uid, backup_uid)
-        ag_uri.n3(), mg=mg_uri.n3(), sg=sg_uri.n3())
+    def delete_rsrc_data(self, uid):
+        for guid in self._graph_uids:
+            self.ds.remove_graph(self.ds.graph(nsc[guid][uid]))
 
-        for guid in ('fcadmin', 'fcmain', 'fcstruct'):
-            self.ds.remove_graph(self.ds.graph(nsc[guid][uid])
+
+    def snapshot_uid(self, uid, ver_uid):
+        '''
+        Create a versioned UID string from a main UID and a versio n UID.
+        '''
+        if VERS_CONT_LABEL in uid:
+            raise ValueError('Resource \'{}\' is already a version.')
+
+        return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
 
 
     ## PROTECTED MEMBERS ##
-
-    def _main_uri(self, uid, ver_uid=None):
-        '''
-        Convert a UID into a request URL to the graph store.
-        '''
-        if ver_uid:
-            uid += ';' + ver_uid
-
-        return nsc['fcmain'][uid]
-
-
-    def _admin_uri(self, uid, ver_uid=None):
-        '''
-        Convert a UID into a request URL to the graph store.
-        '''
-        if ver_uid:
-            uid += ';' + ver_uid
-
-        return nsc['fcadmin'][uid]
-
-
-    def _struct_uri(self, uid, ver_uid=None):
-        '''
-        Convert a UID into a request URL to the graph store.
-        '''
-        if ver_uid:
-            uid += ';' + ver_uid
-
-        return nsc['fcstruct'][uid]
-
 
     def _map_graph_uri(self, t, uid):
         '''
