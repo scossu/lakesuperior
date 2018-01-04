@@ -144,7 +144,7 @@ def get_resource(uid, force_rdf=False):
 
 
 @ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
-@ldp.route('/', defaults={'parent': None}, methods=['POST'],
+@ldp.route('/', defaults={'parent': ''}, methods=['POST'],
         strict_slashes=False)
 def post_resource(parent):
     '''
@@ -434,7 +434,7 @@ def negotiate_content(rsp, headers=None):
         return (rsp.serialize(format='turtle'), headers)
 
 
-def uuid_for_post(parent_uid=None, slug=None):
+def uuid_for_post(parent_uid, slug=None):
     '''
     Validate conditions to perform a POST and return an LDP resource
     UID for using with the `post` method.
@@ -448,9 +448,8 @@ def uuid_for_post(parent_uid=None, slug=None):
         return uid
 
     # Shortcut!
-    if not slug and not parent_uid:
+    if not slug and parent_uid == '':
         uid = split_if_legacy(str(uuid4()))
-
         return uid
 
     parent = LdpFactory.from_stored(parent_uid,
@@ -474,7 +473,7 @@ def uuid_for_post(parent_uid=None, slug=None):
     # Create candidate UID and validate.
     if slug:
         cnd_uid = pfx + slug
-        if current_app.rdfly.ask_rsrc_exists(nsc['fcres'][cnd_uid]):
+        if current_app.rdfly.ask_rsrc_exists(cnd_uid):
             uid = pfx + split_if_legacy(str(uuid4()))
         else:
             uid = cnd_uid
