@@ -643,7 +643,7 @@ class Ldpr(metaclass=ABCMeta):
         to the tombstone of the resource that used to contain the deleted
         resource. Otherwise the deleted resource becomes a tombstone.
         '''
-        self._logger.info('Removing resource {}'.format(self.urn))
+        self._logger.info('Removing resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
         self.create_rsrc_snapshot(uuid4())
 
@@ -672,7 +672,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Remove all traces of a resource and versions.
         '''
-        self._logger.info('Purging resource {}'.format(self.urn))
+        self._logger.info('Purging resource {}'.format(self.uid))
         imr = self.rdfly.extract_imr(
                 self.uid, incl_inbound=True, strict=False)
 

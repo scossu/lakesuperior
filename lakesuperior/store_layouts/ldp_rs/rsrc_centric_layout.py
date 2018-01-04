@@ -71,6 +71,7 @@ class RsrcCentricLayout:
                 nsc['fcrepo'].hasVersion,
                 nsc['fcrepo'].lastModified,
                 nsc['fcrepo'].lastModifiedBy,
+                nsc['fcsystem'].tombstone,
                 # The following 3 are set by the user but still in this group
                 # for convenience.
                 nsc['ldp'].membershipResource,
@@ -87,6 +88,7 @@ class RsrcCentricLayout:
                 nsc['fcrepo'].Container,
                 nsc['fcrepo'].Pairtree,
                 nsc['fcrepo'].Resource,
+                nsc['fcsystem'].Tombstone,
                 nsc['ldp'].BasicContainer,
                 nsc['ldp'].Container,
                 nsc['ldp'].DirectContainer,
@@ -177,7 +179,7 @@ class RsrcCentricLayout:
         else:
             incl_child_qry = ''
 
-        q = '''
+        qry = '''
         CONSTRUCT
         FROM {ag}
         FROM {sg}
@@ -188,14 +190,7 @@ class RsrcCentricLayout:
                 sg=nsc['fcmain'][uid].n3(),
                 chld=incl_child_qry,
             )
-        try:
-            qres = self.ds.query(q, initBindings={
-            })
-        except ResultException:
-            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
-            gr = Graph()
-        else:
-            gr = qres.graph
+        gr = self._parse_construct(qry)
 
         if incl_inbound and len(gr):
             gr += self.get_inbound_rel(nsc['fcres'][uid])
@@ -267,8 +262,9 @@ class RsrcCentricLayout:
           }
         }'''
 
-        return self.ds.query(qry, initBindings={'ag': nsc['fcadmin'][uid],
-            's': nsc['fcres'][uid]}).graph
+        return self._parse_construct(qry, init_bindings={
+            'ag': nsc['fcadmin'][uid],
+            's': nsc['fcres'][uid]})
 
 
     def get_inbound_rel(self, uri):
@@ -288,74 +284,49 @@ class RsrcCentricLayout:
           }
         }
         '''
-
-        try:
-            qres = self.ds.query(qry, initBindings={'s': uri})
-        except ResultException:
-            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
-            return Graph()
-        else:
-            return qres.graph
+        return self._parse_construct(qry, init_bindings={'s': uri})
 
 
     def purge_rsrc(self, uid, inbound=True, backup_uid=None):
         '''
         Completely delete a resource and (optionally) its references.
         '''
-        target_gr_qry = '''
-        SELECT DISTINCT ?g ?mg ?s1 WHERE {
-            GRAPH ?mg { ?g foaf:primaryTopic ?s . }
-            GRAPH ?g { ?s1 ?p ?o }
-        }
-        '''
-        target_gr_rsp = self.ds.query(target_gr_qry, initBindings={
-            's': nsc['fcres'][uid]})
-
-        drop_list = set()
-        delete_list = set()
-        for row in target_gr_rsp:
-            drop_list.add('DROP SILENT GRAPH {}'.format(row['g'].n3()))
-            delete_list.add('{} ?p ?o .'.format(row['g'].n3()))
-
         qry = '''
-        {drop_stmt};
-        DELETE
-        {{
-          GRAPH ?g {{
-            {delete_stmt}
+        DELETE WHERE {{
+          GRAPH ?g {{ {rsrc} fcrepo:hasVersion ?v . }}
+          GRAPH {histmeta} {{
+            ?vg foaf:primaryTopic ?v ;
+              ?gp ?go .
           }}
+          GRAPH ?vg {{ ?vs ?vp ?vo }}
         }}
-        WHERE
-        {{
-          GRAPH ?g {{
-            {delete_stmt}
+        ;
+        DELETE WHERE {{
+          GRAPH {meta} {{
+            ?g foaf:primaryTopic {rsrc} ;
+              ?gp ?go .
           }}
-          FILTER (?g in ( {mg}, {hg}))
+          GRAPH ?g {{ ?s ?p ?o . }}
         }}
-        '''.format(
-            drop_stmt=';\n'.join(drop_list),
-            delete_stmt='\n'.join(delete_list),
-            mg=META_GR_URI.n3(),
-            hg=HIST_GR_URI.n3())
+        '''.format(rsrc=nsc['fcres'][uid].n3(),
+            meta=META_GR_URI.n3(), histmeta=HIST_GR_URI.n3())
+
+        self.ds.update(qry)
 
         if inbound:
             # Gather ALL subjects in the user graph. There may be fragments.
-            #subj_gen = self.ds.graph(self._main_uri(uid)).subjects()
-            subj_set = set({row.s1.n3() for row in target_gr_rsp})
-            subj_stmt = ', '.join(subj_set)
-
-            # Do not delete inbound references from historic graphs
-            qry += ''';
-            DELETE {{ GRAPH ?g {{ ?s1 ?p1 ?s . }} }}
+            # Do not delete inbound references from historic graphs.
+            qry = '''
+            DELETE {{ GRAPH ?ibg {{ ?ibs ?ibp ?s . }} }}
             WHERE {{
-              GRAPH ?g {{ ?s1 ?p1 ?s . }}
-              FILTER (?s IN ({subj}))
-              GRAPH {mg} {{ ?g foaf:primaryTopic ?s1 . }}
+              GRAPH {ug} {{ ?s ?p ?o . }}
+              GRAPH ?ibg {{ ?ibs ?ibp ?s . }}
+              GRAPH {mg} {{ ?ibg foaf:primaryTopic ?ibs . }}
             }}'''.format(
             mg=META_GR_URI.n3(),
-            subj=subj_stmt)
+            ug=nsc['fcmain'][uid].n3())
 
-        self.ds.update(qry)
+            self.ds.update(qry)
 
 
     def create_or_replace_rsrc(self, uid, trp):
@@ -425,6 +396,19 @@ class RsrcCentricLayout:
 
 
     ## PROTECTED MEMBERS ##
+
+    def _parse_construct(self, qry, init_bindings={}):
+        '''
+        Parse a CONSTRUCT query and return a Graph.
+        '''
+        try:
+            qres = self.ds.query(qry, initBindings=init_bindings)
+        except ResultException:
+            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
+            return Graph()
+        else:
+            return qres.graph
+
 
     def _map_graph_uri(self, t, uid):
         '''
