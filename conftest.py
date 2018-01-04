@@ -11,7 +11,7 @@ from PIL import Image
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
 from util.generators import random_image
-from util.bootstrap import bootstrap_db, bootstrap_binary_store
+from util.bootstrap import bootstrap_binary_store
 
 
 @pytest.fixture(scope='module')
@@ -26,7 +26,8 @@ def db(app):
     '''
     Set up and tear down test triplestore.
     '''
-    db = bootstrap_db(app)
+    db = app.rdfly
+    db.bootstrap()
     bootstrap_binary_store(app)
 
     yield db

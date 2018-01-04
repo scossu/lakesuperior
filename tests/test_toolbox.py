@@ -36,7 +36,7 @@ class TestToolbox:
         assert g.tbox.uri_to_uuid(URIRef(g.webroot) + '/test01/test02') == \
                 'test01/test02'
         assert g.tbox.uri_to_uuid(URIRef(g.webroot)) == ''
-        assert g.tbox.uri_to_uuid(nsc['fcsystem'].root) == None
+        assert g.tbox.uri_to_uuid(nsc['fcres']['']) == ''
         assert g.tbox.uri_to_uuid(nsc['fcres']['1234']) == '1234'
         assert g.tbox.uri_to_uuid(nsc['fcres']['1234/5678']) == '1234/5678'
 
@@ -48,7 +48,7 @@ class TestToolbox:
         assert g.tbox.localize_string(g.webroot + '/test/uid') == \
                 g.tbox.localize_string(g.webroot + '/test/uid/') == \
                 str(nsc['fcres']['test/uid'])
-        assert g.tbox.localize_string(g.webroot) == str(nsc['fcsystem'].root)
+        assert g.tbox.localize_string(g.webroot) == str(nsc['fcres'][''])
         assert g.tbox.localize_string('http://bogus.org/test/uid') == \
                 'http://bogus.org/test/uid'
 
@@ -72,30 +72,30 @@ class TestToolbox:
 
         FREE GRATUITOUS {{
           <#blah> a <{0}/type#A> .
-          <> <info:ex:p> <xyz> .
+          <> <info:ex/p> <xyz> .
           <#c#r#a#zy> ex:virtue <?blah#e> .
           <{0}> <{0}/go#lala>
             <{0}/heythere/gulp> .
         }} GARB AGE TOKENS {{
           <{0}/hey?there#hoho> <https://goglyeyes.com#cearch>
             <{0}#hehe> .
-          <{0}?there#haha> <info:auth:blok> "Hi I'm a strong" .
+          <{0}?there#haha> <info:auth/blok> "Hi I'm a strong" .
         }}
         '''.format(g.webroot)
         exp_output = '''
         @prefix bogus: <http://bogs.r.us#>
-        @prefix ex: <info:fcres:ns#>
+        @prefix ex: <info:fcres/ns#>
 
         FREE GRATUITOUS {
-          <info:fcres:123#blah> a <info:fcres:type#A> .
-          <info:fcres:123> <info:ex:p> <xyz> .
-          <info:fcres:123#c#r#a#zy> ex:virtue <info:fcres:123?blah#e> .
-          <info:fcsystem:root> <info:fcres:go#lala>
-            <info:fcres:heythere/gulp> .
+          <info:fcres/123#blah> a <info:fcres/type#A> .
+          <info:fcres/123> <info:ex/p> <xyz> .
+          <info:fcres/123#c#r#a#zy> ex:virtue <info:fcres/123?blah#e> .
+          <info:fcres/> <info:fcres/go#lala>
+            <info:fcres/heythere/gulp> .
         } GARB AGE TOKENS {
-          <info:fcres:hey?there#hoho> <https://goglyeyes.com#cearch>
-            <info:fcsystem:root#hehe> .
-          <info:fcsystem:root?there#haha> <info:auth:blok> "Hi I'm a strong" .
+          <info:fcres/hey?there#hoho> <https://goglyeyes.com#cearch>
+            <info:fcres/#hehe> .
+          <info:fcres/?there#haha> <info:auth/blok> "Hi I'm a strong" .
         }
         '''
 
