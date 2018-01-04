@@ -21,7 +21,7 @@ from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
 
 
 META_GR_URI = nsc['fcsystem']['meta']
-HIST_GR_URI = nsc['fcsystem']['historic']
+HIST_GR_URI = nsc['fcsystem']['histmeta']
 VERS_CONT_LABEL = 'fcr:versions'
 
 

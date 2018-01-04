@@ -133,7 +133,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 # Metadata graph. This contains information about graphs and their
 # relationships.
-<info:fcsystem/graph/meta> {
+<info:fcsystem/meta> {
   # This may not be used by the application logic if we use naming
   # conventions, but is still good LD practice.
   <info:fcsystem/graph/admin/> foaf:primaryTopic <info:fcres/> .
@@ -147,7 +147,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 # Historic version metadata. This is kept separate to optimize current resource
 # lookups.
-<info:fcsystem/graph/historic>  {
+<info:fcsystem/histmeta>  {
   <info:fcsystem/graph/admin/a/b/c/fcr:versions/v1>
     foaf:primaryTopic <info:fcres/a/b/c/fcr:versions/v1> ;
     fcrepo:created "2017-11-24"^^xsd:date ;
