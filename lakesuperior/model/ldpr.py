@@ -137,7 +137,7 @@ class Ldpr(metaclass=ABCMeta):
         @param repr_opts (dict) Options used to retrieve the IMR. See
         `parse_rfc7240` for format details.
         @Param provd_rdf (string) RDF data provided by the client in
-        operations isuch as `PUT` or `POST`, serialized as a string. This sets
+        operations such as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         '''
         self.uid = g.tbox.uri_to_uuid(uid) \
@@ -456,7 +456,7 @@ class Ldpr(metaclass=ABCMeta):
         @param delete_children (boolean) Whether to delete all child resources.
         This is the default.
         '''
-        refint = current_app.config['store']['ldp_rs']['referential_integrity']
+        refint = self.rdfly.config['referential_integrity']
         inbound = True if refint else inbound
 
         children = self.imr[nsc['ldp'].contains * '+'] \
@@ -643,7 +643,7 @@ class Ldpr(metaclass=ABCMeta):
         to the tombstone of the resource that used to contain the deleted
         resource. Otherwise the deleted resource becomes a tombstone.
         '''
-        self._logger.info('Removing resource {}'.format(self.uid))
+        self._logger.info('Burying resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
         self.create_rsrc_snapshot(uuid4())
 
@@ -663,7 +663,10 @@ class Ldpr(metaclass=ABCMeta):
         if inbound:
             for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
                 remove_trp = {(ib_rsrc_uri, None, self.urn)}
-                Ldpr(ib_rsrc_uri)._modify_rsrc(self.RES_UPDATED, remove_trp)
+                ib_rsrc = Ldpr(ib_rsrc_uri)
+                # To preserve inbound links in history, create a snapshot
+                ib_rsrc.create_rsrc_snapshot(uuid4())
+                ib_rsrc._modify_rsrc(self.RES_UPDATED, remove_trp)
 
         return self.RES_DELETED
 
@@ -673,10 +676,6 @@ class Ldpr(metaclass=ABCMeta):
         Remove all traces of a resource and versions.
         '''
         self._logger.info('Purging resource {}'.format(self.uid))
-        imr = self.rdfly.extract_imr(
-                self.uid, incl_inbound=True, strict=False)
-
-        # Remove resource itself.
         self.rdfly.purge_rsrc(self.uid, inbound)
 
         # @TODO This could be a different event type.

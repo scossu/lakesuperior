@@ -202,24 +202,7 @@ class RsrcCentricLayout:
 
         rsrc = Resource(gr, nsc['fcres'][uid])
 
-        # Check if resource is a tombstone.
-        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
-            if strict:
-                raise TombstoneError(
-                        g.tbox.uri_to_uuid(rsrc.identifier),
-                        rsrc.value(nsc['fcrepo'].created))
-            else:
-                self._logger.info('Tombstone found: {}'.format(uid))
-        elif rsrc.value(nsc['fcsystem'].tombstone):
-            if strict:
-                raise TombstoneError(
-                        g.tbox.uri_to_uuid(
-                            rsrc.value(nsc['fcsystem'].tombstone).identifier),
-                        rsrc.value(nsc['fcrepo'].created))
-            else:
-                self._logger.info('Parent tombstone found: {}'.format(uri))
-
-        return rsrc
+        return self._check_rsrc_status(rsrc, strict)
 
 
     def ask_rsrc_exists(self, uid):
@@ -231,7 +214,7 @@ class RsrcCentricLayout:
                 meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
 
 
-    def get_metadata(self, uid, ver_uid=None):
+    def get_metadata(self, uid, ver_uid=None, strict=True):
         '''
         This is an optimized query to get everything the application needs to
         insert new contents, and nothing more.
@@ -239,11 +222,12 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
+        rsrc = Resource(gr, nsc['fcres'][uid])
 
-        return Resource(gr, nsc['fcres'][uid])
+        return self._check_rsrc_status(rsrc, strict)
 
 
-    def get_version_info(self, uid):
+    def get_version_info(self, uid, strict=True):
         '''
         Get all metadata about a resource's versions.
         '''
@@ -262,9 +246,12 @@ class RsrcCentricLayout:
           }
         }'''
 
-        return self._parse_construct(qry, init_bindings={
+        gr = self._parse_construct(qry, init_bindings={
             'ag': nsc['fcadmin'][uid],
             's': nsc['fcres'][uid]})
+        rsrc = Resource(gr, nsc['fcres'][uid])
+
+        return self._check_rsrc_status(rsrc, strict)
 
 
     def get_inbound_rel(self, uri):
@@ -396,6 +383,27 @@ class RsrcCentricLayout:
 
 
     ## PROTECTED MEMBERS ##
+
+    def _check_rsrc_status(self, rsrc, strict):
+        # Check if resource is a tombstone.
+        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+            if strict:
+                raise TombstoneError(
+                        g.tbox.uri_to_uuid(rsrc.identifier),
+                        rsrc.value(nsc['fcrepo'].created))
+            else:
+                self._logger.info('Tombstone found: {}'.format(uid))
+        elif rsrc.value(nsc['fcsystem'].tombstone):
+            if strict:
+                raise TombstoneError(
+                        g.tbox.uri_to_uuid(
+                            rsrc.value(nsc['fcsystem'].tombstone).identifier),
+                        rsrc.value(nsc['fcrepo'].created))
+            else:
+                self._logger.info('Parent tombstone found: {}'.format(uri))
+
+        return rsrc
+
 
     def _parse_construct(self, qry, init_bindings={}):
         '''
