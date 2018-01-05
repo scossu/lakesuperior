@@ -241,15 +241,15 @@ class RsrcCentricLayout:
           GRAPH ?ag {
             ?s fcrepo:hasVersion ?v .
           }
-          GRAPH fcsystem:historic {
+          GRAPH ?hg {
             ?vm foaf:primaryTopic ?v .
             ?vm  ?p ?o .
             FILTER (?o != ?v)
           }
         }'''
-
         gr = self._parse_construct(qry, init_bindings={
             'ag': nsc['fcadmin'][uid],
+            'hg': HIST_GR_URI,
             's': nsc['fcres'][uid]})
         rsrc = Resource(gr, nsc['fcres'][uid])
         if strict:

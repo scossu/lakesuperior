@@ -49,6 +49,7 @@ def atomic(fn):
             #if hasattr(self.rdfly.store, '_edits'):
             #    # @FIXME ugly.
             #    self.rdfly._conn.optimize_edits()
+            #import pdb; pdb.set_trace()
             self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
@@ -405,7 +406,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Get the `fcr:versions` graph.
         '''
-        gr = g.tbox.globalize_graph(self.version_info)
+        gr = g.tbox.globalize_graph(self.version_info.graph)
         gr.namespace_manager = nsm
 
         return gr
@@ -564,15 +565,15 @@ class Ldpr(metaclass=ABCMeta):
         if backup:
             self.create_version(uuid4())
 
-        ver_gr = self.rdfly.get_metadata(self.urn, ver_uid)
-        revert_gr = Graph()
-        for t in ver_gr:
-            if t[1] not in srv_mgd_predicates and not(
+        ver_gr = self.rdfly.get_metadata(self.uid, ver_uid)
+        self.provided_imr = Resource(Graph(), self.urn)
+
+        for t in ver_gr.graph:
+            if t[1] not in srv_mgd_predicates and not (
                 t[1] == RDF.type and t[2] in srv_mgd_types
             ):
-                revert_gr.add((self.urn, t[1], t[2]))
-
-        self.provided_imr = revert_gr.resource(self.urn)
+                import pdb; pdb.set_trace()
+                self.provided_imr.add(t[1], t[2])
 
         return self._create_or_replace_rsrc(create_only=False)
 
