@@ -228,11 +228,13 @@ def get_version(uid, ver_uid):
         return negotiate_content(rsp)
 
 
-@ldp.route('/<path:uid>/fcr:versions', methods=['POST'])
+@ldp.route('/<path:uid>/fcr:versions', methods=['POST', 'PUT'])
 def post_version(uid):
     '''
     Create a new resource version.
     '''
+    if request.method == 'PUT':
+        return 'Method not allowed.', 405
     ver_uid = request.headers.get('slug', None)
     try:
         ver_uri = LdpFactory.from_stored(uid).create_version(ver_uid)
