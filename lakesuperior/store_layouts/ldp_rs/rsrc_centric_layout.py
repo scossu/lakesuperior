@@ -387,7 +387,8 @@ class RsrcCentricLayout:
         Create a versioned UID string from a main UID and a versio n UID.
         '''
         if VERS_CONT_LABEL in uid:
-            raise ValueError('Resource \'{}\' is already a version.')
+            raise InvalidResourceError(uid,
+                    'Resource \'{}\' is already a version.')
 
         return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
 

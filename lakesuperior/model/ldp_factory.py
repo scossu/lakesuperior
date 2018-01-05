@@ -131,7 +131,7 @@ class LdpFactory:
         except:
             types = set()
         if nsc['fcrepo'].Pairtree in types:
-            raise InvalidResourceError(inst.uid)
+            raise InvalidResourceError(inst.uid, 'Resource {} is a Pairtree.')
 
         return inst
 

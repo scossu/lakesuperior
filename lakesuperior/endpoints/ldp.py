@@ -290,8 +290,8 @@ def put_resource(uid):
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
         if not request.content_length and rsrc.is_stored:
-            raise InvalidResourceError(
-                rsrc.uid, 'Resource already exists and no data was provided.')
+            raise InvalidResourceError(rsrc.uid,
+                'Resource {} already exists and no data set was provided.')
     except InvalidResourceError as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
@@ -459,14 +459,14 @@ def uuid_for_post(parent_uid, slug=None):
 
     if nsc['fcrepo'].Pairtree in parent.types:
         raise InvalidResourceError(parent.uid,
-                'Resources cannot be created under a pairtree.')
+                'Resource {} cannot be created under a pairtree.')
 
     # Set prefix.
     if parent_uid:
         logger.debug('Parent types: {}'.format(pformat(parent.types)))
         if nsc['ldp'].Container not in parent.types:
             raise InvalidResourceError(parent_uid,
-                    'Parent {} is not a container.'.format(parent_uid))
+                    'Parent {} is not a container.')
 
         pfx = parent_uid + '/'
     else:

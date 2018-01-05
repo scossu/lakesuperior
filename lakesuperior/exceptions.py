@@ -9,7 +9,7 @@ class ResourceError(RuntimeError):
     '''
     def __init__(self, uid, msg=None):
         self.uid = uid
-        self.msg = msg
+        self.msg = msg.format(uid) if msg else None
 
 
 class ResourceExistsError(ResourceError):
