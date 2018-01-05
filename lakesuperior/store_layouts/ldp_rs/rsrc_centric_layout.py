@@ -197,12 +197,12 @@ class RsrcCentricLayout:
 
         #self._logger.debug('Found resource: {}'.format(
         #        gr.serialize(format='turtle').decode('utf-8')))
-        if strict and not len(gr):
-            raise ResourceNotExistsError(uid)
-
         rsrc = Resource(gr, nsc['fcres'][uid])
 
-        return self._check_rsrc_status(rsrc, strict)
+        if strict:
+            self._check_rsrc_status(rsrc)
+
+        return rsrc
 
 
     def ask_rsrc_exists(self, uid):
@@ -223,8 +223,10 @@ class RsrcCentricLayout:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
         rsrc = Resource(gr, nsc['fcres'][uid])
+        if strict:
+            self._check_rsrc_status(rsrc)
 
-        return self._check_rsrc_status(rsrc, strict)
+        return rsrc
 
 
     def get_version_info(self, uid, strict=True):
@@ -250,8 +252,10 @@ class RsrcCentricLayout:
             'ag': nsc['fcadmin'][uid],
             's': nsc['fcres'][uid]})
         rsrc = Resource(gr, nsc['fcres'][uid])
+        if strict:
+            self._check_rsrc_status(rsrc)
 
-        return self._check_rsrc_status(rsrc, strict)
+        return rsrc
 
 
     def get_inbound_rel(self, uri):
@@ -260,6 +264,7 @@ class RsrcCentricLayout:
 
         @param subj_uri Subject URI.
         '''
+        # Only search in non-historic graphs.
         qry = '''
         CONSTRUCT { ?s1 ?p1 ?s }
         WHERE {
@@ -384,25 +389,23 @@ class RsrcCentricLayout:
 
     ## PROTECTED MEMBERS ##
 
-    def _check_rsrc_status(self, rsrc, strict):
+    def _check_rsrc_status(self, rsrc):
+        '''
+        Check if a resource is not existing or if it is a tombstone.
+        '''
+        uid = g.tbox.uri_to_uuid(rsrc.identifier)
+        if not len(rsrc.graph):
+            raise ResourceNotExistsError(uid)
+
         # Check if resource is a tombstone.
         if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
-            if strict:
-                raise TombstoneError(
-                        g.tbox.uri_to_uuid(rsrc.identifier),
-                        rsrc.value(nsc['fcrepo'].created))
-            else:
-                self._logger.info('Tombstone found: {}'.format(uid))
+            raise TombstoneError(
+                    uid, rsrc.value(nsc['fcrepo'].created))
         elif rsrc.value(nsc['fcsystem'].tombstone):
-            if strict:
-                raise TombstoneError(
-                        g.tbox.uri_to_uuid(
-                            rsrc.value(nsc['fcsystem'].tombstone).identifier),
+            raise TombstoneError(
+                    g.tbox.uri_to_uuid(
+                        rsrc.value(nsc['fcsystem'].tombstone).identifier),
                         rsrc.value(nsc['fcrepo'].created))
-            else:
-                self._logger.info('Parent tombstone found: {}'.format(uri))
-
-        return rsrc
 
 
     def _parse_construct(self, qry, init_bindings={}):

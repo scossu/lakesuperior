@@ -742,8 +742,17 @@ class Ldpr(metaclass=ABCMeta):
         #    if not isinstance(trp, set):
         #        trp = set(trp)
 
-        type = self.types
-        actor = self.metadata.value(nsc['fcrepo'].createdBy)
+        try:
+            type = self.types
+            actor = self.metadata.value(nsc['fcrepo'].createdBy)
+        except ResourceNotExistsError:
+            type = set()
+            actor = None
+            for t in add_trp:
+                if t[1] == RDF.type:
+                    type.add(t[2])
+                elif actor is None and t[1] == nsc['fcrepo'].createdBy:
+                    actor = t[2]
 
         ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 

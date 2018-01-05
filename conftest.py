@@ -32,7 +32,7 @@ def db(app):
 
     yield db
 
-    print('Tearing down fixure graph store.')
+    print('Tearing down fixture graph store.')
     for g in db.ds.graphs():
         db.ds.remove_graph(g)
 

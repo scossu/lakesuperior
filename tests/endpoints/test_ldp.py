@@ -509,7 +509,8 @@ class TestPrefHeader:
         assert rsp_strict.status_code == 412
 
 
-    def test_embed_children(self, cont_structure):
+    # @HOLD Embed children is debated.
+    def _disabled_test_embed_children(self, cont_structure):
         '''
         verify the "embed children" prefer header.
         '''
@@ -572,12 +573,12 @@ class TestPrefHeader:
 
         children = incl_gr[cont_subject : nsc['ldp'].contains]
         for child_uri in children:
-            assert not omit_gr[ cont_subject : nsc['ldp'].contains : child_uri ]
+            assert not omit_gr[cont_subject : nsc['ldp'].contains : child_uri]
 
 
     def test_inbound_rel(self, cont_structure):
         '''
-        verify the "inboud relationships" prefer header.
+        verify the "inbound relationships" prefer header.
         '''
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
