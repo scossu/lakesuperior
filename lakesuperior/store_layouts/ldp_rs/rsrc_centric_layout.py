@@ -172,6 +172,8 @@ class RsrcCentricLayout:
         '''
         See base_rdf_layout.extract_imr.
         '''
+        if ver_uid:
+            uid = self.snapshot_uid(uid, ver_uid)
         if incl_children:
             incl_child_qry = 'FROM {}'.format(nsc['fcstruct'][uid].n3())
             if embed_children:
@@ -237,7 +239,10 @@ class RsrcCentricLayout:
         # with the subject URI. But the concepts of data and metadata in Fedora
         # are quite fluid anyways...
         qry = '''
-        CONSTRUCT {?v ?p ?o .} {
+        CONSTRUCT {
+          ?s fcrepo:hasVersion ?v .
+          ?v ?p ?o .
+        } {
           GRAPH ?ag {
             ?s fcrepo:hasVersion ?v .
           }

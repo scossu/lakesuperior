@@ -316,9 +316,7 @@ class Ldpr(metaclass=ABCMeta):
         Return a generator of version UIDs (relative to their parent resource).
         '''
         gen = self.version_info[
-            self.urn
-            : nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel
-            :]
+                nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel]
 
         return { str(uid) for uid in gen }
 
@@ -412,11 +410,11 @@ class Ldpr(metaclass=ABCMeta):
         return gr
 
 
-    def get_version(self, ver_uid):
+    def get_version(self, ver_uid, **kwargs):
         '''
         Get a version by label.
         '''
-        ver_gr = self.rdfly.get_metadata(self.uid, ver_uid).graph
+        ver_gr = self.rdfly.extract_imr(self.uid, ver_uid, **kwargs).graph
 
         gr = g.tbox.globalize_graph(ver_gr)
         gr.namespace_manager = nsm
@@ -572,7 +570,6 @@ class Ldpr(metaclass=ABCMeta):
             if t[1] not in srv_mgd_predicates and not (
                 t[1] == RDF.type and t[2] in srv_mgd_types
             ):
-                import pdb; pdb.set_trace()
                 self.provided_imr.add(t[1], t[2])
 
         return self._create_or_replace_rsrc(create_only=False)
@@ -693,7 +690,7 @@ class Ldpr(metaclass=ABCMeta):
         ver_uid = '{}/{}'.format(vers_uid, ver_uid)
         ver_uri = nsc['fcres'][ver_uid]
         ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
-        for t in self.metadata.graph:
+        for t in self.imr.graph:
             if (
                 t[1] == RDF.type and t[2] in {
                     nsc['fcrepo'].Binary,
@@ -704,6 +701,7 @@ class Ldpr(metaclass=ABCMeta):
                 t[1] in {
                     nsc['fcrepo'].hasParent,
                     nsc['fcrepo'].hasVersions,
+                    nsc['fcrepo'].hasVersion,
                     nsc['premis'].hasMessageDigest,
                 }
             ):
