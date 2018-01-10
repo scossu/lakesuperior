@@ -53,8 +53,16 @@
   - [D] PATCH
   - [D] DELETE (Purge)
 
-
 # Alpha 3 TODO
+
+- [D] Use named graphs
+
+# Alpha 4 TODO
+
+- [ ] Complete revert to version and resurrect
+- [ ] Explore alternative backends
+
+# Alpha 5 TODO
 
 - [ ] Migration tool
 - [ ] Complete header handling
@@ -67,14 +75,14 @@
   - [ ] Others
 - [ ] Query API
 
-# Alpha 4 TODO
+# Alpha 6 TODO
 
 - [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 5 TODO
+# Alpha 7 TODO
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z

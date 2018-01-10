@@ -1,0 +1,11 @@
+# Performance benchmark notes
+
+Sleepycat back end: Duchamp VIAF dataset(343 triples)
+
+10K PUTs to new resources under the same container:
+
+~18' running time
+0.108" per resource
+3.4M triples total in repo at the end of the process
+
+Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.6"

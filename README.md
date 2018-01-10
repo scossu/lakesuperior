@@ -13,14 +13,14 @@ Key features:
   [Delta document](doc/notes/fcrepo4_deltas.md))—currently being tested with
   Hyrax 2
 - Stores metadata in a graph store, binaries in filesystem
-- Simple search and SPARQL Query API via back-end triplestore (alpha 2)
+- Simple search and SPARQL Query API via back-end triplestore (planned)
 - No performance issues storing many resources under the same container; no
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
   pairtree segmentation <sup id="a1">[1](#f1)</sup>
 - Mitigates "many member" issue: constant performance writing to a resource with
   many children or members; option to omit children in retrieval
 - Flexible back-end layouts: options to organize information in back end
-- Migration tool (in alpha3)
+- Migration tool (planned)
 
 Implementation of the official [Fedora API specs](https://fedora.info/spec/)
 (Fedora 5.x and beyond) is not
@@ -30,9 +30,8 @@ project if it gains support.
 Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas.md) for
 divergences with the official Fedora4 implementation.
 
-Alpha 1 application code consists of less than 2200 lines and strives to
-maintain a linear, intuitive code structure to foster collaboration. *TODO link
-to tech overview and approach*
+The application code strives to maintain a linear, intuitive code structure to
+foster collaboration. *TODO link to tech overview and approach*
 
 ## Installation
 
