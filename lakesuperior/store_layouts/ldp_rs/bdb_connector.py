@@ -37,4 +37,4 @@ class BdbConnector(BaseConnector):
         '''
         Close store connection.
         '''
-        self.store.close(commit_pending_transaction=False)
+        self.ds.close(commit_pending_transaction=False)

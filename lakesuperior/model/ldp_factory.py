@@ -11,7 +11,8 @@ from rdflib.namespace import RDF
 
 from lakesuperior import model
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.exceptions import *
+from lakesuperior.exceptions import (IncompatibleLdpTypeError,
+        InvalidResourceError, ResourceNotExistsError)
 
 
 class LdpFactory:

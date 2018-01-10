@@ -9,12 +9,14 @@ import arrow
 from flask import (
         Blueprint, current_app, g, make_response, render_template,
         request, send_file)
-from rdflib.namespace import RDF, XSD
+from rdflib.namespace import XSD
 from rdflib.term import Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.exceptions import *
+from lakesuperior.exceptions import (ResourceNotExistsError, TombstoneError,
+        ServerManagedTermError, InvalidResourceError, SingleSubjectError,
+        ResourceExistsError, IncompatibleLdpTypeError)
 from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
@@ -398,7 +400,7 @@ def tombstone(uid):
     logger.debug('Deleting tombstone for {}.'.format(uid))
     rsrc = Ldpr(uid)
     try:
-        metadata = rsrc.metadata
+        rsrc.metadata
     except TombstoneError as e:
         if request.method == 'DELETE':
             if e.uid == uid:
@@ -514,8 +516,6 @@ def bitstream_from_req():
 
 
 def _get_bitstream(rsrc):
-    out_headers = std_headers
-
     # @TODO This may change in favor of more low-level handling if the file
     # system is not local.
     return send_file(rsrc.local_path, as_attachment=True,

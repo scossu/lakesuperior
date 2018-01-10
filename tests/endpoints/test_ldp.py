@@ -273,7 +273,7 @@ class TestLdp:
 
         uri = g.webroot + '/test_patch_ssr'
 
-        nossr_qry = 'INSERT { <http://bogus.org> a <urn:ns:A> . } WHERE {}'
+        #nossr_qry = 'INSERT { <http://bogus.org> a <urn:ns:A> . } WHERE {}'
         abs_qry = 'INSERT {{ <{}> a <urn:ns:A> . }} WHERE {{}}'.format(uri)
         frag_qry = 'INSERT {{ <{}#frag> a <urn:ns:A> . }} WHERE {{}}'\
                 .format(uri)
@@ -345,7 +345,7 @@ class TestLdp:
         '''
         Test delete response codes.
         '''
-        create_resp = self.client.put('/ldp/test_delete01')
+        #create_resp = self.client.put('/ldp/test_delete01')
         delete_resp = self.client.delete('/ldp/test_delete01')
         assert delete_resp.status_code == 204
 
@@ -518,9 +518,9 @@ class TestPrefHeader:
         cont_resp = cont_structure['response']
         cont_subject = cont_structure['subject']
 
-        minimal_resp = self.client.get(parent_path, headers={
-            'Prefer' : 'return=minimal',
-        })
+        #minimal_resp = self.client.get(parent_path, headers={
+        #    'Prefer' : 'return=minimal',
+        #})
 
         incl_embed_children_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; include={}'\
@@ -580,16 +580,19 @@ class TestPrefHeader:
         '''
         verify the "inbound relationships" prefer header.
         '''
-        parent_path = cont_structure['path']
-        cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        self.client.put('/ldp/test_target')
+        data = '<> <http://ex.org/ns#shoots> <{}> .'.format(
+                g.webroot + '/test_target')
+        self.client.put('/ldp/test_shooter', data=data,
+                headers={'Content-Type': 'text/turtle'})
 
-        incl_inbound_resp = self.client.get(parent_path, headers={
-            'Prefer' : 'return=representation; include={}'\
+        cont_resp = self.client.get('/ldp/test_target')
+        incl_inbound_resp = self.client.get('/ldp/test_target', headers={
+            'Prefer' : 'return=representation; include="{}"'\
                     .format(Ldpr.RETURN_INBOUND_REF_URI),
         })
-        omit_inbound_resp = self.client.get(parent_path, headers={
-            'Prefer' : 'return=representation; omit={}'\
+        omit_inbound_resp = self.client.get('/ldp/test_target', headers={
+            'Prefer' : 'return=representation; omit="{}"'\
                     .format(Ldpr.RETURN_INBOUND_REF_URI),
         })
 
@@ -597,9 +600,13 @@ class TestPrefHeader:
         incl_gr = Graph().parse(data=incl_inbound_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_inbound_resp.data, format='turtle')
 
+        subject = URIRef(g.webroot + '/test_target')
+        inbd_subject = URIRef(g.webroot + '/test_shooter')
         assert isomorphic(omit_gr, default_gr)
-        assert set(incl_gr[ : : cont_subject ])
-        assert not set(omit_gr[ : : cont_subject ])
+        assert len(set(incl_gr[inbd_subject : : ])) == 1
+        assert incl_gr[
+            inbd_subject : URIRef('http://ex.org/ns#shoots') : subject]
+        assert not len(set(omit_gr[inbd_subject : :]))
 
 
     def test_srv_mgd_triples(self, cont_structure):

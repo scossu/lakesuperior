@@ -218,8 +218,7 @@ class RsrcCentricLayout:
 
     def get_metadata(self, uid, ver_uid=None, strict=True):
         '''
-        This is an optimized query to get everything the application needs to
-        insert new contents, and nothing more.
+        This is an optimized query to get only the administrative metadata.
         '''
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
@@ -384,7 +383,7 @@ class RsrcCentricLayout:
 
     def snapshot_uid(self, uid, ver_uid):
         '''
-        Create a versioned UID string from a main UID and a versio n UID.
+        Create a versioned UID string from a main UID and a version UID.
         '''
         if VERS_CONT_LABEL in uid:
             raise InvalidResourceError(uid,

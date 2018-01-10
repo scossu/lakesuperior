@@ -3,7 +3,7 @@ import logging
 from abc import ABCMeta
 from collections import defaultdict
 from itertools import accumulate, groupby
-from pprint import pformat
+#from pprint import pformat
 from uuid import uuid4
 
 import arrow
@@ -18,7 +18,8 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import *
+from lakesuperior.exceptions import (RefIntViolationError,
+        ResourceNotExistsError, ServerManagedTermError, TombstoneError)
 from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.store_layouts.ldp_rs.rsrc_centric_layout import (
         VERS_CONT_LABEL)
@@ -49,8 +50,6 @@ def atomic(fn):
             #if hasattr(self.rdfly.store, '_edits'):
             #    # @FIXME ugly.
             #    self.rdfly._conn.optimize_edits()
-            #import pdb; pdb.set_trace()
-            self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
                 self._send_event_msg(*ev)
@@ -278,10 +277,7 @@ class Ldpr(metaclass=ABCMeta):
             ) and (
                 # Only include server managed triples if requested.
                 self._imr_options.get('incl_srv_mgd', True)
-                or (
-                    not t[1] in srv_mgd_predicates
-                    and not (t[1] == RDF.type or t[2] in srv_mgd_types)
-                )
+                or not self._is_trp_managed(t)
             ):
                 out_gr.add(t)
 
@@ -487,7 +483,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         tstone_trp = set(self.rdfly.extract_imr(self.uid, strict=False).graph)
 
-        ver_rsp = self.version_info.query('''
+        ver_rsp = self.version_info.graph.query('''
         SELECT ?uid {
           ?latest fcrepo:hasVersionLabel ?uid ;
             fcrepo:created ?ts .
@@ -495,8 +491,9 @@ class Ldpr(metaclass=ABCMeta):
         ORDER BY DESC(?ts)
         LIMIT 1
         ''')
+        #import pdb; pdb.set_trace()
         ver_uid = str(ver_rsp.bindings[0]['uid'])
-        ver_trp = set(self.rdfly.get_metadata(self.urn, ver_uid))
+        ver_trp = set(self.rdfly.get_metadata(self.uid, ver_uid).graph)
 
         laz_gr = Graph()
         for t in ver_trp:
@@ -531,7 +528,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @atomic
-    def create_version(self, ver_uid):
+    def create_version(self, ver_uid=None):
         '''
         Create a new version of the resource.
 
@@ -553,29 +550,37 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Revert to a previous version.
 
-        NOTE: this will create a new version.
-
         @param ver_uid (string) Version UID.
-        @param backup (boolean) Whether to create a backup copy. Default is
+        @param backup (boolean) Whether to create a backup snapshot. Default is
         true.
         '''
         # Create a backup snapshot.
         if backup:
-            self.create_version(uuid4())
+            self.create_version()
 
-        ver_gr = self.rdfly.get_metadata(self.uid, ver_uid)
+        ver_gr = self.rdfly.extract_imr(self.uid, ver_uid=ver_uid,
+                incl_children=False)
         self.provided_imr = Resource(Graph(), self.urn)
 
         for t in ver_gr.graph:
-            if t[1] not in srv_mgd_predicates and not (
-                t[1] == RDF.type and t[2] in srv_mgd_types
-            ):
+            if not self._is_trp_managed(t):
                 self.provided_imr.add(t[1], t[2])
+            # @TODO Check individual objects: if they are repo-managed URIs
+            # and not existing or tombstones, they are not added.
 
         return self._create_or_replace_rsrc(create_only=False)
 
 
     ## PROTECTED METHODS ##
+
+    def _is_trp_managed(self, t):
+        '''
+        Return whether a triple is server-managed.
+        This is true if one of its terms is in the managed terms list.
+        '''
+        return t[1] in srv_mgd_predicates or (
+                t[1] == RDF.type and t[2] in srv_mgd_types)
+
 
     def _create_or_replace_rsrc(self, create_only=False):
         '''
@@ -685,6 +690,9 @@ class Ldpr(metaclass=ABCMeta):
         Perform version creation and return the internal URN.
         '''
         # Create version resource from copying the current state.
+        self._logger.info(
+                'Creating version snapshot {} for resource {}.'.format(
+                    ver_uid, self.uid))
         ver_add_gr = set()
         vers_uid = '{}/{}'.format(self.uid, VERS_CONT_LABEL)
         ver_uid = '{}/{}'.format(vers_uid, ver_uid)
@@ -744,7 +752,7 @@ class Ldpr(metaclass=ABCMeta):
         try:
             type = self.types
             actor = self.metadata.value(nsc['fcrepo'].createdBy)
-        except ResourceNotExistsError:
+        except (ResourceNotExistsError, TombstoneError):
             type = set()
             actor = None
             for t in add_trp:
