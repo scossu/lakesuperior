@@ -50,6 +50,7 @@ def atomic(fn):
             #if hasattr(self.rdfly.store, '_edits'):
             #    # @FIXME ugly.
             #    self.rdfly._conn.optimize_edits()
+            self.rdfly.store.commit()
             for ev in request.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
                 self._send_event_msg(*ev)

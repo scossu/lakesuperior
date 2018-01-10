@@ -303,12 +303,12 @@ def put_resource(uid):
 
     try:
         ret = rsrc.put()
+        rsp_headers.update(rsrc.head())
     except (InvalidResourceError, ResourceExistsError) as e:
         return str(e), 409
     except TombstoneError as e:
         return _tombstone_response(e, uid)
 
-    rsp_headers.update(rsrc.head())
     if ret == Ldpr.RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = rsrc.uri

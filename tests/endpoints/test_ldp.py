@@ -345,7 +345,7 @@ class TestLdp:
         '''
         Test delete response codes.
         '''
-        #create_resp = self.client.put('/ldp/test_delete01')
+        self.client.put('/ldp/test_delete01')
         delete_resp = self.client.delete('/ldp/test_delete01')
         assert delete_resp.status_code == 204
 
