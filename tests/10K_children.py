@@ -20,6 +20,12 @@ sys.stdout.write('Delete container? [n] >')
 choice = input().lower()
 del_cont = choice or 'n'
 
+sys.stdout.write('POST or PUT? [PUT] >')
+choice = input().lower()
+if choice and choice.lower() not in ('post', 'put'):
+    raise ValueError('Not a valid verb.')
+method = choice.lower() or 'put'
+
 # Generate 10,000 children of root node.
 
 if del_cont  == 'y':
@@ -34,8 +40,10 @@ print('Inserting {} children.'.format(n))
 data = open(datafile, 'rb').read()
 try:
     for i in range(1, n):
-        rsp = requests.put('{}/{}'.format(container, uuid4()), data=data,
-                headers={ 'content-type': 'text/turtle'})
+        url = '{}/{}'.format(container, uuid4()) if method == 'put' \
+                else container
+        rsp = requests.request(method, url,
+                data=data, headers={ 'content-type': 'text/turtle'})
         rsp.raise_for_status()
         if i % 10 == 0:
             now = arrow.utcnow()
