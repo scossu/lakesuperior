@@ -604,39 +604,6 @@ class Ldpr(metaclass=ABCMeta):
         return self.RES_CREATED if create else self.RES_UPDATED
 
 
-    #def _create_rsrc(self):
-    #    '''
-    #    Create a new resource by comparing an empty graph with the provided
-    #    IMR graph.
-    #    '''
-    #    self._modify_rsrc(self.RES_CREATED, add_trp=self.provided_imr.graph)
-
-    #    # Set the IMR contents to the "add" triples.
-    #    #self.imr = self.provided_imr.graph
-
-    #    return self.RES_CREATED
-
-
-    #def _replace_rsrc(self):
-    #    '''
-    #    Replace a resource.
-
-    #    The existing resource graph is removed except for the protected terms.
-    #    '''
-    #    # The extracted IMR is used as a "minus" delta, so protected predicates
-    #    # must be removed.
-    #    for p in self.protected_pred:
-    #        self.imr.remove(p)
-
-    #    delta = self._dedup_deltas(self.imr.graph, self.provided_imr.graph)
-    #    self._modify_rsrc(self.RES_UPDATED, *delta)
-
-    #    # Set the IMR contents to the "add" triples.
-    #    #self.imr = delta[1]
-
-    #    return self.RES_UPDATED
-
-
     def _bury_rsrc(self, inbound, tstone_pointer=None):
         '''
         Delete a single resource and create a tombstone.

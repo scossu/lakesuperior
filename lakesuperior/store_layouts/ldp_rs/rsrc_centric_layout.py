@@ -1,22 +1,17 @@
 import logging
 
 from collections import defaultdict
-from copy import deepcopy
-from urllib.parse import quote
-
-import requests
 
 from flask import g
 from rdflib import Graph
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
-from rdflib.term import URIRef, Literal
+from rdflib.term import Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.dictionaries.namespaces import ns_pfx_sparql
-from lakesuperior.exceptions import (InvalidResourceError, InvalidTripleError,
+from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError)
 
 
