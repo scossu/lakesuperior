@@ -782,34 +782,34 @@ class TestVersion:
         ]
 
 
-    def test_resurrection(self):
-        '''
-        Delete and then resurrect a resource.
+    #def test_resurrection(self):
+    #    '''
+    #    Delete and then resurrect a resource.
 
-        Make sure that the resource is resurrected to the latest version.
-        '''
-        path = '/ldp/test_lazarus'
-        self.client.put(path)
+    #    Make sure that the resource is resurrected to the latest version.
+    #    '''
+    #    path = '/ldp/test_lazarus'
+    #    self.client.put(path)
 
-        self.client.post(path + '/fcr:versions')
-        self.client.put(
-            path, headers={'content-type': 'text/turtle'},
-            data=b'<> <urn:demo:p1> <urn:demo:o1> .')
-        self.client.post(path + '/fcr:versions')
-        self.client.put(
-            path, headers={'content-type': 'text/turtle'},
-            data=b'<> <urn:demo:p1> <urn:demo:o2> .')
+    #    self.client.post(path + '/fcr:versions', headers={'slug': 'v1'})
+    #    self.client.put(
+    #        path, headers={'content-type': 'text/turtle'},
+    #        data=b'<> <urn:demo:p1> <urn:demo:o1> .')
+    #    self.client.post(path + '/fcr:versions', headers={'slug': 'v2'})
+    #    self.client.put(
+    #        path, headers={'content-type': 'text/turtle'},
+    #        data=b'<> <urn:demo:p1> <urn:demo:o2> .')
 
-        self.client.delete(path)
+    #    self.client.delete(path)
 
-        assert self.client.get(path).status_code == 410
+    #    assert self.client.get(path).status_code == 410
 
-        self.client.post(path + '/fcr:tombstone')
+    #    self.client.post(path + '/fcr:tombstone')
 
-        laz_data = self.client.get(path).data
-        laz_gr = Graph().parse(data=laz_data, format='turtle')
-        assert laz_gr[
-            URIRef(g.webroot + '/test_lazarus')
-            : URIRef('urn:demo:p1')
-            : URIRef('urn:demo:o2')
-        ]
+    #    laz_data = self.client.get(path).data
+    #    laz_gr = Graph().parse(data=laz_data, format='turtle')
+    #    assert laz_gr[
+    #        URIRef(g.webroot + '/test_lazarus')
+    #        : URIRef('urn:demo:p1')
+    #        : URIRef('urn:demo:o2')
+    #    ]
