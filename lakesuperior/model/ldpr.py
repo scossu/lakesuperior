@@ -262,9 +262,7 @@ class Ldpr(metaclass=ABCMeta):
     @property
     def out_graph(self):
         '''
-        Retun a globalized graph of the resource's IMR.
-
-        Internal URNs are replaced by global URIs using the endpoint webroot.
+        Retun a graph of the resource's IMR formatted for output.
         '''
         out_gr = Graph()
 
@@ -388,8 +386,11 @@ class Ldpr(metaclass=ABCMeta):
 
     def get(self):
         '''
-        This gets the RDF metadata. The binary retrieval is handled directly
-        by the route.
+        Get an RDF representation of the resource.
+
+        The binary retrieval is handled directly by the router.
+
+        Internal URNs are replaced by global URIs using the endpoint webroot.
         '''
         gr = g.tbox.globalize_graph(self.out_graph)
         gr.namespace_manager = nsm
@@ -897,17 +898,18 @@ class Ldpr(metaclass=ABCMeta):
         parent_uid = ROOT_UID # Defaults to root
         segments = []
         for cparent_uid in rev_search_order:
-            cparent_uid = cparent_uid
-
             if self.rdfly.ask_rsrc_exists(cparent_uid):
+                # If a real parent is found, set that and break the loop.
                 parent_uid = cparent_uid
                 break
             else:
+                # Otherwise, add to the list of segments to be built.
                 segments.append((cparent_uid, cur_child_uid))
                 cur_child_uid = cparent_uid
 
-        for uid, child_uid in segments:
-            self._create_path_segment(uid, child_uid, parent_uid)
+        for segm_uid, next_uid in segments:
+            self.rdfly.add_path_segment(uid=segm_uid, next_uid=next_uid,
+                    child_uid=self.uid, parent_uid=parent_uid)
 
         return parent_uid
 
@@ -923,35 +925,38 @@ class Ldpr(metaclass=ABCMeta):
         )
 
 
-    def _create_path_segment(self, uid, child_uid, real_parent_uid):
-        '''
-        Create a path segment with a non-LDP containment statement.
+    #def _create_path_segment(self, uid, child_uid, parent_uid):
+    #    '''
+    #    Create a path segment with a non-LDP containment statement.
 
-        If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
-        fcres:a/b exists, we have to create two "hidden" containment statements
-        between a and a/b and between a/b and a/b/c in order to maintain the
-        `containment chain.
-        '''
-        rsrc_uri = nsc['fcres'][uid]
+    #    If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
+    #    fcres:a/b exists, we have to create two "hidden" containment statements
+    #    between a and a/b and between a/b and a/b/c in order to maintain the
+    #    containment chain.
 
-        add_trp = {
-            (rsrc_uri, nsc['fcsystem'].contains, nsc['fcres'][child_uid]),
-            (rsrc_uri, nsc['ldp'].contains, self.urn),
-            (rsrc_uri, RDF.type, nsc['ldp'].Container),
-            (rsrc_uri, RDF.type, nsc['ldp'].BasicContainer),
-            (rsrc_uri, RDF.type, nsc['ldp'].RDFSource),
-            (rsrc_uri, RDF.type, nsc['fcrepo'].Pairtree),
-            (rsrc_uri, nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid]),
-        }
+    #    These triples are stored separately and are not versioned.
+    #    '''
+    #    rsrc_uri = nsc['fcres'][uid]
 
-        self.rdfly.modify_rsrc(
-                uid, add_trp=add_trp)
+    #    add_trp = {
+    #        (rsrc_uri, nsc['fcsystem'].contains, nsc['fcres'][child_uid]),
+    #        (rsrc_uri, nsc['ldp'].contains, self.urn),
+    #        (rsrc_uri, RDF.type, nsc['ldp'].Container),
+    #        (rsrc_uri, RDF.type, nsc['ldp'].BasicContainer),
+    #        (rsrc_uri, RDF.type, nsc['ldp'].RDFSource),
+    #        (rsrc_uri, RDF.type, nsc['fcrepo'].Pairtree),
+    #        (rsrc_uri, nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid]),
+    #    }
 
-        # If the path segment is just below root
-        if '/' not in uid:
-            self.rdfly.modify_rsrc(ROOT_UID, add_trp={
-                (ROOT_RSRC_URI, nsc['fcsystem'].contains, nsc['fcres'][uid])
-            })
+    #    self.rdfly.add_segment(nsc['fcres'][uid], next=self.urn,
+    #            child=nsc['fcres'][child_uid],
+    #            parent=nsc['fcres'][parent_uid])
+
+    #    # If the path segment is just below root
+    #    if '/' not in uid:
+    #        self.rdfly.modify_rsrc(ROOT_UID, add_trp={
+    #            (ROOT_RSRC_URI, nsc['fcsystem'].contains, nsc['fcres'][uid])
+    #        })
 
 
     def _add_ldp_dc_ic_rel(self, cont_rsrc):

@@ -12,11 +12,12 @@ from rdflib.term import Literal
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import (InvalidResourceError,
-        ResourceNotExistsError, TombstoneError)
+        ResourceNotExistsError, TombstoneError, PathSegmentError)
 
 
 META_GR_URI = nsc['fcsystem']['meta']
 HIST_GR_URI = nsc['fcsystem']['histmeta']
+PTREE_GR_URI = nsc['fcsystem']['pairtree']
 VERS_CONT_LABEL = 'fcr:versions'
 
 
@@ -161,6 +162,32 @@ class RsrcCentricLayout:
         self.ds.store.close()
 
 
+    def get_raw(self, uri, ctx):
+        '''
+        Get a raw graph of a non-LDP resource.
+
+        The graph is queried across all contexts or within a specific one.
+
+        @param s(rdflib.term.URIRef) URI of the subject.
+        @param ctx (rdflib.term.URIRef) URI of the optional context. If None,
+        all named graphs are queried.
+
+        return rdflib.Graph
+        '''
+        bindings = {'s': uri}
+        if ctx:
+            bindings['g'] = ctx
+
+        qry = '''
+        CONSTRUCT { ?s ?p ?o . } {
+          GRAPH ?g {
+            ?s ?p ?o .
+          }
+        }'''
+
+        return self._parse_construct(qry, init_bindings=bindings)
+
+
     def extract_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, **kwargs):
@@ -192,8 +219,8 @@ class RsrcCentricLayout:
         if incl_inbound and len(gr):
             gr += self.get_inbound_rel(nsc['fcres'][uid])
 
-        #self._logger.debug('Found resource: {}'.format(
-        #        gr.serialize(format='turtle').decode('utf-8')))
+        self._logger.debug('Found resource: {}'.format(
+                gr.serialize(format='turtle').decode('utf-8')))
         rsrc = Resource(gr, nsc['fcres'][uid])
 
         if strict:
@@ -218,6 +245,15 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
+        if not len(gr):
+            # If no resource is found, search in pairtree graph.
+            try:
+                gr = self.ds.graph(PTREE_GR_URI).query(
+                        'CONSTRUCT WHERE {?s ?p ?o}',
+                        initBindings={'s': nsc['fcres'][uid]}).graph
+            except ResultException:
+                gr = Graph()
+
         rsrc = Resource(gr, nsc['fcres'][uid])
         if strict:
             self._check_rsrc_status(rsrc)
@@ -385,6 +421,39 @@ class RsrcCentricLayout:
                     'Resource \'{}\' is already a version.')
 
         return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
+
+
+    def add_path_segment(self, uid, next_uid, parent_uid, child_uid):
+        '''
+        Add a pairtree segment.
+
+        @param uid (string) The UID of the subject.
+        @param next_uid (string) UID of the next step down. This may be an LDP
+        resource or another segment.
+        @param parent_uid (string) UID of the actual resource(s) that contains
+        the segment.
+        @param child_uid (string) UID of the LDP resource contained by the
+        segment.
+        '''
+        props = (
+            (RDF.type, nsc['fcsystem'].PathSegment),
+            (nsc['fcsystem'].contains, nsc['fcres'][next_uid]),
+            (nsc['ldp'].contains, nsc['fcres'][child_uid]),
+            #(RDF.type, nsc['ldp'].Container),
+            #(RDF.type, nsc['ldp'].BasicContainer),
+            #(RDF.type, nsc['ldp'].RDFSource),
+            #(RDF.type, nsc['fcrepo'].Pairtree),
+            (nsc['fcrepo'].hasParent, nsc['fcres'][parent_uid]),
+        )
+        for p, o in props:
+            self.ds.graph(PTREE_GR_URI).add((nsc['fcres'][uid], p, o))
+
+
+    def delete_path_segment(self, uid):
+        '''
+        Delete a pairtree segment.
+        '''
+        self.ds.graph(PTREE_GR_URI).delete((nsc['fcres'][uid], None, None))
 
 
     ## PROTECTED MEMBERS ##

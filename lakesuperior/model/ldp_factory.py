@@ -1,6 +1,6 @@
 import logging
 
-#from pprint import pformat
+from pprint import pformat
 
 import rdflib
 
@@ -10,6 +10,7 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior import model
+from lakesuperior.model.generic_resource import PathSegment
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (IncompatibleLdpTypeError,
         InvalidResourceError, ResourceNotExistsError)
@@ -42,8 +43,8 @@ class LdpFactory:
         imr_urn = nsc['fcres'][uid]
 
         rsrc_meta = current_app.rdfly.get_metadata(uid)
-        #__class__._logger.debug('Extracted metadata: {}'.format(
-        #        pformat(set(rsrc_meta.graph))))
+        __class__._logger.debug('Extracted metadata: {}'.format(
+                pformat(set(rsrc_meta.graph))))
         rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
 
         if __class__.LDP_NR_TYPE in rdf_types:
@@ -52,6 +53,8 @@ class LdpFactory:
         elif __class__.LDP_RS_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-RS.')
             rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
+        elif nsc['fcsystem']['PathSegment'] in rdf_types:
+            return PathSegment(uid)
         else:
             raise ResourceNotExistsError(uid)
 

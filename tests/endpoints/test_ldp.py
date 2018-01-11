@@ -80,8 +80,9 @@ class TestLdp:
 
         assert self.client.get(path).status_code == 200
 
-        assert self.client.put('/ldp/test_tree/a').status_code == 409
-        assert self.client.post('/ldp/test_tree/a').status_code == 409
+        assert self.client.put('/ldp/test_tree/a').status_code == 201
+        assert self.client.post('/ldp/test_tree/a').status_code == 201
+        # @TODO More thorough testing of contents
 
 
     def test_put_nested_tree(self, client):

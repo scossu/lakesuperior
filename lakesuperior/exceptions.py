@@ -64,6 +64,18 @@ class IncompatibleLdpTypeError(ResourceError):
 
 
 
+class PathSegmentError(ResourceError):
+    '''
+    Raised when a LDP-NR resource is a path segment.
+
+    This may be an expected result and may be handled to return a 200.
+    '''
+    def __str__(self):
+        return self.msg or 'Resource \'{}\' is a path segment.'.format(
+                self.uid)
+
+
+
 class ServerManagedTermError(RuntimeError):
     '''
     Raised in an attempt to change a triple containing a server-managed term.

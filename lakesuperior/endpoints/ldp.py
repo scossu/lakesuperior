@@ -17,6 +17,7 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import (ResourceNotExistsError, TombstoneError,
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
         ResourceExistsError, IncompatibleLdpTypeError)
+from lakesuperior.model.generic_resource import PathSegment
 from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
@@ -130,9 +131,11 @@ def get_resource(uid, force_rdf=False):
         return _tombstone_response(e, uid)
     else:
         out_headers.update(rsrc.head())
-        if isinstance(rsrc, LdpRs) \
-                or is_accept_hdr_rdf_parsable() \
-                or force_rdf:
+        if (
+                isinstance(rsrc, LdpRs)
+                or isinstance(rsrc, PathSegment)
+                or is_accept_hdr_rdf_parsable()
+                or force_rdf):
             rsp = rsrc.get()
             return negotiate_content(rsp, out_headers)
         else:
@@ -459,17 +462,16 @@ def uuid_for_post(parent_uid, slug=None):
     parent = LdpFactory.from_stored(parent_uid,
             repr_opts={'incl_children' : False})
 
-    if nsc['fcrepo'].Pairtree in parent.types:
-        raise InvalidResourceError(parent.uid,
-                'Resource {} cannot be created under a pairtree.')
+    #if isintance(parent, PathSegment):
+    #    raise InvalidResourceError(parent.uid,
+    #            'Resource {} cannot be created under a pairtree.')
 
     # Set prefix.
     if parent_uid:
-        logger.debug('Parent types: {}'.format(pformat(parent.types)))
-        if nsc['ldp'].Container not in parent.types:
+        if (not isinstance(parent, PathSegment)
+                and nsc['ldp'].Container not in parent.types):
             raise InvalidResourceError(parent_uid,
                     'Parent {} is not a container.')
-
         pfx = parent_uid + '/'
     else:
         pfx = ''
