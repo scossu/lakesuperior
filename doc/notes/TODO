@@ -59,10 +59,19 @@
 
 # Alpha 4 TODO
 
+- [W] Reorganize pairtrees
+- [W] Fix basic Hyrax workflows
+  - [D] Simple ingest
+  - [ ] Batch ingest
+  - [ ] Update
+  - [W] Delete
+
+# Alpha 5 TODO
+
 - [ ] Complete revert to version and resurrect
 - [ ] Explore alternative backends
 
-# Alpha 5 TODO
+# Alpha 6 TODO
 
 - [ ] Migration tool
 - [ ] Complete header handling
@@ -75,14 +84,14 @@
   - [ ] Others
 - [ ] Query API
 
-# Alpha 6 TODO
+# Alpha 7 TODO
 
 - [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 7 TODO
+# Alpha 8 TODO
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z

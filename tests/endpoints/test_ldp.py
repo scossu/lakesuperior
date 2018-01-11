@@ -281,17 +281,17 @@ class TestLdp:
         # @TODO Leave commented until a decision is made about SSR.
         #assert self.client.patch(
         #    path, data=nossr_qry,
-        #    headers={'content-type' : 'application/sparql-update'}
+        #    headers={'content-type': 'application/sparql-update'}
         #).status_code == 412
 
         assert self.client.patch(
             path, data=abs_qry,
-            headers={'content-type' : 'application/sparql-update'}
+            headers={'content-type': 'application/sparql-update'}
         ).status_code == 204
 
         assert self.client.patch(
             path, data=frag_qry,
-            headers={'content-type' : 'application/sparql-update'}
+            headers={'content-type': 'application/sparql-update'}
         ).status_code == 204
 
 
