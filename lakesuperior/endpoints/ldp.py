@@ -60,7 +60,7 @@ std_headers = {
 
 '''Predicates excluded by view.'''
 vw_blacklist = {
-    nsc['fcrepo'].contains,
+    nsc['fcsystem'].contains,
 }
 
 @ldp.url_defaults

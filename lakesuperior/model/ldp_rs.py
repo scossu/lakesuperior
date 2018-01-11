@@ -1,4 +1,4 @@
-from copy import deepcopy
+#from copy import deepcopy
 
 from flask import g
 from rdflib import Graph
@@ -103,7 +103,7 @@ class Ldpc(LdpRs):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types = super().base_types | {
+        self.base_types |= {
             nsc['fcrepo'].Container,
             nsc['ldp'].Container,
         }
@@ -114,7 +114,7 @@ class LdpBc(Ldpc):
     '''LDP-BC (LDP Basic Container).'''
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types = super().base_types | {
+        self.base_types |= {
             nsc['ldp'].BasicContainer,
         }
 
@@ -125,7 +125,7 @@ class LdpDc(Ldpc):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types = super().base_types | {
+        self.base_types |= {
             nsc['ldp'].DirectContainer,
         }
 
@@ -136,7 +136,7 @@ class LdpIc(Ldpc):
 
     def __init__(self, uuid, *args, **kwargs):
         super().__init__(uuid, *args, **kwargs)
-        self.base_types = super().base_types | {
+        self.base_types |= {
             nsc['ldp'].IndirectContainer,
         }
 

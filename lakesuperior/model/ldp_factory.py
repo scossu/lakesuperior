@@ -1,6 +1,6 @@
 import logging
 
-from pprint import pformat
+#from pprint import pformat
 
 import rdflib
 

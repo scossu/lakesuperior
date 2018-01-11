@@ -294,7 +294,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 self._version_info = self.rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
-                self._version_info = Graph()
+                self._version_info = Resource(Graph(), self.urn)
 
         return self._version_info
 
@@ -961,35 +961,34 @@ class Ldpr(metaclass=ABCMeta):
         @param cont_rsrc (rdflib.resource.Resouce)  The container resource.
         '''
         cont_p = set(cont_rsrc.metadata.graph.predicates())
-        add_trp = set()
 
         self._logger.info('Checking direct or indirect containment.')
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
-        add_trp.add((self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn))
+        add_trp = {(self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn)}
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            s = g.tbox.localize_term(
-                    cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier)
+            s = cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier
             p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
 
             if cont_rsrc.metadata[RDF.type : nsc['ldp'].DirectContainer]:
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
-                add_trp.add((s, p, self.urn))
+                o = self.urn
 
             elif cont_rsrc.metadata[RDF.type : nsc['ldp'].IndirectContainer] \
                    and self.INS_CNT_REL_URI in cont_p:
                 self._logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
                         self.INS_CNT_REL_URI).identifier
-                target_uri = self.provided_metadata.value(
-                        cont_rel_uri).identifier
-                self._logger.debug('Target URI: {}'.format(target_uri))
-                if target_uri:
-                    self._logger.debug('Creating IC triples.')
-                    add_trp.add((s, p, target_uri))
+                #import pdb; pdb.set_trace()
+                o = self.provided_imr.value(cont_rel_uri).identifier
+                self._logger.debug('Target URI: {}'.format(o))
+                self._logger.debug('Creating IC triples.')
+
+            target_rsrc = LdpFactory.from_stored(g.tbox.uri_to_uuid(s))
+            target_rsrc._modify_rsrc(self.RES_UPDATED, add_trp={(s, p, o)})
 
         self._modify_rsrc(self.RES_UPDATED, add_trp=add_trp)
 
