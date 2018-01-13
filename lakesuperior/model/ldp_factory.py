@@ -115,7 +115,8 @@ class LdpFactory:
             if inst.is_stored and __class__.LDP_NR_TYPE in inst.ldp_types:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
-            inst._check_mgd_terms(inst.provided_imr.graph)
+            if kwargs.get('handling', 'strict') != 'none':
+                inst._check_mgd_terms(inst.provided_imr.graph)
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.

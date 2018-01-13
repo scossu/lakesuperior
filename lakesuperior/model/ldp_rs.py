@@ -1,7 +1,9 @@
 #from copy import deepcopy
 
-from flask import g
+from flask import current_app, g
 from rdflib import Graph
+from rdflib.plugins.sparql.algebra import translateUpdate
+from rdflib.plugins.sparql.parser import parseUpdate
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr, atomic
@@ -47,54 +49,88 @@ class LdpRs(Ldpr):
 
         @param update_str (string) SPARQL-Update staements.
         '''
+        self.handling = 'strict'
         local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
-        delta = self._sparql_delta(local_update_str)
-        #self._ensure_single_subject_rdf(delta[0], add_fragment=False)
-        #self._ensure_single_subject_rdf(delta[1])
 
-        return self._modify_rsrc(self.RES_UPDATED, *delta)
+        return self._sparql_update(local_update_str)
 
 
-    def _sparql_delta(self, q):
+    def _sparql_update(self, update_str, notify=True):
         '''
-        Calculate the delta obtained by a SPARQL Update operation.
+        Apply a SPARQL update to a resource.
 
-        This is a critical component of the SPARQL update prcess and does a
-        couple of things:
+        The SPARQL string is validated beforehand to make sure that it does
+        not contain server-managed terms.
 
-        1. It ensures that no resources outside of the subject of the request
-        are modified (e.g. by variable subjects)
-        2. It verifies that none of the terms being modified is server managed.
-
-        This method extracts an in-memory copy of the resource and performs the
-        query on that once it has checked if any of the server managed terms is
-        in the delta. If it is, it raises an exception.
-
-        NOTE: This only checks if a server-managed term is effectively being
-        modified. If a server-managed term is present in the query but does not
-        cause any change in the updated resource, no error is raised.
-
-        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
-        with `BaseStoreLayout.update_resource` and/or recorded as separate
-        events in a provenance tracking system.
+        In theory, server-managed terms in DELETE statements are harmless
+        because the patch is only applied over the user-provided triples, but
+        at the moment those are also checked.
         '''
-        #self._logger.debug('Provided SPARQL query: {}'.format(q))
-        pre_gr = self.imr.graph
+        # Parse the SPARQL update string and validate contents.
+        qry_struct = translateUpdate(parseUpdate(update_str))
+        check_ins_gr = Graph()
+        check_del_gr = Graph()
+        for stmt in qry_struct:
+            try:
+                check_ins_gr += set(stmt.insert.triples)
+            except AttributeError:
+                pass
+            try:
+                check_del_gr += set(stmt.delete.triples)
+            except AttributeError:
+                pass
 
-        post_gr = pre_gr | Graph()
-        post_gr.update(q)
+        self._check_mgd_terms(check_ins_gr)
+        self._check_mgd_terms(check_del_gr)
 
-        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+        self.rdfly.patch_rsrc(self.uid, update_str)
 
-        #self._logger.debug('Removing: {}'.format(
-        #    remove_gr.serialize(format='turtle').decode('utf8')))
-        #self._logger.debug('Adding: {}'.format(
-        #    add_gr.serialize(format='turtle').decode('utf8')))
+        if notify and current_app.config.get('messaging'):
+            self._send_msg(self.RES_UPDATED, check_del_gr, check_ins_gr)
 
-        remove_gr = self._check_mgd_terms(remove_gr)
-        add_gr = self._check_mgd_terms(add_gr)
+        return self.RES_UPDATED
 
-        return set(remove_gr), set(add_gr)
+
+    #def _sparql_delta(self, q):
+    #    '''
+    #    Calculate the delta obtained by a SPARQL Update operation.
+
+    #    This is a critical component of the SPARQL update prcess and does a
+    #    couple of things:
+
+    #    1. It ensures that no resources outside of the subject of the request
+    #    are modified (e.g. by variable subjects)
+    #    2. It verifies that none of the terms being modified is server managed.
+
+    #    This method extracts an in-memory copy of the resource and performs the
+    #    query on that once it has checked if any of the server managed terms is
+    #    in the delta. If it is, it raises an exception.
+
+    #    NOTE: This only checks if a server-managed term is effectively being
+    #    modified. If a server-managed term is present in the query but does not
+    #    cause any change in the updated resource, no error is raised.
+
+    #    @return tuple(rdflib.Graph) Remove and add graphs. These can be used
+    #    with `BaseStoreLayout.update_resource` and/or recorded as separate
+    #    events in a provenance tracking system.
+    #    '''
+    #    self._logger.debug('Provided SPARQL query: {}'.format(q))
+    #    pre_gr = self.imr.graph
+
+    #    post_gr = pre_gr | Graph()
+    #    post_gr.update(q)
+
+    #    remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+
+    #    #self._logger.debug('Removing: {}'.format(
+    #    #    remove_gr.serialize(format='turtle').decode('utf8')))
+    #    #self._logger.debug('Adding: {}'.format(
+    #    #    add_gr.serialize(format='turtle').decode('utf8')))
+
+    #    remove_gr = self._check_mgd_terms(remove_gr)
+    #    add_gr = self._check_mgd_terms(add_gr)
+
+    #    return set(remove_gr), set(add_gr)
 
 
 

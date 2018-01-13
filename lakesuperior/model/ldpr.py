@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import arrow
 
-from flask import current_app, g, request
+from flask import current_app, g
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
@@ -38,7 +38,7 @@ def atomic(fn):
     transaction.
     '''
     def wrapper(self, *args, **kwargs):
-        request.changelog = []
+        g.changelog = []
         try:
             ret = fn(self, *args, **kwargs)
         except:
@@ -51,7 +51,7 @@ def atomic(fn):
             #    # @FIXME ugly.
             #    self.rdfly._conn.optimize_edits()
             self.rdfly.store.commit()
-            for ev in request.changelog:
+            for ev in g.changelog:
                 #self._logger.info('Message: {}'.format(pformat(ev)))
                 self._send_event_msg(*ev)
             return ret
@@ -493,7 +493,6 @@ class Ldpr(metaclass=ABCMeta):
         ORDER BY DESC(?ts)
         LIMIT 1
         ''')
-        #import pdb; pdb.set_trace()
         ver_uid = str(ver_rsp.bindings[0]['uid'])
         ver_trp = set(self.rdfly.get_metadata(self.uid, ver_uid).graph)
 
@@ -577,8 +576,9 @@ class Ldpr(metaclass=ABCMeta):
 
     def _is_trp_managed(self, t):
         '''
-        Return whether a triple is server-managed.
-        This is true if one of its terms is in the managed terms list.
+        Whether a triple is server-managed.
+
+        @return boolean
         '''
         return t[1] in srv_mgd_predicates or (
                 t[1] == RDF.type and t[2] in srv_mgd_types)
@@ -718,6 +718,18 @@ class Ldpr(metaclass=ABCMeta):
         #    if not isinstance(trp, set):
         #        trp = set(trp)
 
+        ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+
+        if notify and current_app.config.get('messaging'):
+            self._send_msg(ev_type, remove_trp, add_trp)
+
+        return ret
+
+
+    def _send_msg(self, ev_type, remove_trp=None, add_trp=None):
+        '''
+        Sent a message about a changed (created, modified, deleted) resource.
+        '''
         try:
             type = self.types
             actor = self.metadata.value(nsc['fcrepo'].createdBy)
@@ -730,17 +742,12 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
-        ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
-
-        if notify and current_app.config.get('messaging'):
-            request.changelog.append((set(remove_trp), set(add_trp), {
-                'ev_type' : ev_type,
-                'time' : g.timestamp,
-                'type' : type,
-                'actor' : actor,
-            }))
-
-        return ret
+        g.changelog.append((set(remove_trp), set(add_trp), {
+            'ev_type' : ev_type,
+            'time' : g.timestamp,
+            'type' : type,
+            'actor' : actor,
+        }))
 
 
     # Not used. @TODO Deprecate or reimplement depending on requirements.
@@ -781,10 +788,6 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Check whether server-managed terms are in a RDF payload.
         '''
-        # @FIXME Need to be more consistent
-        if getattr(self, 'handling', 'none') == 'none':
-            return gr
-
         offending_subjects = set(gr.subjects()) & srv_mgd_subjects
         if offending_subjects:
             if self.handling=='strict':
@@ -987,7 +990,6 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
                         self.INS_CNT_REL_URI).identifier
-                #import pdb; pdb.set_trace()
                 o = self.provided_imr.value(cont_rel_uri).identifier
                 self._logger.debug('Target URI: {}'.format(o))
                 self._logger.debug('Creating IC triples.')

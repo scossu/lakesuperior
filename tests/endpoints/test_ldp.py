@@ -478,16 +478,29 @@ class TestPrefHeader:
         '''
         Trying to PUT an existing resource should:
 
-        - Return a 204 if the payload is empty
+        - Return a 409 if the payload is empty
         - Return a 204 if the payload is RDF, server-managed triples are
           included and the 'Prefer' header is set to 'handling=lenient'
         - Return a 412 (ServerManagedTermError) if the payload is RDF,
-          server-managed triples are included and handling is set to 'strict'
+          server-managed triples are included and handling is set to 'strict',
+          or not set.
         '''
         path = '/ldp/put_pref_header01'
         assert self.client.put(path).status_code == 201
         assert self.client.get(path).status_code == 200
         assert self.client.put(path).status_code == 409
+
+        # Default handling is strict.
+        with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
+            rsp_default = self.client.put(
+                path,
+                headers={
+                    'Content-Type' : 'text/turtle',
+                },
+                data=f
+            )
+        assert rsp_default.status_code == 412
+
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
             rsp_len = self.client.put(
                 path,
@@ -498,6 +511,7 @@ class TestPrefHeader:
                 data=f
             )
         assert rsp_len.status_code == 204
+
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
             rsp_strict = self.client.put(
                 path,

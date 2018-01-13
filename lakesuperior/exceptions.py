@@ -82,7 +82,7 @@ class ServerManagedTermError(RuntimeError):
 
     This usually surfaces at the HTTP level as a 409 or other error.
     '''
-    def __init__(self, terms, term_type):
+    def __init__(self, terms, term_type=None):
         if term_type == 's':
             term_name = 'subject'
         elif term_type == 'p':

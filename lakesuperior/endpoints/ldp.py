@@ -526,17 +526,16 @@ def _get_bitstream(rsrc):
 
 def _tombstone_response(e, uid):
     headers = {
-        'Link' : '<{}/fcr:tombstone>; rel="hasTombstone"'.format(request.url),
+        'Link': '<{}/fcr:tombstone>; rel="hasTombstone"'.format(request.url),
     } if e.uid == uid else {}
     return str(e), 410, headers
-
 
 
 def set_post_put_params():
     '''
     Sets handling and content disposition for POST and PUT by parsing headers.
     '''
-    handling = None
+    handling = 'strict'
     if 'prefer' in request.headers:
         prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(prefer))

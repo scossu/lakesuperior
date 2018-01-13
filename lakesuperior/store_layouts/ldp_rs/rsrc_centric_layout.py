@@ -314,6 +314,23 @@ class RsrcCentricLayout:
         return self._parse_construct(qry, init_bindings={'s': uri})
 
 
+    def patch_rsrc(self, uid, qry):
+        '''
+        Patch a resource with SPARQL-Update statements.
+
+        The statement(s) is/are executed on the user-provided graph only
+        to ensure that the scope is limited to the resource.
+
+        @param uid (string) UID of the resource to be patched.
+        @param qry (dict) Parsed and translated query, or query string.
+        '''
+        gr = self.ds.graph(nsc['fcmain'][uid])
+        self._logger.debug('Updating graph {} with statements: {}'.format(
+            nsc['fcmain'][uid], qry))
+
+        return gr.update(qry)
+
+
     def purge_rsrc(self, uid, inbound=True, backup_uid=None):
         '''
         Completely delete a resource and (optionally) its references.
