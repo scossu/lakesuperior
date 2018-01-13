@@ -49,8 +49,9 @@ class LdpRs(Ldpr):
 
         @param update_str (string) SPARQL-Update staements.
         '''
-        self.handling = 'strict'
+        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
         local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
+        self._logger.debug('Local update string: {}'.format(local_update_str))
 
         return self._sparql_update(local_update_str)
 
@@ -87,6 +88,10 @@ class LdpRs(Ldpr):
 
         if notify and current_app.config.get('messaging'):
             self._send_msg(self.RES_UPDATED, check_del_gr, check_ins_gr)
+
+        # @FIXME Ugly workaround until we find how to recompose a SPARQL query
+        # string from a parsed query object.
+        self.rdfly.clear_smt(self.uid)
 
         return self.RES_UPDATED
 

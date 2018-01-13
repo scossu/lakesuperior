@@ -11,6 +11,8 @@ from rdflib.term import Literal
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
+        srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
 
@@ -471,6 +473,21 @@ class RsrcCentricLayout:
         Delete a pairtree segment.
         '''
         self.ds.graph(PTREE_GR_URI).delete((nsc['fcres'][uid], None, None))
+
+
+    def clear_smt(self, uid):
+        '''
+        This is an ugly way to deal with lenient SPARQL update statements
+        that may insert server-managed triples into a user graph.
+
+        @TODO Deprecate when a solution to provide a sanitized SPARQL update
+        sring is found.
+        '''
+        gr = self.ds.graph(nsc['fcmain'][uid])
+        for p in srv_mgd_predicates:
+            gr.remove((None, p, None))
+        for t in srv_mgd_types:
+            gr.remove((None, RDF.type, t))
 
 
     ## PROTECTED MEMBERS ##

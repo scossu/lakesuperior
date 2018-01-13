@@ -134,7 +134,7 @@ Clients are encouraged to omit LDP types in PUT, POST and PATCH requests.
 ### Lenient handling
 
 FCREPO4 requires server-managed triples to be expressly indicated in a PUT
-request, unless the `Prefer` heeader is set to
+request, unless the `Prefer` header is set to
 `handling=lenient; received="minimal"`, in which case the RDF payload must not
 have any server-managed triples.
 

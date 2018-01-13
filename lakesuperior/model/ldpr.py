@@ -107,17 +107,26 @@ class Ldpr(metaclass=ABCMeta):
     RES_DELETED = '_delete_'
     RES_UPDATED = '_update_'
 
+    # RDF Types that populate a new resource.
     base_types = {
         nsc['fcrepo'].Resource,
         nsc['ldp'].Resource,
         nsc['ldp'].RDFSource,
     }
 
+    # Predicates that do not get removed when a resource is replaced.
     protected_pred = (
         nsc['fcrepo'].created,
         nsc['fcrepo'].createdBy,
         nsc['ldp'].contains,
     )
+
+    # Server-managed RDF types ignored in the RDF payload if the resource is
+    # being created. N.B. These still raise an error if the resource exists.
+    smt_allow_on_create = {
+        nsc['ldp'].DirectContainer,
+        nsc['ldp'].IndirectContainer,
+    }
 
     _logger = logging.getLogger(__name__)
 
@@ -787,6 +796,8 @@ class Ldpr(metaclass=ABCMeta):
     def _check_mgd_terms(self, gr):
         '''
         Check whether server-managed terms are in a RDF payload.
+
+        @param gr (rdflib.Graph) The graph to validate.
         '''
         offending_subjects = set(gr.subjects()) & srv_mgd_subjects
         if offending_subjects:
@@ -798,6 +809,7 @@ class Ldpr(metaclass=ABCMeta):
                     gr.remove((s, None, None))
 
         offending_predicates = set(gr.predicates()) & srv_mgd_predicates
+        # Allow some predicates if the resource is being created.
         if offending_predicates:
             if self.handling=='strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
@@ -807,6 +819,8 @@ class Ldpr(metaclass=ABCMeta):
                     gr.remove((None, p, None))
 
         offending_types = set(gr.objects(predicate=RDF.type)) & srv_mgd_types
+        if not self.is_stored:
+            offending_types -= self.smt_allow_on_create
         if offending_types:
             if self.handling=='strict':
                 raise ServerManagedTermError(offending_types, 't')
