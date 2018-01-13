@@ -474,9 +474,12 @@ class Ldpr(metaclass=ABCMeta):
             ret = self._purge_rsrc(inbound)
 
         for child_uri in children:
-            child_rsrc = LdpFactory.from_stored(
-                g.tbox.uri_to_uuid(child_uri.identifier),
-                repr_opts={'incl_children' : False})
+            try:
+                child_rsrc = LdpFactory.from_stored(
+                    g.tbox.uri_to_uuid(child_uri.identifier),
+                    repr_opts={'incl_children' : False})
+            except (TombstoneError, ResourceNotExistsError):
+                continue
             if leave_tstone:
                 child_rsrc._bury_rsrc(inbound, tstone_pointer=self.urn)
             else:
