@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
 from lakesuperior.app import create_app

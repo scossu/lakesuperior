@@ -106,6 +106,13 @@ class RsrcCentricLayout:
         },
     }
 
+    # RDF types of graphs by prefix.
+    graph_ns_types = {
+        nsc['fcadmin']: nsc['fcsystem'].AdminGraph,
+        nsc['fcmain']: nsc['fcsystem'].UserProvidedGraph,
+        nsc['fcstruct']: nsc['fcsystem'].StructureGraph,
+    }
+
 
     ## MAGIC METHODS ##
 
@@ -135,6 +142,23 @@ class RsrcCentricLayout:
         which is formatted for human readability and to avoid repetition.
         The attributes not mapped here (usually user-provided triples with no
         special meaning to the application) go to the `fcmain:` graph.
+
+        The output of this is a dict with a similar structure:
+
+        {
+            'p': {
+                <Predicate P1>: <destination graph G1>,
+                <Predicate P2>: <destination graph G1>,
+                <Predicate P3>: <destination graph G1>,
+                <Predicate P4>: <destination graph G2>,
+                [...]
+            },
+            't': {
+                <RDF Type T1>: <destination graph G1>,
+                <RDF Type T2>: <destination graph G3>,
+                [...]
+            }
+        }
         '''
         if not hasattr(self, '_attr_routes'):
             self._attr_routes = {'p': {}, 't': {}}
@@ -199,24 +223,28 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
         if incl_children:
-            incl_child_qry = 'FROM {}'.format(nsc['fcstruct'][uid].n3())
+            incl_child_qry = ''
             if embed_children:
                 pass # Not implemented. May never be.
         else:
-            incl_child_qry = ''
+            incl_child_qry = (
+                    '\n FILTER NOT EXISTS { ?g a fcsystem:StructureGraph .}')
 
         qry = '''
-        CONSTRUCT
-        FROM {ag}
-        FROM {sg}
-        {chld}
-        WHERE {{ ?s ?p ?o . }}
-        '''.format(
-                ag=nsc['fcadmin'][uid].n3(),
-                sg=nsc['fcmain'][uid].n3(),
-                chld=incl_child_qry,
-            )
-        gr = self._parse_construct(qry)
+        CONSTRUCT {?s ?p ?o . }
+        WHERE {
+          GRAPH fcsystem:meta {
+            ?g foaf:primaryTopic ?rsrc .
+          }
+          GRAPH ?g { ?s ?p ?o . }
+        ''' + incl_child_qry + '\n}'
+
+        gr = self._parse_construct(qry, init_bindings={
+            'rsrc': nsc['fcres'][uid],
+            'ag': nsc['fcadmin'][uid],
+            'mg': nsc['fcmain'][uid],
+            'sg': nsc['fcstruct'][uid],
+        })
 
         if incl_inbound and len(gr):
             gr += self.get_inbound_rel(nsc['fcres'][uid])
@@ -396,16 +424,23 @@ class RsrcCentricLayout:
         add_routes = defaultdict(set)
         historic = VERS_CONT_LABEL in uid
 
+        graph_types = set() # Graphs that need RDF type metadata added.
         # Create add and remove sets for each graph.
         for t in remove_trp:
-            target_gr_uri = self._map_graph_uri(t, uid)
+            map_graph = self._map_graph_uri(t, uid)
+            target_gr_uri = map_graph[0]
             remove_routes[target_gr_uri].add(t)
+            graph_types.add(map_graph)
         for t in add_trp:
-            target_gr_uri = self._map_graph_uri(t, uid)
+            map_graph = self._map_graph_uri(t, uid)
+            target_gr_uri = map_graph[0]
             add_routes[target_gr_uri].add(t)
+            graph_types.add(map_graph)
 
         # Decide if metadata go into historic or current graph.
-        meta_uri = HIST_GR_URI if historic else META_GR_URI
+        meta_gr_uri = HIST_GR_URI if historic else META_GR_URI
+        meta_gr = self.ds.graph(meta_gr_uri)
+
         # Remove and add triple sets from each graph.
         for gr_uri, trp in remove_routes.items():
             gr = self.ds.graph(gr_uri)
@@ -414,16 +449,18 @@ class RsrcCentricLayout:
             gr = self.ds.graph(gr_uri)
             gr += trp
             # Add metadata.
-            self.ds.graph(meta_uri).set((
-                gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
-            self.ds.graph(meta_uri).set((
-                gr_uri, nsc['fcrepo'].created, g.timestamp_term))
+            meta_gr.set((gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
+            meta_gr.set((gr_uri, nsc['fcrepo'].created, g.timestamp_term))
             if historic:
                 # @FIXME Ugly reverse engineering.
                 ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')
-                self.ds.graph(meta_uri).set((
+                meta_gr.set((
                     gr_uri, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
             # @TODO More provenance metadata can be added here.
+
+        # Add graph RDF types.
+        for gr_uri, gr_type in graph_types:
+            meta_gr.add((gr_uri, RDF.type, gr_type))
 
 
     def delete_rsrc_data(self, uid):
@@ -527,10 +564,14 @@ class RsrcCentricLayout:
     def _map_graph_uri(self, t, uid):
         '''
         Map a triple to a namespace prefix corresponding to a graph.
+
+        @return Tuple with a graph URI and an associated RDF type.
         '''
         if t[1] in self.attr_routes['p'].keys():
-            return self.attr_routes['p'][t[1]][uid]
+            pfx = self.attr_routes['p'][t[1]]
         elif t[1] == RDF.type and t[2] in self.attr_routes['t'].keys():
-            return self.attr_routes['t'][t[2]][uid]
+            pfx = self.attr_routes['t'][t[2]]
         else:
-            return nsc['fcmain'][uid]
+            pfx = nsc['fcmain']
+
+        return (pfx[uid], self.graph_ns_types[pfx])

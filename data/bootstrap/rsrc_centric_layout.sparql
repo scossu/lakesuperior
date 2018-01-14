@@ -16,7 +16,9 @@ INSERT DATA {
   }
 
   GRAPH <info:fcsystem/meta> {
-    <info:fcsystem/graph/admin/> foaf:primaryTopic <info:fcres/> .
-    <info:fcsystem/graph/userdata/_main/> foaf:primaryTopic <info:fcres/> .
+    <info:fcsystem/graph/admin/> a <info:fcsystem/AdminGraph> ;
+      foaf:primaryTopic <info:fcres/> .
+    <info:fcsystem/graph/userdata/_main/> a <info:fcsystem/UserProvidedGraph> ;
+      foaf:primaryTopic <info:fcres/> .
   }
 }
