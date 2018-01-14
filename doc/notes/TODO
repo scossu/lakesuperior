@@ -1,4 +1,4 @@
-# Alpha 1 TODO
+# Alpha 1
 
 - [D] Logging
 - [D] Server-managed triples
@@ -25,7 +25,7 @@
 - [D] Bootstrap
 
 
-# Alpha 2 TODO
+# Alpha 2
 
 - [D] Messaging SPI
 - [D] Refactor structure and flow
@@ -53,25 +53,30 @@
   - [D] PATCH
   - [D] DELETE (Purge)
 
-# Alpha 3 TODO
+# Alpha 3
 
 - [D] Use named graphs
 
-# Alpha 4 TODO
+# Alpha 4
 
 - [W] Reorganize pairtrees
-- [W] Fix basic Hyrax workflows
+- [D] Fix basic Hyrax workflows
   - [D] Simple ingest
-  - [ ] Batch ingest
-  - [ ] Update
-  - [W] Delete
+  - [D] Batch ingest
+  - [D] Update
+  - [D] Delete
+- [D] BDB backend
 
-# Alpha 5 TODO
+# Alpha 5
 
+- [ ] Query API
+  - [ ] SPARQL
+  - [ ] Simple query
 - [ ] Complete revert to version and resurrect
+- [ ] Atomic BDB operations
 - [ ] Explore alternative backends
 
-# Alpha 6 TODO
+# Alpha 6
 
 - [ ] Migration tool
 - [ ] Complete header handling
@@ -84,14 +89,14 @@
   - [ ] Others
 - [ ] Query API
 
-# Alpha 7 TODO
+# Alpha 7
 
 - [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 8 TODO
+# Alpha 8
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z
