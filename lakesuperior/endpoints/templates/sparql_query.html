@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block extra_js %}
+<link href="{{url_for('ldp.static', filename='assets/css/yasgui.min.css')}}" rel="stylesheet" type='text/css'/>
+<script src="{{url_for('ldp.static', filename='assets/js/yasgui.min.js')}}"></script>
+{% endblock %}
+{% block title %}SPARQL Query{% endblock %}
+{% block content %}
+<div id="sparql_ui"></div>
+<script type="text/javascript">
+    var yasgui = YASGUI(document.getElementById("sparql_ui"), {
+        catalogueEndpoints: [{endpoint: '{{url_for('query.sparql')}}'}],
+        endpoint: '{{url_for('query.sparql')}}',
+        tracker: {}
+    });
+</script>
+{% endblock %}

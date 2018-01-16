@@ -214,6 +214,13 @@ class RsrcCentricLayout:
         return self._parse_construct(qry, init_bindings=bindings)
 
 
+    def raw_query(self, qry_str):
+        '''
+        Perform a straight query to the graph store.
+        '''
+        return self.ds.query(qry_str)
+
+
     def extract_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, **kwargs):

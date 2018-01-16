@@ -1,4 +1,8 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, render_template
+from rdflib.plugin import PluginException
+
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.query import QueryEngine
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple
@@ -14,7 +18,13 @@ def find():
     '''
     Search by entering a search term and optional property and comparison term.
     '''
-    valid_operands = ('=', '>', '<', '<>')
+    valid_operands = (
+        ('=', 'Equals'),
+        ('>', 'Greater Than'),
+        ('<', 'Less Than'),
+        ('<>', 'Not Equal'),
+        ('a', 'RDF Type'),
+    )
 
     term = request.args.get('term')
     prop = request.args.get('prop', default=1)
@@ -22,12 +32,32 @@ def find():
     # @TODO
 
 
-@query.route('/sparql', methods=['POST'])
-def sparql(q):
+@query.route('/sparql', methods=['GET', 'POST'])
+def sparql():
     '''
     Perform a direct SPARQL query on the underlying triplestore.
 
     @param q SPARQL query string.
     '''
-    # @TODO
-    pass
+    accept_mimetypes = {
+        'text/csv': 'csv',
+        'application/sparql-results+json': 'json',
+        'application/sparql-results+xml': 'xml',
+    }
+    if request.method == 'GET':
+        return render_template('sparql_query.html', nsm=nsm)
+    else:
+        qres = QueryEngine().sparql_query(request.form['query'])
+        match = request.accept_mimetypes.best_match(accept_mimetypes.keys())
+        if match:
+            enc = accept_mimetypes[match]
+        else:
+            enc = request.accept_mimetypes.best
+
+        try:
+            out = qres.serialize(format=enc)
+        except PluginException:
+            return ('Unable to serialize results into format {}'.format(enc),
+                    406)
+
+    return out, 200

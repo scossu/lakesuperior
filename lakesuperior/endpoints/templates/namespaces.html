@@ -1,0 +1,25 @@
+<h2>Namespaces</h2>
+ <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#nslist" aria-expanded="false" aria-controls="nsList">
+    Expand/Collapse
+</button>
+<div class="collapse" id="nslist">
+    <div class="card card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <td>Prefix</td>
+                    <td>URI</td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ns in nsm.namespaces() | sort %}
+                <tr>
+                    <td>{{ ns[0] }}</td>
+                    <td>{{ ns[1] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
