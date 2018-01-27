@@ -220,17 +220,6 @@ class TestContext:
     '''
     Tests for context handling.
     '''
-    # Add empty graph
-    # Query graph → return graph
-    # Add triples to graph
-    # Query triples in graph → triples
-    # Query triples in default graph → no results
-    # Add another empty graph
-    # Delete graph with triples
-    # Query graph → no results
-    # Query triples → no results
-    # Delete empty graph
-    # Query graph → no results
     def test_add_graph(self, store):
         '''
         Test creating an empty and a non-empty graph.
@@ -240,6 +229,20 @@ class TestContext:
         with TxnManager(store, True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in store.contexts()
+
+
+    def test_empty_context(self, store):
+        '''
+        Test creating and deleting empty contexts.
+        '''
+        gr_uri = URIRef('urn:bogus:empty#a')
+
+        with TxnManager(store, True) as txn:
+            store.add_graph(gr_uri)
+            assert gr_uri in store.contexts()
+            store.ermove_graph(gr_uri)
+            assert gr_uri not in store.contexts()
+
 
     def test_add_trp_to_ctx(self, store):
         '''
@@ -277,8 +280,8 @@ class TestContext:
         '''
         Delete triples from a named graph and from the default graph.
         '''
-        gr_uri = URIRef('urn:bogus:graph#a') # From previous test
-        gr2_uri = URIRef('urn:bogus:graph#b') # Never created before
+        gr_uri = URIRef('urn:bogus:graph#a')
+        gr2_uri = URIRef('urn:bogus:graph#b')
 
         with TxnManager(store, True) as txn:
             store.remove((None, None, None))
