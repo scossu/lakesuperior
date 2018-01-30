@@ -185,7 +185,6 @@ class RsrcCentricLayout:
             self.ds.update(f.read())
 
         self.ds.store.commit()
-        self.ds.store.close()
 
 
     def get_raw(self, uri, ctx):

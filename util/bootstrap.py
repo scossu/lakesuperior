@@ -7,8 +7,7 @@ sys.path.append('.')
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.ldp_rs.bdb_connector import \
-        BdbConnector
+from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
 from lakesuperior.model.ldpr import Ldpr
 
 __doc__ = '''
@@ -45,5 +44,10 @@ if __name__=='__main__':
         sys.exit()
 
     app = create_app(config['application'], config['logging'])
-    app.rdfly.bootstrap()
+    if hasattr(app.rdfly.store, 'begin'):
+        with TxnManager(app.rdfly.store, write=True) as txn:
+            app.rdfly.bootstrap()
+    else:
+        app.rdfly.bootstrap()
+
     bootstrap_binary_store(app)

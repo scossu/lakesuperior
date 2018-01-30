@@ -9,7 +9,7 @@ from urllib.request import pathname2url
 import lmdb
 
 from rdflib.store import Store, VALID_STORE, NO_STORE
-from rdflib import Namespace, URIRef
+from rdflib import Graph, Namespace, URIRef
 
 
 logger = logging.getLogger(__name__)
@@ -61,14 +61,14 @@ class TxnManager(ContextDecorator):
         self.write = write
 
     def __enter__(self):
-        self.txn = self.store.begin(write=self.write)
+        self._txn = self.store.begin(write=self.write)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
             self.store.rollback()
         else:
             self.store.commit()
-        return True
+        #return True
 
 
 class LmdbStore(Store):
@@ -139,11 +139,13 @@ class LmdbStore(Store):
     db = None
     dbs = {}
     txn = None
+    is_txn_rw = None
 
 
     def __init__(self, path, identifier=None):
         self.__open = False
-        self.identifier = identifier
+
+        self.identifier = identifier or URIRef(pathname2url(abspath(path)))
         super(LmdbStore, self).__init__(path)
 
         self._pickle = self.node_pickler.dumps
@@ -167,9 +169,6 @@ class LmdbStore(Store):
         This method is called outside of the main transaction. All cursors
         are created separately within the transaction.
         '''
-        if self.identifier is None:
-            self.identifier = URIRef(pathname2url(abspath(path)))
-
         self._init_db_environment(path, create)
         if self.db_env == NO_STORE:
             return NO_STORE
@@ -185,6 +184,7 @@ class LmdbStore(Store):
         if not self.is_open:
             raise RuntimeError('Store must be opened first.')
         self.txn = self.db_env.begin(write=write, buffers=True)
+        self.is_txn_rw = write
         # Cursors.
         self.curs = self.get_data_cursors(self.txn)
         self.curs.update(self.get_idx_cursors(self.txn))
@@ -197,11 +197,11 @@ class LmdbStore(Store):
         '''
         try:
             self.txn.id()
-        except (lmdb.Error, AttributeError):
-            logger.info('Main transaction does not exist or is closed.')
+        except (lmdb.Error, AttributeError) as e:
+            #logger.info('Main transaction does not exist or is closed.')
             return False
         else:
-            logger.info('Main transaction is open.')
+            #logger.info('Main transaction is open.')
             return True
 
 
@@ -253,13 +253,26 @@ class LmdbStore(Store):
         self.db_env.close()
 
 
-    def add(self, triple, context=None):
+    def destroy(self, path):
+        '''
+        Destroy the store.
+
+        https://www.youtube.com/watch?v=lIVq7FJnPwg
+
+        @param path (string) Path of the folder containing the database(s).
+        '''
+        if exists(path):
+            rmtree(path)
+
+
+    def add(self, triple, context=None, quoted=False):
         '''
         Add a triple and start indexing.
 
         @param triple (tuple:rdflib.Identifier) Tuple of three identifiers.
         @param context (rdflib.Identifier | None) Context identifier.
         'None' inserts in the default graph.
+        @param quoted (bool) Not used.
         '''
         assert context != self, "Can not add triple directly to store"
         Store.add(self, triple, context)
@@ -267,8 +280,8 @@ class LmdbStore(Store):
         if self.DEFAULT_UNION:
             raise NotImplementedError()
             # @TODO
-        else:
-            context = context or self.DEFAULT_GRAPH_URI
+        elif context is None:
+            context = self.DEFAULT_GRAPH_URI
         pk_trp = self._pickle(triple)
         trp_key = hashlib.new(self.KEY_HASH_ALGO, pk_trp).digest()
 
@@ -276,14 +289,16 @@ class LmdbStore(Store):
         if self.curs['tk:t'].put(trp_key, pk_trp, overwrite=False):
             needs_indexing = True
 
-        pk_ctx = self._pickle(context)
+        pk_ctx = self._pickle(context.identifier) \
+                if isinstance(context, Graph) \
+                else self._pickle(context)
         if not self.curs['tk:c'].set_key_dup(trp_key, pk_ctx):
             self.curs['tk:c'].put(trp_key, pk_ctx)
             needs_indexing = True
 
         if needs_indexing:
-            # @TODO make await
-            self._update_indices(triple, trp_key, pk_ctx)
+            # @TODO make await; run outside of this txn
+            self._update_indices(trp_key, pk_ctx, triple=triple)
 
 
     def remove(self, triple_pattern, context=None):
@@ -293,14 +308,17 @@ class LmdbStore(Store):
         if self.DEFAULT_UNION:
             raise NotImplementedError()
             # @TODO
-        else:
-            context = context or self.DEFAULT_GRAPH_URI
-        pk_ctx = self._pickle(context)
-        for trp in self.triples(triple_pattern, context):
-            trp_key = self._to_key(trp)
+        elif context is None:
+            context = self.DEFAULT_GRAPH_URI
 
+        #import pdb; pdb.set_trace()
+        pk_ctx = self._pickle(context.identifier) \
+                if isinstance(context, Graph) \
+                else self._pickle(context)
+        for trp_key in self._triple_keys(triple_pattern, context):
             # Delete context association.
             if self.curs['tk:c'].set_key_dup(trp_key, pk_ctx):
+                triple = self._key_to_triple(trp_key)
                 self.curs['tk:c'].delete()
 
                 # If no other contexts are associated w/ the triple, delete it.
@@ -308,21 +326,27 @@ class LmdbStore(Store):
                         self.curs['tk:t'].set_key(trp_key)):
                     self.curs['tk:t'].delete()
 
-                # @TODO make await
-                self._update_indices(trp, trp_key, pk_ctx)
+                # @TODO make await; run outside of this txn
+                #import pdb; pdb.set_trace()
+                self._update_indices(trp_key, pk_ctx, triple)
 
 
     # @TODO Make async
-    def _update_indices(self, triple, trp_key, pk_ctx):
+    def _update_indices(self, trp_key, pk_ctx, triple=None):
         '''
         Update indices for a given triple.
 
         If the triple is found, add indices. if it is not found, delete them.
 
-        @param triple (tuple: rdflib.Identifier) Tuple of 3 RDFLib terms.
         @param key (bytes) Unique key associated with the triple.
         @param pk_ctx (bytes) Pickled context term.
+        @param triple (tuple: rdflib.Identifier) Tuple of 3 RDFLib terms.
+        This can be provided if already pre-calculated, otherwise it will be
+        retrieved from the store using `trp_key`.
         '''
+        if triple is None:
+            triple = self._key_to_triple(trp_key)
+
         s, p, o = triple
         term_keys = {
             'sk:tk': self._to_key(s),
@@ -353,61 +377,25 @@ class LmdbStore(Store):
     def triples(self, triple_pattern, context=None):
         '''
         Generator over matching triples.
+
+        @param triple_pattern (tuple) 3 RDFLib terms
+        @param context (rdflib.Graph | None) Context graph, if available.
+        If a graph is given, only its identifier is stored.
         '''
-        if context == self:
-            context = None
-
-        if self.DEFAULT_UNION:
-            raise NotImplementedError()
-            # In theory, this is what should happen:
-            #if context == self.DEFAULT_GRAPH_URI
-            #    # Any pattern with unbound context
-            #    for tk in self._lookup(triple_pattern, tkey):
-            #        yield self._key_to_triple(tk)
-            #    return
-        else:
-            context = context or self.DEFAULT_GRAPH_URI
-
-        tkey = self._to_key(triple_pattern)
-
-        # Shortcuts
-        pk_ctx = self._pickle(context)
-        if not self.curs['c:tk'].set_key(pk_ctx):
-            # Context not found.
-            return iter(())
-
-        # s p o c
-        if all(triple_pattern):
-            if self.curs['tk:c'].set_key_dup(tkey, pk_ctx):
-                yield self._key_to_triple(tkey)
-                return
-            else:
-                # Triple not found.
-                return iter(())
-
-        # ? ? ? c
-        elif not any(triple_pattern):
-            # Get all triples from the context
-            for tk in self.curs['c:tk'].iternext_dup():
-                yield self._key_to_triple(tk)
-
-        # Regular lookup.
-        else:
-            for tk in self._lookup(triple_pattern, tkey):
-                if self.curs['c:tk'].set_key_dup(pk_ctx, tk):
-                    yield self._key_to_triple(tk)
+        for tk in self._triple_keys(triple_pattern, context):
+            yield self._key_to_triple(tk), context
 
 
     def __len__(self, context=None):
         '''
         Return length of the dataset.
         '''
-        if context == self:
-            context = None
-        context = context or self.DEFAULT_GRAPH_URI
+        if context == self or context is None:
+            context = Graph(identifier=self.DEFAULT_GRAPH_URI)
 
-        if context is not self.DEFAULT_GRAPH_URI:
-            dataset = self.triples((None, None, None), context)
+        if context.identifier is not self.DEFAULT_GRAPH_URI:
+            #dataset = self.triples((None, None, None), context)
+            dataset = (tk for tk in self.curs['c:tk'].iternext_dup())
             return len(set(dataset))
         else:
             return self.txn.stat(self.dbs['tk:t'])['entries']
@@ -474,10 +462,22 @@ class LmdbStore(Store):
         '''
         Add a graph to the database.
 
+        This may be called by supposedly read-only operations:
+        https://github.com/RDFLib/rdflib/blob/master/rdflib/graph.py#L1623
+        Therefore it needs to open a write transaction. This is not ideal
+        but the only way to play well with RDFLib.
+
         @param graph (URIRef) URI of the named graph to add.
         '''
-        self.curs['tk:c'].put(self._pickle(None), self._pickle(graph))
-        self.curs['c:tk'].put(self._pickle(graph), self._pickle(None))
+        if not self.is_txn_rw:
+            with self.db_env.begin(write=True) as txn:
+                with txn.cursor(self.dbs['tk:c']) as tk2c_cur:
+                    tk2c_cur.put(self._pickle(None), self._pickle(graph))
+                with txn.cursor(self.dbs['c:tk']) as c2tk_cur:
+                    c2tk_cur.put(self._pickle(graph), self._pickle(None))
+        else:
+            self.curs['tk:c'].put(self._pickle(None), self._pickle(graph))
+            self.curs['c:tk'].put(self._pickle(graph), self._pickle(None))
 
 
     def remove_graph(self, graph):
@@ -499,18 +499,20 @@ class LmdbStore(Store):
 
     def commit(self):
         '''
-        Commit main write transaction.
+        Commit main transaction.
         '''
-        self.txn.commit()
-        self.txn = None
+        if self.is_txn_open:
+            self.txn.commit()
+        self.txn = self.is_txn_rw = None
 
 
     def rollback(self):
         '''
-        Roll back main write transaction.
+        Roll back main transaction.
         '''
-        self.txn.abort()
-        self.txn = None
+        if self.is_txn_open:
+            self.txn.abort()
+        self.txn = self.is_txn_rw = None
 
 
     #def _next_lex_key(self, db=None):
@@ -541,6 +543,65 @@ class LmdbStore(Store):
 
 
     ## PRIVATE METHODS ##
+
+    def _triple_keys(self, triple_pattern, context=None):
+        '''
+        Generator over matching triple keys.
+
+        This method is used by `triples` which returns native Python tuples,
+        as well as by other methods that need to iterate and filter triple
+        keys without incurring in the overhead of converting them to triples.
+
+        @param triple_pattern (tuple) 3 RDFLib terms
+        @param context (rdflib.Graph | None) Context graph, if available.
+        If a graph is given, only its identifier is stored.
+        '''
+        if context == self:
+            context = None
+
+        if self.DEFAULT_UNION:
+            raise NotImplementedError()
+            # In theory, this is what should happen:
+            #if context == self.DEFAULT_GRAPH_URI
+            #    # Any pattern with unbound context
+            #    for tk in self._lookup(triple_pattern, tkey):
+            #        yield self._key_to_triple(tk)
+            #    return
+        elif context is None:
+            context = self.DEFAULT_GRAPH_URI
+
+        tkey = self._to_key(triple_pattern)
+
+        # Shortcuts
+        pk_ctx = self._pickle(context.identifier) \
+                if isinstance(context, Graph) \
+                else self._pickle(context)
+        if not self.curs['c:tk'].set_key(pk_ctx):
+            # Context not found.
+            return iter(())
+
+        # s p o c
+        if all(triple_pattern):
+            if self.curs['tk:c'].set_key_dup(tkey, pk_ctx):
+                yield tkey
+                return
+            else:
+                # Triple not found.
+                return iter(())
+
+        # ? ? ? c
+        elif not any(triple_pattern):
+            # Get all triples from the context
+            for tk in self.curs['c:tk'].iternext_dup():
+                yield tk
+
+        # Regular lookup.
+        else:
+            for tk in self._lookup(triple_pattern, tkey):
+                if self.curs['c:tk'].set_key_dup(pk_ctx, tk):
+                    yield tk
+            return
+
 
     def _init_db_environment(self, path, create=True):
         '''

@@ -2,6 +2,7 @@ import logging
 
 from collections import defaultdict
 from pprint import pformat
+from functools import wraps
 from uuid import uuid4
 
 import arrow
@@ -22,6 +23,7 @@ from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
 from lakesuperior.toolbox import Toolbox
 
 
@@ -99,12 +101,77 @@ def log_request_end(rsp):
     return rsp
 
 
+def transaction(write=False):
+    '''
+    Handle atomic operations in a store.
+
+    This wrapper ensures that a write operation is performed atomically. It
+    also takes care of sending a message for each resource changed in the
+    transaction.
+    '''
+    def _transaction_deco(fn):
+        @wraps(fn)
+        def _wrapper(*args, **kwargs):
+            g.changelog = []
+            store = current_app.rdfly.store
+            if isinstance(store, LmdbStore):
+                with TxnManager(store, write=write) as txn:
+                    ret = fn(*args, **kwargs)
+                return ret
+            else:
+                try:
+                    ret = fn(*args, **kwargs)
+                except:
+                    logger.warn('Rolling back transaction.')
+                    store.rollback()
+                    raise
+                else:
+                    logger.info('Committing transaction.')
+                    #if hasattr(store, '_edits'):
+                    #    # @FIXME ugly.
+                    #    self.rdfly._conn.optimize_edits()
+                    store.commit()
+                    return ret
+            # @TODO re-enable, maybe leave out the delta part
+            #for ev in g.changelog:
+            #    #self._logger.info('Message: {}'.format(pformat(ev)))
+            #    send_event_msg(*ev)
+
+        return _wrapper
+    return _transaction_deco
+
+
+def send_msg(self, ev_type, remove_trp=None, add_trp=None):
+    '''
+    Sent a message about a changed (created, modified, deleted) resource.
+    '''
+    try:
+        type = self.types
+        actor = self.metadata.value(nsc['fcrepo'].createdBy)
+    except (ResourceNotExistsError, TombstoneError):
+        type = set()
+        actor = None
+        for t in add_trp:
+            if t[1] == RDF.type:
+                type.add(t[2])
+            elif actor is None and t[1] == nsc['fcrepo'].createdBy:
+                actor = t[2]
+
+    g.changelog.append((set(remove_trp), set(add_trp), {
+        'ev_type' : ev_type,
+        'time' : g.timestamp,
+        'type' : type,
+        'actor' : actor,
+    }))
+
+
 ## REST SERVICES ##
 
 @ldp.route('/<path:uid>', methods=['GET'], strict_slashes=False)
 @ldp.route('/', defaults={'uid': ''}, methods=['GET'], strict_slashes=False)
 @ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['GET'])
+@transaction()
 def get_resource(uid, force_rdf=False):
     '''
     Retrieve RDF or binary content.
@@ -151,6 +218,7 @@ def get_resource(uid, force_rdf=False):
 @ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
 @ldp.route('/', defaults={'parent': ''}, methods=['POST'],
         strict_slashes=False)
+@transaction(True)
 def post_resource(parent):
     '''
     Add a new resource in a new URI.
@@ -168,7 +236,8 @@ def post_resource(parent):
     try:
         uid = uuid_for_post(parent, slug)
         logger.debug('Generated UID for POST: {}'.format(uid))
-        rsrc = LdpFactory.from_provided(uid, content_length=request.content_length,
+        rsrc = LdpFactory.from_provided(
+                uid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
     except ResourceNotExistsError as e:
@@ -197,6 +266,7 @@ def post_resource(parent):
 
 
 @ldp.route('/<path:uid>/fcr:versions', methods=['GET'])
+@transaction()
 def get_version_info(uid):
     '''
     Get version info (`fcr:versions`).
@@ -214,6 +284,7 @@ def get_version_info(uid):
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
+@transaction()
 def get_version(uid, ver_uid):
     '''
     Get an individual resource version.
@@ -234,6 +305,7 @@ def get_version(uid, ver_uid):
 
 
 @ldp.route('/<path:uid>/fcr:versions', methods=['POST', 'PUT'])
+@transaction(True)
 def post_version(uid):
     '''
     Create a new resource version.
@@ -254,6 +326,7 @@ def post_version(uid):
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['PATCH'])
+@transaction(True)
 def patch_version(uid, ver_uid):
     '''
     Revert to a previous version.
@@ -278,6 +351,7 @@ def patch_version(uid, ver_uid):
 @ldp.route('/<path:uid>', methods=['PUT'], strict_slashes=False)
 @ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['PUT'])
+@transaction(True)
 def put_resource(uid):
     '''
     Add a new resource at a specified URI.
@@ -325,6 +399,7 @@ def put_resource(uid):
 
 
 @ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
+@transaction(True)
 def patch_resource(uid):
     '''
     Update an existing resource with a SPARQL-UPDATE payload.
@@ -349,11 +424,13 @@ def patch_resource(uid):
 
 
 @ldp.route('/<path:uid>/fcr:metadata', methods=['PATCH'])
+@transaction(True)
 def patch_resource_metadata(uid):
     return patch_resource(uid)
 
 
 @ldp.route('/<path:uid>', methods=['DELETE'])
+@transaction(True)
 def delete_resource(uid):
     '''
     Delete a resource and optionally leave a tombstone.
@@ -393,6 +470,7 @@ def delete_resource(uid):
 
 @ldp.route('/<path:uid>/fcr:tombstone', methods=['GET', 'POST', 'PUT',
         'PATCH', 'DELETE'])
+@transaction(True)
 def tombstone(uid):
     '''
     Handle all tombstone operations.

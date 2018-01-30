@@ -1,12 +1,10 @@
-#from copy import deepcopy
-
 from flask import current_app, g
 from rdflib import Graph
 from rdflib.plugins.sparql.algebra import translateUpdate
 from rdflib.plugins.sparql.parser import parseUpdate
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr, atomic
+from lakesuperior.model.ldpr import Ldpr
 
 class LdpRs(Ldpr):
     '''LDP-RS (LDP RDF source).
@@ -40,7 +38,6 @@ class LdpRs(Ldpr):
 
     ## LDP METHODS ##
 
-    @atomic
     def patch(self, update_str):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
@@ -180,8 +177,4 @@ class LdpIc(Ldpc):
         self.base_types |= {
             nsc['ldp'].IndirectContainer,
         }
-
-
-
-
 

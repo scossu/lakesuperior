@@ -4,7 +4,7 @@ from rdflib.resource import Resource
 from rdflib.term import URIRef, Literal, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr, atomic
+from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_rs import LdpRs
 
 class LdpNr(Ldpr):
@@ -52,7 +52,6 @@ class LdpNr(Ldpr):
 
     ## LDP METHODS ##
 
-    @atomic
     def _create_or_replace_rsrc(self, create_only=False):
         '''
         Create a new binary resource with a corresponding RDF representation.

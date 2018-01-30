@@ -29,36 +29,6 @@ ROOT_UID = ''
 ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
 
 
-def atomic(fn):
-    '''
-    Handle atomic operations in an RDF store.
-
-    This wrapper ensures that a write operation is performed atomically. It
-    also takes care of sending a message for each resource changed in the
-    transaction.
-    '''
-    def wrapper(self, *args, **kwargs):
-        g.changelog = []
-        try:
-            ret = fn(self, *args, **kwargs)
-        except:
-            self._logger.warn('Rolling back transaction.')
-            self.rdfly.store.rollback()
-            raise
-        else:
-            self._logger.info('Committing transaction.')
-            #if hasattr(self.rdfly.store, '_edits'):
-            #    # @FIXME ugly.
-            #    self.rdfly._conn.optimize_edits()
-            self.rdfly.store.commit()
-            for ev in g.changelog:
-                #self._logger.info('Message: {}'.format(pformat(ev)))
-                self._send_event_msg(*ev)
-            return ret
-
-    return wrapper
-
-
 class Ldpr(metaclass=ABCMeta):
     '''LDPR (LDP Resource).
 
@@ -136,10 +106,6 @@ class Ldpr(metaclass=ABCMeta):
     def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
         '''Instantiate an in-memory LDP resource that can be loaded from and
         persisted to storage.
-
-        Persistence is done in this class. None of the operations in the store
-        layout should commit an open transaction. Methods are wrapped in a
-        transaction by using the `@atomic` decorator.
 
         @param uid (string) uid of the resource. If None (must be explicitly
         set) it refers to the root node. It can also be the full URI or URN,
@@ -307,14 +273,6 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
-    def versions(self):
-        '''
-        Return a generator of version URIs.
-        '''
-        return set(self.version_info[self.urn : nsc['fcrepo'].hasVersion :])
-
-
-    @property
     def version_uids(self):
         '''
         Return a generator of version UIDs (relative to their parent resource).
@@ -429,7 +387,6 @@ class Ldpr(metaclass=ABCMeta):
         return gr
 
 
-    @atomic
     def post(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
@@ -439,7 +396,6 @@ class Ldpr(metaclass=ABCMeta):
         return self._create_or_replace_rsrc(create_only=True)
 
 
-    @atomic
     def put(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
@@ -451,7 +407,6 @@ class Ldpr(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-    @atomic
     def delete(self, inbound=True, delete_children=True, leave_tstone=True):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
@@ -488,7 +443,6 @@ class Ldpr(metaclass=ABCMeta):
         return ret
 
 
-    @atomic
     def resurrect(self):
         '''
         Resurrect a resource from a tombstone.
@@ -527,7 +481,6 @@ class Ldpr(metaclass=ABCMeta):
 
 
 
-    @atomic
     def purge(self, inbound=True):
         '''
         Delete a tombstone and all historic snapstots.
@@ -540,7 +493,6 @@ class Ldpr(metaclass=ABCMeta):
         return self._purge_rsrc(inbound)
 
 
-    @atomic
     def create_version(self, ver_uid=None):
         '''
         Create a new version of the resource.
@@ -558,7 +510,6 @@ class Ldpr(metaclass=ABCMeta):
         return g.tbox.globalize_term(self.create_rsrc_snapshot(ver_uid))
 
 
-    @atomic
     def revert_to_version(self, ver_uid, backup=True):
         '''
         Revert to a previous version.
@@ -732,34 +683,10 @@ class Ldpr(metaclass=ABCMeta):
 
         ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        if notify and current_app.config.get('messaging'):
-            self._send_msg(ev_type, remove_trp, add_trp)
+        #if notify and current_app.config.get('messaging'):
+        #    self._send_msg(ev_type, remove_trp, add_trp)
 
         return ret
-
-
-    def _send_msg(self, ev_type, remove_trp=None, add_trp=None):
-        '''
-        Sent a message about a changed (created, modified, deleted) resource.
-        '''
-        try:
-            type = self.types
-            actor = self.metadata.value(nsc['fcrepo'].createdBy)
-        except (ResourceNotExistsError, TombstoneError):
-            type = set()
-            actor = None
-            for t in add_trp:
-                if t[1] == RDF.type:
-                    type.add(t[2])
-                elif actor is None and t[1] == nsc['fcrepo'].createdBy:
-                    actor = t[2]
-
-        g.changelog.append((set(remove_trp), set(add_trp), {
-            'ev_type' : ev_type,
-            'time' : g.timestamp,
-            'type' : type,
-            'actor' : actor,
-        }))
 
 
     # Not used. @TODO Deprecate or reimplement depending on requirements.
@@ -1017,17 +944,18 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(self.RES_UPDATED, add_trp=add_trp)
 
 
-    def _send_event_msg(self, remove_trp, add_trp, metadata):
-        '''
-        Break down delta triples, find subjects and send event message.
-        '''
-        remove_grp = groupby(remove_trp, lambda x : x[0])
-        remove_dict = { k[0] : k[1] for k in remove_grp }
+    # @TODO reenable at request level.
+    #def _send_event_msg(self, remove_trp, add_trp, metadata):
+    #    '''
+    #    Break down delta triples, find subjects and send event message.
+    #    '''
+    #    remove_grp = groupby(remove_trp, lambda x : x[0])
+    #    remove_dict = { k[0] : k[1] for k in remove_grp }
 
-        add_grp = groupby(add_trp, lambda x : x[0])
-        add_dict = { k[0] : k[1] for k in add_grp }
+    #    add_grp = groupby(add_trp, lambda x : x[0])
+    #    add_dict = { k[0] : k[1] for k in add_grp }
 
-        subjects = set(remove_dict.keys()) | set(add_dict.keys())
-        for rsrc_uri in subjects:
-            self._logger.info('subject: {}'.format(rsrc_uri))
-            #current_app.messenger.send
+    #    subjects = set(remove_dict.keys()) | set(add_dict.keys())
+    #    for rsrc_uri in subjects:
+    #        self._logger.info('subject: {}'.format(rsrc_uri))
+    #        #current_app.messenger.send

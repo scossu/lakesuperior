@@ -3,6 +3,7 @@ import pytest
 from shutil import rmtree
 
 from rdflib import Namespace, URIRef
+from rdflib.namespace import RDF, RDFS
 
 from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
@@ -290,3 +291,81 @@ class TestContext:
             assert len(set(store.triples((None, None, None)))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None), gr2_uri))) == 0
+
+
+@pytest.mark.usefixtures('store')
+class TestTransactions:
+    '''
+    Tests for transaction handling.
+    '''
+    # @TODO Test concurrent reads and writes.
+    pass
+
+
+#@pytest.mark.usefixtures('store')
+#class TestRdflib:
+#    '''
+#    Test case adapted from
+#    http://rdflib.readthedocs.io/en/stable/univrdfstore.html#interface-test-cases
+#    '''
+#
+#    @pytest.fixture
+#    def sample_gr(self):
+#        return Graph().parse('''
+#        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+#        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+#        @prefix : <http://test/> .
+#        {:a :b :c; a :foo} => {:a :d :c} .
+#        _:foo a rdfs:Class .
+#        :a :d :c .
+#        ''', format='n3')
+#
+#    def _test_basic(self, sample_gr):
+#        with TxnManager as txn:
+#            implies = URIRef("http://www.w3.org/2000/10/swap/log#implies")
+#            a = URIRef('http://test/a')
+#            b = URIRef('http://test/b')
+#            c = URIRef('http://test/c')
+#            d = URIRef('http://test/d')
+#            for s,p,o in g.triples((None,implies,None)):
+#                formulaA = s
+#                formulaB = o
+#
+#                #contexts test
+#                assert len(list(g.contexts()))==3
+#
+#                #contexts (with triple) test
+#                assert len(list(g.contexts((a,d,c))))==2
+#
+#                #triples test cases
+#                assert type(list(g.triples(
+#                        (None,RDF.type,RDFS.Class)))[0][0]) == BNode
+#                assert len(list(g.triples((None,implies,None))))==1
+#                assert len(list(g.triples((None,RDF.type,None))))==3
+#                assert len(list(g.triples((None,RDF.type,None),formulaA)))==1
+#                assert len(list(g.triples((None,None,None),formulaA)))==2
+#                assert len(list(g.triples((None,None,None),formulaB)))==1
+#                assert len(list(g.triples((None,None,None))))==5
+#                assert len(list(g.triples(
+#                        (None,URIRef('http://test/d'),None),formulaB)))==1
+#                assert len(list(g.triples(
+#                        (None,URIRef('http://test/d'),None))))==1
+#
+#                #Remove test cases
+#                g.remove((None,implies,None))
+#                assert len(list(g.triples((None,implies,None))))==0
+#                assert len(list(g.triples((None,None,None),formulaA)))==2
+#                assert len(list(g.triples((None,None,None),formulaB)))==1
+#                g.remove((None,b,None),formulaA)
+#                assert len(list(g.triples((None,None,None),formulaA)))==1
+#                g.remove((None,RDF.type,None),formulaA)
+#                assert len(list(g.triples((None,None,None),formulaA)))==0
+#                g.remove((None,RDF.type,RDFS.Class))
+#
+#                #remove_context tests
+#                formulaBContext=Context(g,formulaB)
+#                g.remove_context(formulaB)
+#                assert len(list(g.triples((None,RDF.type,None))))==2
+#                assert len(g)==3 assert len(formulaBContext)==0
+#                g.remove((None,None,None))
+#                assert len(g)==0
