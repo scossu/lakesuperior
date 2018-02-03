@@ -153,6 +153,8 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
+                self._logger.info('Getting RDF representation for resource /{}'
+                        .format(self.uid))
                 #self._logger.debug('IMR options: {}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
@@ -192,7 +194,13 @@ class Ldpr(metaclass=ABCMeta):
         Get resource metadata.
         '''
         if not hasattr(self, '_metadata'):
-            self._metadata = self.rdfly.get_metadata(self.uid)
+            if hasattr(self, '_imr'):
+                self._logger.info('Metadata is IMR.')
+                self._metadata = self._imr
+            else:
+                self._logger.info('Getting metadata for resource /{}'
+                        .format(self.uid))
+                self._metadata = self.rdfly.get_metadata(self.uid)
 
         return self._metadata
 
@@ -349,6 +357,7 @@ class Ldpr(metaclass=ABCMeta):
                     '{};rel="type"'.format(t.n3()))
 
         return out_headers
+
 
 
     def get(self):
@@ -563,10 +572,12 @@ class Ldpr(metaclass=ABCMeta):
             self._check_ref_int(ref_int)
 
         self.rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph)
+        self.imr = self.provided_imr
 
         self._set_containment_rel()
 
         return self.RES_CREATED if create else self.RES_UPDATED
+        #return self._head(self.provided_imr.graph)
 
 
     def _bury_rsrc(self, inbound, tstone_pointer=None):

@@ -1,7 +1,7 @@
 import hashlib
 import logging
 
-from contextlib import ContextDecorator
+from contextlib import ContextDecorator, ExitStack
 from os import makedirs
 from os.path import exists, abspath
 from urllib.request import pathname2url
@@ -66,8 +66,12 @@ class TxnManager(ContextDecorator):
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
             self.store.rollback()
+            # If the tx fails, leave the index queue alone. There may still be
+            # jobs left from other requests.
         else:
             self.store.commit()
+            if len(self.store._idx_queue):
+                self.store._run_indexing()
 
 
 class LmdbStore(Store):
@@ -141,6 +145,8 @@ class LmdbStore(Store):
     data_txn = None
     idx_txn = None
     is_txn_rw = None
+
+    _idx_queue = set()
 
 
     def __init__(self, path, identifier=None):
@@ -302,8 +308,7 @@ class LmdbStore(Store):
             needs_indexing = True
 
         if needs_indexing:
-            # @TODO make await; run outside of this txn
-            self._update_indices(trp_key, pk_ctx, triple=triple)
+            self._idx_queue.add((trp_key, pk_ctx, triple))
 
 
     def remove(self, triple_pattern, context=None):
@@ -331,13 +336,10 @@ class LmdbStore(Store):
                         self.curs['tk:t'].set_key(trp_key)):
                     self.curs['tk:t'].delete()
 
-                # @TODO make await; run outside of this txn
-                #import pdb; pdb.set_trace()
-                self._update_indices(trp_key, pk_ctx, triple)
+                self._idx_queue.add((trp_key, pk_ctx, triple))
 
 
-    # @TODO Make async
-    def _update_indices(self, trp_key, pk_ctx, triple=None):
+    def _run_indexing(self):
         '''
         Update indices for a given triple.
 
@@ -349,34 +351,42 @@ class LmdbStore(Store):
         This can be provided if already pre-calculated, otherwise it will be
         retrieved from the store using `trp_key`.
         '''
-        if triple is None:
-            triple = self._key_to_triple(trp_key)
+        with self.data_env.begin(buffers=True) as data_txn:
+            data_curs = self.get_data_cursors(data_txn)
+            with self.idx_env.begin(write=True, buffers=True) as idx_txn:
+                idx_curs = self.get_idx_cursors(idx_txn)
+                while len(self._idx_queue):
+                    trp_key, pk_ctx, triple = self._idx_queue.pop()
 
-        s, p, o = triple
-        term_keys = {
-            'sk:tk': self._to_key(s),
-            'pk:tk': self._to_key(p),
-            'ok:tk': self._to_key(o),
-            'spk:tk': self._to_key((s, p)),
-            'sok:tk': self._to_key((s, o)),
-            'pok:tk': self._to_key((p, o)),
-        }
+                    if triple is None:
+                        triple = self._key_to_triple(trp_key)
 
-        if self.curs['tk:t'].get(trp_key):
-            # Add to index.
-            for ikey in term_keys:
-                self.curs[ikey].put(term_keys[ikey], trp_key)
-        else:
-            # Delete from index if a match is found.
-            for ikey in term_keys:
-                if self.curs[ikey].set_key_dup(term_keys[ikey], trp_key):
-                    self.curs[ikey].delete()
+                    s, p, o = triple
+                    term_keys = {
+                        'sk:tk': self._to_key(s),
+                        'pk:tk': self._to_key(p),
+                        'ok:tk': self._to_key(o),
+                        'spk:tk': self._to_key((s, p)),
+                        'sok:tk': self._to_key((s, o)),
+                        'pok:tk': self._to_key((p, o)),
+                    }
 
-        # Add or remove context association index.
-        if self.curs['tk:c'].set_key_dup(trp_key, pk_ctx):
-            self.curs['c:tk'].put(pk_ctx, trp_key)
-        elif self.curs['c:tk'].set_key_dup(pk_ctx, trp_key):
-            self.curs['c:tk'].delete()
+                    if data_curs['tk:t'].get(trp_key):
+                        # Add to index.
+                        for ikey in term_keys:
+                            idx_curs[ikey].put(term_keys[ikey], trp_key)
+                    else:
+                        # Delete from index if a match is found.
+                        for ikey in term_keys:
+                            if idx_curs[ikey].set_key_dup(
+                                    term_keys[ikey], trp_key):
+                                idx_curs[ikey].delete()
+
+                    # Add or remove context association index.
+                    if data_curs['tk:c'].set_key_dup(trp_key, pk_ctx):
+                        idx_curs['c:tk'].put(pk_ctx, trp_key)
+                    elif idx_curs['c:tk'].set_key_dup(pk_ctx, trp_key):
+                        idx_curs['c:tk'].delete()
 
 
     def triples(self, triple_pattern, context=None):

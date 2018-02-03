@@ -365,7 +365,8 @@ def put_resource(uid):
     stream, mimetype = bitstream_from_req()
 
     try:
-        rsrc = LdpFactory.from_provided(uid, content_length=request.content_length,
+        rsrc = LdpFactory.from_provided(
+                uid, content_length=request.content_length,
                 stream=stream, mimetype=mimetype, handling=handling,
                 disposition=disposition)
         if not request.content_length and rsrc.is_stored:

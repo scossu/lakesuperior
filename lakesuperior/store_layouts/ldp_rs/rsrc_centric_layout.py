@@ -423,7 +423,7 @@ class RsrcCentricLayout:
         Modify triples about a subject.
 
         This method adds and removes triple sets from specific graphs,
-        indicated by the term rotuer. It also adds metadata about the changed
+        indicated by the term router. It also adds metadata about the changed
         graphs.
         '''
         remove_routes = defaultdict(set)
