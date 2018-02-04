@@ -11,8 +11,8 @@ _app_mode = 'dev'
 
 bind = "0.0.0.0:8000"
 workers = 4
-threads = 2
-max_requests = 1000
+worker_class = 'gevent'
+max_requests = 512
 
 #user = "user"
 #group = "group"

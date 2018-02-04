@@ -72,6 +72,7 @@ class TxnManager(ContextDecorator):
         else:
             self.store.commit()
             if len(self.store._idx_queue):
+                #self.store._run_indexing()
                 job = Thread(target=self.store._run_indexing)
                 job.start()
                 logger.info('Started indexing job #{}'.format(job.ident))
@@ -193,6 +194,8 @@ class LmdbStore(Store):
         '''
         if not self.is_open:
             raise RuntimeError('Store must be opened first.')
+        logger.info('Beginning a {} transaction.'.format(
+            'read/write' if write else 'read-only'))
         self.data_txn = self.data_env.begin(write=write, buffers=True)
         # Index transaction is read-write only for indexing jobs.
         self.idx_txn = self.idx_env.begin(buffers=True)
@@ -287,10 +290,10 @@ class LmdbStore(Store):
         'None' inserts in the default graph.
         @param quoted (bool) Not used.
         '''
-        assert context != self, "Can not add triple directly to store"
+        assert context != self, "Cannot add triple directly to store"
         Store.add(self, triple, context)
 
-        logger.info('Adding triple: {}'.format(triple))
+        #logger.info('Adding triple: {}'.format(triple))
         if self.DEFAULT_UNION:
             raise NotImplementedError()
             # @TODO
