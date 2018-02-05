@@ -2,6 +2,7 @@ import hashlib
 import logging
 
 from contextlib import ContextDecorator, ExitStack
+from multiprocessing import Process
 from os import makedirs
 from os.path import exists, abspath
 from threading import Lock, Thread
@@ -74,10 +75,14 @@ class TxnManager(ContextDecorator):
             if len(self.store._data_queue):
                 self.store._apply_changes()
             if len(self.store._idx_queue):
-                #self.store._run_indexing()
-                job = Thread(target=self.store._run_indexing)
-                job.start()
-                logger.info('Started indexing job #{}'.format(job.ident))
+                # Synchronous.
+                self.store._run_indexing()
+                # Threading.
+                #job = Thread(target=self.store._run_indexing)
+                # Multiprocess.
+                #job = Process(target=self.store._run_indexing)
+                #job.start()
+                #logger.info('Started indexing job #{}'.format(job.ident))
 
 
 class LmdbStore(Store):
