@@ -212,12 +212,6 @@ class LmdbStore(Store):
     '''Separator byte. Used to join and plit individual term keys.'''
     SEP_BYTE = b'\x00'
 
-    '''
-    Dummy bytestriung to associate with a "no triple" statement in the c:spo
-    index. Used to keep track of empty graphs.
-    '''
-    NO_TRIPLE = b'\x01' * 5
-
     DEFAULT_GRAPH_URI = URIRef('urn:fcrepo:default_graph')
 
     KEY_LENGTH = 5 # Max key length for terms. That allows for A LOT of terms.
@@ -228,6 +222,8 @@ class LmdbStore(Store):
         't:st',
         # Joined triple keys to context key: 1:m
         'spo:c',
+        # This has empty values and is used to keep track of empty contexts.
+        'c:',
     )
     idx_keys = (
         # Namespace to prefix: 1:1
@@ -520,7 +516,6 @@ class LmdbStore(Store):
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
                 if context is not None:
-                    import pdb; pdb.set_trace()
                     yield self._from_key(spok), (context,)
                 else:
                     if cur.set_key(spok):
@@ -618,8 +613,8 @@ class LmdbStore(Store):
                     ck = self._append(cur, (pk_c,))[0]
                 with self.cur('th:t') as cur:
                     cur.put(c_hash, ck)
-                with self.cur('c:spo') as cur:
-                    cur.put(ck, self.NO_TRIPLE)
+                with self.cur('c:') as cur:
+                    cur.put(ck, b'')
             else:
                 # Open new R/W transactions.
                 with self.data_env.begin(write=True) as wtxn:
@@ -628,8 +623,8 @@ class LmdbStore(Store):
                 with self.idx_env.begin(write=True) as wtxn:
                     with wtxn.cursor(self.dbs['th:t']) as cur:
                         cur.put(c_hash, ck)
-                    with wtxn.cursor(self.dbs['c:spo']) as cur:
-                        cur.put(ck, self.NO_TRIPLE)
+                    with wtxn.cursor(self.dbs['c:']) as cur:
+                        cur.put(ck, b'')
 
 
     def remove_graph(self, graph):
@@ -642,9 +637,8 @@ class LmdbStore(Store):
         #    graph = graph.identifier
         self.remove((None, None, None), graph)
 
-        ck = self._to_key(graph)
-        with self.cur('c:spo') as cur:
-            if cur.set_key_dup(ck, self.NO_TRIPLE):
+        with self.cur('c:') as cur:
+            if cur.set_key(self._to_key(graph)):
                 cur.delete()
 
 
@@ -718,7 +712,7 @@ class LmdbStore(Store):
                 # s p o c
                 if all(triple_pattern):
                     spok = self._to_key(triple_pattern)
-                    if not spok or spok == self.NO_TRIPLE:
+                    if not spok:
                         # A term in the triple is not found.
                         return iter(())
                     if cur.set_key_dup(ck, spok):
@@ -733,14 +727,12 @@ class LmdbStore(Store):
                     # Get all triples from the context
                     cur.set_key(ck)
                     for spok in cur.iternext_dup():
-                        if spok != self.NO_TRIPLE:
-                            yield spok
+                        yield spok
 
                 # Regular lookup.
                 else:
                     for spok in self._lookup(triple_pattern):
-                        if (spok != self.NO_TRIPLE
-                                and cur.set_key_dup(ck, spok)):
+                        if cur.set_key_dup(ck, spok):
                             yield spok
                     return
         else:
@@ -767,7 +759,7 @@ class LmdbStore(Store):
         self.data_env = lmdb.open(path + '/main', subdir=False, create=create,
                 map_size=self.MAP_SIZE, max_dbs=4, readahead=False)
         self.idx_env = lmdb.open(path + '/index', subdir=False, create=create,
-                map_size=self.MAP_SIZE, max_dbs=10, readahead=False)
+                map_size=self.MAP_SIZE, max_dbs=9, readahead=False)
 
         # Open and optionally create main databases.
         self.dbs = {
@@ -775,6 +767,7 @@ class LmdbStore(Store):
             't:st': self.data_env.open_db(b't:st', create=create),
             'spo:c': self.data_env.open_db(
                     b'spo:c', create=create, dupsort=True, dupfixed=True),
+            'c:': self.data_env.open_db(b'c:', create=create),
             'pfx:ns': self.data_env.open_db(b'pfx:ns', create=create),
             # One-off indices.
             'ns:pfx': self.idx_env.open_db(b'ns:pfx', create=create),
