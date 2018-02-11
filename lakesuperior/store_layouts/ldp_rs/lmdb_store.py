@@ -5,6 +5,7 @@ from contextlib import ContextDecorator, ExitStack
 from multiprocessing import Process
 from os import makedirs
 from os.path import exists, abspath
+from shutil import rmtree
 from threading import Lock, Thread
 from urllib.request import pathname2url
 
@@ -269,6 +270,7 @@ class LmdbStore(Store):
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
         super(LmdbStore, self).__init__(path)
+        self.path = path
 
         self._pickle = self.node_pickler.dumps
         self._unpickle = self.node_pickler.loads

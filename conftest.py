@@ -28,9 +28,7 @@ def db(app):
     Set up and tear down test triplestore.
     '''
     db = app.rdfly
-    if hasattr(db.store, 'begin'):
-        with TxnManager(db.store, True) as txn:
-            db.bootstrap()
+    db.bootstrap()
     bootstrap_binary_store(app)
 
     yield db

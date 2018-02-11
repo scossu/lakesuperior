@@ -15,6 +15,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
+from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -176,15 +177,17 @@ class RsrcCentricLayout:
         Delete all graphs and insert the basic triples.
         '''
         self._logger.info('Deleting all data from the graph store.')
-        self.ds.update('DROP SILENT ALL')
+        store = self.ds.store
+        if store.is_txn_open:
+            store.rollback()
+        store.destroy(store.path)
 
         self._logger.info('Initializing the graph store with system data.')
         #self.ds.default_context.parse(
         #        source='data/bootstrap/rsrc_centric_layout.nq', format='nquads')
         with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
-            self.ds.update(f.read())
-
-        self.ds.store.commit()
+            with TxnManager(store, True):
+                self.ds.update(f.read())
 
 
     def get_raw(self, uri, ctx):
