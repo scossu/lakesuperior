@@ -443,100 +443,42 @@ class LmdbStore(Store):
         pk_trp = self._pickle(triple)
 
         pk_s, pk_p, pk_o = [self._pickle(t) for t in triple]
-        pk_c = self._pickle(context.identifier) \
-                if isinstance(context, Graph) \
-                else self._pickle(context)
+        #if isinstance(context, Graph):
+        #    graph = context.identifier
+        pk_c = self._pickle(context)
 
         # Add new individual terms or gather keys for existing ones.
         keys = [None, None, None, None]
-        with self.cur('th:t') as idx_cur:
+        with self.cur('th:t') as icur:
             for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
                 thash = self._hash(pk_t)
-                if idx_cur.set_key(thash):
-                    keys[i] = idx_cur.value()
+                if icur.set_key(thash):
+                    keys[i] = icur.value()
                 else:
                     # Put new term.
-                    with self.cur('t:st') as cur:
-                        keys[i] = self._append(cur, (pk_t,))[0]
+                    with self.cur('t:st') as dcur:
+                        keys[i] = self._append(dcur, (pk_t,))[0]
                     # Index.
-                    idx_cur.put(thash, keys[i])
+                    icur.put(thash, keys[i])
 
         # Add triple:context association.
-        ck = keys[3]
         spok = self.SEP_BYTE.join(keys[:3])
+        ck = keys[3]
         with self.cur('spo:c') as cur:
-            triple_exists = cur.set_key_dup(spok, ck)
-            if not triple_exists:
+            if not cur.set_key_dup(spok, ck):
                 cur.put(spok, ck)
 
         self._index('add', spok, ck)
-
-
-    def _index(self, action, spok, ck=None):
-        '''
-        Update index for a triple and context (add or remove).
-
-        @param action (string) 'add' or 'remove'.
-        @param spok (bytes) Triple key.
-        @param ck (bytes|None) Context key. If None, all contexts found are
-        indexed. Context MUST be specified for 'add'.
-        '''
-        # Split and rearrange-join keys for association and indices.
-        triple = spok.split(self.SEP_BYTE)
-        sk, pk, ok = triple[:3]
-        spk = self.SEP_BYTE.join(triple[:2])
-        sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
-        pok = self.SEP_BYTE.join(triple[1:3])
-        spok = self.SEP_BYTE.join(triple[:3])
-
-        # Associate cursor labels with k/v pairs.
-        curs = {
-            's:po': (sk, pok),
-            'p:so': (pk, sok),
-            'o:sp': (ok, spk),
-            'sp:o': (spk, ok),
-            'so:p': (sok, pk),
-            'po:s': (pok, sk),
-        }
-
-        # Index context association.
-        if ck:
-            cks = (ck,)
-        elif action == 'remove':
-            # Delete all contexts if none is specified.
-            with self.cur('spo:c') as spo_cur:
-                if spo_cur.set_key(spok):
-                    cks = iternext_dup()
-                    with self.cur('c:spo') as c_cur:
-                        if c_cur.set_key_dup(ck, spok):
-                            c_cur.delete()
-        else:
-            raise ValueError('Cannot run an \'add\' index without context.')
-
-        # Loop over contexts.
-        for ck in cks:
-            for clabel, terms in curs.items():
-                with self.cur(clabel) as cur:
-                    if action == 'remove':
-                        if cur.set_key_dup(*terms):
-                            cur.delete()
-                    elif action == 'add':
-                        cur.put(*terms)
-                    else:
-                        raise ValueError(
-                                'Index action \'{}\' not supported.'
-                                .format(action))
 
 
     def remove(self, triple_pattern, context=None):
         '''
         Remove a triple and start indexing.
         '''
-        #import pdb; pdb.set_trace()
         if context is not None:
-            pk_c = self._pickle(context.identifier) \
-                    if isinstance(context, Graph) \
-                    else self._pickle(context)
+            #if isinstance(context, Graph):
+            #    graph = context.identifier
+            #pk_c = self._pickle(context)
             ck = self._to_key(context)
         else:
             ck = None
@@ -568,14 +510,21 @@ class LmdbStore(Store):
         Where the contexts generator lists all context that the triple appears
         in.
         '''
+        logger.debug('Getting triples for pattern: {} and context: {}'.format(
+            triple_pattern, context))
         #import pdb; pdb.set_trace()
+        #if isinstance(context, Graph):
+        #    logger.debug('Context graph length: {}'.format(len(context)))
+        #    context = context.identifier
+        #    logger.debug('Converted graph into URI: {}'.format(context))
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
                 if context is not None:
+                    import pdb; pdb.set_trace()
                     yield self._from_key(spok), (context,)
                 else:
                     if cur.set_key(spok):
-                        contexts = (self._from_key(ck)
+                        contexts = (self._from_key(ck)[0]
                                 for ck in cur.iternext_dup())
                         yield self._from_key(spok), contexts
 
@@ -631,12 +580,12 @@ class LmdbStore(Store):
         if triple:
             with self.cur('spo:c') as cur:
                 cur.set_key(self._to_key(triple))
-                contexts = cur.iternext_dup()
+                for ctx in cur.iternext_dup():
+                    yield self._from_key(ctx)[0]
         else:
             with self.cur('c:spo') as cur:
-                contexts = cur.iternext_nodup()
-
-        return (self._from_key(ctx)[0] for ctx in contexts)
+                for ctx in cur.iternext_nodup():
+                    yield self._from_key(ctx)[0]
 
 
     def add_graph(self, graph):
@@ -654,8 +603,9 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to add.
         '''
-        if isinstance(graph, Graph):
-            graph = graph.identifier
+        #pk_c = self._pickle(graph.identifier) \
+        #        if isinstance(graph, Graph) \
+        #        else self._pickle(graph)
         pk_c = self._pickle(graph)
         c_hash = self._hash(pk_c)
         with self.cur('th:t') as cur:
@@ -672,14 +622,14 @@ class LmdbStore(Store):
                     cur.put(ck, self.NO_TRIPLE)
             else:
                 # Open new R/W transactions.
-                with self.data_env.begin(write=True).cursor(self.dbs['t:st']) \
-                        as cur:
-                    ck = self._append(cur, (pk_c,))[0]
+                with self.data_env.begin(write=True) as wtxn:
+                    with wtxn.cursor(self.dbs['t:st']) as cur:
+                        ck = self._append(cur, (pk_c,))[0]
                 with self.idx_env.begin(write=True) as wtxn:
                     with wtxn.cursor(self.dbs['th:t']) as cur:
                         cur.put(c_hash, ck)
                     with wtxn.cursor(self.dbs['c:spo']) as cur:
-                        cur.put(ck, b'')
+                        cur.put(ck, self.NO_TRIPLE)
 
 
     def remove_graph(self, graph):
@@ -688,9 +638,8 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to remove.
         '''
-        if isinstance(graph, Graph):
-            graph = graph.identifier
-
+        #if isinstance(graph, Graph):
+        #    graph = graph.identifier
         self.remove((None, None, None), graph)
 
         ck = self._to_key(graph)
@@ -756,10 +705,8 @@ class LmdbStore(Store):
         if context == self:
             context = None
 
-        if context:
-            pk_c = self._pickle(context.identifier) \
-                    if isinstance(context, Graph) \
-                    else self._pickle(context)
+        if context is not None:
+            pk_c = self._pickle(context)
             ck = self._to_key(context)
 
             # Shortcuts
@@ -771,7 +718,7 @@ class LmdbStore(Store):
                 # s p o c
                 if all(triple_pattern):
                     spok = self._to_key(triple_pattern)
-                    if not spok:
+                    if not spok or spok == self.NO_TRIPLE:
                         # A term in the triple is not found.
                         return iter(())
                     if cur.set_key_dup(ck, spok):
@@ -784,13 +731,16 @@ class LmdbStore(Store):
                 # ? ? ? c
                 elif not any(triple_pattern):
                     # Get all triples from the context
+                    cur.set_key(ck)
                     for spok in cur.iternext_dup():
-                        yield spok
+                        if spok != self.NO_TRIPLE:
+                            yield spok
 
                 # Regular lookup.
                 else:
                     for spok in self._lookup(triple_pattern):
-                        if cur.set_key_dup(ck, spok):
+                        if (spok != self.NO_TRIPLE
+                                and cur.set_key_dup(ck, spok)):
                             yield spok
                     return
         else:
@@ -896,7 +846,6 @@ class LmdbStore(Store):
 
         @return iterator of matching triple keys.
         '''
-        #import pdb; pdb.set_trace()
         s, p, o = triple_pattern
 
         if s is not None:
@@ -952,10 +901,15 @@ class LmdbStore(Store):
                     return
 
         tkey = self._to_key(bound_terms)
+        if not tkey:
+            return iter(())
+
         with self.cur(cur_label) as cur:
-            #import pdb; pdb.set_trace()
             if cur.set_key(tkey):
-                for match in cur.iternext_dup():
+                # @FIXME For some reason LMDB blows up if this iterator is not
+                # wrapped in a set. This may not be too bad because we can get
+                # rid of duplicates here.
+                for match in set(cur.iternext_dup()):
                     # Combine bound and found in search order.
                     comb_keys = (
                             bytes(tkey).split(self.SEP_BYTE)
@@ -986,6 +940,67 @@ class LmdbStore(Store):
         cur.putmulti(data, **kwargs)
 
         return [d[0] for d in data]
+
+
+    def _index(self, action, spok, ck=None):
+        '''
+        Update index for a triple and context (add or remove).
+
+        @param action (string) 'add' or 'remove'.
+        @param spok (bytes) Triple key.
+        @param ck (bytes|None) Context key. If None, all contexts found are
+        indexed. Context MUST be specified for 'add'.
+        '''
+        # Split and rearrange-join keys for association and indices.
+        triple = bytes(spok).split(self.SEP_BYTE)
+        sk, pk, ok = triple[:3]
+        spk = self.SEP_BYTE.join(triple[:2])
+        sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
+        pok = self.SEP_BYTE.join(triple[1:3])
+        spok = self.SEP_BYTE.join(triple[:3])
+
+        # Associate cursor labels with k/v pairs.
+        curs = {
+            's:po': (sk, pok),
+            'p:so': (pk, sok),
+            'o:sp': (ok, spk),
+            'sp:o': (spk, ok),
+            'so:p': (sok, pk),
+            'po:s': (pok, sk),
+        }
+
+        # Add or remove context association.
+        if action == 'remove':
+            # Delete all context associations with the triple
+            # if none is specified.
+            with self.cur('c:spo') as icur:
+                if not ck:
+                    with self.cur('spo:c') as dcur:
+                        # Find all context associations to delete.
+                        if dcur.set_key(spok):
+                            for ck in dcur.iternext_dup():
+                                if icur.set_key_dup(ck, spok):
+                                    icur.delete()
+                else:
+                    # Delete one triple-context association.
+                    if icur.set_key_dup(ck, spok):
+                        icur.delete
+        elif action == 'add':
+            ck = ck or self._to_key(self.DEFAULT_GRAPH_URI)
+            with self.cur('c:spo') as icur:
+                icur.put(ck, spok)
+        else:
+            raise ValueError(
+                'Index action \'{}\' is not supported.'.format(action))
+
+        # Add or remove triple lookups.
+        for clabel, terms in curs.items():
+            with self.cur(clabel) as icur:
+                if action == 'remove':
+                    if icur.set_key_dup(*terms):
+                        icur.delete()
+                else:
+                    icur.put(*terms)
 
 
     ## Convenience methods—not necessary for functioning but useful for

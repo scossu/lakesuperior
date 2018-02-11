@@ -455,7 +455,8 @@ class RsrcCentricLayout:
             gr = self.ds.graph(gr_uri)
             gr += trp
             # Add metadata.
-            meta_gr.set((gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
+            meta_gr.set(
+                    (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
             meta_gr.set((gr_uri, nsc['fcrepo'].created, g.timestamp_term))
             if historic:
                 # @FIXME Ugly reverse engineering.
