@@ -1,6 +1,27 @@
-# Performance benchmark notes
+# Performance Benchmark Notes
 
-Sleepycat back end: Duchamp VIAF dataset(343 triples)
+## Environment
+
+### Hardware
+
+- Dell Precison M3800 Laptop
+- 8x Intel(R) Core(TM) i7-4712HQ CPU @ 2.30GHz
+- 12Gb RAM
+- SSD
+
+### Software
+
+- Arch Linux OS
+- glibc 2.26-11
+- python 3.5.4
+- lmdb 0.9.21-1
+- db (BerkeleyDB) 5.3.28-3
+
+### Sample Data Set
+
+Modified Duchamp VIAF dataset (343 triples; changed all subjects to `<>`)
+
+## Sleepycat Back End Test
 
 10K PUTs to new resources under the same container:
 
@@ -9,3 +30,19 @@ Sleepycat back end: Duchamp VIAF dataset(343 triples)
 3.4M triples total in repo at the end of the process
 
 Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.6"
+
+## LMDB Back End Test
+
+10K PUTs to new resources under the same container:
+
+~29' running time
+0.178" per resource
+3.4M triples total in repo at the end of the process
+
+Some gaps every ~40-50 requests, probably blocking transactions or disk
+flush
+
+Database size: 633 Mb
+
+Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.48"
+

@@ -28,7 +28,6 @@ def db(app):
     Set up and tear down test triplestore.
     '''
     db = app.rdfly
-    import pdb; pdb.set_trace()
     if hasattr(db.store, 'begin'):
         with TxnManager(db.store, True) as txn:
             db.bootstrap()

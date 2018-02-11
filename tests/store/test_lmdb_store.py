@@ -16,6 +16,10 @@ def store():
     rmtree('/tmp/test_lmdbstore')
 
 
+def _clean(res):
+    return {r[0] for r in res}
+
+
 @pytest.mark.usefixtures('store')
 class TestStoreInit:
     '''
@@ -52,20 +56,25 @@ class TestStoreInit:
             pass
         assert not store.is_txn_open
 
-        with TxnManager(store) as txn:
-            raise RuntimeError
-        assert not store.is_txn_open
+        try:
+            with TxnManager(store) as txn:
+                raise RuntimeError
+        except RuntimeError:
+            assert not store.is_txn_open
 
 
     def test_rollback(self, store):
         '''
         Test rolling back a transaction.
         '''
-        with TxnManager(store, True) as txn:
-            store.add((
-                URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
-                URIRef('urn:nogo:o')))
-            raise RuntimeError # This should roll back the transaction.
+        try:
+            with TxnManager(store, True) as txn:
+                store.add((
+                    URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
+                    URIRef('urn:nogo:o')))
+                raise RuntimeError # This should roll back the transaction.
+        except RuntimeError:
+            pass
 
         with TxnManager(store) as txn:
             res = set(store.triples((None, None, None)))
@@ -86,12 +95,13 @@ class TestBasicOps:
         with TxnManager(store, True) as txn:
             store.add(trp)
 
-            #import pdb; pdb.set_trace()
             res1 = set(store.triples((None, None, None)))
             res2 = set(store.triples(trp))
             assert len(res1) == 1
             assert len(res2) == 1
-            assert trp in res1 & res2
+            clean_res1 = _clean(res1)
+            clean_res2 = _clean(res2)
+            assert trp in clean_res1 & clean_res2
 
 
     def test_triple_match_1bound(self, store):
@@ -102,11 +112,11 @@ class TestBasicOps:
             res1 = set(store.triples((URIRef('urn:test:s'), None, None)))
             res2 = set(store.triples((None, URIRef('urn:test:p'), None)))
             res3 = set(store.triples((None, None, URIRef('urn:test:o'))))
-            assert res1 == {(
+            assert _clean(res1) == {(
                 URIRef('urn:test:s'), URIRef('urn:test:p'),
                 URIRef('urn:test:o'))}
-            assert res2 == res1
-            assert res3 == res2
+            assert _clean(res2) == _clean(res1)
+            assert _clean(res3) == _clean(res2)
 
 
     def test_triple_match_2bound(self, store):
@@ -120,10 +130,10 @@ class TestBasicOps:
                 (URIRef('urn:test:s'), None, URIRef('urn:test:o'))))
             res3 = set(store.triples(
                 (None, URIRef('urn:test:p'), URIRef('urn:test:o'))))
-            assert res1 == {(
+            assert _clean(res1) == {(
                 URIRef('urn:test:s'), URIRef('urn:test:p'), URIRef('urn:test:o'))}
-            assert res2 == res1
-            assert res3 == res2
+            assert _clean(res2) == _clean(res1)
+            assert _clean(res3) == _clean(res2)
 
 
     def test_triple_no_match(self, store):
@@ -229,7 +239,7 @@ class TestContext:
 
         with TxnManager(store, True) as txn:
             store.add_graph(gr_uri)
-            assert gr_uri in store.contexts()
+            assert gr_uri in set(store.contexts())
 
 
     def test_empty_context(self, store):
@@ -241,7 +251,7 @@ class TestContext:
         with TxnManager(store, True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in store.contexts()
-            store.ermove_graph(gr_uri)
+            store.remove_graph(gr_uri)
             assert gr_uri not in store.contexts()
 
 
@@ -262,19 +272,21 @@ class TestContext:
             store.add(trp3, gr2_uri)
             store.add(trp3)
 
-            assert len(set(store.triples((None, None, None)))) == 2
+            assert len(set(store.triples((None, None, None)))) == 3
+            assert len(set(store.triples((None, None, None),
+                store.DEFAULT_GRAPH_URI))) == 2
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
             assert gr2_uri in store.contexts()
-            assert trp1 not in store.triples((None, None, None))
-            assert trp1 not in store.triples((None, None, None),
-                    store.DEFAULT_GRAPH_URI)
-            assert trp2 in store.triples((None, None, None), gr_uri)
-            assert trp2 in store.triples((None, None, None))
-            assert trp3 in store.triples((None, None, None), gr2_uri)
-            assert trp3 in store.triples((None, None, None),
-                    store.DEFAULT_GRAPH_URI)
+            assert trp1 in _clean(store.triples((None, None, None)))
+            assert trp1 not in _clean(store.triples((None, None, None),
+                    store.DEFAULT_GRAPH_URI))
+            assert trp2 in _clean(store.triples((None, None, None), gr_uri))
+            assert trp2 in _clean(store.triples((None, None, None)))
+            assert trp3 in _clean(store.triples((None, None, None), gr2_uri))
+            assert trp3 in _clean(store.triples((None, None, None),
+                    store.DEFAULT_GRAPH_URI))
 
 
     def test_delete_from_ctx(self, store):

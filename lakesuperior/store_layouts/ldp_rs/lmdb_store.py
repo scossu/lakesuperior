@@ -224,6 +224,8 @@ class LmdbStore(Store):
         'spo:c',
         # This has empty values and is used to keep track of empty contexts.
         'c:',
+        # Prefix to namespace: 1:1
+        'pfx:ns',
     )
     idx_keys = (
         # Namespace to prefix: 1:1
@@ -457,9 +459,14 @@ class LmdbStore(Store):
                     # Index.
                     icur.put(thash, keys[i])
 
+        # Add context in cnotext DB.
+        ck = keys[3]
+        with self.cur('c:') as cur:
+            if not cur.set_key(ck):
+                cur.put(ck, b'')
+
         # Add triple:context association.
         spok = self.SEP_BYTE.join(keys[:3])
-        ck = keys[3]
         with self.cur('spo:c') as cur:
             if not cur.set_key_dup(spok, ck):
                 cur.put(spok, ck)
@@ -562,8 +569,8 @@ class LmdbStore(Store):
         Get an iterator of all prefix: namespace bindings.
         '''
         with self.cur('pfx:ns') as cur:
-            bindings = iter(cur)
-            return ((b2s(pfx), Namespace(b2s(ns))) for pfx, ns in bindings)
+            for pfx, ns in iter(cur):
+                yield (b2s(pfx), Namespace(b2s(ns)))
 
 
     def contexts(self, triple=None):
@@ -578,8 +585,8 @@ class LmdbStore(Store):
                 for ctx in cur.iternext_dup():
                     yield self._from_key(ctx)[0]
         else:
-            with self.cur('c:spo') as cur:
-                for ctx in cur.iternext_nodup():
+            with self.cur('c:') as cur:
+                for ctx in cur.iternext(values=False):
                     yield self._from_key(ctx)[0]
 
 
@@ -620,11 +627,11 @@ class LmdbStore(Store):
                 with self.data_env.begin(write=True) as wtxn:
                     with wtxn.cursor(self.dbs['t:st']) as cur:
                         ck = self._append(cur, (pk_c,))[0]
+                    with wtxn.cursor(self.dbs['c:']) as cur:
+                        cur.put(ck, b'')
                 with self.idx_env.begin(write=True) as wtxn:
                     with wtxn.cursor(self.dbs['th:t']) as cur:
                         cur.put(c_hash, ck)
-                    with wtxn.cursor(self.dbs['c:']) as cur:
-                        cur.put(ck, b'')
 
 
     def remove_graph(self, graph):
@@ -793,7 +800,7 @@ class LmdbStore(Store):
                 pk_t = cur.get(k)
                 terms.append(self._unpickle(pk_t))
 
-        return terms
+        return tuple(terms)
 
 
     def _to_key(self, obj):
