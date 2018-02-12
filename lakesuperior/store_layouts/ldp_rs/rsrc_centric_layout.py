@@ -178,16 +178,16 @@ class RsrcCentricLayout:
         '''
         self._logger.info('Deleting all data from the graph store.')
         store = self.ds.store
-        if store.is_txn_open:
+        if getattr(store, 'is_txn_open', False):
             store.rollback()
         store.destroy(store.path)
 
         self._logger.info('Initializing the graph store with system data.')
-        #self.ds.default_context.parse(
-        #        source='data/bootstrap/rsrc_centric_layout.nq', format='nquads')
-        with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
-            with TxnManager(store, True):
+        store.open(store.path)
+        with TxnManager(store, True):
+            with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
                 self.ds.update(f.read())
+        store.close()
 
 
     def get_raw(self, uri, ctx):
@@ -248,6 +248,7 @@ class RsrcCentricLayout:
           GRAPH ?g { ?s ?p ?o . }
         ''' + incl_child_qry + '\n}'
 
+        import pdb; pdb.set_trace()
         gr = self._parse_construct(qry, init_bindings={
             'rsrc': nsc['fcres'][uid],
             'ag': nsc['fcadmin'][uid],

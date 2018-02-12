@@ -1,8 +1,9 @@
-from flask import Blueprint, request, render_template
+from flask import Blueprint, current_app, request, render_template
 from rdflib.plugin import PluginException
 
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.query import QueryEngine
+from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple
@@ -47,17 +48,21 @@ def sparql():
     if request.method == 'GET':
         return render_template('sparql_query.html', nsm=nsm)
     else:
-        qres = QueryEngine().sparql_query(request.form['query'])
-        match = request.accept_mimetypes.best_match(accept_mimetypes.keys())
-        if match:
-            enc = accept_mimetypes[match]
-        else:
-            enc = request.accept_mimetypes.best
+        store = current_app.rdfly.store
+        with TxnManager(store) as txn:
+            qres = QueryEngine().sparql_query(request.form['query'])
 
-        try:
-            out = qres.serialize(format=enc)
-        except PluginException:
-            return ('Unable to serialize results into format {}'.format(enc),
+            match = request.accept_mimetypes.best_match(accept_mimetypes.keys())
+            if match:
+                enc = accept_mimetypes[match]
+            else:
+                enc = request.accept_mimetypes.best
+
+            try:
+                out = qres.serialize(format=enc)
+            except PluginException:
+                return (
+                    'Unable to serialize results into format {}'.format(enc),
                     406)
 
     return out, 200
