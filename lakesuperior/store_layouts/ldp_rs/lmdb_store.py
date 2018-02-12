@@ -539,10 +539,18 @@ class LmdbStore(Store):
         '''
         prefix = s2b(prefix)
         namespace = s2b(namespace)
-        with self.data_txn.cursor(self.dbs['pfx:ns']) as cur:
-            cur.put(prefix, namespace)
-        with self.idx_txn.cursor(self.dbs['ns:pfx']) as cur:
-            cur.put(namespace, prefix)
+        if self.is_txn_rw:
+            with self.data_txn.cursor(self.dbs['pfx:ns']) as cur:
+                cur.put(prefix, namespace)
+            with self.idx_txn.cursor(self.dbs['ns:pfx']) as cur:
+                cur.put(namespace, prefix)
+        else:
+            with self.data_env.begin(write=True) as wtxn:
+                with wtxn.cursor(self.dbs['pfx:ns']) as cur:
+                    cur.put(prefix, namespace)
+            with self.idx_env.begin(write=True) as wtxn:
+                with wtxn.cursor(self.dbs['ns:pfx']) as cur:
+                    cur.put(namespace, prefix)
 
 
     def namespace(self, prefix):
