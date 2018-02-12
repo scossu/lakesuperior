@@ -700,6 +700,30 @@ class Ldpr(metaclass=ABCMeta):
         return ret
 
 
+    def _send_msg(self, ev_type, remove_trp=None, add_trp=None):
+        '''
+        Sent a message about a changed (created, modified, deleted) resource.
+        '''
+        try:
+            type = self.types
+            actor = self.metadata.value(nsc['fcrepo'].createdBy)
+        except (ResourceNotExistsError, TombstoneError):
+            type = set()
+            actor = None
+            for t in add_trp:
+                if t[1] == RDF.type:
+                    type.add(t[2])
+                elif actor is None and t[1] == nsc['fcrepo'].createdBy:
+                    actor = t[2]
+
+        g.changelog.append((set(remove_trp), set(add_trp), {
+            'ev_type' : ev_type,
+            'time' : g.timestamp,
+            'type' : type,
+            'actor' : actor,
+        }))
+
+
     # Not used. @TODO Deprecate or reimplement depending on requirements.
     #def _ensure_single_subject_rdf(self, gr, add_fragment=True):
     #    '''
