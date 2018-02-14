@@ -42,8 +42,8 @@ class LdpFactory:
         imr_urn = nsc['fcres'][uid]
 
         rsrc_meta = current_app.rdfly.get_metadata(uid)
-        __class__._logger.debug('Extracted metadata: {}'.format(
-                pformat(set(rsrc_meta.graph))))
+        #__class__._logger.debug('Extracted metadata: {}'.format(
+        #        pformat(set(rsrc_meta.graph))))
         rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
 
         if __class__.LDP_NR_TYPE in rdf_types:

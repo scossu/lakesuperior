@@ -257,8 +257,8 @@ class RsrcCentricLayout:
         if incl_inbound and len(gr):
             gr += self.get_inbound_rel(nsc['fcres'][uid])
 
-        self._logger.debug('Found resource: {}'.format(
-                gr.serialize(format='turtle').decode('utf-8')))
+        #self._logger.debug('Found resource: {}'.format(
+        #        gr.serialize(format='turtle').decode('utf-8')))
         rsrc = Resource(gr, nsc['fcres'][uid])
 
         if strict:
