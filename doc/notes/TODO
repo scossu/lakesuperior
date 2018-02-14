@@ -69,14 +69,17 @@
 
 # Alpha 5
 
-- [ ] Query API
-  - [ ] SPARQL
-  - [ ] Simple query
-- [ ] Complete revert to version and resurrect
-- [ ] Atomic BDB operations
-- [ ] Explore alternative backends
+- [D] LMDB Back End
 
 # Alpha 6
+
+- [ ] Basic admin tools
+- [ ] Term query API
+- [ ] Optimize queries
+- [ ] Optimize store
+- [ ] Complete revert to version and resurrect
+
+# Alpha 7
 
 - [ ] Migration tool
 - [ ] Complete header handling
@@ -89,14 +92,13 @@
   - [ ] Others
 - [ ] Query API
 
-# Alpha 7
+# Alpha 8
 
-- [ ] Optimize queries
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
-# Alpha 8
+# Alpha 9
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z
