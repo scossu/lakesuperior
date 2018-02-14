@@ -187,7 +187,6 @@ class RsrcCentricLayout:
         with TxnManager(store, True):
             with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
                 self.ds.update(f.read())
-        store.close()
 
 
     def get_raw(self, uri, ctx):
@@ -248,7 +247,6 @@ class RsrcCentricLayout:
           GRAPH ?g { ?s ?p ?o . }
         ''' + incl_child_qry + '\n}'
 
-        import pdb; pdb.set_trace()
         gr = self._parse_construct(qry, init_bindings={
             'rsrc': nsc['fcres'][uid],
             'ag': nsc['fcadmin'][uid],

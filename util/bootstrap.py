@@ -47,6 +47,7 @@ if __name__=='__main__':
     if hasattr(app.rdfly.store, 'begin'):
         with TxnManager(app.rdfly.store, write=True) as txn:
             app.rdfly.bootstrap()
+            app.rdfly.store.close()
     else:
         app.rdfly.bootstrap()
 
