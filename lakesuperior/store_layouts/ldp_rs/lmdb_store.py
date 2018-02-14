@@ -1005,7 +1005,7 @@ class LmdbStore(Store):
                 else:
                     # Delete one triple-context association.
                     if icur.set_key_dup(ck, spok):
-                        icur.delete
+                        icur.delete()
         elif action == 'add':
             ck = ck or self._to_key(self.DEFAULT_GRAPH_URI)
             with self.cur('c:spo') as icur:
