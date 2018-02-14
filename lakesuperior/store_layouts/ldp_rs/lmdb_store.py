@@ -223,7 +223,7 @@ class LmdbStore(Store):
     data_keys = (
         # Term key to serialized term content: 1:1
         't:st',
-        # Joined triple keys to context key: 1:m
+        # Joined triple keys to context key: 1:m, fixed-length values
         'spo:c',
         # This has empty values and is used to keep track of empty contexts.
         'c:',
@@ -235,11 +235,19 @@ class LmdbStore(Store):
         'ns:pfx',
         # Term hash to triple key: 1:1
         'th:t',
-        # Lookups for one known term: 1:m
-        's:po', 'p:so', 'o:sp', 'c:spo',
-        # Lookups for two known terms: 1:m
-        'sp:o', 'so:p', 'po:s',
+        # Lookups for one known term: 1:m, fixed-length values
+        's:spo', 'p:spo', 'o:spo', 'c:spo',
     )
+
+    '''
+    Order in which keys are looked up if two terms are bound.
+    The indices with the smallest average number of values per key should be
+    looked up first.
+
+    If we want to get fancy, this can be rebalanced from time to time by
+    looking up the number of keys in (s:spo, p:spo, o:spo).
+    '''
+    _lookup_rank = ('s', 'o', 'p')
 
     data_env = None
     idx_env = None
@@ -873,6 +881,41 @@ class LmdbStore(Store):
 
         @return iterator of matching triple keys.
         '''
+        def lookup_2bound(bound_terms):
+            '''
+            Look up triples for a pattern with two bound terms.
+            '''
+            if not len(bound_terms) == 2:
+                raise ValueError(
+                        'Exactly 2 terms need to be bound. Got {}'.format(
+                            len(bound_terms)))
+
+            # Establish lookup ranking.
+            luk = None
+            for k in self._lookup_rank:
+                if k in bound_terms.keys():
+                    # First match is lookup term.
+                    if not luk:
+                        # Lookup database key (cursor)
+                        luk = k + ':spo'
+                        # Term to look up
+                        lut = bound_terms[k]
+                    # Second match is the filter.
+                    else:
+                        # Filter key (position in triple key)
+                        fpos = 'spo'.index(k)
+                        # Fliter term
+                        ft = bound_terms[k]
+
+            # Look up in index.
+            with self.cur(luk) as cur:
+                if cur.set_key(lut):
+                    # Iterate over matches and filter by second term.
+                    for match in cur.iternext_dup():
+                        subkey = bytes(match).split(self.SEP_BYTE)[fpos]
+                        if subkey == ft:
+                            yield match
+
         s, p, o = triple_pattern
 
         if s is not None:
@@ -888,15 +931,11 @@ class LmdbStore(Store):
                             return iter(())
                 # s p ?
                 else:
-                    bound_terms = [s, p]
-                    cur_label = 'sp:o'
-                    order = (0, 1, 2)
+                    yield from lookup_2bound({'s': s, 'p': p})
             else:
                 # s ? o
                 if o is not None:
-                    bound_terms = [s, o]
-                    cur_label = 'so:p'
-                    order = (0, 2, 1)
+                    yield from lookup_2bound({'s': s, 'o': o})
                 # s ? ?
                 else:
                     bound_terms = [s]
@@ -906,16 +945,14 @@ class LmdbStore(Store):
             if p is not None:
                 # ? p o
                 if o is not None:
-                    bound_terms = [p, o]
-                    cur_label = 'po:s'
-                    order = (2, 0, 1)
+                    yield from lookup_2bound({'p': p, 'o': o})
                 # ? p ?
                 else:
                     bound_terms = [p]
                     cur_label = 'p:so'
                     order = (1, 0, 2)
             else:
-                # ? ? or
+                # ? ? o
                 if o is not None:
                     bound_terms = [o]
                     cur_label = 'o:sp'
@@ -981,19 +1018,14 @@ class LmdbStore(Store):
         # Split and rearrange-join keys for association and indices.
         triple = bytes(spok).split(self.SEP_BYTE)
         sk, pk, ok = triple[:3]
-        spk = self.SEP_BYTE.join(triple[:2])
-        sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
-        pok = self.SEP_BYTE.join(triple[1:3])
         spok = self.SEP_BYTE.join(triple[:3])
 
         # Associate cursor labels with k/v pairs.
         curs = {
-            's:po': (sk, pok),
-            'p:so': (pk, sok),
-            'o:sp': (ok, spk),
-            'sp:o': (spk, ok),
-            'so:p': (sok, pk),
-            'po:s': (pok, sk),
+            's:spo': (sk, spok),
+            'p:spo': (pk, spok),
+            'o:spo': (ok, spok),
+            'c:spo': (ck, spok),
         }
 
         # Add or remove context association.
