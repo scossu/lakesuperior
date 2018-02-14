@@ -12,7 +12,7 @@ from urllib.request import pathname2url
 import lmdb
 
 from rdflib.store import Store, VALID_STORE, NO_STORE
-from rdflib import Graph, Namespace, URIRef
+from rdflib import Graph, Namespace, URIRef, Variable
 
 
 logger = logging.getLogger(__name__)
@@ -525,7 +525,13 @@ class LmdbStore(Store):
         '''
         logger.debug('Getting triples for pattern: {} and context: {}'.format(
             triple_pattern, context))
-        #import pdb; pdb.set_trace()
+        # This sounds strange, RDFLib should be passing None at this point,
+        # but anyway...
+        if isinstance(context, Graph) and isinstance(
+                context.identifier, Variable):
+            qry_context = None
+        else:
+            qry_context = context
         #if isinstance(context, Graph):
         #    logger.debug('Context graph length: {}'.format(len(context)))
         #    context = context.identifier
