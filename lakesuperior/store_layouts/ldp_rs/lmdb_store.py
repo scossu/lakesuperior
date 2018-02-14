@@ -64,7 +64,9 @@ class TxnManager(ContextDecorator):
         self.write = write
 
     def __enter__(self):
-        self.store.begin(write=self.write)
+        # Only open a R/W transaction if one is not already open.
+        if not self.write or not self.store.is_txn_rw:
+            self.store.begin(write=self.write)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
@@ -666,7 +668,7 @@ class LmdbStore(Store):
         if self.is_txn_open:
             self.data_txn.commit()
             self.idx_txn.commit()
-        self.data_txn = self.idx_txn = None
+        self.data_txn = self.idx_txn = self.is_txn_rw = None
 
 
     def rollback(self):
@@ -676,7 +678,7 @@ class LmdbStore(Store):
         if self.is_txn_open:
             self.data_txn.abort()
             self.idx_txn.abort()
-        self.data_txn = self.idx_txn = None
+        self.data_txn = self.idx_txn = self.is_txn_rw = None
 
 
     def rebase(self, n, start=1):
