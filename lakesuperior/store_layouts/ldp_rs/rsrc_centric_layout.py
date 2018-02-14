@@ -362,6 +362,11 @@ class RsrcCentricLayout:
         @param uid (string) UID of the resource to be patched.
         @param qry (dict) Parsed and translated query, or query string.
         '''
+        # Add meta graph for user-defined triples. This may not be used but
+        # it's simple and harmless to add here.
+        self.ds.graph(META_GR_URI).add(
+                (nsc['fcmain'][uid], nsc['foaf'].primaryTopic,
+                nsc['fcres'][uid]))
         gr = self.ds.graph(nsc['fcmain'][uid])
         self._logger.debug('Updating graph {} with statements: {}'.format(
             nsc['fcmain'][uid], qry))
