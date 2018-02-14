@@ -271,7 +271,7 @@ class LmdbStore(Store):
         self.__open = False
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
-        super(LmdbStore, self).__init__(path)
+        super().__init__(path)
         self.path = path
 
         self._pickle = self.node_pickler.dumps
@@ -284,14 +284,17 @@ class LmdbStore(Store):
         '''
         Return length of the dataset.
         '''
-        if context == self or context is None:
-            context = Graph(identifier=self.DEFAULT_GRAPH_URI)
+        if context == self:
+            context = None
 
-        if context.identifier is not self.DEFAULT_GRAPH_URI:
+        if context.identifier is not None:
             #dataset = self.triples((None, None, None), context)
             with self.cur('c:spo') as cur:
-                dataset = set(cur.iternext_dup())
-                return len(dataset)
+                if cur.set_key(self._to_key(context)):
+                    dataset = set(cur.iternext_dup())
+                    return len(dataset)
+                else:
+                    return 0
         else:
             return self.data_txn.stat(self.dbs['tk:t'])['entries']
 
@@ -332,7 +335,7 @@ class LmdbStore(Store):
         self.data_txn = self.data_env.begin(buffers=True, write=write)
         self.idx_txn = self.idx_env.begin(buffers=True, write=write)
 
-        self.is_txn_rw = write==True
+        self.is_txn_rw = write
 
 
     @property
@@ -436,6 +439,7 @@ class LmdbStore(Store):
         'None' inserts in the default graph.
         @param quoted (bool) Not used.
         '''
+        #logger.debug('Adding quad: {} {}'.format(triple, context))
         assert context != self, "Cannot add triple directly to store"
         Store.add(self, triple, context)
 
@@ -463,7 +467,7 @@ class LmdbStore(Store):
                     # Index.
                     icur.put(thash, keys[i])
 
-        # Add context in cnotext DB.
+        # Add context in context DB.
         ck = keys[3]
         with self.cur('c:') as cur:
             if not cur.set_key(ck):
@@ -482,6 +486,8 @@ class LmdbStore(Store):
         '''
         Remove a triple and start indexing.
         '''
+        logger.debug('Removing triples by pattern: {} on context: {}'.format(
+            triple_pattern, context))
         if context is not None:
             #if isinstance(context, Graph):
             #    graph = context.identifier
@@ -525,14 +531,17 @@ class LmdbStore(Store):
         #    context = context.identifier
         #    logger.debug('Converted graph into URI: {}'.format(context))
         with self.cur('spo:c') as cur:
-            for spok in self._triple_keys(triple_pattern, context):
+            for spok in self._triple_keys(triple_pattern, qry_context):
                 if context is not None:
-                    yield self._from_key(spok), (context,)
+                    contexts = (context,)
                 else:
                     if cur.set_key(spok):
                         contexts = (self._from_key(ck)[0]
                                 for ck in cur.iternext_dup())
-                        yield self._from_key(spok), contexts
+
+                #print('Found triples: {} In contexts: {}'.format(
+                #    self._from_key(spok), contexts))
+                yield self._from_key(spok), contexts
 
 
     def bind(self, prefix, namespace):
