@@ -486,8 +486,8 @@ class LmdbStore(Store):
         '''
         Remove a triple and start indexing.
         '''
-        logger.debug('Removing triples by pattern: {} on context: {}'.format(
-            triple_pattern, context))
+        #logger.debug('Removing triples by pattern: {} on context: {}'.format(
+        #    triple_pattern, context))
         if context is not None:
             #if isinstance(context, Graph):
             #    graph = context.identifier
@@ -523,8 +523,8 @@ class LmdbStore(Store):
         Where the contexts generator lists all context that the triple appears
         in.
         '''
-        logger.debug('Getting triples for pattern: {} and context: {}'.format(
-            triple_pattern, context))
+        #logger.debug('Getting triples for pattern: {} and context: {}'.format(
+        #    triple_pattern, context))
         # This sounds strange, RDFLib should be passing None at this point,
         # but anyway...
         if isinstance(context, Graph) and isinstance(

@@ -236,16 +236,17 @@ class RsrcCentricLayout:
                 pass # Not implemented. May never be.
         else:
             incl_child_qry = (
-                    '\n FILTER NOT EXISTS { ?g a fcsystem:StructureGraph .}')
+                '\n FILTER NOT EXISTS { ?g a fcsystem:StructureGraph . }')
 
         qry = '''
-        CONSTRUCT {?s ?p ?o . }
-        WHERE {
-          GRAPH fcsystem:meta {
+        CONSTRUCT {{?s ?p ?o . }}
+        WHERE {{
+          GRAPH fcsystem:meta {{
             ?g foaf:primaryTopic ?rsrc .
-          }
-          GRAPH ?g { ?s ?p ?o . }
-        ''' + incl_child_qry + '\n}'
+            {}
+          }}
+          GRAPH ?g {{ ?s ?p ?o . }}
+        }}'''.format(incl_child_qry)
 
         gr = self._parse_construct(qry, init_bindings={
             'rsrc': nsc['fcres'][uid],
