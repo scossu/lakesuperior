@@ -235,8 +235,8 @@ class LmdbStore(Store):
         'ns:pfx',
         # Term hash to triple key: 1:1
         'th:t',
-        # Lookups for one known term: 1:m, fixed-length values
-        's:spo', 'p:spo', 'o:spo', 'c:spo',
+        # Lookups: 1:m, fixed-length values
+        's:po', 'p:so', 'o:sp', 'c:spo',
     )
 
     '''
@@ -248,6 +248,16 @@ class LmdbStore(Store):
     looking up the number of keys in (s:spo, p:spo, o:spo).
     '''
     _lookup_rank = ('s', 'o', 'p')
+
+    '''
+    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
+    '''
+    _lookup_ordering = {
+        's:po': (0, 1, 2),
+        'p:so': (1, 0, 2),
+        'o:sp': (2, 0, 1),
+    }
+
 
     data_env = None
     idx_env = None
@@ -515,6 +525,7 @@ class LmdbStore(Store):
                     if cur.set_key(trp_key):
                         cur.delete(dupdata=True)
 
+            #import pdb; pdb.set_trace()
             self._index('remove', trp_key, ck)
 
 
@@ -801,7 +812,7 @@ class LmdbStore(Store):
         self.data_env = lmdb.open(path + '/main', subdir=False, create=create,
                 map_size=self.MAP_SIZE, max_dbs=4, readahead=False)
         self.idx_env = lmdb.open(path + '/index', subdir=False, create=create,
-                map_size=self.MAP_SIZE, max_dbs=9, readahead=False)
+                map_size=self.MAP_SIZE, max_dbs=6, readahead=False)
 
         # Open and optionally create main databases.
         self.dbs = {
@@ -881,40 +892,88 @@ class LmdbStore(Store):
 
         @return iterator of matching triple keys.
         '''
+        def lookup_1bound(label, term):
+            '''
+            Lookup triples for a pattern with one bound term.
+            '''
+            #import pdb; pdb.set_trace()
+            k = self._to_key(term)
+            if not k:
+                return iter(())
+            idx_name = label + ':' + 'spo'.replace(label, '')
+            term_order = self._lookup_ordering[idx_name]
+            with self.cur(idx_name) as cur:
+                if cur.set_key(k):
+                    for match in cur.iternext_dup():
+                        subkeys = bytes(match).split(self.SEP_BYTE)
+
+                        # Compose result.
+                        out = [None, None, None]
+                        out[term_order[0]] = k
+                        out[term_order[1]] = subkeys[0]
+                        out[term_order[2]] = subkeys[1]
+
+                        yield self.SEP_BYTE.join(out)
+
+
         def lookup_2bound(bound_terms):
             '''
             Look up triples for a pattern with two bound terms.
+
+            @param bound terms (dict) Triple labels and terms to search for,
+            in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
+            URIRef('urn:o:1')}
             '''
-            if not len(bound_terms) == 2:
+            #import pdb; pdb.set_trace()
+            if len(bound_terms) != 2:
                 raise ValueError(
                         'Exactly 2 terms need to be bound. Got {}'.format(
                             len(bound_terms)))
 
             # Establish lookup ranking.
-            luk = None
-            for k in self._lookup_rank:
-                if k in bound_terms.keys():
+            luc = None
+            for k_label in self._lookup_rank:
+                if k_label in bound_terms.keys():
                     # First match is lookup term.
-                    if not luk:
-                        # Lookup database key (cursor)
-                        luk = k + ':spo'
+                    if not luc:
+                        v_label = 'spo'.replace(k_label, '')
+                        # Lookup database key (cursor) name
+                        luc = k_label + ':' + v_label
+                        term_order = self._lookup_ordering[luc]
                         # Term to look up
-                        lut = bound_terms[k]
+                        luk = self._to_key(bound_terms[k_label])
+                        if not luk:
+                            return iter(())
+                        # Position of key in final triple.
                     # Second match is the filter.
                     else:
-                        # Filter key (position in triple key)
-                        fpos = 'spo'.index(k)
+                        # Filter key (position of sub-key in lookup results)
+                        fpos = v_label.index(k_label)
                         # Fliter term
-                        ft = bound_terms[k]
+                        ft = self._to_key(bound_terms[k_label])
+                        if not ft:
+                            return iter(())
+                        break
 
             # Look up in index.
-            with self.cur(luk) as cur:
-                if cur.set_key(lut):
+            with self.cur(luc) as cur:
+                if cur.set_key(luk):
                     # Iterate over matches and filter by second term.
                     for match in cur.iternext_dup():
-                        subkey = bytes(match).split(self.SEP_BYTE)[fpos]
-                        if subkey == ft:
-                            yield match
+                        subkeys = bytes(match).split(self.SEP_BYTE)
+                        flt_subkey = subkeys[fpos]
+                        if flt_subkey == ft:
+                            # Remainder (not filter) key used to complete the
+                            # triple.
+                            r_subkey = subkeys[1-fpos]
+
+                            # Compose result.
+                            out = [None, None, None]
+                            out[term_order[0]] = luk
+                            out[term_order[fpos+1]] = flt_subkey
+                            out[term_order[2-fpos]] = r_subkey
+
+                            yield self.SEP_BYTE.join(out)
 
         s, p, o = triple_pattern
 
@@ -938,9 +997,7 @@ class LmdbStore(Store):
                     yield from lookup_2bound({'s': s, 'o': o})
                 # s ? ?
                 else:
-                    bound_terms = [s]
-                    cur_label = 's:po'
-                    order = (0, 1, 2)
+                    yield from lookup_1bound('s', s)
         else:
             if p is not None:
                 # ? p o
@@ -948,40 +1005,16 @@ class LmdbStore(Store):
                     yield from lookup_2bound({'p': p, 'o': o})
                 # ? p ?
                 else:
-                    bound_terms = [p]
-                    cur_label = 'p:so'
-                    order = (1, 0, 2)
+                    yield from lookup_1bound('p', p)
             else:
                 # ? ? o
                 if o is not None:
-                    bound_terms = [o]
-                    cur_label = 'o:sp'
-                    order = (1, 2, 0)
+                    yield from lookup_1bound('o', o)
                 # ? ? ?
                 else:
                     # Get all triples in the database.
                     with self.cur('spo:c') as cur:
                         yield from cur.iternext_nodup()
-                    return
-
-        tkey = self._to_key(bound_terms)
-        if not tkey:
-            return iter(())
-
-        with self.cur(cur_label) as cur:
-            if cur.set_key(tkey):
-                # @FIXME For some reason LMDB blows up if this iterator is not
-                # wrapped in a set. This may not be too bad because we can get
-                # rid of duplicates here.
-                for match in set(cur.iternext_dup()):
-                    # Combine bound and found in search order.
-                    comb_keys = (
-                            bytes(tkey).split(self.SEP_BYTE)
-                            + bytes(match).split(self.SEP_BYTE))
-                    # Rearrange term keys according to given order.
-                    yield self.SEP_BYTE.join([comb_keys[i] for i in order])
-            else:
-                return iter(())
 
 
     def _append(self, cur, values, **kwargs):
@@ -1018,13 +1051,16 @@ class LmdbStore(Store):
         # Split and rearrange-join keys for association and indices.
         triple = bytes(spok).split(self.SEP_BYTE)
         sk, pk, ok = triple[:3]
+        spk = self.SEP_BYTE.join(triple[:2])
+        sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
+        pok = self.SEP_BYTE.join(triple[1:3])
         spok = self.SEP_BYTE.join(triple[:3])
 
         # Associate cursor labels with k/v pairs.
         curs = {
-            's:spo': (sk, spok),
-            'p:spo': (pk, spok),
-            'o:spo': (ok, spok),
+            's:po': (sk, pok),
+            'p:so': (pk, sok),
+            'o:sp': (ok, spk),
             'c:spo': (ck, spok),
         }
 

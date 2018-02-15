@@ -31,7 +31,12 @@ Modified Duchamp VIAF dataset (343 triples; changed all subjects to `<>`)
 
 Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.6"
 
+Database size: 1.2 Gb
+
+
 ## LMDB Back End Test
+
+### Strategy #4
 
 10K PUTs to new resources under the same container:
 
@@ -45,4 +50,20 @@ flush
 Database size: 633 Mb
 
 Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.48"
+
+
+### Strategy #5
+
+10K PUTs to new resources under the same container:
+
+29' running time
+0.176" per resource
+3.4M triples total in repo at the end of the process
+
+Less gaps than strategy #4, however overall timing is almost identical. The
+blocker seems to be somewhere else.
+
+Database size: 422 Mb
+
+Retrieval of parent resource (11400 triples), pipe to /dev/null: 7.5"
 

@@ -338,6 +338,7 @@ class RsrcCentricLayout:
 
         @param subj_uri Subject URI.
         '''
+        #import pdb; pdb.set_trace()
         # Only search in non-historic graphs.
         qry = '''
         CONSTRUCT { ?s1 ?p1 ?s }
