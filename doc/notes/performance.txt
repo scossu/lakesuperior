@@ -67,3 +67,13 @@ Database size: 422 Mb
 
 Retrieval of parent resource (11400 triples), pipe to /dev/null: 7.5"
 
+
+### After using triple methods rather than SPARQL for extract_imr
+
+25' running time
+0.155" per resource
+
+Database size: 523 Mb
+
+Retrieval of parent resource, pipe to /dev/null: 1.9"
+

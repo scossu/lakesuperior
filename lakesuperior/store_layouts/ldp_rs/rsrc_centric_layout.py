@@ -232,23 +232,27 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
 
-        import pdb; pdb.set_trace()
         graphs = {pfx[uid] for pfx in self.graph_ns_types.keys()}
+
+        # Exclude children: remove containment graphs.
         if not incl_children:
             graphs.remove(nsc['fcstruct'][uid])
 
         rsrc_graphs = [
-                self.store.triples((None, None, None), gr)
+                self.ds.graph(gr)
                 for gr in graphs]
         resultset = set(chain.from_iterable(rsrc_graphs))
 
-        if incl_inbound and len(gr):
-            resultset += self.get_inbound_rel(nsc['fcres'][uid])
-
         gr = Graph()
+        gr += resultset
+
+        # Include inbound relationships.
+        if incl_inbound and len(gr):
+            gr += self.get_inbound_rel(nsc['fcres'][uid])
+
         #self._logger.debug('Found resource: {}'.format(
         #        gr.serialize(format='turtle').decode('utf-8')))
-        gr += resultset
+
         rsrc = Resource(gr, nsc['fcres'][uid])
 
         if strict:
@@ -327,20 +331,16 @@ class RsrcCentricLayout:
 
         @param subj_uri Subject URI.
         '''
-        #import pdb; pdb.set_trace()
-        # Only search in non-historic graphs.
-        qry = '''
-        CONSTRUCT { ?s1 ?p1 ?s }
-        WHERE {
-          GRAPH ?g {
-            ?s1 ?p1 ?s .
-          }
-          GRAPH ?mg {
-            ?g foaf:primaryTopic ?s1 .
-          }
-        }
-        '''
-        return self._parse_construct(qry, init_bindings={'s': uri})
+        # Only return non-historic graphs.
+        meta_gr = self.ds.graph(META_GR_URI)
+        ptopic_uri = nsc['foaf'].primaryTopic
+
+        ib_rels = (
+            match[:3] for match in self.ds.quads((None, None, uri, None))
+            if set(meta_gr[ : ptopic_uri : match[0]])
+        )
+
+        yield from ib_rels
 
 
     def get_recursive(self, uid, predicate):

@@ -212,7 +212,7 @@ class LmdbStore(Store):
     '''
     KEY_HASH_ALGO = 'sha1'
 
-    '''Separator byte. Used to join and plit individual term keys.'''
+    '''Separator byte. Used to join and split individual term keys.'''
     SEP_BYTE = b'\x00'
 
     DEFAULT_GRAPH_URI = URIRef('urn:fcrepo:default_graph')
