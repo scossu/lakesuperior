@@ -1,6 +1,7 @@
 import logging
 
 from collections import defaultdict
+from itertools import chain
 
 from flask import g
 from rdflib import Graph
@@ -230,33 +231,24 @@ class RsrcCentricLayout:
         '''
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
-        if incl_children:
-            incl_child_qry = ''
-            if embed_children:
-                pass # Not implemented. May never be.
-        else:
-            incl_child_qry = (
-                '\n FILTER NOT EXISTS { ?g a fcsystem:StructureGraph . }')
 
-        qry = '''
-        CONSTRUCT {{?s ?p ?o . }}
-        WHERE {{
-          GRAPH fcsystem:meta {{
-            ?g foaf:primaryTopic ?rsrc .
-            {}
-          }}
-          GRAPH ?g {{ ?s ?p ?o . }}
-        }}'''.format(incl_child_qry)
+        import pdb; pdb.set_trace()
+        graphs = {pfx[uid] for pfx in self.graph_ns_types.keys()}
+        if not incl_children:
+            graphs.remove(nsc['fcstruct'][uid])
 
-        gr = self._parse_construct(qry, init_bindings={
-            'rsrc': nsc['fcres'][uid],
-        })
+        rsrc_graphs = [
+                self.store.triples((None, None, None), gr)
+                for gr in graphs]
+        resultset = set(chain.from_iterable(rsrc_graphs))
 
         if incl_inbound and len(gr):
-            gr += self.get_inbound_rel(nsc['fcres'][uid])
+            resultset += self.get_inbound_rel(nsc['fcres'][uid])
 
+        gr = Graph()
         #self._logger.debug('Found resource: {}'.format(
         #        gr.serialize(format='turtle').decode('utf-8')))
+        gr += resultset
         rsrc = Resource(gr, nsc['fcres'][uid])
 
         if strict:
