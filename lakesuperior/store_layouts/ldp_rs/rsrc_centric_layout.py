@@ -250,9 +250,6 @@ class RsrcCentricLayout:
 
         gr = self._parse_construct(qry, init_bindings={
             'rsrc': nsc['fcres'][uid],
-            'ag': nsc['fcadmin'][uid],
-            'mg': nsc['fcmain'][uid],
-            'sg': nsc['fcstruct'][uid],
         })
 
         if incl_inbound and len(gr):
@@ -352,6 +349,26 @@ class RsrcCentricLayout:
         }
         '''
         return self._parse_construct(qry, init_bindings={'s': uri})
+
+
+    def get_recursive(self, uid, predicate):
+        '''
+        Get recursive references for a resource predicate.
+
+        @param uid (stirng) Resource UID.
+        @param predicate (URIRef) Predicate URI.
+        '''
+        ds = self.ds
+        uri = nsc['fcres'][uid]
+        def recurse(dset, s, p):
+            new_dset = set(ds[s : p])
+            for ss in new_dset:
+                dset.add(ss)
+                if set(ds[ss : p]):
+                    recurse(dset, ss, p)
+            return dset
+
+        return recurse(set(), uri, predicate)
 
 
     def patch_rsrc(self, uid, qry):
