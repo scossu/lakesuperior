@@ -379,8 +379,10 @@ class TestLdp:
         Test response codes for resources deleted recursively and their
         tombstones.
         '''
+        child_suffixes = ('a', 'a/b', 'a/b/c', 'a1', 'a1/b1')
         self.client.put('/ldp/test_delete_recursive01')
-        self.client.put('/ldp/test_delete_recursive01/a')
+        for cs in child_suffixes:
+            self.client.put('/ldp/test_delete_recursive01/{}'.format(cs))
 
         self.client.delete('/ldp/test_delete_recursive01')
 
@@ -390,9 +392,11 @@ class TestLdp:
             '<{}/test_delete_recursive01/fcr:tombstone>; rel="hasTombstone"'\
             .format(g.webroot)
 
-        child_tstone_resp = self.client.get('/ldp/test_delete_recursive01/a')
-        assert child_tstone_resp.status_code == tstone_resp.status_code
-        assert 'Link' not in child_tstone_resp.headers.keys()
+        for cs in child_suffixes:
+            child_tstone_resp = self.client.get(
+                    '/ldp/test_delete_recursive01/{}'.format(cs))
+            assert child_tstone_resp.status_code == tstone_resp.status_code
+            assert 'Link' not in child_tstone_resp.headers.keys()
 
 
     def test_put_fragments(self):

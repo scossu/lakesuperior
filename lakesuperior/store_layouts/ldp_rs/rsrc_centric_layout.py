@@ -4,7 +4,7 @@ from collections import defaultdict
 from itertools import chain
 
 from flask import g
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
@@ -343,24 +343,26 @@ class RsrcCentricLayout:
         yield from ib_rels
 
 
-    def get_recursive(self, uid, predicate):
+    def get_recursive_children(self, uid, predicate):
         '''
-        Get recursive references for a resource predicate.
+        Get recursive children for a resource predicate.
 
-        @param uid (stirng) Resource UID.
+        @param uid (string) Resource UID.
         @param predicate (URIRef) Predicate URI.
         '''
         ds = self.ds
-        uri = nsc['fcres'][uid]
-        def recurse(dset, s, p):
-            new_dset = set(ds[s : p])
+        subj_uri = nsc['fcres'][uid]
+        ctx_uri = nsc['fcstruct'][uid]
+        def recurse(dset, s, p, c):
+            new_dset = set(ds.graph(c)[s : p])
             for ss in new_dset:
                 dset.add(ss)
-                if set(ds[ss : p]):
-                    recurse(dset, ss, p)
+                cc = URIRef(ss.replace(nsc['fcres'], nsc['fcstruct']))
+                if set(ds.graph(cc)[ss : p]):
+                    recurse(dset, ss, p, cc)
             return dset
 
-        return recurse(set(), uri, predicate)
+        return recurse(set(), subj_uri, predicate, ctx_uri)
 
 
     def patch_rsrc(self, uid, qry):

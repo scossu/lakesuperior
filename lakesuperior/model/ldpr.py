@@ -429,8 +429,9 @@ class Ldpr(metaclass=ABCMeta):
         refint = self.rdfly.config['referential_integrity']
         inbound = True if refint else inbound
 
-        children = (self.rdfly.get_recursive(self.uid, nsc['ldp'].contains)
-                if delete_children else [])
+        children = (
+            self.rdfly.get_recursive_children(self.uid, nsc['ldp'].contains)
+            if delete_children else [])
 
         if leave_tstone:
             ret = self._bury_rsrc(inbound)
@@ -440,7 +441,7 @@ class Ldpr(metaclass=ABCMeta):
         for child_uri in children:
             try:
                 child_rsrc = LdpFactory.from_stored(
-                    g.tbox.uri_to_uuid(child_uri.identifier),
+                    g.tbox.uri_to_uuid(child_uri),
                     repr_opts={'incl_children' : False})
             except (TombstoneError, ResourceNotExistsError):
                 continue

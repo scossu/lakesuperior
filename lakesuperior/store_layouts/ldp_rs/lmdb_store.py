@@ -1061,7 +1061,6 @@ class LmdbStore(Store):
             's:po': (sk, pok),
             'p:so': (pk, sok),
             'o:sp': (ok, spk),
-            'c:spo': (ck, spok),
         }
 
         # Add or remove context association.
@@ -1089,6 +1088,7 @@ class LmdbStore(Store):
                 'Index action \'{}\' is not supported.'.format(action))
 
         # Add or remove triple lookups.
+        #import pdb; pdb.set_trace()
         for clabel, terms in curs.items():
             with self.cur(clabel) as icur:
                 if action == 'remove':
