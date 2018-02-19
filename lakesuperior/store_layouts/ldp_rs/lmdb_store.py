@@ -457,18 +457,19 @@ class LmdbStore(Store):
         'None' inserts in the default graph.
         @param quoted (bool) Not used.
         '''
-        #logger.debug('Adding quad: {} {}'.format(triple, context))
+        #import pdb; pdb.set_trace()
         assert context != self, "Cannot add triple directly to store"
         Store.add(self, triple, context)
 
         #logger.info('Adding triple: {}'.format(triple))
         if context is None:
-            context = self.DEFAULT_GRAPH_URI
+            context = Graph(identifier=self.DEFAULT_GRAPH_URI)
         pk_trp = self._pickle(triple)
 
         pk_s, pk_p, pk_o = [self._pickle(t) for t in triple]
-        #if isinstance(context, Graph):
-        #    graph = context.identifier
+        if isinstance(context, Graph):
+            context = context.identifier
+        logger.debug('Adding quad: {} {}'.format(triple, context))
         pk_c = self._pickle(context)
 
         # Add new individual terms or gather keys for existing ones.
@@ -507,9 +508,8 @@ class LmdbStore(Store):
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
         #    triple_pattern, context))
         if context is not None:
-            #if isinstance(context, Graph):
-            #    graph = context.identifier
-            #pk_c = self._pickle(context)
+            if isinstance(context, Graph):
+                graph = context.identifier
             ck = self._to_key(context)
         else:
             ck = None
@@ -548,20 +548,18 @@ class LmdbStore(Store):
         # but anyway...
         if isinstance(context, Graph) and isinstance(
                 context.identifier, Variable):
-            qry_context = None
-        else:
-            qry_context = context
-        #if isinstance(context, Graph):
-        #    logger.debug('Context graph length: {}'.format(len(context)))
-        #    context = context.identifier
-        #    logger.debug('Converted graph into URI: {}'.format(context))
+            context = None
+        if isinstance(context, Graph):
+            context = context.identifier
+            logger.debug('Converted graph into URI: {}'.format(context))
+        import pdb; pdb.set_trace()
         with self.cur('spo:c') as cur:
-            for spok in self._triple_keys(triple_pattern, qry_context):
+            for spok in self._triple_keys(triple_pattern, context):
                 if context is not None:
-                    contexts = (context,)
+                    contexts = (Graph(identifier=context),)
                 else:
                     if cur.set_key(spok):
-                        contexts = (self._from_key(ck)[0]
+                        contexts = (Graph(identifier=self._from_key(ck)[0])
                                 for ck in cur.iternext_dup())
 
                 #print('Found triples: {} In contexts: {}'.format(
@@ -629,11 +627,11 @@ class LmdbStore(Store):
             with self.cur('spo:c') as cur:
                 cur.set_key(self._to_key(triple))
                 for ctx in cur.iternext_dup():
-                    yield self._from_key(ctx)[0]
+                    yield Graph(identifier=self._from_key(ctx)[0])
         else:
             with self.cur('c:') as cur:
                 for ctx in cur.iternext(values=False):
-                    yield self._from_key(ctx)[0]
+                    yield Graph(identifier=self._from_key(ctx)[0])
 
 
     def add_graph(self, graph):
@@ -651,9 +649,8 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to add.
         '''
-        #pk_c = self._pickle(graph.identifier) \
-        #        if isinstance(graph, Graph) \
-        #        else self._pickle(graph)
+        if isinstance(graph, Graph):
+            graph = graph.identifier
         pk_c = self._pickle(graph)
         c_hash = self._hash(pk_c)
         with self.cur('th:t') as cur:
@@ -686,8 +683,8 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to remove.
         '''
-        #if isinstance(graph, Graph):
-        #    graph = graph.identifier
+        if isinstance(graph, Graph):
+            graph = graph.identifier
         self.remove((None, None, None), graph)
 
         with self.cur('c:') as cur:
@@ -778,9 +775,10 @@ class LmdbStore(Store):
                 # ? ? ? c
                 elif not any(triple_pattern):
                     # Get all triples from the context
-                    cur.set_key(ck)
-                    for spok in cur.iternext_dup():
-                        yield spok
+                    if cur.set_key(ck):
+                        yield from cur.iternext_dup()
+                    else:
+                        return iter(())
 
                 # Regular lookup.
                 else:
