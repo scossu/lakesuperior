@@ -302,10 +302,13 @@ class LmdbStore(Store):
         '''
         Return length of the dataset.
         '''
+        import pdb; pdb.set_trace()
         if context == self:
             context = None
+        if isinstance(context, Graph):
+            context = context.identifier
 
-        if context.identifier is not None:
+        if context is not None:
             #dataset = self.triples((None, None, None), context)
             with self.cur('c:spo') as cur:
                 if cur.set_key(self._to_key(context)):
@@ -542,6 +545,7 @@ class LmdbStore(Store):
         Where the contexts generator lists all context that the triple appears
         in.
         '''
+        #import pdb; pdb.set_trace()
         #logger.debug('Getting triples for pattern: {} and context: {}'.format(
         #    triple_pattern, context))
         # This sounds strange, RDFLib should be passing None at this point,
@@ -552,7 +556,6 @@ class LmdbStore(Store):
         if isinstance(context, Graph):
             context = context.identifier
             logger.debug('Converted graph into URI: {}'.format(context))
-        import pdb; pdb.set_trace()
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
                 if context is not None:
@@ -621,17 +624,25 @@ class LmdbStore(Store):
         '''
         Get a list of all contexts.
 
-        @return generator:URIRef
+        @return generator(Graph)
         '''
-        if triple:
+        import pdb; pdb.set_trace()
+        if triple and any(triple):
             with self.cur('spo:c') as cur:
                 cur.set_key(self._to_key(triple))
-                for ctx in cur.iternext_dup():
-                    yield Graph(identifier=self._from_key(ctx)[0])
+                i = cur.iternext_dup()
         else:
             with self.cur('c:') as cur:
-                for ctx in cur.iternext(values=False):
-                    yield Graph(identifier=self._from_key(ctx)[0])
+                i = cur.iternext(values=False)
+
+        for ck in i:
+            gr_uri = self._from_key(ck)[0]
+            gr = Graph(identifier=graph_uri)
+            for trp in self.triples((None, None, None), gr_uri):
+                gr.add(trp)
+
+            yield gr
+
 
 
     def add_graph(self, graph):
@@ -649,6 +660,7 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to add.
         '''
+        #import pdb; pdb.set_trace()
         if isinstance(graph, Graph):
             graph = graph.identifier
         pk_c = self._pickle(graph)

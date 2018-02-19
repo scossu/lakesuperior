@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, current_app, request, render_template
 from rdflib.plugin import PluginException
 
@@ -10,6 +12,7 @@ from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
 # binary comparisons should be added. Binary lookups—maybe?
 # N.B All data sources are read-only for this endpoint.
 
+logger = logging.getLogger(__name__)
 
 query = Blueprint('query', __name__)
 
@@ -48,6 +51,7 @@ def sparql():
     if request.method == 'GET':
         return render_template('sparql_query.html', nsm=nsm)
     else:
+        logger.debug('Query: {}'.format(request.form['query']))
         store = current_app.rdfly.store
         with TxnManager(store) as txn:
             qres = QueryEngine().sparql_query(request.form['query'])
