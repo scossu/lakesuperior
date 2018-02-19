@@ -325,30 +325,38 @@ class RsrcCentricLayout:
         return rsrc
 
 
-    def get_inbound_rel(self, uri):
+    def get_inbound_rel(self, subj_uri, full_triple=True):
         '''
         Query inbound relationships for a subject.
 
-        @param subj_uri Subject URI.
+        This can be a list of either complete triples, or of subjects referring
+        to the given URI. It excludes historic version snapshots.
+
+        @param subj_uri (rdflib.URIRef) Subject URI.
+        @param full_triple (boolean) Whether to return the full triples found
+        or only the subjects. By default, full triples are returned.
+
+        @return iterator(tuple(rdflib.term.Identifier) | rdflib.URIRef)
+        Inbound triples or subjects.
         '''
         # Only return non-historic graphs.
         meta_gr = self.ds.graph(META_GR_URI)
         ptopic_uri = nsc['foaf'].primaryTopic
 
-        ib_rels = (
-            match[:3] for match in self.ds.quads((None, None, uri, None))
+        yield from (
+            (match[:3] if full_triple else match[0])
+            for match in self.ds.quads((None, None, subj_uri, None))
             if set(meta_gr[ : ptopic_uri : match[0]])
         )
 
-        yield from ib_rels
 
-
-    def get_recursive_children(self, uid, predicate):
+    def get_descendants(self, uid):
         '''
-        Get recursive children for a resource predicate.
+        Get descendants (recursive children) of a resource.
 
         @param uid (string) Resource UID.
-        @param predicate (URIRef) Predicate URI.
+
+        @return iterator(rdflib.URIRef) Subjects of descendant resources.
         '''
         ds = self.ds
         subj_uri = nsc['fcres'][uid]
@@ -362,7 +370,7 @@ class RsrcCentricLayout:
                     recurse(dset, ss, p, cc)
             return dset
 
-        return recurse(set(), subj_uri, predicate, ctx_uri)
+        return recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
 
 
     def patch_rsrc(self, uid, qry):
@@ -387,53 +395,45 @@ class RsrcCentricLayout:
         return gr.update(qry)
 
 
-    def purge_rsrc(self, uid, inbound=True, backup_uid=None):
+    def purge_rsrc(self, uid, inbound=True, children=True):
         '''
-        Completely delete a resource and (optionally) its references.
+        Completely delete a resource and (optionally) its children and inbound
+        references.
+
+        NOTE: inbound references in historic versions are not affected.
         '''
-        qry = '''
-        DELETE WHERE {{
-          GRAPH ?g {{ {rsrc} fcrepo:hasVersion ?v . }}
-          GRAPH {histmeta} {{
-            ?vg foaf:primaryTopic ?v ;
-              ?gp ?go .
-          }}
-          GRAPH ?vg {{ ?vs ?vp ?vo }}
-        }}
-        ;
-        DELETE WHERE {{
-          GRAPH {meta} {{
-            ?g foaf:primaryTopic {rsrc} ;
-              ?gp ?go .
-          }}
-          GRAPH ?g {{ ?s ?p ?o . }}
-        }}
-        '''.format(rsrc=nsc['fcres'][uid].n3(),
-            meta=META_GR_URI.n3(), histmeta=HIST_GR_URI.n3())
+        # Localize variables to be used in loops.
+        uri = nsc['fcres'][uid]
+        topic_uri = nsc['foaf'].primaryTopic
+        uid_fn = g.tbox.uri_to_uuid
 
-        self.ds.update(qry)
+        # remove children.
+        #if children:
+        #    self._logger.debug('Purging children for /{}'.format(uid))
+        #    for rsrc_uri in self.get_descendants(uid):
+        #        self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
 
-        if inbound:
-            # Gather ALL subjects in the user graph. There may be fragments.
-            # Do not delete inbound references from historic graphs.
-            qry = '''
-            DELETE {{ GRAPH ?ibg {{ ?ibs ?ibp ?s . }} }}
-            WHERE {{
-              GRAPH {ug} {{ ?s ?p ?o . }}
-              GRAPH ?ibg {{ ?ibs ?ibp ?s . }}
-              GRAPH {mg} {{ ?ibg foaf:primaryTopic ?ibs . }}
-            }}'''.format(
-            mg=META_GR_URI.n3(),
-            ug=nsc['fcmain'][uid].n3())
+        # Remove inbound references.
+        #if inbound:
+        #    rm_inbound = list(map(self.ds.remove, self.get_inbound_rel(uri)))
+        #    self._logger.debug('Removed {} inbound triples from /{}.'.format(
+        #            len(rm_inbound), uid))
 
-            self.ds.update(qry)
+        # Remove versions.
+        #for ver_uri in self.ds.graph(nsc['fcadmin'][uid])[
+        #        uri : nsc['fcrepo'].hasVersion : None]:
+        #    self._delete_rsrc(uid_fn(ver_uri), True)
+
+        # Remove resource itself.
+        self._delete_rsrc(uid)
 
 
     def create_or_replace_rsrc(self, uid, trp):
         '''
         Create a new resource or replace an existing one.
         '''
-        self.delete_rsrc_data(uid)
+        if self.ask_rsrc_exists(uid):
+            self._delete_rsrc(uid)
 
         return self.modify_rsrc(uid, add_trp=trp)
 
@@ -490,9 +490,18 @@ class RsrcCentricLayout:
             meta_gr.add((gr_uri, RDF.type, gr_type))
 
 
-    def delete_rsrc_data(self, uid):
-        for guid in self._graph_uids:
-            self.ds.remove_graph(self.ds.graph(nsc[guid][uid]))
+    def _delete_rsrc(self, uid, historic=False):
+        '''
+        Delete all aspect graphs of an individual resource.
+
+        @param uid Resource UID.
+        @param historic (bool) Whether the UID is of a historic version.
+        '''
+        meta_gr_uri = HIST_GR_URI if historic else META_GR_URI
+        for gr_uri in self.ds.graph(meta_gr_uri)[
+                : nsc['foaf'].primaryTopic : nsc['fcres'][uid]]:
+            self.ds.remove_context(gr_uri)
+            self.ds.graph(meta_gr_uri).remove((gr_uri, None, None))
 
 
     def snapshot_uid(self, uid, ver_uid):

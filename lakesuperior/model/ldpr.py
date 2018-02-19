@@ -426,11 +426,12 @@ class Ldpr(metaclass=ABCMeta):
         @param delete_children (boolean) Whether to delete all child resources.
         This is the default.
         '''
+        #import pdb; pdb.set_trace()
         refint = self.rdfly.config['referential_integrity']
         inbound = True if refint else inbound
 
         children = (
-            self.rdfly.get_recursive_children(self.uid, nsc['ldp'].contains)
+            self.rdfly.get_descendants(self.uid)
             if delete_children else [])
 
         if leave_tstone:
@@ -594,7 +595,9 @@ class Ldpr(metaclass=ABCMeta):
         # Create a backup snapshot for resurrection purposes.
         self.create_rsrc_snapshot(uuid4())
 
-        remove_trp = set(self.imr.graph)
+        remove_trp = {
+                trp for trp in self.imr.graph
+                if trp[1] != nsc['fcrepo'].hasVersion}
 
         if tstone_pointer:
             add_trp = {(self.urn, nsc['fcsystem'].tombstone,
