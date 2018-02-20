@@ -350,11 +350,13 @@ class RsrcCentricLayout:
         )
 
 
-    def get_descendants(self, uid):
+    def get_descendants(self, uid, path_segments=False):
         '''
         Get descendants (recursive children) of a resource.
 
         @param uid (string) Resource UID.
+        @param path_segments (bool) Whether to add path segments to the
+        result set.
 
         @return iterator(rdflib.URIRef) Subjects of descendant resources.
         '''
@@ -370,7 +372,13 @@ class RsrcCentricLayout:
                     recurse(dset, ss, p, cc)
             return dset
 
-        return recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
+        children = recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
+        if path_segments:
+            psegs = set(recurse(
+                set(), subj_uri, nsc['fcsystem'].contains, ctx_uri))
+            return set(children) | psegs
+        else:
+            return children
 
 
     def patch_rsrc(self, uid, qry):
@@ -408,21 +416,23 @@ class RsrcCentricLayout:
         uid_fn = g.tbox.uri_to_uuid
 
         # remove children.
-        #if children:
-        #    self._logger.debug('Purging children for /{}'.format(uid))
-        #    for rsrc_uri in self.get_descendants(uid):
-        #        self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
+        if children:
+            self._logger.debug('Purging children for /{}'.format(uid))
+            for rsrc_uri in self.get_descendants(uid, True):
+                self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
+            # Remove structure graph.
+            self.ds.remove_graph(nsc['fcstruct'][uid])
 
         # Remove inbound references.
-        #if inbound:
-        #    rm_inbound = list(map(self.ds.remove, self.get_inbound_rel(uri)))
-        #    self._logger.debug('Removed {} inbound triples from /{}.'.format(
-        #            len(rm_inbound), uid))
+        if inbound:
+            #import pdb; pdb.set_trace()
+            for ibs in self.get_inbound_rel(uri):
+                self.ds.remove(ibs)
 
         # Remove versions.
-        #for ver_uri in self.ds.graph(nsc['fcadmin'][uid])[
-        #        uri : nsc['fcrepo'].hasVersion : None]:
-        #    self._delete_rsrc(uid_fn(ver_uri), True)
+        for ver_uri in self.ds.graph(nsc['fcadmin'][uid])[
+                uri : nsc['fcrepo'].hasVersion : None]:
+            self._delete_rsrc(uid_fn(ver_uri), True)
 
         # Remove resource itself.
         self._delete_rsrc(uid)

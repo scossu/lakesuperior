@@ -496,39 +496,55 @@ class LmdbStore(Store):
 
         # Add triple:context association.
         spok = self.SEP_BYTE.join(keys[:3])
-        with self.cur('spo:c') as cur:
-            if not cur.set_key_dup(spok, ck):
-                cur.put(spok, ck)
+        with self.cur('spo:c') as dcur:
+            if not dcur.set_key_dup(spok, ck):
+                dcur.put(spok, ck)
+        # Index spo:c association.
+        with self.cur('c:spo') as icur:
+            icur.put(ck, spok)
 
-        self._index('add', spok, ck)
+        self._index_triple('add', spok)
 
 
     def remove(self, triple_pattern, context=None):
         '''
-        Remove a triple and start indexing.
+        Remove triples by a pattern.
         '''
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
         #    triple_pattern, context))
         if context is not None:
             if isinstance(context, Graph):
-                graph = context.identifier
+                context = context.identifier
             ck = self._to_key(context)
+            # If context is specified but not found, return to avoid deleting
+            # the wrong triples.
+            if not ck:
+                return
         else:
             ck = None
 
-        for trp_key in self._triple_keys(triple_pattern, context):
+        for spok in set(self._triple_keys(triple_pattern, context)):
             # Delete context association.
-            with self.cur('spo:c') as cur:
-                if ck:
-                    if cur.set_key_dup(trp_key, ck):
-                        cur.delete()
-                else:
-                    # If no context is specified, remove all associations.
-                    if cur.set_key(trp_key):
-                        cur.delete(dupdata=True)
+            with self.cur('spo:c') as dcur:
+                with self.cur('c:spo') as icur:
+                    #import pdb; pdb.set_trace()
+                    if ck:
+                        if dcur.set_key_dup(spok, ck):
+                            dcur.delete()
+                            if icur.set_key_dup(ck, spok):
+                                icur.delete()
+                    else:
+                        # If no context is specified, remove all associations.
+                        if dcur.set_key(spok):
+                            # Delete indices first while we have the context
+                            # references.
+                            for ck in dcur.iternext_dup():
+                                if icur.set_key_dup(ck, spok):
+                                    icur.delete()
+                            # Then delete the main entry.
+                            dcur.delete(dupdata=True)
 
-            #import pdb; pdb.set_trace()
-            self._index('remove', trp_key, ck)
+            self._index_triple('remove', spok)
 
 
     def triples(self, triple_pattern, context=None):
@@ -625,23 +641,15 @@ class LmdbStore(Store):
 
         @return generator(Graph)
         '''
-        import pdb; pdb.set_trace()
         if triple and any(triple):
             with self.cur('spo:c') as cur:
-                cur.set_key(self._to_key(triple))
-                i = cur.iternext_dup()
+                if cur.set_key(self._to_key(triple)):
+                    for ctx_uri in cur.iternext_dup():
+                        yield Graph(identifier=self._from_key(ctx_uri)[0], store=self)
         else:
-            with self.cur('c:') as cur:
-                i = cur.iternext(values=False)
-
-        for ck in i:
-            gr_uri = self._from_key(ck)[0]
-            gr = Graph(identifier=graph_uri)
-            for trp in self.triples((None, None, None), gr_uri):
-                gr.add(trp)
-
-            yield gr
-
+            with self.cur('c:spo') as cur:
+                for ctx_uri in cur.iternext_nodup():
+                    yield Graph(identifier=self._from_key(ctx_uri)[0], store=self)
 
 
     def add_graph(self, graph):
@@ -787,7 +795,8 @@ class LmdbStore(Store):
                 elif not any(triple_pattern):
                     # Get all triples from the context
                     if cur.set_key(ck):
-                        yield from cur.iternext_dup()
+                        for spok in cur.iternext_dup():
+                            yield spok
                     else:
                         return iter(())
 
@@ -1048,22 +1057,20 @@ class LmdbStore(Store):
         return [d[0] for d in data]
 
 
-    def _index(self, action, spok, ck=None):
+    def _index_triple(self, action, spok):
         '''
         Update index for a triple and context (add or remove).
 
         @param action (string) 'add' or 'remove'.
         @param spok (bytes) Triple key.
-        @param ck (bytes|None) Context key. If None, all contexts found are
         indexed. Context MUST be specified for 'add'.
         '''
         # Split and rearrange-join keys for association and indices.
         triple = bytes(spok).split(self.SEP_BYTE)
-        sk, pk, ok = triple[:3]
+        sk, pk, ok = triple
         spk = self.SEP_BYTE.join(triple[:2])
         sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
         pok = self.SEP_BYTE.join(triple[1:3])
-        spok = self.SEP_BYTE.join(triple[:3])
 
         # Associate cursor labels with k/v pairs.
         curs = {
@@ -1072,39 +1079,17 @@ class LmdbStore(Store):
             'o:sp': (ok, spk),
         }
 
-        # Add or remove context association.
-        if action == 'remove':
-            # Delete all context associations with the triple
-            # if none is specified.
-            with self.cur('c:spo') as icur:
-                if not ck:
-                    with self.cur('spo:c') as dcur:
-                        # Find all context associations to delete.
-                        if dcur.set_key(spok):
-                            for ck in dcur.iternext_dup():
-                                if icur.set_key_dup(ck, spok):
-                                    icur.delete()
-                else:
-                    # Delete one triple-context association.
-                    if icur.set_key_dup(ck, spok):
-                        icur.delete()
-        elif action == 'add':
-            ck = ck or self._to_key(self.DEFAULT_GRAPH_URI)
-            with self.cur('c:spo') as icur:
-                icur.put(ck, spok)
-        else:
-            raise ValueError(
-                'Index action \'{}\' is not supported.'.format(action))
-
         # Add or remove triple lookups.
-        #import pdb; pdb.set_trace()
         for clabel, terms in curs.items():
             with self.cur(clabel) as icur:
                 if action == 'remove':
                     if icur.set_key_dup(*terms):
                         icur.delete()
-                else:
+                elif action == 'add':
                     icur.put(*terms)
+                else:
+                    raise ValueError(
+                        'Index action \'{}\' is not supported.'.format(action))
 
 
     ## Convenience methods—not necessary for functioning but useful for
@@ -1118,7 +1103,7 @@ class LmdbStore(Store):
 
         @return Iterator:tuple Generator of triples.
         '''
-        with self.cur('c:tk') as cur:
+        with self.cur('c:spo') as cur:
             if cur.set_key(pk_ctx):
                 tkeys = cur.iternext_dup()
                 return {self._key_to_triple(tk) for tk in tkeys}
@@ -1134,7 +1119,7 @@ class LmdbStore(Store):
 
         @return Iterator:URIRef Generator of context URIs.
         '''
-        with self.cur('tk:c') as cur:
+        with self.cur('spo:c') as cur:
             if cur.set_key(tkey):
                 ctx = cur.iternext_dup()
                 return {self._unpickle(c) for c in ctx}
