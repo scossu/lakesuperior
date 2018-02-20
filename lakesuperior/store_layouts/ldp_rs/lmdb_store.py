@@ -302,7 +302,6 @@ class LmdbStore(Store):
         '''
         Return length of the dataset.
         '''
-        import pdb; pdb.set_trace()
         if context == self:
             context = None
         if isinstance(context, Graph):
@@ -354,7 +353,7 @@ class LmdbStore(Store):
         logger.info('Beginning a {} transaction.'.format(
             'read/write' if write else 'read-only'))
         self.data_txn = self.data_env.begin(buffers=True, write=write)
-        self.idx_txn = self.idx_env.begin(buffers=True, write=write)
+        self.idx_txn = self.idx_env.begin(buffers=False, write=write)
 
         self.is_txn_rw = write
 
