@@ -33,11 +33,9 @@ def db(app):
 
     yield db
 
-    #print('Tearing down fixture graph store.')
-    #if hasattr(db.store, 'begin'):
-    #    with TxnManager(db.store, True) as txn:
-    #        for g in db.ds.graphs():
-    #            db.ds.remove_graph(g)
+    print('Tearing down fixture graph store.')
+    if hasattr(db.store, 'destroy'):
+        db.store.destroy(db.store.path)
 
 
 @pytest.fixture

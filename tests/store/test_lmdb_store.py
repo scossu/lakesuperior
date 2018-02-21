@@ -131,7 +131,8 @@ class TestBasicOps:
             res3 = set(store.triples(
                 (None, URIRef('urn:test:p'), URIRef('urn:test:o'))))
             assert _clean(res1) == {(
-                URIRef('urn:test:s'), URIRef('urn:test:p'), URIRef('urn:test:o'))}
+                URIRef('urn:test:s'),
+                URIRef('urn:test:p'), URIRef('urn:test:o'))}
             assert _clean(res2) == _clean(res1)
             assert _clean(res3) == _clean(res2)
 
@@ -239,7 +240,7 @@ class TestContext:
 
         with TxnManager(store, True) as txn:
             store.add_graph(gr_uri)
-            assert gr_uri in set(store.contexts())
+            assert gr_uri in {gr.identifier for gr in store.contexts()}
 
 
     def test_empty_context(self, store):
@@ -250,9 +251,9 @@ class TestContext:
 
         with TxnManager(store, True) as txn:
             store.add_graph(gr_uri)
-            assert gr_uri in store.contexts()
+            assert gr_uri in {gr.identifier for gr in store.contexts()}
             store.remove_graph(gr_uri)
-            assert gr_uri not in store.contexts()
+            assert gr_uri not in {gr.identifier for gr in store.contexts()}
 
 
     def test_add_trp_to_ctx(self, store):
@@ -278,7 +279,7 @@ class TestContext:
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
-            assert gr2_uri in store.contexts()
+            assert gr2_uri in {gr.identifier for gr in store.contexts()}
             assert trp1 in _clean(store.triples((None, None, None)))
             assert trp1 not in _clean(store.triples((None, None, None),
                     store.DEFAULT_GRAPH_URI))
@@ -289,20 +290,23 @@ class TestContext:
                     store.DEFAULT_GRAPH_URI))
 
 
-    def test_delete_from_ctx(self, store):
-        '''
-        Delete triples from a named graph and from the default graph.
-        '''
-        gr_uri = URIRef('urn:bogus:graph#a')
-        gr2_uri = URIRef('urn:bogus:graph#b')
+    #def test_delete_from_ctx(self, store):
+    #    '''
+    #    Delete triples from a named graph and from the default graph.
+    #    '''
+    #    gr_uri = URIRef('urn:bogus:graph#a')
+    #    gr2_uri = URIRef('urn:bogus:graph#b')
 
-        with TxnManager(store, True) as txn:
-            store.remove((None, None, None))
-            store.remove((None, None, None), gr2_uri)
+    #    with TxnManager(store, True) as txn:
+    #        store.remove((None, None, None), gr2_uri)
+    #        assert len(set(store.triples((None, None, None), gr2_uri))) == 0
+    #        assert len(set(store.triples((None, None, None), gr_uri))) == 2
 
-            assert len(set(store.triples((None, None, None)))) == 0
-            assert len(set(store.triples((None, None, None), gr_uri))) == 2
-            assert len(set(store.triples((None, None, None), gr2_uri))) == 0
+    #    with TxnManager(store, True) as txn:
+    #        store.remove((None, None, None))
+    #        assert len(set(store.triples((None, None, None)))) == 0
+    #        assert len(set(store.triples((None, None, None), gr_uri))) == 0
+    #        assert len(store) == 0
 
 
 @pytest.mark.usefixtures('store')
