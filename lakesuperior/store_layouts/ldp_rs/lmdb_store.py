@@ -316,7 +316,7 @@ class LmdbStore(Store):
                 else:
                     return 0
         else:
-            return self.data_txn.stat(self.dbs['tk:t'])['entries']
+            return self.data_txn.stat(self.dbs['spo:c'])['entries']
 
 
     @property
@@ -471,7 +471,7 @@ class LmdbStore(Store):
         pk_s, pk_p, pk_o = [self._pickle(t) for t in triple]
         if isinstance(context, Graph):
             context = context.identifier
-        logger.debug('Adding quad: {} {}'.format(triple, context))
+        #logger.debug('Adding quad: {} {}'.format(triple, context))
         pk_c = self._pickle(context)
 
         # Add new individual terms or gather keys for existing ones.
@@ -527,7 +527,6 @@ class LmdbStore(Store):
             # Delete context association.
             with self.cur('spo:c') as dcur:
                 with self.cur('c:spo') as icur:
-                    #import pdb; pdb.set_trace()
                     if ck:
                         if dcur.set_key_dup(spok, ck):
                             dcur.delete()
@@ -536,12 +535,13 @@ class LmdbStore(Store):
                     else:
                         # If no context is specified, remove all associations.
                         if dcur.set_key(spok):
-                            # Delete indices first while we have the context
-                            # references.
                             for ck in dcur.iternext_dup():
+                                # Delete index first while we have the
+                                # context reference.
                                 if icur.set_key_dup(ck, spok):
                                     icur.delete()
                             # Then delete the main entry.
+                            dcur.set_key(spok)
                             dcur.delete(dupdata=True)
 
             self._index_triple('remove', spok)
@@ -570,15 +570,16 @@ class LmdbStore(Store):
             context = None
         if isinstance(context, Graph):
             context = context.identifier
-            logger.debug('Converted graph into URI: {}'.format(context))
+            #logger.debug('Converted graph into URI: {}'.format(context))
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
                 if context is not None:
                     contexts = (Graph(identifier=context),)
                 else:
                     if cur.set_key(spok):
-                        contexts = (Graph(identifier=self._from_key(ck)[0])
-                                for ck in cur.iternext_dup())
+                        contexts = (
+                            Graph(identifier=self._from_key(ck)[0], store=self)
+                            for ck in cur.iternext_dup())
 
                 #print('Found triples: {} In contexts: {}'.format(
                 #    self._from_key(spok), contexts))
@@ -645,11 +646,13 @@ class LmdbStore(Store):
             with self.cur('spo:c') as cur:
                 if cur.set_key(self._to_key(triple)):
                     for ctx_uri in cur.iternext_dup():
-                        yield Graph(identifier=self._from_key(ctx_uri)[0], store=self)
+                        yield Graph(
+                            identifier=self._from_key(ctx_uri)[0], store=self)
         else:
-            with self.cur('c:spo') as cur:
-                for ctx_uri in cur.iternext_nodup():
-                    yield Graph(identifier=self._from_key(ctx_uri)[0], store=self)
+            with self.cur('c:') as cur:
+                for ctx_uri in cur.iternext(values=False):
+                    yield Graph(
+                            identifier=self._from_key(ctx_uri)[0], store=self)
 
 
     def add_graph(self, graph):
