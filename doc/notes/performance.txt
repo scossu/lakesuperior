@@ -21,6 +21,19 @@
 
 Modified Duchamp VIAF dataset (343 triples; changed all subjects to `<>`)
 
+## Vanilla FCREPO 4.7
+
+10K PUTs to new resources under the same container:
+
+9'27" running time
+0.057" per resource
+3.4M triples total in repo at the end of the process
+
+Retrieval of parent resource (~10000 triples), pipe to /dev/null: 3.64"
+
+Database size: 3.3 Gb
+
+
 ## Sleepycat Back End Test
 
 10K PUTs to new resources under the same container:
@@ -29,7 +42,7 @@ Modified Duchamp VIAF dataset (343 triples; changed all subjects to `<>`)
 0.108" per resource
 3.4M triples total in repo at the end of the process
 
-Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.6"
+Retrieval of parent resource, pipe to /dev/null: 3.6"
 
 Database size: 1.2 Gb
 
@@ -49,7 +62,7 @@ flush
 
 Database size: 633 Mb
 
-Retrieval of parent resource (11400 triples), pipe to /dev/null: 3.48"
+Retrieval of parent resource, pipe to /dev/null: 3.48"
 
 
 ### Strategy #5
@@ -65,7 +78,7 @@ blocker seems to be somewhere else.
 
 Database size: 422 Mb
 
-Retrieval of parent resource (11400 triples), pipe to /dev/null: 7.5"
+Retrieval of parent resource, pipe to /dev/null: 7.5"
 
 
 ### After using triple methods rather than SPARQL for extract_imr
