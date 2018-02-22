@@ -291,16 +291,14 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
+        uri = nsc['fcres'][uid]
         if not len(gr):
             # If no resource is found, search in pairtree graph.
-            try:
-                gr = self.ds.graph(PTREE_GR_URI).query(
-                        'CONSTRUCT WHERE {?s ?p ?o}',
-                        initBindings={'s': nsc['fcres'][uid]}).graph
-            except ResultException:
-                gr = Graph()
+            gr = Graph()
+            for p, o in self.ds.graph(PTREE_GR_URI)[uri : : ]:
+                gr.add(uri, p, o)
 
-        rsrc = Resource(gr, nsc['fcres'][uid])
+        rsrc = Resource(gr, uri)
         if strict:
             self._check_rsrc_status(rsrc)
 
@@ -364,7 +362,7 @@ class RsrcCentricLayout:
         )
 
 
-    def get_descendants(self, uid, path_segments=False):
+    def get_descendants(self, uid, recurse=True, path_segments=False):
         '''
         Get descendants (recursive children) of a resource.
 
@@ -377,20 +375,25 @@ class RsrcCentricLayout:
         ds = self.ds
         subj_uri = nsc['fcres'][uid]
         ctx_uri = nsc['fcstruct'][uid]
-        def recurse(dset, s, p, c):
+        def _recurse(dset, s, p, c):
             new_dset = set(ds.graph(c)[s : p])
             for ss in new_dset:
                 dset.add(ss)
                 cc = URIRef(ss.replace(nsc['fcres'], nsc['fcstruct']))
                 if set(ds.graph(cc)[ss : p]):
-                    recurse(dset, ss, p, cc)
+                    _recurse(dset, ss, p, cc)
             return dset
 
-        children = recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
+        children = (
+            _recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
+            if recurse
+            else ds.graph(ctx_uri)[subj_uri : nsc['ldp'].contains : ])
         if path_segments:
-            psegs = set(recurse(
-                set(), subj_uri, nsc['fcsystem'].contains, ctx_uri))
-            return set(children) | psegs
+            psegs = (
+                _recurse(set(), subj_uri, nsc['fcsystem'].contains, ctx_uri)
+                if recurse
+                else ds.graph(ctx_uri)[subj_uri : nsc['fcsystem'].contains : ])
+            return chain(children, psegs)
         else:
             return children
 
@@ -432,14 +435,13 @@ class RsrcCentricLayout:
         # remove children.
         if children:
             self._logger.debug('Purging children for /{}'.format(uid))
-            for rsrc_uri in self.get_descendants(uid, True):
+            for rsrc_uri in self.get_descendants(uid, False, True):
                 self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
             # Remove structure graph.
             self.ds.remove_graph(nsc['fcstruct'][uid])
 
         # Remove inbound references.
         if inbound:
-            #import pdb; pdb.set_trace()
             for ibs in self.get_inbound_rel(uri):
                 self.ds.remove(ibs)
 

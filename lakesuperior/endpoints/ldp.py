@@ -66,6 +66,8 @@ vw_blacklist = {
     nsc['fcsystem'].contains,
 }
 
+
+
 @ldp.url_defaults
 def bp_url_defaults(endpoint, values):
     url_prefix = getattr(g, 'url_prefix', None)
@@ -84,7 +86,8 @@ def log_request_start():
 
 
 @ldp.before_request
-def instantiate_toolbox():
+def instantiate_req_vars():
+    g.store = current_app.rdfly.store
     g.tbox = Toolbox()
 
 
@@ -218,7 +221,6 @@ def get_resource(uid, force_rdf=False):
 @ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
 @ldp.route('/', defaults={'parent': ''}, methods=['POST'],
         strict_slashes=False)
-@transaction(True)
 def post_resource(parent):
     '''
     Add a new resource in a new URI.
@@ -234,21 +236,20 @@ def post_resource(parent):
     stream, mimetype = bitstream_from_req()
 
     try:
-        uid = uuid_for_post(parent, slug)
-        logger.debug('Generated UID for POST: {}'.format(uid))
-        rsrc = LdpFactory.from_provided(
-                uid, content_length=request.content_length,
-                stream=stream, mimetype=mimetype, handling=handling,
-                disposition=disposition)
+        with TxnManager(g.store, True):
+            uid = uuid_for_post(parent, slug)
+            logger.debug('Generated UID for POST: {}'.format(uid))
+            rsrc = LdpFactory.from_provided(
+                    uid, content_length=request.content_length,
+                    stream=stream, mimetype=mimetype, handling=handling,
+                    disposition=disposition)
+            rsrc.post()
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
         return str(e), 409
     except TombstoneError as e:
         return _tombstone_response(e, uid)
-
-    try:
-        rsrc.post()
     except ServerManagedTermError as e:
         return str(e), 412
 
