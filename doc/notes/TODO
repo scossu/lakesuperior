@@ -73,10 +73,10 @@
 
 # Alpha 6
 
-- [ ] Basic admin tools
+- [D] Optimize queries
+- [D] Optimize store
+- [W] Basic admin tools
 - [ ] Term query API
-- [ ] Optimize queries
-- [ ] Optimize store
 - [ ] Complete revert to version and resurrect
 
 # Alpha 7

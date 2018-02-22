@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 
 from contextlib import ContextDecorator, ExitStack
 from multiprocessing import Process
@@ -286,11 +287,11 @@ class LmdbStore(Store):
 
 
     def __init__(self, path, identifier=None):
+        self.path = path
         self.__open = False
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
         super().__init__(path)
-        self.path = path
 
         self._pickle = self.node_pickler.dumps
         self._unpickle = self.node_pickler.loads
@@ -324,7 +325,7 @@ class LmdbStore(Store):
         return self.__open
 
 
-    def open(self, path, create=True):
+    def open(self, configuration=None, create=True):
         '''
         Open the database.
 
@@ -336,7 +337,7 @@ class LmdbStore(Store):
         This method is called outside of the main transaction. All cursors
         are created separately within the transaction.
         '''
-        self._init_db_environments(path, create)
+        self._init_db_environments(create)
         if self.data_env == NO_STORE:
             return NO_STORE
         self.__open = True
@@ -352,10 +353,32 @@ class LmdbStore(Store):
             raise RuntimeError('Store must be opened first.')
         logger.info('Beginning a {} transaction.'.format(
             'read/write' if write else 'read-only'))
+
         self.data_txn = self.data_env.begin(buffers=True, write=write)
         self.idx_txn = self.idx_env.begin(buffers=False, write=write)
 
         self.is_txn_rw = write
+
+
+    def stats(self):
+        '''
+        Gather statistics about the database.
+        '''
+        stats = {
+            'data_db_stats': {
+                db_label: self.data_txn.stat(self.dbs[db_label])
+                for db_label in self.data_keys},
+
+            'idx_db_stats': {
+                db_label: self.idx_txn.stat(self.dbs[db_label])
+                for db_label in self.idx_keys},
+
+            'data_db_size': os.stat(self.data_env.path()).st_size,
+            'idx_db_size': os.stat(self.idx_env.path()).st_size,
+            'num_triples': len(self),
+        }
+
+        return stats
 
 
     @property
@@ -813,7 +836,7 @@ class LmdbStore(Store):
             yield from self._lookup(triple_pattern)
 
 
-    def _init_db_environments(self, path, create=True):
+    def _init_db_environments(self, create=True):
         '''
         Initialize the DB environment.
 
@@ -821,15 +844,16 @@ class LmdbStore(Store):
         (these may be even further split up depending on performance
         considerations).
 
-        @param path The base path to contain the databases.
         @param create (bool) If True, the environment and its databases are
         created.
         '''
+        path = self.path
         if not exists(path):
             if create is True:
                 makedirs(path)
             else:
                 return NO_STORE
+
         self.data_env = lmdb.open(path + '/main', subdir=False, create=create,
                 map_size=self.MAP_SIZE, max_dbs=4, readahead=False)
         self.idx_env = lmdb.open(path + '/index', subdir=False, create=create,

@@ -6,6 +6,7 @@ from logging.config import dictConfig
 
 from flask import Flask
 
+from lakesuperior.endpoints.admin import admin
 from lakesuperior.endpoints.ldp import ldp
 from lakesuperior.endpoints.main import main
 from lakesuperior.endpoints.query import query
@@ -43,6 +44,7 @@ def create_app(app_conf, logging_conf):
         'url_prefix': 'rest'
     })
     app.register_blueprint(query, url_prefix='/query')
+    app.register_blueprint(admin, url_prefix='/admin')
 
     # Initialize RDF store connector.
     conn_mod_name = app_conf['store']['ldp_rs']['connector']['module']

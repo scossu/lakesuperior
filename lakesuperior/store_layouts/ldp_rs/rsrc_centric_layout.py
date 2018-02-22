@@ -184,7 +184,7 @@ class RsrcCentricLayout:
         store.destroy(store.path)
 
         self._logger.info('Initializing the graph store with system data.')
-        store.open(store.path)
+        store.open()
         with TxnManager(store, True):
             with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
                 self.ds.update(f.read())
@@ -214,6 +214,20 @@ class RsrcCentricLayout:
         }'''
 
         return self._parse_construct(qry, init_bindings=bindings)
+
+
+    def count_rsrc(self):
+        '''
+        Return a count of first-class resources, subdivided in "live" and
+        historic snapshots.
+        '''
+        with TxnManager(self.ds.store) as txn:
+            main = set(
+                    self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
+            hist = set(
+                    self.ds.graph(HIST_GR_URI)[ : nsc['foaf'].primaryTopic : ])
+
+        return {'main': len(main), 'hist': len(hist)}
 
 
     def raw_query(self, qry_str):
