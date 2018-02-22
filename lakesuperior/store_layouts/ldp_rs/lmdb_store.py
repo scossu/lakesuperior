@@ -170,29 +170,26 @@ class LmdbStore(Store):
     in the same environment due to complications in handling transaction
     contexts.
 
-    There are 3 main data sets (preservation worthy data):
+    There are 4 main data sets (preservation worthy data):
 
-    - tk:t (triple key: pickled triple; unique keys)
-    - tk:c (Triple key: pickled context; multi-valued keys)
+    - t:st (term key: serialized term; 1:1)
+    - spo:c (joined S, P, O keys: context key; dupsort, dupfixed)
+    - c: (context keys only, values are the empty bytestring; 1:1)
     - pfx:ns (prefix: pickled namespace; unique)
 
-    And 8 indices to optimize lookup for all possible bound/unbound term
+    And 6 indices to optimize lookup for all possible bound/unbound term
     combination in a triple:
 
-    - c:tk (pickled context URI: triple key)
-    - sk:tk (subject key: triple key)
-    - pk:tk (pred key: triple key)
-    - ok:tk (object key: triple key)
-    - spk:tk (subject + predicate key: triple key)
-    - sok:tk (subject + object key: triple key)
-    - pok:tk (predicate + object key: triple key)
+    - th:t (term hash: term key; 1:1)
+    - s:po (S key: joined P, O keys; dupsort, dupfixed)
+    - p:so (P key: joined S, O keys; dupsort, dupfixed)
+    - o:sp (O key: joined S, P keys; dupsort, dupfixed)
+    - c:spo (context → triple association; dupsort, dupfixed)
     - ns:pfx (pickled namespace: prefix; unique)
 
-    The above indices (except for ns:pfx) are all multi-valued and store
-    fixed-length hash values referring to triples for economy's sake.
-
-    The search keys for terms are hashed on lookup. @TODO If this is too slow,
-    we may want to index term hashes.
+    These two data sets are stored in separate environments, i.e. separate
+    files in the filesystem. The index could be recreated from the main data
+    set in case of a disaster.
     '''
     context_aware = True
     # This is a hassle to maintain for no apparent gain. If some use is devised

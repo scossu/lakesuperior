@@ -3,24 +3,39 @@
 LAKEsuperior is an experimental [Fedora Repository](http://fedorarepository.org)
 implementation.
 
-## Basic concepts
+## Guiding Principles
 
 LAKEsuperior aims at being an uncomplicated, efficient Fedora 4 implementation.
 
-Key features:
+Its main goals are:
+
+- *Simplicity of design:* LAKEsuperior relies on [LMDB](https://symas.com/lmdb/),
+an embedded, high-performance key-value store, for storing metadata and on
+the filesystem to store binaries.
+- *Efficiency:* while raw speed is important, LAKEsuperior also aims at being
+conservative with resources. Its memory and CPU footprint are small. Python C
+extensions are used where possible to improve performance.
+- *Reliability:* fully ACID-compliant writes guarantee consistency of data.
+- *Ease of management:* Contents can be queried directly via term search or
+SPARQL without the aid of external indices. Scripts and interfaces for
+repository administration and monitoring are shipped with the standard release.
+- *Portability:* aims at maintaining a minimal set of dependencies.
+
+## Key features
 
 - Drop-in replacement for Fedora4 (with some caveats: see
   [Delta document](doc/notes/fcrepo4_deltas.md))—currently being tested with
   Hyrax 2
-- Stores metadata in a graph store, binaries in filesystem
-- Simple search and SPARQL Query API via back-end triplestore (planned)
-- No performance issues storing many resources under the same container; no
+- Term-based search (*planned*) and SPARQL Query API + UI
+- No performance penalty for storing many resources under the same container; no
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
   pairtree segmentation <sup id="a1">[1](#f1)</sup>
-- Mitigates "many member" issue: constant performance writing to a resource with
+- Constant performance writing to a resource with
   many children or members; option to omit children in retrieval
-- Flexible back-end layouts: options to organize information in back end
-- Migration tool (planned)
+- Migration tools (*planned*)
+- Python API (*planned*): Authors of Python clients can use LAKEsuperior as an
+  embedded repository with no HTTP traffic or interim RDF serialization &
+  de-serialization involved.
 
 Implementation of the official [Fedora API specs](https://fedora.info/spec/)
 (Fedora 5.x and beyond) is not
@@ -30,20 +45,16 @@ project if it gains support.
 Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas.md) for
 divergences with the official Fedora4 implementation.
 
-The application code strives to maintain a linear, intuitive code structure to
-foster collaboration. *TODO link to tech overview and approach*
-
 ## Installation
 
 ### Dependencies
 
-1. A triplestore.
-   [Fuseki](https://jena.apache.org/documentation/fuseki2/#download-fuseki)
-   is the benchmark used so far in development. Other implementations are
-   possible as long as they support RDF 1.1 and SPARQL over HTTP
-1. A message broker supporting the STOMP protocol. If you have a separate
-   instance of official Fedora listening to port 61613, that will do the job
-1. Python 3.5 or greater
+1. Python 3.5 or greater.
+1. The [LMDB](https://symas.com/lmdb/) database library. It should be included
+in most Linux distributions' standard package repositories.
+1. A message broker supporting the STOMP protocol. For testing and evaluation
+purposes, Coilmq is included in the dependencies and should be automatically
+installed.
 
 ### Installation steps
 
@@ -59,7 +70,7 @@ foster collaboration. *TODO link to tech overview and approach*
    `export FCREPO_CONFIG_DIR=<your config dir location>` (alternatively you can
    add this line to your virtualenv `activate` script)
 1. Configure the application
-1. Start your triplestore and STOMP broker
+1. Start your STOMP broker
 1. Run `util/bootstrap.py` to initialize the binary and graph stores
 1. Run `./fcrepo` for a multi-threaded server or `flask run` for a
    single-threaded development server
@@ -75,7 +86,10 @@ for a rudimentary road map and status.
 
 ## Further documentation
 
-The design documents are in the [doc/pdf](doc/pdf) folder. *@TODO needs update*
+Miscellaneous documents are in the [doc](doc) folder. They will be organized
+and linked better some day.
+
+---
 
 <b id="f1">1</b> However if your client splits pairtrees upstream, such as
 Hyrax does, that obviously needs to change to get rid of the path
