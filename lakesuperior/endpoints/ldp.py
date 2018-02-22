@@ -211,7 +211,7 @@ def get_resource(uid, force_rdf=False):
         else:
             logger.info('Streaming out binary content.')
             rsp = make_response(send_file(rsrc.local_path, as_attachment=True,
-                    attachment_filename=rsrc.filename))
+                    attachment_filename=rsrc.filename, mimetype=rsrc.mimetype))
             rsp.headers['Link'] = '<{}/fcr:metadata>; rel="describedby"'\
                     .format(rsrc.uri)
 

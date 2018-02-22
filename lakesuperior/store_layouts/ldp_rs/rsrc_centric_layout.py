@@ -46,14 +46,6 @@ class RsrcCentricLayout:
     E.g. if the configuration indicates `simple_layout` the application will
     look for
     `lakesuperior.store_layouts.rdf.simple_layout.SimpleLayout`.
-
-    Some method naming conventions:
-
-    - Methods starting with `get_` return a resource.
-    - Methods starting with `list_` return an iterable or generator of URIs.
-    - Methods starting with `select_` return an iterable or generator with
-      table-like data such as from a SELECT statement.
-    - Methods starting with `ask_` return a boolean value.
     '''
 
     _logger = logging.getLogger(__name__)
@@ -65,6 +57,7 @@ class RsrcCentricLayout:
             # List of server-managed predicates. Triples bearing one of these
             # predicates will go in the metadata graph.
             'p': {
+                nsc['ebucore'].hasMimeType,
                 nsc['fcrepo'].created,
                 nsc['fcrepo'].createdBy,
                 nsc['fcrepo'].hasParent,

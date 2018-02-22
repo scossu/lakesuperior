@@ -20,7 +20,7 @@ class LdpNr(Ldpr):
         nsc['ldp'].NonRDFSource,
     }
 
-    def __init__(self, uuid, stream=None, mimetype='application/octet-stream',
+    def __init__(self, uuid, stream=None, mimetype=None,
             disposition=None, **kwargs):
         '''
         Extends Ldpr.__init__ by adding LDP-NR specific parameters.
@@ -34,7 +34,14 @@ class LdpNr(Ldpr):
         else:
             self.workflow = self.WRKF_OUTBOUND
 
-        self.mimetype = mimetype
+        if not mimetype:
+            self.mimetype = (
+                    self.metadata.value(nsc['ebucore'].hasMimeType)
+                    if self.is_stored
+                    else 'application/octet-stream')
+        else:
+            self.mimetype = mimetype
+
         self.disposition = disposition
 
 
