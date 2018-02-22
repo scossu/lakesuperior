@@ -69,18 +69,24 @@
 
 # Alpha 5
 
+- [D] SPARQL query
 - [D] LMDB Back End
 
 # Alpha 6
 
 - [D] Optimize queries
 - [D] Optimize store
-- [W] Basic admin tools
-- [ ] Term query API
-- [ ] Complete revert to version and resurrect
+- [D] Stats page
+- [W] Refactor for Python API
+- [ ] Basic admin tools
+- [ ] Better management of path segments
 
 # Alpha 7
 
+- [ ] Term query API
+- [ ] Better management of versions
+- [ ] Complete revert to version and resurrect
+- [ ] Write tests for LDP containers
 - [ ] Migration tool
 - [ ] Complete header handling
   - [ ] Accept
@@ -90,12 +96,10 @@
   - [ ] Limit
   - [ ] (PUT) Digest
   - [ ] Others
-- [ ] Query API
 
 # Alpha 8
 
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
-- [ ] Move server-managed triples to separate graph in simple layout
 - [ ] Fixity checks
 
 # Alpha 9
