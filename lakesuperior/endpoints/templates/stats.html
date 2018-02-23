@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block extra_js %}
+{% endblock %}
+{% block title %}System Statistics{% endblock %}
+{% block content %}
+    <h2>Repository</h2>
+    <p>Current resources: <strong>{{ '{:,}'.format(rsrc_stats['main']) }}</strong></p>
+    <p>Historic snapshots: <strong>{{ '{:,}'.format(rsrc_stats['hist']) }}</strong></p>
+    <p>Triples: <strong>{{ '{:,}'.format(store_stats['num_triples']) }}</strong></p>
+    <h2>LMDB Store</h2>
+    <p>Overall size on disk: <strong>{{ fsize_fmt(
+        store_stats['idx_db_size'] + store_stats['data_db_size']
+    )}}</strong></p>
+    <h3>Data</h3>
+    <p>Size on disk: <strong>{{ fsize_fmt(store_stats['data_db_size']) }}</strong></p>
+    <p>Refer to the <a href="http://lmdb.readthedocs.io/en/release/#lmdb.Environment.stat">LMDB API documentation</a> for details about the parameters below.</p>
+    {% for db_label, db in store_stats['data_db_stats'].items() %}
+    <h4>{{ db_label }}</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <td>Property</td>
+                <td>Value</td>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p, v in db.items() | sort %}
+            <tr>
+                <td>{{ p }}</td>
+                <td>{{ v }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+    <h3>Indices</h3>
+    <p>Size on disk: <strong>{{ fsize_fmt(store_stats['idx_db_size']) }}</strong></p>
+    {% for db_label, db in store_stats['idx_db_stats'].items() %}
+    <h4>{{ db_label }}</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <td>Property</td>
+                <td>Value</td>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p, v in db.items() | sort %}
+            <tr>
+                <td>{{ p }}</td>
+                <td>{{ v }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+{% endblock %}

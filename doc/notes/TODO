@@ -74,12 +74,15 @@
 
 # Alpha 6
 
-- [D] Optimize queries
+- [D] Optimize lookups (round 1)
 - [D] Optimize store
 - [D] Stats page
 - [W] Refactor for Python API
-- [ ] Basic admin tools
+- [D] Basic admin tools
+  - [D] Stats page
+  - [D] Stub admin tools page
 - [ ] Better management of path segments
+- [ ] Optimize SPARQL
 
 # Alpha 7
 
