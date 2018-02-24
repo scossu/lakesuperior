@@ -183,7 +183,7 @@ class RsrcCentricLayout:
                 self.ds.update(f.read())
 
 
-    def get_raw(self, uri, ctx):
+    def get_raw(self, uri, ctx=None):
         '''
         Get a raw graph of a non-LDP resource.
 
@@ -195,18 +195,7 @@ class RsrcCentricLayout:
 
         return rdflib.Graph
         '''
-        bindings = {'s': uri}
-        if ctx:
-            bindings['g'] = ctx
-
-        qry = '''
-        CONSTRUCT { ?s ?p ?o . } {
-          GRAPH ?g {
-            ?s ?p ?o .
-          }
-        }'''
-
-        return self._parse_construct(qry, init_bindings=bindings)
+        return self.store.triples((nsc['fcres'][uid], None, None), ctx)
 
 
     def count_rsrc(self):

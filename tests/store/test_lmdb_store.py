@@ -3,6 +3,7 @@ import pytest
 from shutil import rmtree
 
 from rdflib import Namespace, URIRef
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
 from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
@@ -269,25 +270,25 @@ class TestContext:
         with TxnManager(store, True) as txn:
             store.add(trp1, gr_uri)
             store.add(trp2, gr_uri)
-            store.add(trp2, store.DEFAULT_GRAPH_URI)
+            store.add(trp2, None)
             store.add(trp3, gr2_uri)
             store.add(trp3)
 
             assert len(set(store.triples((None, None, None)))) == 3
             assert len(set(store.triples((None, None, None),
-                store.DEFAULT_GRAPH_URI))) == 2
+                RDFLIB_DEFAULT_GRAPH_URI))) == 2
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
             assert gr2_uri in {gr.identifier for gr in store.contexts()}
             assert trp1 in _clean(store.triples((None, None, None)))
             assert trp1 not in _clean(store.triples((None, None, None),
-                    store.DEFAULT_GRAPH_URI))
+                    RDFLIB_DEFAULT_GRAPH_URI))
             assert trp2 in _clean(store.triples((None, None, None), gr_uri))
             assert trp2 in _clean(store.triples((None, None, None)))
             assert trp3 in _clean(store.triples((None, None, None), gr2_uri))
             assert trp3 in _clean(store.triples((None, None, None),
-                    store.DEFAULT_GRAPH_URI))
+                    RDFLIB_DEFAULT_GRAPH_URI))
 
 
     #def test_delete_from_ctx(self, store):
