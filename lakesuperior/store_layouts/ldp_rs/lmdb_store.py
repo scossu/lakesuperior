@@ -583,6 +583,8 @@ class LmdbStore(Store):
         # This sounds strange, RDFLib should be passing None at this point,
         # but anyway...
         context = self._normalize_context(context)
+        if context == RDFLIB_DEFAULT_GRAPH_URI:
+            context = None
 
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
