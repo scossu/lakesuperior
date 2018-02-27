@@ -72,16 +72,20 @@ class TestLdp:
         '''
         PUT a resource with several path segments.
 
-        The test should create intermediate path segments that are not
+        The test should create intermediate path segments that are LDPCs,
         accessible to PUT or POST.
         '''
         path = '/ldp/test_tree/a/b/c/d/e/f/g'
         self.client.put(path)
 
         assert self.client.get(path).status_code == 200
+        assert self.client.get('/ldp/test_tree/a/b/c').status_code == 200
 
-        assert self.client.put('/ldp/test_tree/a').status_code == 201
-        assert self.client.post('/ldp/test_tree/a').status_code == 201
+        assert self.client.post('/ldp/test_tree/a/b').status_code == 201
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            put_int_resp = self.client.put(
+                    'ldp/test_tree/a', data=f, content_type='text/turtle')
+        assert put_int_resp.status_code == 204
         # @TODO More thorough testing of contents
 
 
@@ -103,7 +107,7 @@ class TestLdp:
         cont1_data = self.client.get('/ldp').data
         gr1 = Graph().parse(data=cont1_data, format='turtle')
         assert gr1[ URIRef(g.webroot + '/') : nsc['ldp'].contains : \
-                URIRef(g.webroot + '/' + uuid1) ]
+                URIRef(g.webroot + '/test_nested_tree') ]
 
         self.client.put(path2)
 
@@ -111,7 +115,7 @@ class TestLdp:
         gr2 = Graph().parse(data=cont2_data, format='turtle')
         assert gr2[ URIRef(g.webroot + '/' + uuid1) : \
                 nsc['ldp'].contains : \
-                URIRef(g.webroot + '/' + uuid2) ]
+                URIRef(g.webroot + '/' + uuid1 + '/e') ]
 
 
     def test_put_ldp_rs(self, client):
@@ -190,6 +194,36 @@ class TestLdp:
                     rnd_img['filename'])})
 
         assert ldp_nr_resp.status_code == 415
+
+
+    def test_missing_reference(self, client):
+        '''
+        PUT a resource with RDF payload referencing a non-existing in-repo
+        resource.
+        '''
+        self.client.get('/ldp')
+        data = '''
+        PREFIX ns: <http://example.org#>
+        PREFIX res: <http://example-source.org/res/>
+        <> ns:p1 res:bogus ;
+          ns:p2 <{0}/> ;
+          ns:p3 <{0}/nonexistent> .
+        '''.format(g.webroot)
+        put_rsp = self.client.put('/ldp/test_missing_ref', data=data, headers={
+            'content-type': 'text/turtle'})
+        assert put_rsp.status_code == 201
+
+        resp = self.client.get('/ldp/test_missing_ref',
+                headers={'accept' : 'text/turtle'})
+        assert resp.status_code == 200
+
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert URIRef('http://example-source.org/res/bogus') in \
+                gr.objects(None, URIRef('http://example.org#p1'))
+        assert URIRef(g.webroot + '/') in \
+                gr.objects(None, URIRef('http://example.org#p2'))
+        assert URIRef(g.webroot + '/nonexistent') in \
+                gr.objects(None, URIRef('http://example.org#p3'))
 
 
     def test_post_resource(self, client):

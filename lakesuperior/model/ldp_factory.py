@@ -1,6 +1,7 @@
 import logging
 
 from pprint import pformat
+from uuid import uuid4
 
 import rdflib
 
@@ -12,8 +13,9 @@ from rdflib.namespace import RDF
 from lakesuperior import model
 from lakesuperior.model.generic_resource import PathSegment
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.exceptions import (IncompatibleLdpTypeError,
-        InvalidResourceError, ResourceNotExistsError)
+from lakesuperior.exceptions import (
+        IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
+        ResourceNotExistsError)
 
 class LdpFactory:
     '''
@@ -24,6 +26,19 @@ class LdpFactory:
     LDP_RS_TYPE = nsc['ldp'].RDFSource
 
     _logger = logging.getLogger(__name__)
+
+
+    @staticmethod
+    def new_container(uid):
+        if not uid:
+            raise InvalidResourceError(uid)
+        if current_app.rdfly.ask_rsrc_exists(uid):
+            raise ResourceExistsError(uid)
+        rsrc = model.ldp_rs.Ldpc(
+                uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
+
+        return rsrc
+
 
     @staticmethod
     def from_stored(uid, repr_opts={}, **kwargs):
@@ -134,8 +149,6 @@ class LdpFactory:
             types = inst.types
         except:
             types = set()
-        if nsc['fcrepo'].Pairtree in types:
-            raise InvalidResourceError(inst.uid, 'Resource {} is a Pairtree.')
 
         return inst
 
@@ -168,4 +181,58 @@ class LdpFactory:
             return False
         else:
             return True
+
+
+    @staticmethod
+    def mint_uid(parent_uid, path=None):
+        '''
+        Mint a new resource UID based on client directives.
+
+        This method takes a parent ID and a tentative path and returns an LDP
+        resource UID.
+
+        This may raise an exception resulting in a 404 if the parent is not
+        found or a 409 if the parent is not a valid container.
+
+        @param parent_uid (string) UID of the parent resource. It must be an
+        existing LDPC.
+        @param path (string) path to the resource, relative to the parent.
+
+        @return string The confirmed resource UID. This may be different from
+        what has been indicated.
+        '''
+        def split_if_legacy(uid):
+            if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
+                uid = g.tbox.split_uuid(uid)
+            return uid
+
+        # Shortcut!
+        if not path and parent_uid == '':
+            uid = split_if_legacy(str(uuid4()))
+            return uid
+
+        parent = LdpFactory.from_stored(parent_uid,
+                repr_opts={'incl_children' : False})
+
+        # Set prefix.
+        if parent_uid:
+            if nsc['ldp'].Container not in parent.types:
+                raise InvalidResourceError(parent_uid,
+                        'Parent {} is not a container.')
+            pfx = parent_uid + '/'
+        else:
+            pfx = ''
+
+        # Create candidate UID and validate.
+        if path:
+            cnd_uid = pfx + path
+            if current_app.rdfly.ask_rsrc_exists(cnd_uid):
+                uid = pfx + split_if_legacy(str(uuid4()))
+            else:
+                uid = cnd_uid
+        else:
+            uid = pfx + split_if_legacy(str(uuid4()))
+
+        return uid
+
 

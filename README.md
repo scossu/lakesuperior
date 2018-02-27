@@ -36,6 +36,7 @@ repository administration and monitoring are shipped with the standard release.
 - Python API (*planned*): Authors of Python clients can use LAKEsuperior as an
   embedded repository with no HTTP traffic or interim RDF serialization &
   de-serialization involved.
+- Fits in a pocket: you can carry over 50M triples in an 8Gb memory stick.
 
 Implementation of the official [Fedora API specs](https://fedora.info/spec/)
 (Fedora 5.x and beyond) is not

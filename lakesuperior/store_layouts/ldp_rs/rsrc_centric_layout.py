@@ -94,7 +94,6 @@ class RsrcCentricLayout:
         nsc['fcstruct']: {
             # These are placed in a separate graph for optimization purposes.
             'p': {
-                nsc['fcsystem'].contains,
                 nsc['ldp'].contains,
                 nsc['pcdm'].hasMember,
             }
@@ -344,12 +343,11 @@ class RsrcCentricLayout:
         )
 
 
-    def get_descendants(self, uid, recurse=True, path_segments=False):
+    def get_descendants(self, uid, recurse=True):
         '''
         Get descendants (recursive children) of a resource.
 
         @param uid (string) Resource UID.
-        @param path_segments (bool) Whether to add path segments to the
         result set.
 
         @return iterator(rdflib.URIRef) Subjects of descendant resources.
@@ -366,18 +364,10 @@ class RsrcCentricLayout:
                     _recurse(dset, ss, p, cc)
             return dset
 
-        children = (
+        return (
             _recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
             if recurse
             else ds.graph(ctx_uri)[subj_uri : nsc['ldp'].contains : ])
-        if path_segments:
-            psegs = (
-                _recurse(set(), subj_uri, nsc['fcsystem'].contains, ctx_uri)
-                if recurse
-                else ds.graph(ctx_uri)[subj_uri : nsc['fcsystem'].contains : ])
-            return chain(children, psegs)
-        else:
-            return children
 
 
     def patch_rsrc(self, uid, qry):
@@ -417,7 +407,7 @@ class RsrcCentricLayout:
         # remove children.
         if children:
             self._logger.debug('Purging children for /{}'.format(uid))
-            for rsrc_uri in self.get_descendants(uid, False, True):
+            for rsrc_uri in self.get_descendants(uid, False):
                 self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
             # Remove structure graph.
             self.ds.remove_graph(nsc['fcstruct'][uid])
@@ -521,39 +511,6 @@ class RsrcCentricLayout:
                     'Resource \'{}\' is already a version.')
 
         return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
-
-
-    def add_path_segment(self, uid, next_uid, parent_uid, child_uid):
-        '''
-        Add a pairtree segment.
-
-        @param uid (string) The UID of the subject.
-        @param next_uid (string) UID of the next step down. This may be an LDP
-        resource or another segment.
-        @param parent_uid (string) UID of the actual resource(s) that contains
-        the segment.
-        @param child_uid (string) UID of the LDP resource contained by the
-        segment.
-        '''
-        props = (
-            (RDF.type, nsc['fcsystem'].PathSegment),
-            (nsc['fcsystem'].contains, nsc['fcres'][next_uid]),
-            (nsc['ldp'].contains, nsc['fcres'][child_uid]),
-            #(RDF.type, nsc['ldp'].Container),
-            #(RDF.type, nsc['ldp'].BasicContainer),
-            #(RDF.type, nsc['ldp'].RDFSource),
-            #(RDF.type, nsc['fcrepo'].Pairtree),
-            (nsc['fcrepo'].hasParent, nsc['fcres'][parent_uid]),
-        )
-        for p, o in props:
-            self.ds.graph(PTREE_GR_URI).add((nsc['fcres'][uid], p, o))
-
-
-    def delete_path_segment(self, uid):
-        '''
-        Delete a pairtree segment.
-        '''
-        self.ds.graph(PTREE_GR_URI).delete((nsc['fcres'][uid], None, None))
 
 
     def clear_smt(self, uid):

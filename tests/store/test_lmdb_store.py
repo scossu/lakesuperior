@@ -276,13 +276,13 @@ class TestContext:
 
             assert len(set(store.triples((None, None, None)))) == 3
             assert len(set(store.triples((None, None, None),
-                RDFLIB_DEFAULT_GRAPH_URI))) == 2
+                RDFLIB_DEFAULT_GRAPH_URI))) == 3
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
             assert gr2_uri in {gr.identifier for gr in store.contexts()}
             assert trp1 in _clean(store.triples((None, None, None)))
-            assert trp1 not in _clean(store.triples((None, None, None),
+            assert trp1 in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
             assert trp2 in _clean(store.triples((None, None, None), gr_uri))
             assert trp2 in _clean(store.triples((None, None, None)))

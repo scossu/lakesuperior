@@ -59,7 +59,7 @@
 
 # Alpha 4
 
-- [W] Reorganize pairtrees
+- [D] Reorganize pairtrees
 - [D] Fix basic Hyrax workflows
   - [D] Simple ingest
   - [D] Batch ingest
@@ -77,12 +77,12 @@
 - [D] Optimize lookups (round 1)
 - [D] Optimize store
 - [D] Stats page
-- [W] Refactor for Python API
 - [D] Basic admin tools
   - [D] Stats page
   - [D] Stub admin tools page
-- [ ] Better management of path segments
-- [ ] Optimize SPARQL
+- [D] Make default graph a merge graph
+- [D] Revamp containment
+- [ ] Refactor for Python API
 
 # Alpha 7
 

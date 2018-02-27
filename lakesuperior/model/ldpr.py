@@ -836,68 +836,46 @@ class Ldpr(metaclass=ABCMeta):
         '''Find the closest parent in the path indicated by the uid and
         establish a containment triple.
 
+        Check the path-wise parent of the new resource. If it exists, add the
+        containment relationship with this UID. Otherwise, create a container
+        resource as the parent.
+        This function may recurse up the path tree until an existing container
+        is found.
+
         E.g. if only urn:fcres:a (short: a) exists:
         - If a/b/c/d is being created, a becomes container of a/b/c/d. Also,
-          pairtree nodes are created for a/b and a/b/c.
+          containers are created for a/b and a/b/c.
         - If e is being created, the root node becomes container of e.
         '''
         if '/' in self.uid:
             # Traverse up the hierarchy to find the parent.
-            parent_uid = self._find_parent_or_create_pairtree()
+            path_components = self.uid.split('/')
+            cnd_parent_uid = '/'.join(path_components[:-1])
+            if self.rdfly.ask_rsrc_exists(cnd_parent_uid):
+                parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
+                if nsc['ldp'].Container not in parent_rsrc.types:
+                    raise InvalidResourceError(parent_uid,
+                            'Parent {} is not a container.')
+
+                parent_uid = cnd_parent_uid
+            else:
+                parent_rsrc = LdpFactory.new_container(cnd_parent_uid)
+                # This will trigger this method again and recurse until an
+                # existing container or the root node is reached.
+                parent_rsrc.put()
+                parent_uid = parent_rsrc.uid
         else:
             parent_uid = ROOT_UID
 
         add_gr = Graph()
         add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.urn))
         parent_rsrc = LdpFactory.from_stored(
-                parent_uid, repr_opts={
-                'incl_children' : False}, handling='none')
+                parent_uid, repr_opts={'incl_children' : False},
+                handling='none')
         parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
         self._add_ldp_dc_ic_rel(parent_rsrc)
-
-
-    def _find_parent_or_create_pairtree(self):
-        '''
-        Check the path-wise parent of the new resource. If it exists, return
-        its UID. Otherwise, create pairtree resources up the path until an
-        actual resource or the root node is found.
-
-        @return string Resource UID.
-        '''
-        path_components = self.uid.split('/')
-
-         # If there is only one element, the parent is the root node.
-        if len(path_components) < 2:
-            return ROOT_UID
-
-        # Build search list, e.g. for a/b/c/d/e would be a/b/c/d, a/b/c, a/b, a
-        self._logger.info('Path components: {}'.format(path_components))
-        fwd_search_order = accumulate(
-            list(path_components)[:-1],
-            func=lambda x,y : x + '/' + y
-        )
-        rev_search_order = reversed(list(fwd_search_order))
-
-        cur_child_uid = self.uid
-        parent_uid = ROOT_UID # Defaults to root
-        segments = []
-        for cparent_uid in rev_search_order:
-            if self.rdfly.ask_rsrc_exists(cparent_uid):
-                # If a real parent is found, set that and break the loop.
-                parent_uid = cparent_uid
-                break
-            else:
-                # Otherwise, add to the list of segments to be built.
-                segments.append((cparent_uid, cur_child_uid))
-                cur_child_uid = cparent_uid
-
-        for segm_uid, next_uid in segments:
-            self.rdfly.add_path_segment(uid=segm_uid, next_uid=next_uid,
-                    child_uid=self.uid, parent_uid=parent_uid)
-
-        return parent_uid
 
 
     def _dedup_deltas(self, remove_gr, add_gr):
@@ -909,40 +887,6 @@ class Ldpr(metaclass=ABCMeta):
             remove_gr - add_gr,
             add_gr - remove_gr
         )
-
-
-    #def _create_path_segment(self, uid, child_uid, parent_uid):
-    #    '''
-    #    Create a path segment with a non-LDP containment statement.
-
-    #    If a resource such as `fcres:a/b/c` is created, and neither fcres:a or
-    #    fcres:a/b exists, we have to create two "hidden" containment statements
-    #    between a and a/b and between a/b and a/b/c in order to maintain the
-    #    containment chain.
-
-    #    These triples are stored separately and are not versioned.
-    #    '''
-    #    rsrc_uri = nsc['fcres'][uid]
-
-    #    add_trp = {
-    #        (rsrc_uri, nsc['fcsystem'].contains, nsc['fcres'][child_uid]),
-    #        (rsrc_uri, nsc['ldp'].contains, self.urn),
-    #        (rsrc_uri, RDF.type, nsc['ldp'].Container),
-    #        (rsrc_uri, RDF.type, nsc['ldp'].BasicContainer),
-    #        (rsrc_uri, RDF.type, nsc['ldp'].RDFSource),
-    #        (rsrc_uri, RDF.type, nsc['fcrepo'].Pairtree),
-    #        (rsrc_uri, nsc['fcrepo'].hasParent, nsc['fcres'][real_parent_uid]),
-    #    }
-
-    #    self.rdfly.add_segment(nsc['fcres'][uid], next=self.urn,
-    #            child=nsc['fcres'][child_uid],
-    #            parent=nsc['fcres'][parent_uid])
-
-    #    # If the path segment is just below root
-    #    if '/' not in uid:
-    #        self.rdfly.modify_rsrc(ROOT_UID, add_trp={
-    #            (ROOT_RSRC_URI, nsc['fcsystem'].contains, nsc['fcres'][uid])
-    #        })
 
 
     def _add_ldp_dc_ic_rel(self, cont_rsrc):

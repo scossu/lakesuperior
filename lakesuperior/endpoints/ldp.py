@@ -63,7 +63,6 @@ std_headers = {
 
 '''Predicates excluded by view.'''
 vw_blacklist = {
-    nsc['fcsystem'].contains,
 }
 
 
@@ -237,7 +236,7 @@ def post_resource(parent):
 
     try:
         with TxnManager(g.store, True):
-            uid = uuid_for_post(parent, slug)
+            uid = LdpFactory.mint_uid(parent, slug)
             logger.debug('Generated UID for POST: {}'.format(uid))
             rsrc = LdpFactory.from_provided(
                     uid, content_length=request.content_length,
@@ -519,54 +518,6 @@ def negotiate_content(rsp, headers=None):
         for p in vw_blacklist:
             rsp.remove((None, p, None))
         return (rsp.serialize(format='turtle'), headers)
-
-
-def uuid_for_post(parent_uid, slug=None):
-    '''
-    Validate conditions to perform a POST and return an LDP resource
-    UID for using with the `post` method.
-
-    This may raise an exception resulting in a 404 if the parent is not
-    found or a 409 if the parent is not a valid container.
-    '''
-    def split_if_legacy(uid):
-        if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
-            uid = g.tbox.split_uuid(uid)
-        return uid
-
-    # Shortcut!
-    if not slug and parent_uid == '':
-        uid = split_if_legacy(str(uuid4()))
-        return uid
-
-    parent = LdpFactory.from_stored(parent_uid,
-            repr_opts={'incl_children' : False})
-
-    #if isintance(parent, PathSegment):
-    #    raise InvalidResourceError(parent.uid,
-    #            'Resource {} cannot be created under a pairtree.')
-
-    # Set prefix.
-    if parent_uid:
-        if (not isinstance(parent, PathSegment)
-                and nsc['ldp'].Container not in parent.types):
-            raise InvalidResourceError(parent_uid,
-                    'Parent {} is not a container.')
-        pfx = parent_uid + '/'
-    else:
-        pfx = ''
-
-    # Create candidate UID and validate.
-    if slug:
-        cnd_uid = pfx + slug
-        if current_app.rdfly.ask_rsrc_exists(cnd_uid):
-            uid = pfx + split_if_legacy(str(uuid4()))
-        else:
-            uid = cnd_uid
-    else:
-        uid = pfx + split_if_legacy(str(uuid4()))
-
-    return uid
 
 
 def bitstream_from_req():
