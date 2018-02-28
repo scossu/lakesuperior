@@ -82,9 +82,13 @@
   - [D] Stub admin tools page
 - [D] Make default graph a merge graph
 - [D] Revamp containment
-- [ ] Refactor for Python API
 
 # Alpha 7
+
+- [W] Refactor for Python API
+- [ ] Complete messaging
+
+# Alpha 8
 
 - [ ] Term query API
 - [ ] Better management of versions
@@ -100,12 +104,12 @@
   - [ ] (PUT) Digest
   - [ ] Others
 
-# Alpha 8
+# Alpha 9
 
 - [ ] Separate read-only graph/resource generation from RW graph/res generation
 - [ ] Fixity checks
 
-# Alpha 9
+# Alpha 10
 
 - [ ] Full provenance layout
 - [ ] AuthN/Z
