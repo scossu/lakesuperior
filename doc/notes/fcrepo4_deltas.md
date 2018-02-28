@@ -10,11 +10,10 @@ it.
 See [TODO](TODO)
 
 - Various header handling
-- Versioning
+- Versioning (incomplete)
 - AuthN/Z
 - Fixity check
 - Blank nodes
-- Hash URIs
 
 
 ## Potentially breaking changes
@@ -28,7 +27,7 @@ and a number of operations (i.e. multiple R/W requests to the repository) can
 be performed. The operations are persisted in the repository only if and when
 the transaction is committed.
 
-LAKesuperior only supports atomicity for a single LDP request. I.e. a single
+LAKesuperior only supports atomicity for a single HTTP request. I.e. a single
 HTTTP request that should reult in multiple write operations to the storage
 layer is only persisted if no exception is thrown. Otherwise, the operation is
 rolled back in order to prevent resources to be left in an inconsistent state.
@@ -46,18 +45,12 @@ otherwise.
 
 FCREPO4 includes a web UI for simple CRUD operations.
 
-Such a UI is not in the immediate LAKEsuperior development plans. However, a very
-basic UI may at some point be built for read-only interaction (i.e.
-requesting resources and clicking through relationship links). A more complete
-UI should be built for simple and/or SPARQL queries.
+Such a UI is not in the immediate LAKEsuperior development plans. However, a
+basic UI is available for read-only interaction: LDP resource browsing, SPARQL
+query and other search facilities, and administrative tools. Some of the latter
+*may* involve write operations, such as clean-up tasks.
 
-
-## Non-standard client breaking changes
-
-The following changes may be incompatible with clients relying on some FCREPO4
-behavior not endorsed by LDP or other specifications.
-
-### Automatic pairtree generation
+### Automatic path segment generation
 
 A `POST` request without a slug in FCREPO4 results in a pairtree consisting of
 several intermediate nodes leading to the automatically minted identifier. E.g.
@@ -71,21 +64,41 @@ The same request in LAKEsuperior would create
 `/rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` (obviously the identifiers will be
 different).
 
-### Explicit intermediate paths
+This seems to brak Hyrax at some point, but might have been fixed. This needs
+to be verified further.
 
-In FCREPO4, a PUT request to `/rest/a/b/c`, given `/rest/a` and `rest/a/b` not
-previously existing, results in the creation of Pairtree resources that are
-retrievable. In LAKEsuperior the same operation results only in the creation of
-containment triple in the graph store, which are not exposed in the LDP API.
-Therefore, a GET to `rest/a` in FCREPO4 will result in a 200, a GET to `rest/a`
-in LAKEsuperior in a 404.
 
-In both above cases, PUTting into `rest/a` yields a 409, POSTing to it results
-in a 201.
+## Non-standard client breaking changes
+
+The following changes may be incompatible with clients relying on some FCREPO4
+behavior not endorsed by LDP or other specifications.
+
+### Pairtrees
+
+FCREPO4 generates "pairtree" resources if a resource is created in a path whose
+segments are missing. E.g. when crating `/a/b/c/d`, if `/a/b` and `/a/b/c` do
+not exist, FCREPO4 will create two Pairtree resources. POSTing and PUTting into
+Pairtrees is not allowed. Also, a containment triple is established between the
+closest LDPC and the created resource, e.g. if `a` exists, a `</a> ldp:contains
+</a/b/c/d>` triple is created.
+
+LAKEsuperior does not employ Pairtrees. In the example above LAKEsuperior would
+create a fully qualified LDPC for each missing segment, which can be POSTed and
+PUT to. Containment triples are created between each link in the path, i.e.
+`</a> ldp:contains </a/b>`, `</a/b> ldp:contains </a/b/c>` etc. This may
+potentially break clients relying on the direct containment model.
+
+The rationale behind this change is that Pairtrees are the byproduct of a
+limitation imposed by Modeshape and introduce complexity in the software stack
+and confusion for the client. LAKEsuperior aligns with the more intuitive UNIX
+filesystem model, where each segment of a path is a "folder" or container
+(except for the leaf nodes that can be eiher folders or files). In any
+case, clients are discouraged from generating deep paths in LAKEsuperior
+without a specific purpose because these resources create unnecessary data.
 
 ### Non-mandatory, non-authoritative slug in version POST
 
-FCREPO requires a `Slug` header to POST to `fcr:versions` to create a new
+FCREPO4 requires a `Slug` header to POST to `fcr:versions` to create a new
 version.
 
 LAKEsuperior adheres to the more general FCREPO POST rule and if no slug is
@@ -150,6 +163,12 @@ the payload are ignored.
 Clients using the `Prefer` header to control PUT behavior as advertised by the
 specs should not notice any difference.
 
+
+## Optional improvements
+
+The following are improvements in performance or usability that can only taken
+advantage of if client code is adjusted.
+
 ### LDP-NR metadata by content negotiation
 
 FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
@@ -157,12 +176,6 @@ an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
 use of content negotiation to do the same. Any request to an LDP-NR with an
 `Accept` header set to one of the supported RDF serialization formats will
 yield the RDF metadata of the resource instead of the binary contents.
-
-
-## Optional improvements
-
-The following are improvements in performance or usability that can only taken
-advantage of if client code is adjusted.
 
 ### "Include" and "Omit" options for children
 
@@ -172,9 +185,11 @@ while leaving the other server-managed triples when retrieving a resource:
 
     Prefer: return=representation; [include | omit]="http://fedora.info/definitions/v4/repository#Children"
 
-The default behavior is including all children URIs.
+The default behavior is to include all children URIs.
 
 ### Soft-delete and purge
+
+**NOTE**: The implementation of this section is incomplete and debated.
 
 In FCREPO4 a deleted resource leaves a tombstone deleting all traces of the
 previous resource.

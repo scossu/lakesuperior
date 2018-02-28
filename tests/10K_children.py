@@ -14,7 +14,7 @@ from util.generators import random_utf8_string
 
 default_n = 10000
 webroot = 'http://localhost:8000/ldp'
-#webroot = 'http://localhost:8080/fcrepo/rest'
+#webroot = 'http://localhost:8080/rest'
 container_uri = webroot + '/pomegranate'
 
 sys.stdout.write('How many children? [{}] >'.format(default_n))
