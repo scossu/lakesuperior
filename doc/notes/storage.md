@@ -1,4 +1,4 @@
-# Storage implementation
+# Storage Implementation
 
 LAKEsuperior stores non-RDF ("binary") data in the filesystem and RDF data in
 an embedded key-value store, [LMDB](https://symas.com/lmdb/).
@@ -19,6 +19,9 @@ store is the one containing the preservation-worthy data. While the indices are
 necessary for LAKEsuperior to function, they can be entirely rebuilt from the
 main data store in case of file corruption (recovery tools are on the TODO
 list).
+
+Detailed notes about the various strategies researched can be found
+[here](indexing_strategy.md).
 
 ## Scalability
 
@@ -67,7 +70,7 @@ benefit from multi-threaded requests.
 
 ## Performance
 
-The [Performance Benchmark Report](performance.txt) contains benchmark results.
+The [Performance Benchmark Report](performance.md) contains benchmark results.
 
 Write performance is lower than Modeshape/Fedora4; this may be mostly due to
 the fact that indices are written synchronously in a blocking transaction;

@@ -85,10 +85,13 @@ If you like fried repositories for lunch, deploy before 11AM.
 LAKEsuperior is in **alpha** status. Please see the [TODO](doc/notes/TODO) list
 for a rudimentary road map and status.
 
-## Further documentation
+## Technical documentation
 
-Miscellaneous documents are in the [doc](doc) folder. They will be organized
-and linked better some day.
+[Storage Implementation](doc/notes/torage.md)
+
+[Performance benchmarks](doc/notes/performance.md)
+
+[TODO list](doc/notes/TODO)
 
 ---
 
