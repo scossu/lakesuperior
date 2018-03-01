@@ -46,26 +46,17 @@ def create_app(app_conf, logging_conf):
     app.register_blueprint(query, url_prefix='/query')
     app.register_blueprint(admin, url_prefix='/admin')
 
-    # Initialize RDF store connector.
-    conn_mod_name = app_conf['store']['ldp_rs']['connector']['module']
-    conn_mod = import_module('lakesuperior.store_layouts.ldp_rs.{}'.format(
-            conn_mod_name))
-    conn_cls = getattr(conn_mod, camelcase(conn_mod_name))
-    rdf_store_conn = conn_cls(
-            **app_conf['store']['ldp_rs']['connector']['options'])
-    logger.info('RDF store: {}'.format(conn_mod_name))
-
     # Initialize RDF layout.
     rdfly_mod_name = app_conf['store']['ldp_rs']['layout']
-    rdfly_mod = import_module('lakesuperior.store_layouts.ldp_rs.{}'.format(
+    rdfly_mod = import_module('lakesuperior.store.ldp_rs.{}'.format(
             rdfly_mod_name))
     rdfly_cls = getattr(rdfly_mod, camelcase(rdfly_mod_name))
-    app.rdfly = rdfly_cls(rdf_store_conn, app_conf['store']['ldp_rs'])
+    app.rdfly = rdfly_cls(app_conf['store']['ldp_rs'])
     logger.info('RDF layout: {}'.format(rdfly_mod_name))
 
     # Initialize file layout.
     nonrdfly_mod_name = app_conf['store']['ldp_nr']['layout']
-    nonrdfly_mod = import_module('lakesuperior.store_layouts.ldp_nr.{}'.format(
+    nonrdfly_mod = import_module('lakesuperior.store.ldp_nr.{}'.format(
             nonrdfly_mod_name))
     nonrdfly_cls = getattr(nonrdfly_mod, camelcase(nonrdfly_mod_name))
     app.nonrdfly = nonrdfly_cls(app_conf['store']['ldp_nr'])

@@ -40,8 +40,8 @@ Please review your configuration before starting.
 config['test'] = hiyapyco.load(CONFIG_DIR + '/application.yml',
         CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)
 
-if config['application']['store']['ldp_rs']['connector']['options']['location'] \
-        == config['test']['store']['ldp_rs']['connector']['options']['location']:
+if config['application']['store']['ldp_rs']['location'] \
+        == config['test']['store']['ldp_rs']['location']:
             raise RuntimeError(error_msg.format('RDF'))
             sys.exit()
 

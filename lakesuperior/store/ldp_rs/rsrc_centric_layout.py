@@ -4,11 +4,11 @@ from collections import defaultdict
 from itertools import chain
 
 from flask import g
-from rdflib import Graph, URIRef
+from rdflib import Dataset, Graph, Literal, URIRef, plugin
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
-from rdflib.term import Literal
+from rdflib.store import Store
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
@@ -16,8 +16,11 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
+
+Lmdb = plugin.register('Lmdb', Store,
+        'lakesuperior.store.ldp_rs.lmdb_store', 'LmdbStore')
 
 META_GR_URI = nsc['fcsystem']['meta']
 HIST_GR_URI = nsc['fcsystem']['histmeta']
@@ -38,14 +41,14 @@ class RsrcCentricLayout:
     contents are ingested in a repository, changing a layout will most likely
     require a migration.
 
-    The custom layout must be in the lakesuperior.store_layouts.rdf
+    The custom layout must be in the lakesuperior.store.rdf
     package and the class implementing the layout must be called
     `StoreLayout`. The module name is the one defined in the app
     configuration.
 
     E.g. if the configuration indicates `simple_layout` the application will
     look for
-    `lakesuperior.store_layouts.rdf.simple_layout.SimpleLayout`.
+    `lakesuperior.store.rdf.simple_layout.SimpleLayout`.
     '''
 
     _logger = logging.getLogger(__name__)
@@ -110,7 +113,7 @@ class RsrcCentricLayout:
 
     ## MAGIC METHODS ##
 
-    def __init__(self, conn, config):
+    def __init__(self, config):
         '''Initialize the graph store and a layout.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
@@ -120,11 +123,8 @@ class RsrcCentricLayout:
         which is currently the reference implementation.
         '''
         self.config = config
-        self._conn = conn
-        self.store = self._conn.store
-
-        #self.UNION_GRAPH_URI = self._conn.UNION_GRAPH_URI
-        self.ds = self._conn.ds
+        self.store = plugin.get('Lmdb', Store)(config['location'])
+        self.ds = Dataset(self.store, default_union=True)
         self.ds.namespace_manager = nsm
 
 

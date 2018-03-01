@@ -6,7 +6,7 @@ from rdflib import Namespace, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
 
 @pytest.fixture(scope='class')

@@ -4,15 +4,7 @@
 
 store:
     ldp_rs:
-        connector:
-            options:
-                location: http://localhost:3030/fcrepo-test/
-                query_ep: query
-                update_ep: update
-                # Optional
-                #username: <set me>
-                #password: <set me>
-                #ssl_verify: false
+        location: /tmp/fcrepo_test/data/ldprs_store
     ldp_nr:
-        path: /tmp/fcrepo_test/ldpnr_store
+        path: /tmp/fcrepo_test/data/ldpnr_store
 

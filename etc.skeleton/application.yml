@@ -22,29 +22,13 @@ store:
     # The semantic store used for persisting LDP-RS (RDF Source) resources.
     # MUST support SPARQL 1.1 query and update.
     ldp_rs:
-        # Connector class. This corresponds to a sub-class of the
-        # `lakesuperior.store_layouts.rdf.base_connector.BaseConnector`.
-        connector:
-            module: sparql_connector
-            options:
-                # `location` must be consistent for all connector types. Other
-                # options may vary.
-                location: http://localhost:3030/fcrepo/
-                query_ep: query
-                update_ep: update
-                # Optional
-                #username: <set me>
-                #password: <set me>
-                #ssl_verify: false
-
-            # Connector for BerkeleyDB embedded store.
-            #module: bdb_connector
-            #options:
-            #    location: /data/fcrepo/ldprs_store/bdb
+        # Directory where the RDF data files are stored.
+        location: /tmp/fcrepo/data/ldprs_store
 
         # store layout. this corresponds to a sub-class of the
-        # `lakesuperior.store_layouts.rdf.base_rdf_layout/baserdflayout`.
-        layout: default_layout
+        # `lakesuperior.store.rdf.base_rdf_layout/baserdflayout`.
+        layout: rsrc_centric_layout
+
         # whether to check if the object of a client-provided triple is the uri
         # of a repository-managed resource and veify if that exists.
         # if set to false, properties are allowed to point to resources in the
@@ -55,9 +39,9 @@ store:
         # user-provided triple if its object violates referential integrity.
         # `strict` raises an exception.
         referential_integrity: lenient
+
         # this mimics fedora4 behavior which segments an identifier on post.
-        # hyrax will break if this is off.
-        legacy_ptree_split: false
+        legacy_ptree_split: False
 
     # The path used to persist LDP-NR (bitstreams).
     # This is for now a POSIX filesystem. Other solutions such as HDFS may be
@@ -66,7 +50,7 @@ store:
         # See store.ldp_rs.layout.
         layout: default_layout
         # The filesystem path to the root of the binary store.
-        path: /data/fcrepo/ldpnr_store
+        path: /tmp/fcrepo/data/ldpnr_store
 
         # How to split the balanced pairtree to generate a path. The hash
         # string is defined by the uuid.algo parameter value.

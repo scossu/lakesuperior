@@ -3,11 +3,9 @@ import logging
 import os
 
 from contextlib import ContextDecorator, ExitStack
-from multiprocessing import Process
 from os import makedirs
 from os.path import exists, abspath
 from shutil import rmtree
-from threading import Lock, Thread
 from urllib.request import pathname2url
 
 import lmdb
@@ -32,14 +30,6 @@ def b2s(u, enc='UTF-8'):
     Convert a bytes or memoryview object into a string.
     '''
     return bytes(u).decode(enc)
-
-
-class NoTxnError(Exception):
-    '''
-    Raised if a store operation is attempted while no transaction is present.
-    '''
-    def __str__(self):
-        return 'No transaction active in the store.'
 
 
 class TxnManager(ContextDecorator):
@@ -73,24 +63,9 @@ class TxnManager(ContextDecorator):
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
             self.store.rollback()
-            # If the tx fails, leave the index queue alone. There may still be
-            # jobs left from other requests.
         else:
             self.store.commit()
-            if self.write:
-                if len(self.store._data_queue):
-                    self.store._apply_changes()
-                if len(self.store._idx_queue):
-                    # Ditch index data. For testing data entry only.
-                    #self.store._idx_queue = []
-                    # Synchronous.
-                    self.store._run_indexing()
-                    # Threading.
-                    #job = Thread(target=self.store._run_indexing)
-                    # Multiprocess.
-                    #job = Process(target=self.store._run_indexing)
-                    #job.start()
-                    #logger.info('Started indexing job #{}'.format(job.ident))
+
 
 
 class LexicalSequence:
@@ -165,11 +140,15 @@ class LmdbStore(Store):
     '''
     LMDB-backed store.
 
+    This is an implementation of the RDFLib Store interface:
+    https://github.com/RDFLib/rdflib/blob/master/rdflib/store.py
+
+    Handles the interaction with a LMDB store and builds an abstraction layer
+    for triples.
+
     This store class uses two LMDB environments (i.e. two files): one for the
-    critical (preservation-worthy) data and the other for the index data which
-    can be rebuilt from the main database. @TODO For now, data and indices are
-    in the same environment due to complications in handling transaction
-    contexts.
+    main (preservation-worthy) data and the other for the index data which
+    can be rebuilt from the main database.
 
     There are 4 main data sets (preservation worthy data):
 
@@ -187,11 +166,8 @@ class LmdbStore(Store):
     - o:sp (O key: joined S, P keys; dupsort, dupfixed)
     - c:spo (context → triple association; dupsort, dupfixed)
     - ns:pfx (pickled namespace: prefix; 1:1)
-
-    These two data sets are stored in separate environments, i.e. separate
-    files in the filesystem. The index could be recreated from the main data
-    set in case of a disaster.
     '''
+
     context_aware = True
     # This is a hassle to maintain for no apparent gain. If some use is devised
     # in the future, it may be revised.
@@ -577,7 +553,6 @@ class LmdbStore(Store):
         Where the contexts generator lists all context that the triple appears
         in.
         '''
-        #import pdb; pdb.set_trace()
         #logger.debug('Getting triples for pattern: {} and context: {}'.format(
         #    triple_pattern, context))
         # This sounds strange, RDFLib should be passing None at this point,
@@ -747,27 +722,6 @@ class LmdbStore(Store):
             self.data_txn.abort()
             self.idx_txn.abort()
         self.data_txn = self.idx_txn = self.is_txn_rw = None
-
-
-    def rebase(self, n, start=1):
-        '''
-        Create a bytearray translating an integer to an arbitrary base.
-
-        the base is between the `start` value and 255 to fit in one-byte
-        chunks.
-
-        @param n (int) Number to rebase.
-        @param start (int) Starting byte. This is useful to leave out "special"
-        bytes for purposes such as separators.
-
-        @return bytearray
-        '''
-        map = list(range(start, 255))
-        base = len(map)
-        if n < base:
-            return bytearray([map[n]])
-        else:
-            return self.rebase(n // base, start) + bytearray([map[n % base]])
 
 
     ## PRIVATE METHODS ##

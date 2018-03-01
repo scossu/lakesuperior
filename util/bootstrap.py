@@ -7,7 +7,7 @@ sys.path.append('.')
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from lakesuperior.model.ldpr import Ldpr
 
 __doc__ = '''

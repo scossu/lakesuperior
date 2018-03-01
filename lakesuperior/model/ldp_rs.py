@@ -84,7 +84,7 @@ class LdpRs(Ldpr):
         self.rdfly.patch_rsrc(self.uid, update_str)
 
         if notify and current_app.config.get('messaging'):
-            self._send_msg(self.RES_UPDATED, check_del_gr, check_ins_gr)
+            self._enqueue_msg(self.RES_UPDATED, check_del_gr, check_ins_gr)
 
         # @FIXME Ugly workaround until we find how to recompose a SPARQL query
         # string from a parsed query object.

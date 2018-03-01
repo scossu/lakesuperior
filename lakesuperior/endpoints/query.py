@@ -5,7 +5,7 @@ from rdflib.plugin import PluginException
 
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.query import QueryEngine
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple

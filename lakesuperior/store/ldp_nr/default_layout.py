@@ -3,8 +3,7 @@ import os
 from hashlib import sha1
 from uuid import uuid4
 
-from lakesuperior.store_layouts.ldp_nr.base_non_rdf_layout import \
-        BaseNonRdfLayout
+from lakesuperior.store.ldp_nr.base_non_rdf_layout import BaseNonRdfLayout
 
 class DefaultLayout(BaseNonRdfLayout):
     '''

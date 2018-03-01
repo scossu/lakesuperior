@@ -10,7 +10,7 @@ from PIL import Image
 
 from lakesuperior.app import create_app
 from lakesuperior.config_parser import config
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from util.generators import random_image
 from util.bootstrap import bootstrap_binary_store
 

@@ -11,7 +11,6 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior import model
-from lakesuperior.model.generic_resource import PathSegment
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
@@ -67,8 +66,6 @@ class LdpFactory:
         elif __class__.LDP_RS_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-RS.')
             rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
-        elif nsc['fcsystem']['PathSegment'] in rdf_types:
-            return PathSegment(uid)
         else:
             raise ResourceNotExistsError(uid)
 

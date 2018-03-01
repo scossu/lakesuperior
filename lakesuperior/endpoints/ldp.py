@@ -2,7 +2,6 @@ import logging
 
 from collections import defaultdict
 from pprint import pformat
-from functools import wraps
 from uuid import uuid4
 
 import arrow
@@ -13,17 +12,17 @@ from flask import (
 from rdflib.namespace import XSD
 from rdflib.term import Literal
 
+from lakesuperior.api.resource import transaction
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import (ResourceNotExistsError, TombstoneError,
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
         ResourceExistsError, IncompatibleLdpTypeError)
-from lakesuperior.model.generic_resource import PathSegment
 from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import LmdbStore, TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from lakesuperior.toolbox import Toolbox
 
 
@@ -103,70 +102,6 @@ def log_request_end(rsp):
     return rsp
 
 
-def transaction(write=False):
-    '''
-    Handle atomic operations in a store.
-
-    This wrapper ensures that a write operation is performed atomically. It
-    also takes care of sending a message for each resource changed in the
-    transaction.
-    '''
-    def _transaction_deco(fn):
-        @wraps(fn)
-        def _wrapper(*args, **kwargs):
-            g.changelog = []
-            store = current_app.rdfly.store
-            if isinstance(store, LmdbStore):
-                with TxnManager(store, write=write) as txn:
-                    ret = fn(*args, **kwargs)
-                return ret
-            else:
-                try:
-                    ret = fn(*args, **kwargs)
-                except:
-                    logger.warn('Rolling back transaction.')
-                    store.rollback()
-                    raise
-                else:
-                    logger.info('Committing transaction.')
-                    #if hasattr(store, '_edits'):
-                    #    # @FIXME ugly.
-                    #    self.rdfly._conn.optimize_edits()
-                    store.commit()
-                    return ret
-            # @TODO re-enable, maybe leave out the delta part
-            #for ev in g.changelog:
-            #    #self._logger.info('Message: {}'.format(pformat(ev)))
-            #    send_event_msg(*ev)
-
-        return _wrapper
-    return _transaction_deco
-
-
-def send_msg(self, ev_type, remove_trp=None, add_trp=None):
-    '''
-    Sent a message about a changed (created, modified, deleted) resource.
-    '''
-    try:
-        type = self.types
-        actor = self.metadata.value(nsc['fcrepo'].createdBy)
-    except (ResourceNotExistsError, TombstoneError):
-        type = set()
-        actor = None
-        for t in add_trp:
-            if t[1] == RDF.type:
-                type.add(t[2])
-            elif actor is None and t[1] == nsc['fcrepo'].createdBy:
-                actor = t[2]
-
-    g.changelog.append((set(remove_trp), set(add_trp), {
-        'ev_type' : ev_type,
-        'time' : g.timestamp,
-        'type' : type,
-        'actor' : actor,
-    }))
-
-
 ## REST SERVICES ##
 
 @ldp.route('/<path:uid>', methods=['GET'], strict_slashes=False)
@@ -202,7 +137,6 @@ def get_resource(uid, force_rdf=False):
         out_headers.update(rsrc.head())
         if (
                 isinstance(rsrc, LdpRs)
-                or isinstance(rsrc, PathSegment)
                 or is_accept_hdr_rdf_parsable()
                 or force_rdf):
             rsp = rsrc.get()

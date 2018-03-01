@@ -2,8 +2,7 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
-from itertools import accumulate, groupby
-#from pprint import pformat
+from itertools import groupby
 from uuid import uuid4
 
 import arrow
@@ -21,8 +20,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.exceptions import (RefIntViolationError,
         ResourceNotExistsError, ServerManagedTermError, TombstoneError)
 from lakesuperior.model.ldp_factory import LdpFactory
-from lakesuperior.store_layouts.ldp_rs.rsrc_centric_layout import (
-        VERS_CONT_LABEL)
+from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 
 
 ROOT_UID = ''
@@ -692,19 +690,15 @@ class Ldpr(metaclass=ABCMeta):
         @param add_trp (set) Triples to be added.
         @param notify (boolean) Whether to send a message about the change.
         '''
-        #for trp in [remove_trp, add_trp]:
-        #    if not isinstance(trp, set):
-        #        trp = set(trp)
-
         ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        #if notify and current_app.config.get('messaging'):
-        #    self._send_msg(ev_type, remove_trp, add_trp)
+        if notify and current_app.config.get('messaging'):
+            self._enqueue_msg(ev_type, remove_trp, add_trp)
 
         return ret
 
 
-    def _send_msg(self, ev_type, remove_trp=None, add_trp=None):
+    def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):
         '''
         Sent a message about a changed (created, modified, deleted) resource.
         '''
@@ -720,31 +714,14 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
+        if not hasattr(g, 'changelog'):
+            g.changelog = []
         g.changelog.append((set(remove_trp), set(add_trp), {
             'ev_type' : ev_type,
             'time' : g.timestamp,
             'type' : type,
             'actor' : actor,
         }))
-
-
-    # Not used. @TODO Deprecate or reimplement depending on requirements.
-    #def _ensure_single_subject_rdf(self, gr, add_fragment=True):
-    #    '''
-    #    Ensure that a RDF payload for a POST or PUT has a single resource.
-    #    '''
-    #    for s in set(gr.subjects()):
-    #        # Fragment components
-    #        if '#' in s:
-    #            parts = s.split('#')
-    #            frag = s
-    #            s = URIRef(parts[0])
-    #            if add_fragment:
-    #                # @TODO This is added to the main graph. It should be added
-    #                # to the metadata graph.
-    #                gr.add((frag, nsc['fcsystem'].fragmentOf, s))
-    #        if not s == self.urn:
-    #            raise SingleSubjectError(s, self.uid)
 
 
     def _check_ref_int(self, config):
@@ -925,20 +902,3 @@ class Ldpr(metaclass=ABCMeta):
             target_rsrc._modify_rsrc(self.RES_UPDATED, add_trp={(s, p, o)})
 
         self._modify_rsrc(self.RES_UPDATED, add_trp=add_trp)
-
-
-    # @TODO reenable at request level.
-    #def _send_event_msg(self, remove_trp, add_trp, metadata):
-    #    '''
-    #    Break down delta triples, find subjects and send event message.
-    #    '''
-    #    remove_grp = groupby(remove_trp, lambda x : x[0])
-    #    remove_dict = { k[0] : k[1] for k in remove_grp }
-
-    #    add_grp = groupby(add_trp, lambda x : x[0])
-    #    add_dict = { k[0] : k[1] for k in add_grp }
-
-    #    subjects = set(remove_dict.keys()) | set(add_dict.keys())
-    #    for rsrc_uri in subjects:
-    #        self._logger.info('subject: {}'.format(rsrc_uri))
-    #        #current_app.messenger.send

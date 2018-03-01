@@ -2,7 +2,7 @@ import logging
 
 from flask import Blueprint, current_app, g, request, render_template
 
-from lakesuperior.store_layouts.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 # Admin interface and API.
 
