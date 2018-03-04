@@ -10,7 +10,7 @@ from rdflib import Graph
 from rdflib.term import URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import ROOT_RSRC_URI
+from lakesuperior.globals import ROOT_RSRC_URI
 
 
 class Toolbox:

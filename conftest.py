@@ -14,7 +14,6 @@ env.config = test_config
 
 @pytest.fixture(scope='module')
 def app():
-    import pdb; pdb.set_trace()
     app = create_app(env.config['application'])
 
     yield app

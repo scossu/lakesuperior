@@ -2,7 +2,8 @@ import logging
 
 from collections import deque
 from importlib import import_module
-from logging.config import dictConfig
+
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
 '''
 Constants used in messaging to identify an event type.
@@ -10,6 +11,9 @@ Constants used in messaging to identify an event type.
 RES_CREATED = '_create_'
 RES_DELETED = '_delete_'
 RES_UPDATED = '_update_'
+
+ROOT_UID = ''
+ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
 
 
 class AppGlobals:

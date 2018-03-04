@@ -2,8 +2,6 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from flask import current_app
-
 
 class BaseNonRdfLayout(metaclass=ABCMeta):
     '''

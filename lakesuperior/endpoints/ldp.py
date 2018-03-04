@@ -9,7 +9,7 @@ from uuid import uuid4
 import arrow
 
 from flask import (
-        Blueprint, current_app, g, make_response, render_template,
+        Blueprint, g, make_response, render_template,
         request, send_file)
 from rdflib.namespace import XSD
 from rdflib.term import Literal
@@ -88,12 +88,6 @@ def log_request_start():
 @ldp.before_request
 def instantiate_req_vars():
     g.tbox = Toolbox()
-
-
-@ldp.before_request
-def request_timestamp():
-    g.timestamp = arrow.utcnow()
-    g.timestamp_term = Literal(g.timestamp, datatype=XSD.dateTime)
 
 
 @ldp.after_request

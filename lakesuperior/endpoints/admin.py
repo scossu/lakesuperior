@@ -7,9 +7,12 @@ from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 # Admin interface and API.
 
-app_globals = env.app_globals
-logger = logging.getLogger(__name__)
+#import threading
+#print('In admin:', threading.current_thread())
+#print('Env: {}'.format(env.__dict__))
 
+logger = logging.getLogger(__name__)
+app_globals = env.app_globals
 admin = Blueprint('admin', __name__)
 
 

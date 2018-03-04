@@ -17,5 +17,8 @@ e.g.:
 
 This is automated in non-test environments by importing
 `lakesuperior.env_setup`.
+
+Context variables would be ideal: https://www.python.org/dev/peps/pep-0567/
+However they are only available in Python 3.7. Better keep an eye on that.
 '''
 env = threading.local()

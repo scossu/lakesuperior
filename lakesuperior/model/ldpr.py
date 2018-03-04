@@ -2,31 +2,28 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
-from itertools import groupby
 from uuid import uuid4
 
 import arrow
 
-from flask import current_app, g
 from rdflib import Graph
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 from rdflib.term import URIRef, Literal
 
 from lakesuperior.env import env
-from lakesuperior.globals import RES_CREATED, RES_DELETED, RES_UPDATED
+from lakesuperior.globals import (
+    RES_CREATED, RES_DELETED, RES_UPDATED, ROOT_UID)
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
-        srv_mgd_predicates, srv_mgd_types
-from lakesuperior.exceptions import (RefIntViolationError,
-        ResourceNotExistsError, ServerManagedTermError, TombstoneError)
+from lakesuperior.dictionaries.srv_mgd_terms import (
+    srv_mgd_subjects, srv_mgd_predicates, srv_mgd_types)
+from lakesuperior.exceptions import (
+    InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
+    ServerManagedTermError, TombstoneError)
 from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
+from lakesuperior.toolbox import Toolbox
 
-
-ROOT_UID = ''
-ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
 
 rdfly = env.app_globals.rdfly
 
@@ -114,9 +111,12 @@ class Ldpr(metaclass=ABCMeta):
         operations such as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         '''
-        self.uid = rdfly.uri_to_uid(uid) \
-                if isinstance(uid, URIRef) else uid
+        self.uid = (
+            rdfly.uri_to_uid(uid) if isinstance(uid, URIRef) else uid)
         self.uri = nsc['fcres'][uid]
+        # @FIXME Not ideal, should separate app-context dependent functions in
+        # a different toolbox.
+        self.tbox = Toolbox()
 
         self.provided_imr = provided_imr
 
@@ -148,9 +148,9 @@ class Ldpr(metaclass=ABCMeta):
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
                 self._logger.debug(
-                        'Getting RDF representation for resource /{}'
-                        .format(self.uid))
-                #self._logger.debug('IMR options: {}'.format(self._imr_options))
+                    'Getting RDF representation for resource /{}'
+                    .format(self.uid))
+                #self._logger.debug('IMR options:{}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -193,8 +193,8 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.info('Metadata is IMR.')
                 self._metadata = self._imr
             else:
-                self._logger.info('Getting metadata for resource /{}'
-                        .format(self.uid))
+                self._logger.info(
+                    'Getting metadata for resource /{}'.format(self.uid))
                 self._metadata = rdfly.get_metadata(self.uid)
 
         return self._metadata
@@ -222,7 +222,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                #self._logger.debug('IMR options: {}'.format(self._imr_options))
+                #self._logger.debug('IMR options:{}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -282,9 +282,9 @@ class Ldpr(metaclass=ABCMeta):
         Return a generator of version UIDs (relative to their parent resource).
         '''
         gen = self.version_info[
-                nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel]
+            nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel]
 
-        return { str(uid) for uid in gen }
+        return {str(uid) for uid in gen}
 
 
     @property
@@ -313,7 +313,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 return set()
 
-            self._types = set(metadata.graph[self.uri : RDF.type])
+            self._types = set(metadata.graph[self.uri: RDF.type])
 
         return self._types
 
@@ -325,7 +325,7 @@ class Ldpr(metaclass=ABCMeta):
         @return set(rdflib.term.URIRef)
         '''
         if not hasattr(self, '_ldp_types'):
-            self._ldp_types = { t for t in self.types if nsc['ldp'] in t }
+            self._ldp_types = {t for t in self.types if nsc['ldp'] in t}
 
         return self._ldp_types
 
@@ -350,7 +350,7 @@ class Ldpr(metaclass=ABCMeta):
 
         for t in self.ldp_types:
             out_headers['Link'].append(
-                    '{};rel="type"'.format(t.n3()))
+                '{};rel="type"'.format(t.n3()))
 
         return out_headers
 
@@ -411,16 +411,16 @@ class Ldpr(metaclass=ABCMeta):
         self.create_rsrc_snapshot(uuid4())
 
         remove_trp = {
-                trp for trp in self.imr.graph
-                if trp[1] != nsc['fcrepo'].hasVersion}
+            trp for trp in self.imr.graph
+            if trp[1] != nsc['fcrepo'].hasVersion}
 
         if tstone_pointer:
-            add_trp = {(self.uri, nsc['fcsystem'].tombstone,
-                    tstone_pointer)}
+            add_trp = {
+                (self.uri, nsc['fcsystem'].tombstone, tstone_pointer)}
         else:
             add_trp = {
                 (self.uri, RDF.type, nsc['fcsystem'].Tombstone),
-                (self.uri, nsc['fcrepo'].created, g.timestamp_term),
+                (self.uri, nsc['fcrepo'].created, env.timestamp_term),
             }
 
         self._modify_rsrc(RES_DELETED, remove_trp, add_trp)
@@ -441,7 +441,7 @@ class Ldpr(metaclass=ABCMeta):
         Remove all traces of a resource and versions.
         '''
         self._logger.info('Purging resource {}'.format(self.uid))
-        refint = current_app.config['store']['ldp_rs']['referential_integrity']
+        refint = env.config['store']['ldp_rs']['referential_integrity']
         inbound = True if refint else inbound
         rdfly.forget_rsrc(self.uid, inbound)
 
@@ -455,8 +455,8 @@ class Ldpr(metaclass=ABCMeta):
         '''
         # Create version resource from copying the current state.
         self._logger.info(
-                'Creating version snapshot {} for resource {}.'.format(
-                    ver_uid, self.uid))
+            'Creating version snapshot {} for resource {}.'.format(
+                ver_uid, self.uid))
         ver_add_gr = set()
         vers_uid = '{}/{}'.format(self.uid, VERS_CONT_LABEL)
         ver_uid = '{}/{}'.format(vers_uid, ver_uid)
@@ -480,8 +480,8 @@ class Ldpr(metaclass=ABCMeta):
                 pass
             else:
                 ver_add_gr.add((
-                        g.tbox.replace_term_domain(t[0], self.uri, ver_uri),
-                        t[1], t[2]))
+                    self.tbox.replace_term_domain(t[0], self.uri, ver_uri),
+                    t[1], t[2]))
 
         rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
 
@@ -562,8 +562,8 @@ class Ldpr(metaclass=ABCMeta):
         if backup:
             self.create_version()
 
-        ver_gr = rdfly.extract_imr(self.uid, ver_uid=ver_uid,
-                incl_children=False)
+        ver_gr = rdfly.extract_imr(
+            self.uid, ver_uid=ver_uid, incl_children=False)
         self.provided_imr = Resource(Graph(), self.uri)
 
         for t in ver_gr.graph:
@@ -584,11 +584,11 @@ class Ldpr(metaclass=ABCMeta):
         @return boolean
         '''
         return t[1] in srv_mgd_predicates or (
-                t[1] == RDF.type and t[2] in srv_mgd_types)
+            t[1] == RDF.type and t[2] in srv_mgd_types)
 
 
-    def _modify_rsrc(self, ev_type, remove_trp=set(), add_trp=set(),
-             notify=True):
+    def _modify_rsrc(
+            self, ev_type, remove_trp=set(), add_trp=set(), notify=True):
         '''
         Low-level method to modify a graph for a single resource.
 
@@ -603,7 +603,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         ret = rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        if notify and current_app.config.get('messaging'):
+        if notify and env.config.get('messaging'):
             self._enqueue_msg(ev_type, remove_trp, add_trp)
 
         return ret
@@ -625,11 +625,11 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
-        changelog.append((set(remove_trp), set(add_trp), {
-            'ev_type' : ev_type,
-            'time' : g.timestamp,
-            'type' : type,
-            'actor' : actor,
+        env.changelog.append((set(remove_trp), set(add_trp), {
+            'ev_type': ev_type,
+            'time': env.timestamp,
+            'type': type,
+            'actor': actor,
         }))
 
 
@@ -643,8 +643,8 @@ class Ldpr(metaclass=ABCMeta):
                     raise RefIntViolationError(o)
                 else:
                     self._logger.info(
-                            'Removing link to non-existent repo resource: {}'
-                            .format(o))
+                        'Removing link to non-existent repo resource: {}'
+                        .format(o))
                     gr.remove((None, None, o))
 
 
@@ -656,7 +656,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         offending_subjects = set(gr.subjects()) & srv_mgd_subjects
         if offending_subjects:
-            if self.handling=='strict':
+            if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
@@ -666,7 +666,7 @@ class Ldpr(metaclass=ABCMeta):
         offending_predicates = set(gr.predicates()) & srv_mgd_predicates
         # Allow some predicates if the resource is being created.
         if offending_predicates:
-            if self.handling=='strict':
+            if self.handling == 'strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
                 for p in offending_predicates:
@@ -677,7 +677,7 @@ class Ldpr(metaclass=ABCMeta):
         if not self.is_stored:
             offending_types -= self.smt_allow_on_create
         if offending_types:
-            if self.handling=='strict':
+            if self.handling == 'strict':
                 raise ServerManagedTermError(offending_types, 't')
             else:
                 for t in offending_types:
@@ -700,21 +700,24 @@ class Ldpr(metaclass=ABCMeta):
             self.provided_imr.add(RDF.type, t)
 
         # Message digest.
-        cksum = g.tbox.rdf_cksum(self.provided_imr.graph)
-        self.provided_imr.set(nsc['premis'].hasMessageDigest,
-                URIRef('urn:sha1:{}'.format(cksum)))
+        cksum = self.tbox.rdf_cksum(self.provided_imr.graph)
+        self.provided_imr.set(
+            nsc['premis'].hasMessageDigest,
+            URIRef('urn:sha1:{}'.format(cksum)))
 
         # Create and modify timestamp.
         if create:
-            self.provided_imr.set(nsc['fcrepo'].created, g.timestamp_term)
+            self.provided_imr.set(nsc['fcrepo'].created, env.timestamp_term)
             self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
         else:
-            self.provided_imr.set(nsc['fcrepo'].created, self.metadata.value(
+            self.provided_imr.set(
+                nsc['fcrepo'].created, self.metadata.value(
                     nsc['fcrepo'].created))
-            self.provided_imr.set(nsc['fcrepo'].createdBy, self.metadata.value(
+            self.provided_imr.set(
+                nsc['fcrepo'].createdBy, self.metadata.value(
                     nsc['fcrepo'].createdBy))
 
-        self.provided_imr.set(nsc['fcrepo'].lastModified, g.timestamp_term)
+        self.provided_imr.set(nsc['fcrepo'].lastModified, env.timestamp_term)
         self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
 
@@ -742,8 +745,8 @@ class Ldpr(metaclass=ABCMeta):
             if rdfly.ask_rsrc_exists(cnd_parent_uid):
                 parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
                 if nsc['ldp'].Container not in parent_rsrc.types:
-                    raise InvalidResourceError(parent_uid,
-                            'Parent {} is not a container.')
+                    raise InvalidResourceError(
+                        cnd_parent_uid, 'Parent {} is not a container.')
 
                 parent_uid = cnd_parent_uid
             else:
@@ -758,8 +761,7 @@ class Ldpr(metaclass=ABCMeta):
         add_gr = Graph()
         add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
         parent_rsrc = LdpFactory.from_stored(
-                parent_uid, repr_opts={'incl_children' : False},
-                handling='none')
+            parent_uid, repr_opts={'incl_children' : False}, handling='none')
         parent_rsrc._modify_rsrc(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
@@ -794,17 +796,18 @@ class Ldpr(metaclass=ABCMeta):
             s = cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier
             p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
 
-            if cont_rsrc.metadata[RDF.type : nsc['ldp'].DirectContainer]:
+            if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
                 o = self.uri
 
-            elif cont_rsrc.metadata[RDF.type : nsc['ldp'].IndirectContainer] \
-                   and self.INS_CNT_REL_URI in cont_p:
+            elif (
+                    cont_rsrc.metadata[RDF.type: nsc['ldp'].IndirectContainer]
+                    and self.INS_CNT_REL_URI in cont_p):
                 self._logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
-                        self.INS_CNT_REL_URI).identifier
+                    self.INS_CNT_REL_URI).identifier
                 o = self.provided_imr.value(cont_rel_uri).identifier
                 self._logger.debug('Target URI: {}'.format(o))
                 self._logger.debug('Creating IC triples.')

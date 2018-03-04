@@ -15,6 +15,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
+from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
@@ -475,7 +476,7 @@ class RsrcCentricLayout:
             # Add metadata.
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
-            meta_gr.set((gr_uri, nsc['fcrepo'].created, g.timestamp_term))
+            meta_gr.set((gr_uri, nsc['fcrepo'].created, env.timestamp_term))
             if historic:
                 # @FIXME Ugly reverse engineering.
                 ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')

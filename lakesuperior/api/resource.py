@@ -4,6 +4,11 @@ from functools import wraps
 from multiprocessing import Process
 from threading import Lock, Thread
 
+import arrow
+
+from rdflib import Literal
+from rdflib.namespace import XSD
+
 from lakesuperior.config_parser import config
 from lakesuperior.exceptions import InvalidResourceError
 from lakesuperior.env import env
@@ -25,11 +30,17 @@ def transaction(write=False):
     def _transaction_deco(fn):
         @wraps(fn)
         def _wrapper(*args, **kwargs):
+            # Mark transaction begin timestamp. This is used for create and
+            # update timestamps on resources.
+            env.timestamp = arrow.utcnow()
+            env.timestamp_term = Literal(env.timestamp, datatype=XSD.dateTime)
             with TxnManager(app_globals.rdf_store, write=write) as txn:
                 ret = fn(*args, **kwargs)
             if len(app_globals.changelog):
                 job = Thread(target=process_queue)
                 job.start()
+            delattr(env, 'timestamp')
+            delattr(env, 'timestamp_term')
             return ret
         return _wrapper
     return _transaction_deco
