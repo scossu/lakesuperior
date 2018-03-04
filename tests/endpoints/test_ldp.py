@@ -1,3 +1,4 @@
+import pdb
 import pytest
 import uuid
 
@@ -141,11 +142,35 @@ class TestLdp:
         rnd_img['content'].seek(0)
         resp = self.client.put('/ldp/ldpnr01', data=rnd_img['content'],
                 headers={
+                    'Content-Type': 'image/png',
                     'Content-Disposition' : 'attachment; filename={}'.format(
                     rnd_img['filename'])})
         assert resp.status_code == 201
 
-        resp = self.client.get('/ldp/ldpnr01', headers={'accept' : 'image/png'})
+        resp = self.client.get(
+                '/ldp/ldpnr01', headers={'accept' : 'image/png'})
+        assert resp.status_code == 200
+        assert sha1(resp.data).hexdigest() == rnd_img['hash']
+
+
+    def test_put_ldp_nr_multipart(self, rnd_img):
+        '''
+        PUT a resource with a multipart/form-data payload.
+        '''
+        rnd_img['content'].seek(0)
+        resp = self.client.put(
+            '/ldp/ldpnr02',
+            data={
+                'file': (
+                    rnd_img['content'], rnd_img['filename'],
+                    'image/png',
+                )
+            }
+        )
+        assert resp.status_code == 201
+
+        resp = self.client.get(
+                '/ldp/ldpnr02', headers={'accept' : 'image/png'})
         assert resp.status_code == 200
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 

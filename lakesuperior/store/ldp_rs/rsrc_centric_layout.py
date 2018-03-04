@@ -3,7 +3,6 @@ import logging
 from collections import defaultdict
 from itertools import chain
 
-from flask import g
 from rdflib import Dataset, Graph, Literal, URIRef, plugin
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
@@ -273,11 +272,6 @@ class RsrcCentricLayout:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
         uri = nsc['fcres'][uid]
-        if not len(gr):
-            # If no resource is found, search in pairtree graph.
-            gr = Graph()
-            for p, o in self.ds.graph(PTREE_GR_URI)[uri : : ]:
-                gr.add(uri, p, o)
 
         rsrc = Resource(gr, uri)
         if strict:
@@ -293,6 +287,11 @@ class RsrcCentricLayout:
         # @NOTE This pretty much bends the ontology—it replaces the graph URI
         # with the subject URI. But the concepts of data and metadata in Fedora
         # are quite fluid anyways...
+        # WIP—Is it worth to replace SPARQL here?
+        #versions = self.ds.graph(nsc['fcadmin'][uid]).triples(
+        #        (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
+        #for version in versions:
+        #    version_meta = self.ds.graph(HIST_GRAPH_URI).triples(
         qry = '''
         CONSTRUCT {
           ?s fcrepo:hasVersion ?v .
@@ -312,6 +311,7 @@ class RsrcCentricLayout:
             'hg': HIST_GR_URI,
             's': nsc['fcres'][uid]})
         rsrc = Resource(gr, nsc['fcres'][uid])
+        # @TODO Should return a graph.
         if strict:
             self._check_rsrc_status(rsrc)
 
@@ -392,7 +392,7 @@ class RsrcCentricLayout:
         return gr.update(qry)
 
 
-    def purge_rsrc(self, uid, inbound=True, children=True):
+    def forget_rsrc(self, uid, inbound=True, children=True):
         '''
         Completely delete a resource and (optionally) its children and inbound
         references.
@@ -402,13 +402,13 @@ class RsrcCentricLayout:
         # Localize variables to be used in loops.
         uri = nsc['fcres'][uid]
         topic_uri = nsc['foaf'].primaryTopic
-        uid_fn = g.tbox.uri_to_uuid
+        uid_fn = self.uri_to_uid
 
         # remove children.
         if children:
             self._logger.debug('Purging children for /{}'.format(uid))
             for rsrc_uri in self.get_descendants(uid, False):
-                self.purge_rsrc(uid_fn(rsrc_uri), inbound, False)
+                self.forget_rsrc(uid_fn(rsrc_uri), inbound, False)
             # Remove structure graph.
             self.ds.remove_graph(nsc['fcstruct'][uid])
 
@@ -528,13 +528,20 @@ class RsrcCentricLayout:
             gr.remove((None, RDF.type, t))
 
 
+    def uri_to_uid(self, uri):
+        '''
+        Convert an internal URI to a UID.
+        '''
+        return str(uri).replace(nsc['fcres'], '')
+
+
     ## PROTECTED MEMBERS ##
 
     def _check_rsrc_status(self, rsrc):
         '''
         Check if a resource is not existing or if it is a tombstone.
         '''
-        uid = g.tbox.uri_to_uuid(rsrc.identifier)
+        uid = self.uri_to_uid(rsrc.identifier)
         if not len(rsrc.graph):
             raise ResourceNotExistsError(uid)
 
@@ -544,7 +551,7 @@ class RsrcCentricLayout:
                     uid, rsrc.value(nsc['fcrepo'].created))
         elif rsrc.value(nsc['fcsystem'].tombstone):
             raise TombstoneError(
-                    g.tbox.uri_to_uuid(
+                    self.uri_to_uid(
                         rsrc.value(nsc['fcsystem'].tombstone).identifier),
                         rsrc.value(nsc['fcrepo'].created))
 

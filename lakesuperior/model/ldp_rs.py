@@ -40,14 +40,11 @@ class LdpRs(Ldpr):
 
     def patch(self, update_str):
         '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
-
         Update an existing resource by applying a SPARQL-UPDATE query.
 
         @param update_str (string) SPARQL-Update staements.
         '''
         self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
-        local_update_str = g.tbox.localize_ext_str(update_str, self.urn)
         self._logger.debug('Local update string: {}'.format(local_update_str))
 
         return self._sparql_update(local_update_str)

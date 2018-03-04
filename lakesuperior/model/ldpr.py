@@ -13,6 +13,8 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF
 from rdflib.term import URIRef, Literal
 
+from lakesuperior.env import env
+from lakesuperior.globals import RES_CREATED, RES_DELETED, RES_UPDATED
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
@@ -25,6 +27,8 @@ from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 
 ROOT_UID = ''
 ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
+
+rdfly = env.app_globals.rdfly
 
 
 class Ldpr(metaclass=ABCMeta):
@@ -71,10 +75,6 @@ class Ldpr(metaclass=ABCMeta):
     # is not provided.
     DEFAULT_USER = Literal('BypassAdmin')
 
-    RES_CREATED = '_create_'
-    RES_DELETED = '_delete_'
-    RES_UPDATED = '_update_'
-
     # RDF Types that populate a new resource.
     base_types = {
         nsc['fcrepo'].Resource,
@@ -114,13 +114,9 @@ class Ldpr(metaclass=ABCMeta):
         operations such as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         '''
-        self.uid = g.tbox.uri_to_uuid(uid) \
+        self.uid = rdfly.uri_to_uid(uid) \
                 if isinstance(uid, URIRef) else uid
-        self.urn = nsc['fcres'][uid]
-        self.uri = g.tbox.uuid_to_uri(self.uid)
-
-        self.rdfly = current_app.rdfly
-        self.nonrdfly = current_app.nonrdfly
+        self.uri = nsc['fcres'][uid]
 
         self.provided_imr = provided_imr
 
@@ -134,7 +130,7 @@ class Ldpr(metaclass=ABCMeta):
         @return rdflib.resource.Resource
         '''
         if not hasattr(self, '_rsrc'):
-            self._rsrc = self.rdfly.ds.resource(self.urn)
+            self._rsrc = rdfly.ds.resource(self.uri)
 
         return self._rsrc
 
@@ -151,14 +147,15 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                self._logger.info('Getting RDF representation for resource /{}'
+                self._logger.debug(
+                        'Getting RDF representation for resource /{}'
                         .format(self.uid))
                 #self._logger.debug('IMR options: {}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
             options = dict(imr_options, strict=True)
-            self._imr = self.rdfly.extract_imr(self.uid, **options)
+            self._imr = rdfly.extract_imr(self.uid, **options)
 
         return self._imr
 
@@ -173,7 +170,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if isinstance(v, Resource):
             v = v.graph
-        self._imr = Resource(Graph(), self.urn)
+        self._imr = Resource(Graph(), self.uri)
         gr = self._imr.graph
         gr += v
 
@@ -198,7 +195,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 self._logger.info('Getting metadata for resource /{}'
                         .format(self.uid))
-                self._metadata = self.rdfly.get_metadata(self.uid)
+                self._metadata = rdfly.get_metadata(self.uid)
 
         return self._metadata
 
@@ -231,9 +228,9 @@ class Ldpr(metaclass=ABCMeta):
                 imr_options = {}
             options = dict(imr_options, strict=True)
             try:
-                self._imr = self.rdfly.extract_imr(self.uid, **options)
+                self._imr = rdfly.extract_imr(self.uid, **options)
             except ResourceNotExistsError:
-                self._imr = Resource(Graph(), self.urn)
+                self._imr = Resource(Graph(), self.uri)
                 for t in self.base_types:
                     self.imr.add(RDF.type, t)
 
@@ -271,9 +268,10 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_version_info'):
             try:
-                self._version_info = self.rdfly.get_version_info(self.uid)
+                #@ TODO get_version_info should return a graph.
+                self._version_info = rdfly.get_version_info(self.uid).graph
             except ResourceNotExistsError as e:
-                self._version_info = Resource(Graph(), self.urn)
+                self._version_info = Graph(identifer=self.uri)
 
         return self._version_info
 
@@ -295,7 +293,7 @@ class Ldpr(metaclass=ABCMeta):
             if hasattr(self, '_imr'):
                 self._is_stored = len(self.imr.graph) > 0
             else:
-                self._is_stored = self.rdfly.ask_rsrc_exists(self.uid)
+                self._is_stored = rdfly.ask_rsrc_exists(self.uid)
 
         return self._is_stored
 
@@ -315,7 +313,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 return set()
 
-            self._types = set(metadata.graph[self.urn : RDF.type])
+            self._types = set(metadata.graph[self.uri : RDF.type])
 
         return self._types
 
@@ -357,206 +355,14 @@ class Ldpr(metaclass=ABCMeta):
         return out_headers
 
 
-
-    def get(self):
-        '''
-        Get an RDF representation of the resource.
-
-        The binary retrieval is handled directly by the router.
-
-        Internal URNs are replaced by global URIs using the endpoint webroot.
-        '''
-        gr = g.tbox.globalize_graph(self.out_graph)
-        gr.namespace_manager = nsm
-
-        return gr
-
-
-    def get_version_info(self):
-        '''
-        Get the `fcr:versions` graph.
-        '''
-        gr = g.tbox.globalize_graph(self.version_info.graph)
-        gr.namespace_manager = nsm
-
-        return gr
-
-
     def get_version(self, ver_uid, **kwargs):
         '''
         Get a version by label.
         '''
-        ver_gr = self.rdfly.extract_imr(self.uid, ver_uid, **kwargs).graph
-
-        gr = g.tbox.globalize_graph(ver_gr)
-        gr.namespace_manager = nsm
-
-        return gr
+        return rdfly.extract_imr(self.uid, ver_uid, **kwargs).graph
 
 
-    def post(self):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
-
-        Perform a POST action after a valid resource URI has been found.
-        '''
-        return self._create_or_replace_rsrc(create_only=True)
-
-
-    def put(self):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
-        '''
-        return self._create_or_replace_rsrc()
-
-
-    def patch(self, *args, **kwargs):
-        raise NotImplementedError()
-
-
-    def delete(self, inbound=True, delete_children=True, leave_tstone=True):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_DELETE
-
-        @param inbound (boolean) If specified, delete all inbound relationships
-        as well. This is the default and is always the case if referential
-        integrity is enforced by configuration.
-        @param delete_children (boolean) Whether to delete all child resources.
-        This is the default.
-        '''
-        #import pdb; pdb.set_trace()
-        refint = self.rdfly.config['referential_integrity']
-        inbound = True if refint else inbound
-
-        children = (
-            self.rdfly.get_descendants(self.uid)
-            if delete_children else [])
-
-        if leave_tstone:
-            ret = self._bury_rsrc(inbound)
-        else:
-            ret = self._purge_rsrc(inbound)
-
-        for child_uri in children:
-            try:
-                child_rsrc = LdpFactory.from_stored(
-                    g.tbox.uri_to_uuid(child_uri),
-                    repr_opts={'incl_children' : False})
-            except (TombstoneError, ResourceNotExistsError):
-                continue
-            if leave_tstone:
-                child_rsrc._bury_rsrc(inbound, tstone_pointer=self.urn)
-            else:
-                child_rsrc._purge_rsrc(inbound)
-
-        return ret
-
-
-    def resurrect(self):
-        '''
-        Resurrect a resource from a tombstone.
-
-        @EXPERIMENTAL
-        '''
-        tstone_trp = set(self.rdfly.extract_imr(self.uid, strict=False).graph)
-
-        ver_rsp = self.version_info.graph.query('''
-        SELECT ?uid {
-          ?latest fcrepo:hasVersionLabel ?uid ;
-            fcrepo:created ?ts .
-        }
-        ORDER BY DESC(?ts)
-        LIMIT 1
-        ''')
-        ver_uid = str(ver_rsp.bindings[0]['uid'])
-        ver_trp = set(self.rdfly.get_metadata(self.uid, ver_uid).graph)
-
-        laz_gr = Graph()
-        for t in ver_trp:
-            if t[1] != RDF.type or t[2] not in {
-                nsc['fcrepo'].Version,
-            }:
-                laz_gr.add((self.urn, t[1], t[2]))
-        laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Resource))
-        if nsc['ldp'].NonRdfSource in laz_gr[: RDF.type :]:
-            laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Binary))
-        elif nsc['ldp'].Container in laz_gr[: RDF.type :]:
-            laz_gr.add((self.urn, RDF.type, nsc['fcrepo'].Container))
-
-        self._modify_rsrc(self.RES_CREATED, tstone_trp, set(laz_gr))
-        self._set_containment_rel()
-
-        return self.uri
-
-
-
-    def purge(self, inbound=True):
-        '''
-        Delete a tombstone and all historic snapstots.
-
-        N.B. This does not trigger an event.
-        '''
-        refint = current_app.config['store']['ldp_rs']['referential_integrity']
-        inbound = True if refint else inbound
-
-        return self._purge_rsrc(inbound)
-
-
-    def create_version(self, ver_uid=None):
-        '''
-        Create a new version of the resource.
-
-        NOTE: This creates an event only for the resource being updated (due
-        to the added `hasVersion` triple and possibly to the `hasVersions` one)
-        but not for the version being created.
-
-        @param ver_uid Version ver_uid. If already existing, an exception is
-        raised.
-        '''
-        if not ver_uid or ver_uid in self.version_uids:
-            ver_uid = str(uuid4())
-
-        return g.tbox.globalize_term(self.create_rsrc_snapshot(ver_uid))
-
-
-    def revert_to_version(self, ver_uid, backup=True):
-        '''
-        Revert to a previous version.
-
-        @param ver_uid (string) Version UID.
-        @param backup (boolean) Whether to create a backup snapshot. Default is
-        true.
-        '''
-        # Create a backup snapshot.
-        if backup:
-            self.create_version()
-
-        ver_gr = self.rdfly.extract_imr(self.uid, ver_uid=ver_uid,
-                incl_children=False)
-        self.provided_imr = Resource(Graph(), self.urn)
-
-        for t in ver_gr.graph:
-            if not self._is_trp_managed(t):
-                self.provided_imr.add(t[1], t[2])
-            # @TODO Check individual objects: if they are repo-managed URIs
-            # and not existing or tombstones, they are not added.
-
-        return self._create_or_replace_rsrc(create_only=False)
-
-
-    ## PROTECTED METHODS ##
-
-    def _is_trp_managed(self, t):
-        '''
-        Whether a triple is server-managed.
-
-        @return boolean
-        '''
-        return t[1] in srv_mgd_predicates or (
-                t[1] == RDF.type and t[2] in srv_mgd_types)
-
-
-    def _create_or_replace_rsrc(self, create_only=False):
+    def create_or_replace_rsrc(self, create_only=False):
         '''
         Create or update a resource. PUT and POST methods, which are almost
         identical, are wrappers for this method.
@@ -567,20 +373,31 @@ class Ldpr(metaclass=ABCMeta):
 
         self._add_srv_mgd_triples(create)
         #self._ensure_single_subject_rdf(self.provided_imr.graph)
-        ref_int = self.rdfly.config['referential_integrity']
+        ref_int = rdfly.config['referential_integrity']
         if ref_int:
             self._check_ref_int(ref_int)
 
-        self.rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph)
+        rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph)
         self.imr = self.provided_imr
 
         self._set_containment_rel()
 
-        return self.RES_CREATED if create else self.RES_UPDATED
+        return RES_CREATED if create else RES_UPDATED
         #return self._head(self.provided_imr.graph)
 
 
-    def _bury_rsrc(self, inbound, tstone_pointer=None):
+    def put(self):
+        '''
+        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
+        '''
+        return self.create_or_replace_rsrc()
+
+
+    def patch(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+    def bury_rsrc(self, inbound, tstone_pointer=None):
         '''
         Delete a single resource and create a tombstone.
 
@@ -598,41 +415,43 @@ class Ldpr(metaclass=ABCMeta):
                 if trp[1] != nsc['fcrepo'].hasVersion}
 
         if tstone_pointer:
-            add_trp = {(self.urn, nsc['fcsystem'].tombstone,
+            add_trp = {(self.uri, nsc['fcsystem'].tombstone,
                     tstone_pointer)}
         else:
             add_trp = {
-                (self.urn, RDF.type, nsc['fcsystem'].Tombstone),
-                (self.urn, nsc['fcrepo'].created, g.timestamp_term),
+                (self.uri, RDF.type, nsc['fcsystem'].Tombstone),
+                (self.uri, nsc['fcrepo'].created, g.timestamp_term),
             }
 
-        self._modify_rsrc(self.RES_DELETED, remove_trp, add_trp)
+        self._modify_rsrc(RES_DELETED, remove_trp, add_trp)
 
         if inbound:
-            for ib_rsrc_uri in self.imr.graph.subjects(None, self.urn):
-                remove_trp = {(ib_rsrc_uri, None, self.urn)}
+            for ib_rsrc_uri in self.imr.graph.subjects(None, self.uri):
+                remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
                 ib_rsrc.create_rsrc_snapshot(uuid4())
-                ib_rsrc._modify_rsrc(self.RES_UPDATED, remove_trp)
+                ib_rsrc._modify_rsrc(RES_UPDATED, remove_trp)
 
-        return self.RES_DELETED
+        return RES_DELETED
 
 
-    def _purge_rsrc(self, inbound):
+    def forget_rsrc(self, inbound=True):
         '''
         Remove all traces of a resource and versions.
         '''
         self._logger.info('Purging resource {}'.format(self.uid))
-        self.rdfly.purge_rsrc(self.uid, inbound)
+        refint = current_app.config['store']['ldp_rs']['referential_integrity']
+        inbound = True if refint else inbound
+        rdfly.forget_rsrc(self.uid, inbound)
 
         # @TODO This could be a different event type.
-        return self.RES_DELETED
+        return RES_DELETED
 
 
     def create_rsrc_snapshot(self, ver_uid):
         '''
-        Perform version creation and return the internal URN.
+        Perform version creation and return the version UID.
         '''
         # Create version resource from copying the current state.
         self._logger.info(
@@ -661,19 +480,111 @@ class Ldpr(metaclass=ABCMeta):
                 pass
             else:
                 ver_add_gr.add((
-                        g.tbox.replace_term_domain(t[0], self.urn, ver_uri),
+                        g.tbox.replace_term_domain(t[0], self.uri, ver_uri),
                         t[1], t[2]))
 
-        self.rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
+        rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
 
         # Update resource admin data.
         rsrc_add_gr = {
-            (self.urn, nsc['fcrepo'].hasVersion, ver_uri),
-            (self.urn, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
+            (self.uri, nsc['fcrepo'].hasVersion, ver_uri),
+            (self.uri, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
         }
-        self._modify_rsrc(self.RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
+        self._modify_rsrc(RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
 
-        return nsc['fcres'][ver_uid]
+        return ver_uid
+
+
+    def resurrect_rsrc(self):
+        '''
+        Resurrect a resource from a tombstone.
+
+        @EXPERIMENTAL
+        '''
+        tstone_trp = set(rdfly.extract_imr(self.uid, strict=False).graph)
+
+        ver_rsp = self.version_info.graph.query('''
+        SELECT ?uid {
+          ?latest fcrepo:hasVersionLabel ?uid ;
+            fcrepo:created ?ts .
+        }
+        ORDER BY DESC(?ts)
+        LIMIT 1
+        ''')
+        ver_uid = str(ver_rsp.bindings[0]['uid'])
+        ver_trp = set(rdfly.get_metadata(self.uid, ver_uid).graph)
+
+        laz_gr = Graph()
+        for t in ver_trp:
+            if t[1] != RDF.type or t[2] not in {
+                nsc['fcrepo'].Version,
+            }:
+                laz_gr.add((self.uri, t[1], t[2]))
+        laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Resource))
+        if nsc['ldp'].NonRdfSource in laz_gr[: RDF.type :]:
+            laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Binary))
+        elif nsc['ldp'].Container in laz_gr[: RDF.type :]:
+            laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Container))
+
+        self._modify_rsrc(RES_CREATED, tstone_trp, set(laz_gr))
+        self._set_containment_rel()
+
+        return self.uri
+
+
+
+    def create_version(self, ver_uid=None):
+        '''
+        Create a new version of the resource.
+
+        NOTE: This creates an event only for the resource being updated (due
+        to the added `hasVersion` triple and possibly to the `hasVersions` one)
+        but not for the version being created.
+
+        @param ver_uid Version ver_uid. If already existing, an exception is
+        raised.
+        '''
+        if not ver_uid or ver_uid in self.version_uids:
+            ver_uid = str(uuid4())
+
+        return self.create_rsrc_snapshot(ver_uid)
+
+
+    def revert_to_version(self, ver_uid, backup=True):
+        '''
+        Revert to a previous version.
+
+        @param ver_uid (string) Version UID.
+        @param backup (boolean) Whether to create a backup snapshot. Default is
+        true.
+        '''
+        # Create a backup snapshot.
+        if backup:
+            self.create_version()
+
+        ver_gr = rdfly.extract_imr(self.uid, ver_uid=ver_uid,
+                incl_children=False)
+        self.provided_imr = Resource(Graph(), self.uri)
+
+        for t in ver_gr.graph:
+            if not self._is_trp_managed(t):
+                self.provided_imr.add(t[1], t[2])
+            # @TODO Check individual objects: if they are repo-managed URIs
+            # and not existing or tombstones, they are not added.
+
+        return self.create_or_replace_rsrc(create_only=False)
+
+
+    ## PROTECTED METHODS ##
+
+    def _is_trp_managed(self, t):
+        '''
+        Whether a triple is server-managed.
+
+        @return boolean
+        '''
+        return t[1] in srv_mgd_predicates or (
+                t[1] == RDF.type and t[2] in srv_mgd_types)
 
 
     def _modify_rsrc(self, ev_type, remove_trp=set(), add_trp=set(),
@@ -690,7 +601,7 @@ class Ldpr(metaclass=ABCMeta):
         @param add_trp (set) Triples to be added.
         @param notify (boolean) Whether to send a message about the change.
         '''
-        ret = self.rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+        ret = rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
         if notify and current_app.config.get('messaging'):
             self._enqueue_msg(ev_type, remove_trp, add_trp)
@@ -714,9 +625,7 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
-        if not hasattr(g, 'changelog'):
-            g.changelog = []
-        g.changelog.append((set(remove_trp), set(add_trp), {
+        changelog.append((set(remove_trp), set(add_trp), {
             'ev_type' : ev_type,
             'time' : g.timestamp,
             'type' : type,
@@ -728,8 +637,8 @@ class Ldpr(metaclass=ABCMeta):
         gr = self.provided_imr.graph
 
         for o in gr.objects():
-            if isinstance(o, URIRef) and str(o).startswith(g.webroot)\
-                    and not self.rdfly.ask_rsrc_exists(o):
+            if isinstance(o, URIRef) and str(o).startswith(nsc['fcres'])\
+                    and not rdfly.ask_rsrc_exists(o):
                 if config == 'strict':
                     raise RefIntViolationError(o)
                 else:
@@ -819,16 +728,18 @@ class Ldpr(metaclass=ABCMeta):
         This function may recurse up the path tree until an existing container
         is found.
 
-        E.g. if only urn:fcres:a (short: a) exists:
-        - If a/b/c/d is being created, a becomes container of a/b/c/d. Also,
-          containers are created for a/b and a/b/c.
-        - If e is being created, the root node becomes container of e.
+        E.g. if only fcres:a exists:
+        - If fcres:a/b/c/d is being created, a becomes container of
+          fcres:a/b/c/d. Also, containers are created for fcres:a/b and
+          fcres:a/b/c.
+        - If fcres:e is being created, the root node becomes container of
+          fcres:e.
         '''
         if '/' in self.uid:
             # Traverse up the hierarchy to find the parent.
             path_components = self.uid.split('/')
             cnd_parent_uid = '/'.join(path_components[:-1])
-            if self.rdfly.ask_rsrc_exists(cnd_parent_uid):
+            if rdfly.ask_rsrc_exists(cnd_parent_uid):
                 parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
                 if nsc['ldp'].Container not in parent_rsrc.types:
                     raise InvalidResourceError(parent_uid,
@@ -845,11 +756,11 @@ class Ldpr(metaclass=ABCMeta):
             parent_uid = ROOT_UID
 
         add_gr = Graph()
-        add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.urn))
+        add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
         parent_rsrc = LdpFactory.from_stored(
                 parent_uid, repr_opts={'incl_children' : False},
                 handling='none')
-        parent_rsrc._modify_rsrc(self.RES_UPDATED, add_trp=add_gr)
+        parent_rsrc._modify_rsrc(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
         self._add_ldp_dc_ic_rel(parent_rsrc)
@@ -877,7 +788,7 @@ class Ldpr(metaclass=ABCMeta):
         self._logger.info('Checking direct or indirect containment.')
         self._logger.debug('Parent predicates: {}'.format(cont_p))
 
-        add_trp = {(self.urn, nsc['fcrepo'].hasParent, cont_rsrc.urn)}
+        add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             s = cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier
@@ -887,7 +798,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.info('Parent is a direct container.')
 
                 self._logger.debug('Creating DC triples.')
-                o = self.urn
+                o = self.uri
 
             elif cont_rsrc.metadata[RDF.type : nsc['ldp'].IndirectContainer] \
                    and self.INS_CNT_REL_URI in cont_p:
@@ -898,7 +809,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._logger.debug('Target URI: {}'.format(o))
                 self._logger.debug('Creating IC triples.')
 
-            target_rsrc = LdpFactory.from_stored(g.tbox.uri_to_uuid(s))
-            target_rsrc._modify_rsrc(self.RES_UPDATED, add_trp={(s, p, o)})
+            target_rsrc = LdpFactory.from_stored(rdfly.uri_to_uid(s))
+            target_rsrc._modify_rsrc(RES_UPDATED, add_trp={(s, p, o)})
 
-        self._modify_rsrc(self.RES_UPDATED, add_trp=add_trp)
+        self._modify_rsrc(RES_UPDATED, add_trp=add_trp)

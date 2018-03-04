@@ -1,11 +1,18 @@
+import pdb
+
 from rdflib import Graph
 from rdflib.namespace import RDF, XSD
 from rdflib.resource import Resource
 from rdflib.term import URIRef, Literal, Variable
 
+from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_rs import LdpRs
+
+
+nonrdfly = env.app_globals.nonrdfly
+
 
 class LdpNr(Ldpr):
     '''LDP-NR (Non-RDF Source).
@@ -54,26 +61,25 @@ class LdpNr(Ldpr):
     def local_path(self):
         cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term.identifier.replace('urn:sha1:',''))
-        return self.nonrdfly.local_path(cksum)
+        return nonrdfly.local_path(cksum)
 
 
-    ## LDP METHODS ##
-
-    def _create_or_replace_rsrc(self, create_only=False):
+    def create_or_replace_rsrc(self, create_only=False):
         '''
         Create a new binary resource with a corresponding RDF representation.
 
         @param file (Stream) A Stream resource representing the uploaded file.
         '''
         # Persist the stream.
-        file_uuid = self.digest = self.nonrdfly.persist(self.stream)
+        self.digest, self.size = nonrdfly.persist(self.stream)
 
         # Try to persist metadata. If it fails, delete the file.
-        self._logger.debug('Persisting LDP-NR triples in {}'.format(self.urn))
+        self._logger.debug('Persisting LDP-NR triples in {}'.format(self.uri))
         try:
-            ev_type = super()._create_or_replace_rsrc(create_only)
+            ev_type = super().create_or_replace_rsrc(create_only)
         except:
-            self.nonrdfly.delete(file_uuid)
+            # self.digest is also the file UID.
+            nonrdfly.delete(self.digest)
             raise
         else:
             return ev_type
@@ -93,9 +99,8 @@ class LdpNr(Ldpr):
         super()._add_srv_mgd_triples(create)
 
         # File size.
-        self._logger.debug('Data stream size: {}'.format(self.stream.limit))
-        self.provided_imr.set(nsc['premis'].hasSize,
-                Literal(self.stream.limit))
+        self._logger.debug('Data stream size: {}'.format(self.size))
+        self.provided_imr.set(nsc['premis'].hasSize, Literal(self.size))
 
         # Checksum.
         cksum_term = URIRef('urn:sha1:{}'.format(self.digest))

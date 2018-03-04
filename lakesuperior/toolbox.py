@@ -37,7 +37,7 @@ class Toolbox:
         return URIRef(s)
 
 
-    def uuid_to_uri(self, uid):
+    def uid_to_uri(self, uid):
         '''Convert a UID to a URI.
 
         @return URIRef
@@ -47,7 +47,7 @@ class Toolbox:
         return URIRef(uri)
 
 
-    def uri_to_uuid(self, uri):
+    def uri_to_uid(self, uri):
         '''Convert an absolute URI (internal or external) to a UID.
 
         @return string
@@ -243,9 +243,6 @@ class Toolbox:
     def rdf_cksum(self, gr):
         '''
         Generate a checksum for a graph.
-
-        This is not straightforward because a graph is derived from an
-        unordered data structure (RDF).
 
         What this method does is ordering the graph by subject, predicate,
         object, then creating a pickle string and a checksum of it.

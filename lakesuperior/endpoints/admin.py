@@ -1,11 +1,13 @@
 import logging
 
-from flask import Blueprint, current_app, g, request, render_template
+from flask import Blueprint, render_template
 
+from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 # Admin interface and API.
 
+app_globals = env.app_globals
 logger = logging.getLogger(__name__)
 
 admin = Blueprint('admin', __name__)
@@ -34,10 +36,9 @@ def stats():
             num /= 1024.0
         return "{:.1f} {}{}".format(num, 'Y', suffix)
 
-    store = current_app.rdfly.store
-    with TxnManager(store) as txn:
-        store_stats = store.stats()
-    rsrc_stats = current_app.rdfly.count_rsrc()
+    with TxnManager(app_globals.rdf_store) as txn:
+        store_stats = app_globals.rdf_store.stats()
+    rsrc_stats = app_globals.rdfly.count_rsrc()
     return render_template(
             'stats.html', rsrc_stats=rsrc_stats, store_stats=store_stats,
             fsize_fmt=fsize_fmt)

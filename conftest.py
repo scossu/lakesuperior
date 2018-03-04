@@ -1,23 +1,21 @@
 import sys
-sys.path.append('.')
-import numpy
-import random
-import uuid
 
 import pytest
 
-from PIL import Image
-
+sys.path.append('.')
+from lakesuperior.config_parser import test_config
+from lakesuperior.globals import AppGlobals
+from lakesuperior.env import env
+env.app_globals = AppGlobals(test_config)
 from lakesuperior.app import create_app
-from lakesuperior.config_parser import config
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from util.generators import random_image
-from util.bootstrap import bootstrap_binary_store
 
+env.config = test_config
 
 @pytest.fixture(scope='module')
 def app():
-    app = create_app(config['test'], config['logging'])
+    import pdb; pdb.set_trace()
+    app = create_app(env.config['application'])
 
     yield app
 
@@ -27,15 +25,14 @@ def db(app):
     '''
     Set up and tear down test triplestore.
     '''
-    db = app.rdfly
-    db.bootstrap()
-    bootstrap_binary_store(app)
+    rdfly = env.app_globals.rdfly
+    rdfly.bootstrap()
+    env.app_globals.nonrdfly.bootstrap()
 
-    yield db
+    yield rdfly
 
     print('Tearing down fixture graph store.')
-    if hasattr(db.store, 'destroy'):
-        db.store.destroy(db.store.path)
+    rdfly.store.destroy(rdfly.store.path)
 
 
 @pytest.fixture

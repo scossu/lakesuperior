@@ -3,18 +3,21 @@ import logging
 from pprint import pformat
 from uuid import uuid4
 
-import rdflib
-
-from flask import current_app, g
-from rdflib import Graph
+from rdflib import Graph, parser, plugin, serializer
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior import model
+from lakesuperior.config_parser import config
+from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError)
+
+
+rdfly = env.app_globals.rdfly
+
 
 class LdpFactory:
     '''
@@ -31,7 +34,7 @@ class LdpFactory:
     def new_container(uid):
         if not uid:
             raise InvalidResourceError(uid)
-        if current_app.rdfly.ask_rsrc_exists(uid):
+        if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
         rsrc = model.ldp_rs.Ldpc(
                 uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
@@ -55,7 +58,7 @@ class LdpFactory:
         #__class__._logger.info('Retrieving stored resource: {}'.format(uid))
         imr_urn = nsc['fcres'][uid]
 
-        rsrc_meta = current_app.rdfly.get_metadata(uid)
+        rsrc_meta = rdfly.get_metadata(uid)
         #__class__._logger.debug('Extracted metadata: {}'.format(
         #        pformat(set(rsrc_meta.graph))))
         rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
@@ -76,44 +79,40 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_provided(uid, content_length, mimetype, stream, **kwargs):
+    def from_provided(uid, mimetype, stream=None, **kwargs):
         '''
         Determine LDP type from request content.
 
         @param uid (string) UID of the resource to be created or updated.
-        @param content_length (int) The provided content length.
         @param mimetype (string) The provided content MIME type.
-        @param stream (IOStream) The provided data stream. This can be RDF or
-        non-RDF content.
+        @param stream (IOStream | None) The provided data stream. This can be
+        RDF or non-RDF content, or None. In the latter case, an empty container
+        is created.
         '''
-        urn = nsc['fcres'][uid]
+        uri = nsc['fcres'][uid]
 
         logger = __class__._logger
 
-        if not content_length:
+        if not stream:
             # Create empty LDPC.
             logger.info('No data received in request. '
                     'Creating empty container.')
             inst = model.ldp_rs.Ldpc(
-                    uid, provided_imr=Resource(Graph(), urn), **kwargs)
+                    uid, provided_imr=Resource(Graph(), uri), **kwargs)
 
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
             input_rdf = stream.read()
-            provided_gr = Graph().parse(data=input_rdf,
-                    format=mimetype, publicID=urn)
+            gr = Graph().parse(data=input_rdf, format=mimetype, publicID=uri)
             #logger.debug('Provided graph: {}'.format(
             #        pformat(set(provided_gr))))
-            local_gr = g.tbox.localize_graph(provided_gr)
-            #logger.debug('Parsed local graph: {}'.format(
-            #        pformat(set(local_gr))))
-            provided_imr = Resource(local_gr, urn)
+            provided_imr = Resource(gr, uri)
 
             # Determine whether it is a basic, direct or indirect container.
             Ldpr = model.ldpr.Ldpr
-            if Ldpr.MBR_RSRC_URI in local_gr.predicates() and \
-                    Ldpr.MBR_REL_URI in local_gr.predicates():
-                if Ldpr.INS_CNT_REL_URI in local_gr.predicates():
+            if Ldpr.MBR_RSRC_URI in gr.predicates() and \
+                    Ldpr.MBR_REL_URI in gr.predicates():
+                if Ldpr.INS_CNT_REL_URI in gr.predicates():
                     cls = model.ldp_rs.LdpIc
                 else:
                     cls = model.ldp_rs.LdpDc
@@ -131,7 +130,7 @@ class LdpFactory:
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.
-            provided_imr = Resource(Graph(), urn)
+            provided_imr = Resource(Graph(), uri)
             inst = model.ldp_nr.LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 
@@ -158,8 +157,8 @@ class LdpFactory:
         @param mimetype (string) MIME type to check.
         '''
         try:
-            rdflib.plugin.get(mimetype, rdflib.parser.Parser)
-        except rdflib.plugin.PluginException:
+            plugin.get(mimetype, parser.Parser)
+        except plugin.PluginException:
             return False
         else:
             return True
@@ -173,8 +172,8 @@ class LdpFactory:
         @param mimetype (string) MIME type to check.
         '''
         try:
-            rdflib.plugin.get(mimetype, rdflib.serializer.Serializer)
-        except rdflib.plugin.PluginException:
+            plugin.get(mimetype, serializer.Serializer)
+        except plugin.PluginException:
             return False
         else:
             return True
@@ -199,8 +198,8 @@ class LdpFactory:
         what has been indicated.
         '''
         def split_if_legacy(uid):
-            if current_app.config['store']['ldp_rs']['legacy_ptree_split']:
-                uid = g.tbox.split_uuid(uid)
+            if config['application']['store']['ldp_rs']['legacy_ptree_split']:
+                uid = tbox.split_uuid(uid)
             return uid
 
         # Shortcut!
@@ -223,7 +222,7 @@ class LdpFactory:
         # Create candidate UID and validate.
         if path:
             cnd_uid = pfx + path
-            if current_app.rdfly.ask_rsrc_exists(cnd_uid):
+            if rdfly.ask_rsrc_exists(cnd_uid):
                 uid = pfx + split_if_legacy(str(uuid4()))
             else:
                 uid = cnd_uid

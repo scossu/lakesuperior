@@ -3,6 +3,7 @@ import logging
 from flask import Blueprint, current_app, request, render_template
 from rdflib.plugin import PluginException
 
+from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.query import QueryEngine
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
@@ -13,6 +14,8 @@ from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
 # N.B All data sources are read-only for this endpoint.
 
 logger = logging.getLogger(__name__)
+rdf_store = env.app_globals.rdf_store
+rdfly = env.app_globals.rdfly
 
 query = Blueprint('query', __name__)
 
@@ -52,8 +55,7 @@ def sparql():
         return render_template('sparql_query.html', nsm=nsm)
     else:
         logger.debug('Query: {}'.format(request.form['query']))
-        store = current_app.rdfly.store
-        with TxnManager(store) as txn:
+        with TxnManager(rdf_store) as txn:
             qres = QueryEngine().sparql_query(request.form['query'])
 
             match = request.accept_mimetypes.best_match(accept_mimetypes.keys())

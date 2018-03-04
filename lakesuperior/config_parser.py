@@ -37,15 +37,15 @@ This means that if you run a test suite, your live data may be wiped clean!
 Please review your configuration before starting.
 '''
 
-config['test'] = hiyapyco.load(CONFIG_DIR + '/application.yml',
-        CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)
+test_config = {'application': hiyapyco.load(CONFIG_DIR + '/application.yml',
+        CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)}
 
 if config['application']['store']['ldp_rs']['location'] \
-        == config['test']['store']['ldp_rs']['location']:
+        == test_config['application']['store']['ldp_rs']['location']:
             raise RuntimeError(error_msg.format('RDF'))
             sys.exit()
 
-if config['application']['store']['ldp_nr']['path'] == \
-        config['test']['store']['ldp_nr']['path']:
+if config['application']['store']['ldp_nr']['path'] \
+        == test_config['application']['store']['ldp_nr']['path']:
             raise RuntimeError(error_msg.format('binary'))
             sys.exit()

@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from hashlib import sha1
 from uuid import uuid4
@@ -12,6 +13,17 @@ class DefaultLayout(BaseNonRdfLayout):
     '''
 
     ## INTERFACE METHODS ##
+
+    def bootstrap(self):
+        '''
+        Initialize binary file store.
+        '''
+        try:
+            shutil.rmtree(self.root)
+        except FileNotFoundError:
+            pass
+        os.makedirs(self.root + '/tmp')
+
 
     def persist(self, stream, bufsize=8192):
         '''
@@ -31,12 +43,14 @@ class DefaultLayout(BaseNonRdfLayout):
                 self._logger.debug('Writing temp file to {}.'.format(tmp_file))
 
                 hash = sha1()
+                size = 0
                 while True:
                     buf = stream.read(bufsize)
                     if not buf:
                         break
                     hash.update(buf)
                     f.write(buf)
+                    size += len(buf)
         except:
             self._logger.exception('File write failed on {}.'.format(tmp_file))
             os.unlink(tmp_file)
@@ -57,7 +71,7 @@ class DefaultLayout(BaseNonRdfLayout):
         else:
             os.rename(tmp_file, dst)
 
-        return uuid
+        return uuid, size
 
 
     def delete(self, uuid):

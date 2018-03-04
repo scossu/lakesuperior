@@ -4,7 +4,7 @@ import uuid
 
 from abc import ABCMeta, abstractmethod
 
-from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.globals import RES_CREATED, RES_DELETED, RES_UPDATED
 
 
 class BaseASFormatter(metaclass=ABCMeta):
@@ -15,15 +15,15 @@ class BaseASFormatter(metaclass=ABCMeta):
     builder.
     '''
     ev_types = {
-        Ldpr.RES_CREATED : 'Create',
-        Ldpr.RES_DELETED : 'Delete',
-        Ldpr.RES_UPDATED : 'Update',
+        RES_CREATED : 'Create',
+        RES_DELETED : 'Delete',
+        RES_UPDATED : 'Update',
     }
 
     ev_names = {
-        Ldpr.RES_CREATED : 'Resource Modification',
-        Ldpr.RES_DELETED : 'Resource Creation',
-        Ldpr.RES_UPDATED : 'Resource Deletion',
+        RES_CREATED : 'Resource Modification',
+        RES_DELETED : 'Resource Creation',
+        RES_UPDATED : 'Resource Deletion',
     }
 
     def __init__(self, uri, ev_type, time, type, data=None,
