@@ -1,8 +1,7 @@
-from flask import current_app, g
 from rdflib import Graph
-from rdflib.plugins.sparql.algebra import translateUpdate
-from rdflib.plugins.sparql.parser import parseUpdate
 
+from lakesuperior.env import env
+from lakesuperior.globals import RES_UPDATED
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr
 
@@ -45,49 +44,8 @@ class LdpRs(Ldpr):
         @param update_str (string) SPARQL-Update staements.
         '''
         self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
-        self._logger.debug('Local update string: {}'.format(local_update_str))
 
-        return self._sparql_update(local_update_str)
-
-
-    def _sparql_update(self, update_str, notify=True):
-        '''
-        Apply a SPARQL update to a resource.
-
-        The SPARQL string is validated beforehand to make sure that it does
-        not contain server-managed terms.
-
-        In theory, server-managed terms in DELETE statements are harmless
-        because the patch is only applied over the user-provided triples, but
-        at the moment those are also checked.
-        '''
-        # Parse the SPARQL update string and validate contents.
-        qry_struct = translateUpdate(parseUpdate(update_str))
-        check_ins_gr = Graph()
-        check_del_gr = Graph()
-        for stmt in qry_struct:
-            try:
-                check_ins_gr += set(stmt.insert.triples)
-            except AttributeError:
-                pass
-            try:
-                check_del_gr += set(stmt.delete.triples)
-            except AttributeError:
-                pass
-
-        self._check_mgd_terms(check_ins_gr)
-        self._check_mgd_terms(check_del_gr)
-
-        self.rdfly.patch_rsrc(self.uid, update_str)
-
-        if notify and current_app.config.get('messaging'):
-            self._enqueue_msg(self.RES_UPDATED, check_del_gr, check_ins_gr)
-
-        # @FIXME Ugly workaround until we find how to recompose a SPARQL query
-        # string from a parsed query object.
-        self.rdfly.clear_smt(self.uid)
-
-        return self.RES_UPDATED
+        return self._sparql_update(update_str)
 
 
     #def _sparql_delta(self, q):

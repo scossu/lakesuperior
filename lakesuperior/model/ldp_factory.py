@@ -16,6 +16,9 @@ from lakesuperior.exceptions import (
         ResourceNotExistsError)
 
 
+LDP_NR_TYPE = nsc['ldp'].NonRDFSource
+LDP_RS_TYPE = nsc['ldp'].RDFSource
+
 rdfly = env.app_globals.rdfly
 
 
@@ -24,9 +27,6 @@ class LdpFactory:
     Generate LDP instances.
     The instance classes are based on provided client data or on stored data.
     '''
-    LDP_NR_TYPE = nsc['ldp'].NonRDFSource
-    LDP_RS_TYPE = nsc['ldp'].RDFSource
-
     _logger = logging.getLogger(__name__)
 
 
@@ -63,10 +63,10 @@ class LdpFactory:
         #        pformat(set(rsrc_meta.graph))))
         rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
 
-        if __class__.LDP_NR_TYPE in rdf_types:
+        if LDP_NR_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-NR.')
             rsrc = model.ldp_nr.LdpNr(uid, repr_opts, **kwargs)
-        elif __class__.LDP_RS_TYPE in rdf_types:
+        elif LDP_RS_TYPE in rdf_types:
             __class__._logger.info('Resource is a LDP-RS.')
             rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
         else:
@@ -122,7 +122,7 @@ class LdpFactory:
             inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
             # Make sure we are not updating an LDP-RS with an LDP-NR.
-            if inst.is_stored and __class__.LDP_NR_TYPE in inst.ldp_types:
+            if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
             if kwargs.get('handling', 'strict') != 'none':
@@ -135,7 +135,7 @@ class LdpFactory:
                     provided_imr=provided_imr, **kwargs)
 
             # Make sure we are not updating an LDP-NR with an LDP-RS.
-            if inst.is_stored and __class__.LDP_RS_TYPE in inst.ldp_types:
+            if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
         logger.info('Creating resource of type: {}'.format(

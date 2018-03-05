@@ -256,13 +256,19 @@ def put_resource(uid):
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
 
     handling, disposition = set_post_put_params()
+    #import pdb; pdb.set_trace()
     stream, mimetype = _bistream_from_req()
 
     if LdpFactory.is_rdf_parsable(mimetype):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
         local_rdf = global_rdf.replace(
-                g.webroot.encode('utf-8'), nsc['fcres'].encode('utf-8'))
+            (g.webroot + '/').encode('utf-8'),
+            nsc['fcres'].encode('utf-8')
+        ).replace(
+            g.webroot.encode('utf-8'),
+            nsc['fcres'].encode('utf-8')
+        )
         stream = BytesIO(local_rdf)
         is_rdf = True
     else:
@@ -294,7 +300,7 @@ def put_resource(uid):
 
 
 @ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
-def patch_resource(uid):
+def patch_resource(uid, is_metadata=False):
     '''
     https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
 
@@ -306,15 +312,17 @@ def patch_resource(uid):
                 .format(request.mimetype), 415
 
     update_str = request.get_data().decode('utf-8')
-    local_update_str = g.tbox.localize_ext_str(update_str, nsc['fcres'][uri])
+    local_update_str = g.tbox.localize_ext_str(update_str, nsc['fcres'][uid])
     try:
-        rsrc = rsrc_api.update(uid, local_update_str)
+        rsrc = rsrc_api.update(uid, local_update_str, is_metadata)
     except ResourceNotExistsError as e:
         return str(e), 404
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
+    except InvalidResourceError as e:
+        return str(e), 415
     else:
         rsp_headers.update(_headers_from_metadata(rsrc))
         return '', 204, rsp_headers
@@ -322,7 +330,7 @@ def patch_resource(uid):
 
 @ldp.route('/<path:uid>/fcr:metadata', methods=['PATCH'])
 def patch_resource_metadata(uid):
-    return patch_resource(uid)
+    return patch_resource(uid, True)
 
 
 @ldp.route('/<path:uid>', methods=['DELETE'])
@@ -408,7 +416,7 @@ def post_version(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return '', 201, {'Location': g.tbox.uri_to_uri(ver_uid)}
+        return '', 201, {'Location': g.tbox.uid_to_uri(ver_uid)}
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['PATCH'])
@@ -454,13 +462,11 @@ def _bistream_from_req():
     '''
     Find how a binary file and its MIMEtype were uploaded in the request.
     '''
-    logger.debug('Content type: {}'.format(request.mimetype))
-    logger.debug('files: {}'.format(request.files))
-    logger.debug('stream: {}'.format(request.stream))
+    #logger.debug('Content type: {}'.format(request.mimetype))
+    #logger.debug('files: {}'.format(request.files))
+    #logger.debug('stream: {}'.format(request.stream))
 
-    if request.mimetype == '':
-        stream = mimetype = None
-    elif request.mimetype == 'multipart/form-data':
+    if request.mimetype == 'multipart/form-data':
         # This seems the "right" way to upload a binary file, with a
         # multipart/form-data MIME type and the file in the `file`
         # field. This however is not supported by FCREPO4.
@@ -474,7 +480,14 @@ def _bistream_from_req():
         # the request as application/x-www-form-urlencoded.
         # This is how FCREPO4 accepts binary uploads.
         stream = request.stream
+        # @FIXME Must decide what to do with this.
         mimetype = request.mimetype
+
+    if mimetype == '' or mimetype == 'application/x-www-form-urlencoded':
+        if stream.limit == 0:
+            stream = mimetype = None
+        else:
+            mimetype = 'application/octet-stream'
 
     return stream, mimetype
 

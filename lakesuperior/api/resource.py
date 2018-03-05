@@ -1,6 +1,7 @@
 import logging
 
 from functools import wraps
+from itertools import groupby
 from multiprocessing import Process
 from threading import Lock, Thread
 
@@ -12,7 +13,8 @@ from rdflib.namespace import XSD
 from lakesuperior.config_parser import config
 from lakesuperior.exceptions import InvalidResourceError
 from lakesuperior.env import env
-from lakesuperior.model.ldp_factory import LdpFactory
+from lakesuperior.globals import RES_DELETED
+from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
@@ -26,6 +28,9 @@ def transaction(write=False):
     This wrapper ensures that a write operation is performed atomically. It
     also takes care of sending a message for each resource changed in the
     transaction.
+
+    ALL write operations on the LDP-RS and LDP-NR stores go through this
+    wrapper.
     '''
     def _transaction_deco(fn):
         @wraps(fn)
@@ -53,7 +58,7 @@ def process_queue():
     lock = Lock()
     lock.acquire()
     while len(app_globals.changelog):
-        send_event_msg(app_globals.changelog.popleft())
+        send_event_msg(*app_globals.changelog.popleft())
     lock.release()
 
 
@@ -69,7 +74,7 @@ def send_event_msg(remove_trp, add_trp, metadata):
 
     subjects = set(remove_dict.keys()) | set(add_dict.keys())
     for rsrc_uri in subjects:
-        self._logger.info('subject: {}'.format(rsrc_uri))
+        logger.info('subject: {}'.format(rsrc_uri))
         app_globals.messenger.send
 
 
@@ -171,15 +176,23 @@ def create_or_replace(uid, stream=None, **kwargs):
 
 
 @transaction(True)
-def update(uid, update_str):
+def update(uid, update_str, is_metadata=False):
     '''
     Update a resource with a SPARQL-Update string.
 
     @param uid (string) Resource UID.
     @param update_str (string) SPARQL-Update statements.
+    @param is_metadata (bool) Whether the resource metadata is being updated.
+    If False, and the resource being updated is a LDP-NR, an error is raised.
     '''
     rsrc = LdpFactory.from_stored(uid)
-    rsrc.patch(update_str)
+    if LDP_NR_TYPE in rsrc.ldp_types:
+        if is_metadata:
+            rsrc.patch_metadata(update_str)
+        else:
+            raise InvalidResourceError(uid)
+    else:
+        rsrc.patch(update_str)
 
     return rsrc
 
@@ -210,30 +223,28 @@ def delete(uid, leave_tstone=True):
     '''
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.
-    refint = rdfly.config['referential_integrity']
+    refint = app_globals.rdfly.config['referential_integrity']
     inbound = True if refint else inbound
     repr_opts = {'incl_inbound' : True} if refint else {}
 
-    rsrc = LdpFactory.from_stored(uid, repr_opts)
+    children = app_globals.rdfly.get_descendants(uid)
 
-    children = rdfly.get_descendants(uid)
+    if leave_tstone:
+        rsrc = LdpFactory.from_stored(uid, repr_opts)
+        ret = rsrc.bury_rsrc(inbound)
 
-    ret = (
-            rsrc.bury_rsrc(inbound)
-            if leave_tstone
-            else rsrc.forget_rsrc(inbound))
-
-    for child_uri in children:
-        try:
-            child_rsrc = LdpFactory.from_stored(
-                rdfly.uri_to_uid(child_uri),
-                repr_opts={'incl_children' : False})
-        except (TombstoneError, ResourceNotExistsError):
-            continue
-        if leave_tstone:
+        for child_uri in children:
+            try:
+                child_rsrc = LdpFactory.from_stored(
+                    app_globals.rdfly.uri_to_uid(child_uri),
+                    repr_opts={'incl_children' : False})
+            except (TombstoneError, ResourceNotExistsError):
+                continue
             child_rsrc.bury_rsrc(inbound, tstone_pointer=rsrc.uri)
-        else:
-            child_rsrc.forget_rsrc(inbound)
+    else:
+        ret = forget(uid, inbound)
+        for child_uri in children:
+            forget(app_globals.rdfly.uri_to_uid(child_uri), inbound)
 
     return ret
 
@@ -258,5 +269,9 @@ def forget(uid, inbound=True):
     as well. If referential integrity is checked system-wide inbound references
     are always deleted and this option has no effect.
     '''
-    return LdpFactory.from_stored(uid).forget_rsrc(inbound)
+    refint = app_globals.rdfly.config['referential_integrity']
+    inbound = True if refint else inbound
+    app_globals.rdfly.forget_rsrc(uid, inbound)
+
+    return RES_DELETED
 

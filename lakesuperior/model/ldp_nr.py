@@ -85,6 +85,17 @@ class LdpNr(Ldpr):
             return ev_type
 
 
+    def patch_metadata(self, update_str):
+        '''
+        Update resource metadata by applying a SPARQL-UPDATE query.
+
+        @param update_str (string) SPARQL-Update staements.
+        '''
+        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
+
+        return self._sparql_update(update_str)
+
+
     ## PROTECTED METHODS ##
 
     def _add_srv_mgd_triples(self, create=False):

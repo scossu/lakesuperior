@@ -231,7 +231,7 @@ class TestLdp:
         PREFIX ns: <http://example.org#>
         PREFIX res: <http://example-source.org/res/>
         <> ns:p1 res:bogus ;
-          ns:p2 <{0}/> ;
+          ns:p2 <{0}> ;
           ns:p3 <{0}/nonexistent> .
         '''.format(g.webroot)
         put_rsp = self.client.put('/ldp/test_missing_ref', data=data, headers={
@@ -245,9 +245,10 @@ class TestLdp:
         gr = Graph().parse(data=resp.data, format='text/turtle')
         assert URIRef('http://example-source.org/res/bogus') in \
                 gr.objects(None, URIRef('http://example.org#p1'))
+        #pdb.set_trace()
         assert URIRef(g.webroot + '/') in \
                 gr.objects(None, URIRef('http://example.org#p2'))
-        assert URIRef(g.webroot + '/nonexistent') in \
+        assert URIRef(g.webroot + '/nonexistent') not in \
                 gr.objects(None, URIRef('http://example.org#p3'))
 
 
@@ -333,16 +334,16 @@ class TestLdp:
 
         uri = g.webroot + '/test_patch_ssr'
 
-        #nossr_qry = 'INSERT { <http://bogus.org> a <urn:ns:A> . } WHERE {}'
+        nossr_qry = 'INSERT { <http://bogus.org> a <urn:ns:A> . } WHERE {}'
         abs_qry = 'INSERT {{ <{}> a <urn:ns:A> . }} WHERE {{}}'.format(uri)
         frag_qry = 'INSERT {{ <{}#frag> a <urn:ns:A> . }} WHERE {{}}'\
                 .format(uri)
 
         # @TODO Leave commented until a decision is made about SSR.
-        #assert self.client.patch(
-        #    path, data=nossr_qry,
-        #    headers={'content-type': 'application/sparql-update'}
-        #).status_code == 412
+        assert self.client.patch(
+            path, data=nossr_qry,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 204
 
         assert self.client.patch(
             path, data=abs_qry,
@@ -357,8 +358,7 @@ class TestLdp:
 
     def test_patch_ldp_nr_metadata(self):
         '''
-        Test patching a LDP-NR metadata resource, both from the fcr:metadata
-        and the resource URIs.
+        Test patching a LDP-NR metadata resource from the fcr:metadata URI.
         '''
         path = '/ldp/ldpnr01'
 
@@ -372,11 +372,11 @@ class TestLdp:
 
         uri = g.webroot + '/ldpnr01'
         gr = Graph().parse(data=resp.data, format='text/turtle')
-        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+        assert gr[URIRef(uri) : nsc['dc'].title : Literal('Hello')]
 
         with open(
                 'tests/data/sparql_update/delete+insert+where.sparql') as data:
-            patch_resp = self.client.patch(path,
+            patch_resp = self.client.patch(path + '/fcr:metadata',
                     data=data,
                     headers={'content-type' : 'application/sparql-update'})
         assert patch_resp.status_code == 204
@@ -388,17 +388,34 @@ class TestLdp:
         assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
 
 
-    def test_patch_ldp_nr(self, rnd_img):
+    def test_patch_ldpnr(self):
+        '''
+        Verify that a direct PATCH to a LDP-NR results in a 415.
+        '''
+        with open(
+                'tests/data/sparql_update/delete+insert+where.sparql') as data:
+            patch_resp = self.client.patch('/ldp/ldpnr01',
+                    data=data,
+                    headers={'content-type': 'application/sparql-update'})
+        assert patch_resp.status_code == 415
+
+
+    def test_patch_invalid_mimetype(self, rnd_img):
         '''
         Verify that a PATCH using anything other than an
         `application/sparql-update` MIME type results in an error.
         '''
+        self.client.put('/ldp/test_patch_invalid_mimetype')
         rnd_img['content'].seek(0)
-        resp = self.client.patch('/ldp/ldpnr01/fcr:metadata',
+        ldpnr_resp = self.client.patch('/ldp/ldpnr01/fcr:metadata',
                 data=rnd_img,
                 headers={'content-type' : 'image/jpeg'})
 
-        assert resp.status_code == 415
+        ldprs_resp = self.client.patch('/ldp/test_patch_invalid_mimetype',
+                data=b'Hello, I\'m not a SPARQL update.',
+                headers={'content-type' : 'text/plain'})
+
+        assert ldprs_resp.status_code == ldpnr_resp.status_code == 415
 
 
     def test_delete(self):

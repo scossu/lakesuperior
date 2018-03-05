@@ -1,4 +1,5 @@
 import logging
+import pdb
 
 from abc import ABCMeta
 from collections import defaultdict
@@ -6,10 +7,12 @@ from uuid import uuid4
 
 import arrow
 
-from rdflib import Graph
+from flask import current_app
+from rdflib import Graph, URIRef, Literal
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
-from rdflib.term import URIRef, Literal
+from rdflib.plugins.sparql.algebra import translateUpdate
+from rdflib.plugins.sparql.parser import parseUpdate
 
 from lakesuperior.env import env
 from lakesuperior.globals import (
@@ -271,7 +274,7 @@ class Ldpr(metaclass=ABCMeta):
                 #@ TODO get_version_info should return a graph.
                 self._version_info = rdfly.get_version_info(self.uid).graph
             except ResourceNotExistsError as e:
-                self._version_info = Graph(identifer=self.uri)
+                self._version_info = Graph(identifier=self.uri)
 
         return self._version_info
 
@@ -282,7 +285,8 @@ class Ldpr(metaclass=ABCMeta):
         Return a generator of version UIDs (relative to their parent resource).
         '''
         gen = self.version_info[
-            nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel]
+                self.uri :
+                nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel :]
 
         return {str(uid) for uid in gen}
 
@@ -625,7 +629,7 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
-        env.changelog.append((set(remove_trp), set(add_trp), {
+        env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
             'ev_type': ev_type,
             'time': env.timestamp,
             'type': type,
@@ -637,15 +641,16 @@ class Ldpr(metaclass=ABCMeta):
         gr = self.provided_imr.graph
 
         for o in gr.objects():
-            if isinstance(o, URIRef) and str(o).startswith(nsc['fcres'])\
-                    and not rdfly.ask_rsrc_exists(o):
-                if config == 'strict':
-                    raise RefIntViolationError(o)
-                else:
-                    self._logger.info(
-                        'Removing link to non-existent repo resource: {}'
-                        .format(o))
-                    gr.remove((None, None, o))
+            if isinstance(o, URIRef) and str(o).startswith(nsc['fcres']):
+                obj_uid = rdfly.uri_to_uid(o)
+                if not rdfly.ask_rsrc_exists(obj_uid):
+                    if config == 'strict':
+                        raise RefIntViolationError(obj_uid)
+                    else:
+                        self._logger.info(
+                            'Removing link to non-existent repo resource: {}'
+                            .format(obj_uid))
+                        gr.remove((None, None, o))
 
 
     def _check_mgd_terms(self, gr):
@@ -816,3 +821,43 @@ class Ldpr(metaclass=ABCMeta):
             target_rsrc._modify_rsrc(RES_UPDATED, add_trp={(s, p, o)})
 
         self._modify_rsrc(RES_UPDATED, add_trp=add_trp)
+
+
+    def _sparql_update(self, update_str, notify=True):
+        '''
+        Apply a SPARQL update to a resource.
+
+        The SPARQL string is validated beforehand to make sure that it does
+        not contain server-managed terms.
+
+        In theory, server-managed terms in DELETE statements are harmless
+        because the patch is only applied over the user-provided triples, but
+        at the moment those are also checked.
+        '''
+        # Parse the SPARQL update string and validate contents.
+        qry_struct = translateUpdate(parseUpdate(update_str))
+        check_ins_gr = Graph()
+        check_del_gr = Graph()
+        for stmt in qry_struct:
+            try:
+                check_ins_gr += set(stmt.insert.triples)
+            except AttributeError:
+                pass
+            try:
+                check_del_gr += set(stmt.delete.triples)
+            except AttributeError:
+                pass
+
+        self._check_mgd_terms(check_ins_gr)
+        self._check_mgd_terms(check_del_gr)
+
+        env.app_globals.rdfly.patch_rsrc(self.uid, update_str)
+
+        if notify and current_app.config.get('messaging'):
+            self._enqueue_msg(RES_UPDATED, check_del_gr, check_ins_gr)
+
+        # @FIXME Ugly workaround until we find how to recompose a SPARQL query
+        # string from a parsed query object.
+        env.app_globals.rdfly.clear_smt(self.uid)
+
+        return RES_UPDATED

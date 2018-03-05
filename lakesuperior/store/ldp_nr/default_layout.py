@@ -8,8 +8,7 @@ from lakesuperior.store.ldp_nr.base_non_rdf_layout import BaseNonRdfLayout
 
 class DefaultLayout(BaseNonRdfLayout):
     '''
-    This is momentarily a stub until more non-RDF layouts use cases are
-    gathered.
+    Default file layout.
     '''
 
     ## INTERFACE METHODS ##
@@ -55,6 +54,8 @@ class DefaultLayout(BaseNonRdfLayout):
             self._logger.exception('File write failed on {}.'.format(tmp_file))
             os.unlink(tmp_file)
             raise
+        if size == 0:
+            self._logger.warn('Zero-file size received.')
 
         # Move temp file to final destination.
         uuid = hash.hexdigest()
