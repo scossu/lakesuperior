@@ -85,11 +85,18 @@
 
 # Alpha 7
 
-- [W] Refactor for Python API
-- [ ] Complete messaging
+- [D] Refactor for Python API
+  - [D] Main structure
+  - [D] LDP
+  - [D] Admin
+  - [D] Query
+- [ ] Align logger variable
+- [ ] CLI prototype
+- [ ] Update documentation
 
 # Alpha 8
 
+- [ ] Complete messaging
 - [ ] Term query API
 - [ ] Better management of versions
 - [ ] Complete revert to version and resurrect

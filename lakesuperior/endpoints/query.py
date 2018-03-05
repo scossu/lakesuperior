@@ -5,7 +5,7 @@ from rdflib.plugin import PluginException
 
 from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.query import QueryEngine
+from lakesuperior.api import query as query_api
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
@@ -44,7 +44,7 @@ def sparql():
     '''
     Perform a direct SPARQL query on the underlying triplestore.
 
-    @param q SPARQL query string.
+    @param qry SPARQL query string.
     '''
     accept_mimetypes = {
         'text/csv': 'csv',
@@ -56,7 +56,7 @@ def sparql():
     else:
         logger.debug('Query: {}'.format(request.form['query']))
         with TxnManager(rdf_store) as txn:
-            qres = QueryEngine().sparql_query(request.form['query'])
+            qres = query_api.sparql_query(request.form['query'])
 
             match = request.accept_mimetypes.best_match(accept_mimetypes.keys())
             if match:
