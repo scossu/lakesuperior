@@ -20,6 +20,7 @@ LDP_NR_TYPE = nsc['ldp'].NonRDFSource
 LDP_RS_TYPE = nsc['ldp'].RDFSource
 
 rdfly = env.app_globals.rdfly
+logger = logging.getLogger(__name__)
 
 
 class LdpFactory:
@@ -27,9 +28,6 @@ class LdpFactory:
     Generate LDP instances.
     The instance classes are based on provided client data or on stored data.
     '''
-    _logger = logging.getLogger(__name__)
-
-
     @staticmethod
     def new_container(uid):
         if not uid:
@@ -55,19 +53,19 @@ class LdpFactory:
 
         @param uid UID of the instance.
         '''
-        #__class__._logger.info('Retrieving stored resource: {}'.format(uid))
+        #logger.info('Retrieving stored resource: {}'.format(uid))
         imr_urn = nsc['fcres'][uid]
 
         rsrc_meta = rdfly.get_metadata(uid)
-        #__class__._logger.debug('Extracted metadata: {}'.format(
+        #logger.debug('Extracted metadata: {}'.format(
         #        pformat(set(rsrc_meta.graph))))
         rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
 
         if LDP_NR_TYPE in rdf_types:
-            __class__._logger.info('Resource is a LDP-NR.')
+            logger.info('Resource is a LDP-NR.')
             rsrc = model.ldp_nr.LdpNr(uid, repr_opts, **kwargs)
         elif LDP_RS_TYPE in rdf_types:
-            __class__._logger.info('Resource is a LDP-RS.')
+            logger.info('Resource is a LDP-RS.')
             rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
         else:
             raise ResourceNotExistsError(uid)
@@ -90,8 +88,6 @@ class LdpFactory:
         is created.
         '''
         uri = nsc['fcres'][uid]
-
-        logger = __class__._logger
 
         if not stream:
             # Create empty LDPC.

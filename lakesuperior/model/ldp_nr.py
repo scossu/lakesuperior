@@ -1,3 +1,4 @@
+import logging
 import pdb
 
 from rdflib import Graph
@@ -12,6 +13,7 @@ from lakesuperior.model.ldp_rs import LdpRs
 
 
 nonrdfly = env.app_globals.nonrdfly
+logger = logging.getLogger(__name__)
 
 
 class LdpNr(Ldpr):
@@ -74,7 +76,7 @@ class LdpNr(Ldpr):
         self.digest, self.size = nonrdfly.persist(self.stream)
 
         # Try to persist metadata. If it fails, delete the file.
-        self._logger.debug('Persisting LDP-NR triples in {}'.format(self.uri))
+        logger.debug('Persisting LDP-NR triples in {}'.format(self.uri))
         try:
             ev_type = super().create_or_replace_rsrc(create_only)
         except:
@@ -110,7 +112,7 @@ class LdpNr(Ldpr):
         super()._add_srv_mgd_triples(create)
 
         # File size.
-        self._logger.debug('Data stream size: {}'.format(self.size))
+        logger.debug('Data stream size: {}'.format(self.size))
         self.provided_imr.set(nsc['premis'].hasSize, Literal(self.size))
 
         # Checksum.
@@ -122,7 +124,7 @@ class LdpNr(Ldpr):
                 Literal(self.mimetype))
 
         # File name.
-        self._logger.debug('Disposition: {}'.format(self.disposition))
+        logger.debug('Disposition: {}'.format(self.disposition))
         try:
             self.provided_imr.set(nsc['ebucore']['filename'], Literal(
                     self.disposition['attachment']['parameters']['filename']))

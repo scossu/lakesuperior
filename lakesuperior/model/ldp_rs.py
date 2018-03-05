@@ -1,9 +1,15 @@
+import logging
+
 from rdflib import Graph
 
 from lakesuperior.env import env
 from lakesuperior.globals import RES_UPDATED
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr
+
+
+logger = logging.getLogger(__name__)
+
 
 class LdpRs(Ldpr):
     '''LDP-RS (LDP RDF source).
@@ -71,7 +77,7 @@ class LdpRs(Ldpr):
     #    with `BaseStoreLayout.update_resource` and/or recorded as separate
     #    events in a provenance tracking system.
     #    '''
-    #    self._logger.debug('Provided SPARQL query: {}'.format(q))
+    #    logger.debug('Provided SPARQL query: {}'.format(q))
     #    pre_gr = self.imr.graph
 
     #    post_gr = pre_gr | Graph()
@@ -79,9 +85,9 @@ class LdpRs(Ldpr):
 
     #    remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
 
-    #    #self._logger.debug('Removing: {}'.format(
+    #    #logger.debug('Removing: {}'.format(
     #    #    remove_gr.serialize(format='turtle').decode('utf8')))
-    #    #self._logger.debug('Adding: {}'.format(
+    #    #logger.debug('Adding: {}'.format(
     #    #    add_gr.serialize(format='turtle').decode('utf8')))
 
     #    remove_gr = self._check_mgd_terms(remove_gr)

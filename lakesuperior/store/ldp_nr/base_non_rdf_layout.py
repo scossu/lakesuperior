@@ -3,6 +3,9 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 
+logger = logging.getLogger(__name__)
+
+
 class BaseNonRdfLayout(metaclass=ABCMeta):
     '''
     Abstract class for setting the non-RDF (bitstream) store layout.
@@ -11,9 +14,6 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
     of this class. A non-RDF layout is not necessarily restricted to a
     traditional filesystem—e.g. a layout persisting to HDFS can be written too.
     '''
-
-    _logger = logging.getLogger(__name__)
-
 
     def __init__(self, config):
         '''

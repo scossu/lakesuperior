@@ -13,13 +13,13 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.globals import ROOT_RSRC_URI
 
 
+logger = logging.getLogger(__name__)
+
+
 class Toolbox:
     '''
     Utility class to translate and generate strings and other objects.
     '''
-
-    _logger = logging.getLogger(__name__)
-
     def replace_term_domain(self, term, search, replace):
         '''
         Replace the domain of a term.

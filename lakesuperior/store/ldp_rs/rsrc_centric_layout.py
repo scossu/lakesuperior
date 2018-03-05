@@ -19,13 +19,14 @@ from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
-Lmdb = plugin.register('Lmdb', Store,
-        'lakesuperior.store.ldp_rs.lmdb_store', 'LmdbStore')
-
 META_GR_URI = nsc['fcsystem']['meta']
 HIST_GR_URI = nsc['fcsystem']['histmeta']
 PTREE_GR_URI = nsc['fcsystem']['pairtree']
 VERS_CONT_LABEL = 'fcr:versions'
+
+Lmdb = plugin.register('Lmdb', Store,
+        'lakesuperior.store.ldp_rs.lmdb_store', 'LmdbStore')
+logger = logging.getLogger(__name__)
 
 
 class RsrcCentricLayout:
@@ -50,8 +51,6 @@ class RsrcCentricLayout:
     look for
     `lakesuperior.store.rdf.simple_layout.SimpleLayout`.
     '''
-
-    _logger = logging.getLogger(__name__)
     _graph_uids = ('fcadmin', 'fcmain', 'fcstruct')
 
     # @TODO Move to a config file?
@@ -169,13 +168,13 @@ class RsrcCentricLayout:
         '''
         Delete all graphs and insert the basic triples.
         '''
-        self._logger.info('Deleting all data from the graph store.')
+        logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
             store.rollback()
         store.destroy(store.path)
 
-        self._logger.info('Initializing the graph store with system data.')
+        logger.info('Initializing the graph store with system data.')
         store.open()
         with TxnManager(store, True):
             with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
@@ -245,7 +244,7 @@ class RsrcCentricLayout:
         if incl_inbound and len(gr):
             gr += self.get_inbound_rel(nsc['fcres'][uid])
 
-        #self._logger.debug('Found resource: {}'.format(
+        #logger.debug('Found resource: {}'.format(
         #        gr.serialize(format='turtle').decode('utf-8')))
 
         rsrc = Resource(gr, nsc['fcres'][uid])
@@ -387,7 +386,7 @@ class RsrcCentricLayout:
                 (nsc['fcmain'][uid], nsc['foaf'].primaryTopic,
                 nsc['fcres'][uid]))
         gr = self.ds.graph(nsc['fcmain'][uid])
-        self._logger.debug('Updating graph {} with statements: {}'.format(
+        logger.debug('Updating graph {} with statements: {}'.format(
             nsc['fcmain'][uid], qry))
 
         return gr.update(qry)
@@ -407,7 +406,7 @@ class RsrcCentricLayout:
 
         # remove children.
         if children:
-            self._logger.debug('Purging children for /{}'.format(uid))
+            logger.debug('Purging children for /{}'.format(uid))
             for rsrc_uri in self.get_descendants(uid, False):
                 self.forget_rsrc(uid_fn(rsrc_uri), inbound, False)
             # Remove structure graph.

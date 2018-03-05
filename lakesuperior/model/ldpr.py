@@ -29,6 +29,7 @@ from lakesuperior.toolbox import Toolbox
 
 
 rdfly = env.app_globals.rdfly
+logger = logging.getLogger(__name__)
 
 
 class Ldpr(metaclass=ABCMeta):
@@ -96,8 +97,6 @@ class Ldpr(metaclass=ABCMeta):
         nsc['ldp'].IndirectContainer,
     }
 
-    _logger = logging.getLogger(__name__)
-
 
     ## MAGIC METHODS ##
 
@@ -150,10 +149,10 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                self._logger.debug(
+                logger.debug(
                     'Getting RDF representation for resource /{}'
                     .format(self.uid))
-                #self._logger.debug('IMR options:{}'.format(self._imr_options))
+                #logger.debug('IMR options:{}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -193,10 +192,10 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_metadata'):
             if hasattr(self, '_imr'):
-                self._logger.info('Metadata is IMR.')
+                logger.info('Metadata is IMR.')
                 self._metadata = self._imr
             else:
-                self._logger.info(
+                logger.info(
                     'Getting metadata for resource /{}'.format(self.uid))
                 self._metadata = rdfly.get_metadata(self.uid)
 
@@ -225,7 +224,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
-                #self._logger.debug('IMR options:{}'.format(self._imr_options))
+                #logger.debug('IMR options:{}'.format(self._imr_options))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -410,7 +409,7 @@ class Ldpr(metaclass=ABCMeta):
         to the tombstone of the resource that used to contain the deleted
         resource. Otherwise the deleted resource becomes a tombstone.
         '''
-        self._logger.info('Burying resource {}'.format(self.uid))
+        logger.info('Burying resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
         self.create_rsrc_snapshot(uuid4())
 
@@ -444,7 +443,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Remove all traces of a resource and versions.
         '''
-        self._logger.info('Purging resource {}'.format(self.uid))
+        logger.info('Purging resource {}'.format(self.uid))
         refint = env.config['store']['ldp_rs']['referential_integrity']
         inbound = True if refint else inbound
         rdfly.forget_rsrc(self.uid, inbound)
@@ -458,7 +457,7 @@ class Ldpr(metaclass=ABCMeta):
         Perform version creation and return the version UID.
         '''
         # Create version resource from copying the current state.
-        self._logger.info(
+        logger.info(
             'Creating version snapshot {} for resource {}.'.format(
                 ver_uid, self.uid))
         ver_add_gr = set()
@@ -647,7 +646,7 @@ class Ldpr(metaclass=ABCMeta):
                     if config == 'strict':
                         raise RefIntViolationError(obj_uid)
                     else:
-                        self._logger.info(
+                        logger.info(
                             'Removing link to non-existent repo resource: {}'
                             .format(obj_uid))
                         gr.remove((None, None, o))
@@ -665,7 +664,7 @@ class Ldpr(metaclass=ABCMeta):
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
-                    self._logger.info('Removing offending subj: {}'.format(s))
+                    logger.info('Removing offending subj: {}'.format(s))
                     gr.remove((s, None, None))
 
         offending_predicates = set(gr.predicates()) & srv_mgd_predicates
@@ -675,7 +674,7 @@ class Ldpr(metaclass=ABCMeta):
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
                 for p in offending_predicates:
-                    self._logger.info('Removing offending pred: {}'.format(p))
+                    logger.info('Removing offending pred: {}'.format(p))
                     gr.remove((None, p, None))
 
         offending_types = set(gr.objects(predicate=RDF.type)) & srv_mgd_types
@@ -686,10 +685,10 @@ class Ldpr(metaclass=ABCMeta):
                 raise ServerManagedTermError(offending_types, 't')
             else:
                 for t in offending_types:
-                    self._logger.info('Removing offending type: {}'.format(t))
+                    logger.info('Removing offending type: {}'.format(t))
                     gr.remove((None, RDF.type, t))
 
-        #self._logger.debug('Sanitized graph: {}'.format(gr.serialize(
+        #logger.debug('Sanitized graph: {}'.format(gr.serialize(
         #    format='turtle').decode('utf-8')))
         return gr
 
@@ -792,8 +791,8 @@ class Ldpr(metaclass=ABCMeta):
         '''
         cont_p = set(cont_rsrc.metadata.graph.predicates())
 
-        self._logger.info('Checking direct or indirect containment.')
-        self._logger.debug('Parent predicates: {}'.format(cont_p))
+        logger.info('Checking direct or indirect containment.')
+        logger.debug('Parent predicates: {}'.format(cont_p))
 
         add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
@@ -802,20 +801,20 @@ class Ldpr(metaclass=ABCMeta):
             p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
 
             if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
-                self._logger.info('Parent is a direct container.')
+                logger.info('Parent is a direct container.')
 
-                self._logger.debug('Creating DC triples.')
+                logger.debug('Creating DC triples.')
                 o = self.uri
 
             elif (
                     cont_rsrc.metadata[RDF.type: nsc['ldp'].IndirectContainer]
                     and self.INS_CNT_REL_URI in cont_p):
-                self._logger.info('Parent is an indirect container.')
+                logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
                     self.INS_CNT_REL_URI).identifier
                 o = self.provided_imr.value(cont_rel_uri).identifier
-                self._logger.debug('Target URI: {}'.format(o))
-                self._logger.debug('Creating IC triples.')
+                logger.debug('Target URI: {}'.format(o))
+                logger.debug('Creating IC triples.')
 
             target_rsrc = LdpFactory.from_stored(rdfly.uri_to_uid(s))
             target_rsrc._modify_rsrc(RES_UPDATED, add_trp={(s, p, o)})

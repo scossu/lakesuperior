@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 
@@ -5,6 +6,10 @@ from hashlib import sha1
 from uuid import uuid4
 
 from lakesuperior.store.ldp_nr.base_non_rdf_layout import BaseNonRdfLayout
+
+
+logger = logging.getLogger(__name__)
+
 
 class DefaultLayout(BaseNonRdfLayout):
     '''
@@ -39,7 +44,7 @@ class DefaultLayout(BaseNonRdfLayout):
         tmp_file = '{}/tmp/{}'.format(self.root, uuid4())
         try:
             with open(tmp_file, 'wb') as f:
-                self._logger.debug('Writing temp file to {}.'.format(tmp_file))
+                logger.debug('Writing temp file to {}.'.format(tmp_file))
 
                 hash = sha1()
                 size = 0
@@ -51,22 +56,22 @@ class DefaultLayout(BaseNonRdfLayout):
                     f.write(buf)
                     size += len(buf)
         except:
-            self._logger.exception('File write failed on {}.'.format(tmp_file))
+            logger.exception('File write failed on {}.'.format(tmp_file))
             os.unlink(tmp_file)
             raise
         if size == 0:
-            self._logger.warn('Zero-file size received.')
+            logger.warn('Zero-file size received.')
 
         # Move temp file to final destination.
         uuid = hash.hexdigest()
         dst = self.local_path(uuid)
-        self._logger.debug('Saving file to disk: {}'.format(dst))
+        logger.debug('Saving file to disk: {}'.format(dst))
         if not os.access(os.path.dirname(dst), os.X_OK):
             os.makedirs(os.path.dirname(dst))
 
         # If the file exists already, don't bother rewriting it.
         if os.path.exists(dst):
-            self._logger.info(
+            logger.info(
                     'File exists on {}. Not overwriting.'.format(dst))
             os.unlink(tmp_file)
         else:
@@ -92,7 +97,7 @@ class DefaultLayout(BaseNonRdfLayout):
         @param uuid (string) The resource UUID. This corresponds to the content
         checksum.
         '''
-        self._logger.debug('Generating path from uuid: {}'.format(uuid))
+        logger.debug('Generating path from uuid: {}'.format(uuid))
         bl = self.config['pairtree_branch_length']
         bc = self.config['pairtree_branches']
         term = len(uuid) if bc==0 else min(bc*bl, len(uuid))
