@@ -23,7 +23,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -742,6 +741,8 @@ class Ldpr(metaclass=ABCMeta):
         - If fcres:e is being created, the root node becomes container of
           fcres:e.
         '''
+        from lakesuperior.model.ldp_factory import LdpFactory
+
         if '/' in self.uid:
             # Traverse up the hierarchy to find the parent.
             path_components = self.uid.split('/')
@@ -797,6 +798,8 @@ class Ldpr(metaclass=ABCMeta):
         add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
+            from lakesuperior.model.ldp_factory import LdpFactory
+
             s = cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier
             p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
 

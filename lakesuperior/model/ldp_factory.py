@@ -7,7 +7,9 @@ from rdflib import Graph, parser, plugin, serializer
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
-from lakesuperior import model
+from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.model.ldp_nr import LdpNr
+from lakesuperior.model.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
 from lakesuperior.config_parser import config
 from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -34,8 +36,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = model.ldp_rs.Ldpc(
-                uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
 
         return rsrc
 
@@ -63,10 +64,10 @@ class LdpFactory:
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')
-            rsrc = model.ldp_nr.LdpNr(uid, repr_opts, **kwargs)
+            rsrc = LdpNr(uid, repr_opts, **kwargs)
         elif LDP_RS_TYPE in rdf_types:
             logger.info('Resource is a LDP-RS.')
-            rsrc = model.ldp_rs.LdpRs(uid, repr_opts, **kwargs)
+            rsrc = LdpRs(uid, repr_opts, **kwargs)
         else:
             raise ResourceNotExistsError(uid)
 
@@ -93,8 +94,7 @@ class LdpFactory:
             # Create empty LDPC.
             logger.info('No data received in request. '
                     'Creating empty container.')
-            inst = model.ldp_rs.Ldpc(
-                    uid, provided_imr=Resource(Graph(), uri), **kwargs)
+            inst = Ldpc(uid, provided_imr=Resource(Graph(), uri), **kwargs)
 
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
@@ -105,15 +105,15 @@ class LdpFactory:
             provided_imr = Resource(gr, uri)
 
             # Determine whether it is a basic, direct or indirect container.
-            Ldpr = model.ldpr.Ldpr
+            Ldpr = Ldpr
             if Ldpr.MBR_RSRC_URI in gr.predicates() and \
                     Ldpr.MBR_REL_URI in gr.predicates():
                 if Ldpr.INS_CNT_REL_URI in gr.predicates():
-                    cls = model.ldp_rs.LdpIc
+                    cls = LdpIc
                 else:
-                    cls = model.ldp_rs.LdpDc
+                    cls = LdpDc
             else:
-                cls = model.ldp_rs.Ldpc
+                cls = Ldpc
 
             inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
@@ -127,7 +127,7 @@ class LdpFactory:
         else:
             # Create a LDP-NR and equip it with the binary file provided.
             provided_imr = Resource(Graph(), uri)
-            inst = model.ldp_nr.LdpNr(uid, stream=stream, mimetype=mimetype,
+            inst = LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 
             # Make sure we are not updating an LDP-NR with an LDP-RS.
