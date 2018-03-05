@@ -734,19 +734,19 @@ class Ldpr(metaclass=ABCMeta):
         This function may recurse up the path tree until an existing container
         is found.
 
-        E.g. if only fcres:a exists:
-        - If fcres:a/b/c/d is being created, a becomes container of
-          fcres:a/b/c/d. Also, containers are created for fcres:a/b and
-          fcres:a/b/c.
-        - If fcres:e is being created, the root node becomes container of
-          fcres:e.
+        E.g. if only fcres:/a exists:
+        - If fcres:/a/b/c/d is being created, a becomes container of
+          fcres:/a/b/c/d. Also, containers are created for fcres:a/b and
+          fcres:/a/b/c.
+        - If fcres:/e is being created, the root node becomes container of
+          fcres:/e.
         '''
         from lakesuperior.model.ldp_factory import LdpFactory
 
-        if '/' in self.uid:
+        if '/' in self.uid.lstrip('/'):
             # Traverse up the hierarchy to find the parent.
-            path_components = self.uid.split('/')
-            cnd_parent_uid = '/'.join(path_components[:-1])
+            path_components = self.uid.lstrip('/').split('/')
+            cnd_parent_uid = '/' + '/'.join(path_components[:-1])
             if rdfly.ask_rsrc_exists(cnd_parent_uid):
                 parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
                 if nsc['ldp'].Container not in parent_rsrc.types:

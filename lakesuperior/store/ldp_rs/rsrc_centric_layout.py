@@ -259,6 +259,7 @@ class RsrcCentricLayout:
         '''
         See base_rdf_layout.ask_rsrc_exists.
         '''
+        logger.debug('Checking if resource exists: {}'.format(uid))
         meta_gr = self.ds.graph(nsc['fcadmin'][uid])
         return bool(
                 meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
@@ -268,6 +269,7 @@ class RsrcCentricLayout:
         '''
         This is an optimized query to get only the administrative metadata.
         '''
+        logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
         gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()

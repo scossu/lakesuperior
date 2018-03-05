@@ -27,29 +27,30 @@ class TestToolbox:
     #    assert g.tbox.camelcase('test__input__string') == 'Test_Input_String'
 
     def test_uid_to_uri(self):
-        assert g.tbox.uid_to_uri('1234') == URIRef(g.webroot + '/1234')
+        assert g.tbox.uid_to_uri('/1234') == URIRef(g.webroot + '/1234')
+        assert g.tbox.uid_to_uri('/1/2/34') == URIRef(g.webroot + '/1/2/34')
         assert g.tbox.uid_to_uri('') == URIRef(g.webroot)
 
 
     def test_uri_to_uid(self):
-        assert g.tbox.uri_to_uid(URIRef(g.webroot) + '/test01') == 'test01'
+        assert g.tbox.uri_to_uid(URIRef(g.webroot) + '/test01') == '/test01'
         assert g.tbox.uri_to_uid(URIRef(g.webroot) + '/test01/test02') == \
-                'test01/test02'
-        assert g.tbox.uri_to_uid(URIRef(g.webroot)) == ''
-        assert g.tbox.uri_to_uid(nsc['fcres']['']) == ''
-        assert g.tbox.uri_to_uid(nsc['fcres']['1234']) == '1234'
-        assert g.tbox.uri_to_uid(nsc['fcres']['1234/5678']) == '1234/5678'
+                '/test01/test02'
+        assert g.tbox.uri_to_uid(URIRef(g.webroot)) == '/'
+        assert g.tbox.uri_to_uid(nsc['fcres']['/']) == '/'
+        assert g.tbox.uri_to_uid(nsc['fcres']['/1234']) == '/1234'
+        assert g.tbox.uri_to_uid(nsc['fcres']['/1234/5678']) == '/1234/5678'
 
 
-    def test_localize_string(self):
+    def test_localize_uri_string(self):
         '''
         Test string localization.
         '''
-        assert g.tbox.localize_string(g.webroot + '/test/uid') == \
-                g.tbox.localize_string(g.webroot + '/test/uid/') == \
-                str(nsc['fcres']['test/uid'])
-        assert g.tbox.localize_string(g.webroot) == str(nsc['fcres'][''])
-        assert g.tbox.localize_string('http://bogus.org/test/uid') == \
+        assert g.tbox.localize_uri_string(g.webroot + '/test/uid') == \
+                g.tbox.localize_uri_string(g.webroot + '/test/uid/') == \
+                str(nsc['fcres']['/test/uid'])
+        assert g.tbox.localize_uri_string(g.webroot) == str(nsc['fcres']['/'])
+        assert g.tbox.localize_uri_string('http://bogus.org/test/uid') == \
                 'http://bogus.org/test/uid'
 
 
@@ -59,7 +60,7 @@ class TestToolbox:
         '''
         assert g.tbox.localize_term(g.webroot + '/test/uid') == \
                 g.tbox.localize_term(g.webroot + '/test/uid/') == \
-                nsc['fcres']['test/uid']
+                nsc['fcres']['/test/uid']
 
 
     def test_localize_ext_str(self):
@@ -100,4 +101,4 @@ class TestToolbox:
         '''
 
         assert g.tbox.localize_ext_str(
-                input, nsc['fcres']['123']) == exp_output
+                input, nsc['fcres']['/123']) == exp_output

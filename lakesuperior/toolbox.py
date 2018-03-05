@@ -42,9 +42,7 @@ class Toolbox:
 
         @return URIRef
         '''
-        uri = '{}/{}'.format(g.webroot, uid) if uid else g.webroot
-
-        return URIRef(uri)
+        return URIRef(g.webroot + uid)
 
 
     def uri_to_uid(self, uri):
@@ -55,10 +53,10 @@ class Toolbox:
         if uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
         else:
-            return str(uri).replace(g.webroot, '').strip('/')
+            return '/' + str(uri).replace(g.webroot, '').strip('/')
 
 
-    def localize_string(self, s):
+    def localize_uri_string(self, s):
         '''Convert URIs into URNs in a string using the application base URI.
 
         @param string s Input string.
@@ -68,7 +66,8 @@ class Toolbox:
         if s.strip('/') == g.webroot:
             return str(ROOT_RSRC_URI)
         else:
-            return s.strip('/').replace(g.webroot+'/', str(nsc['fcres']))
+            return s.rstrip('/').replace(
+                    g.webroot, str(nsc['fcres']))
 
 
     def localize_term(self, uri):
@@ -79,7 +78,7 @@ class Toolbox:
 
         @return rdflib.term.URIRef
         '''
-        return URIRef(self.localize_string(str(uri)))
+        return URIRef(self.localize_uri_string(str(uri)))
 
 
     def localize_triple(self, trp):
@@ -110,6 +109,23 @@ class Toolbox:
         return l_gr
 
 
+    def localize_payload(self, data):
+        '''
+        Localize an RDF stream with domain-specific URIs.
+
+        @param data (bytes) Binary RDF data.
+
+        @return bytes
+        '''
+        return data.replace(
+            (g.webroot + '/').encode('utf-8'),
+            (nsc['fcres'] + '/').encode('utf-8')
+        ).replace(
+            g.webroot.encode('utf-8'),
+            (nsc['fcres'] + '/').encode('utf-8')
+        )
+
+
     def localize_ext_str(self, s, urn):
         '''
         Convert global URIs to local in a SPARQL or RDF string.
@@ -118,14 +134,14 @@ class Toolbox:
         of fragments and relative URIs.
 
         This is a 3-pass replacement. First, global URIs whose webroot matches
-        the application ones are replaced with local URNs. Then, relative URIs
-        are converted to absolute using the URN as the base; finally, the
-        root node is appropriately addressed.
+        the application ones are replaced with internal URIs. Then, relative
+        URIs are converted to absolute using the internal URI as the base;
+        finally, the root node is appropriately addressed.
         '''
         esc_webroot = g.webroot.replace('/', '\\/')
         #loc_ptn = r'<({}\/?)?(.*?)?(\?.*?)?(#.*?)?>'.format(esc_webroot)
         loc_ptn1 = r'<{}\/?(.*?)>'.format(esc_webroot)
-        loc_sub1 = '<{}\\1>'.format(nsc['fcres'])
+        loc_sub1 = '<{}/\\1>'.format(nsc['fcres'])
         s1 = re.sub(loc_ptn1, loc_sub1, s)
 
         loc_ptn2 = r'<([#?].*?)?>'
@@ -146,7 +162,7 @@ class Toolbox:
 
         @return string
         '''
-        return s.replace(str(nsc['fcres']), g.webroot + '/')
+        return s.replace(str(nsc['fcres']), g.webroot)
 
 
     def globalize_term(self, urn):
@@ -157,9 +173,6 @@ class Toolbox:
 
         @return rdflib.term.URIRef
         '''
-        if urn == ROOT_RSRC_URI:
-            urn = nsc['fcres']
-
         return URIRef(self.globalize_string(str(urn)))
 
 

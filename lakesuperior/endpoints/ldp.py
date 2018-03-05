@@ -74,15 +74,21 @@ def bp_url_defaults(endpoint, values):
     if url_prefix is not None:
         values.setdefault('url_prefix', url_prefix)
 
+
 @ldp.url_value_preprocessor
 def bp_url_value_preprocessor(endpoint, values):
     g.url_prefix = values.pop('url_prefix')
     g.webroot = request.host_url + g.url_prefix
+    # Normalize leading slashes for UID.
+    if 'uid' in values:
+        values['uid'] = '/' + values['uid'].lstrip('/')
+    if 'parent_uid' in values:
+        values['parent_uid'] = '/' + values['parent_uid'].lstrip('/')
 
 
 @ldp.before_request
 def log_request_start():
-    logger.info('\n\n** Start {} {} **'.format(request.method, request.url))
+    logger.info('** Start {} {} **'.format(request.method, request.url))
 
 
 @ldp.before_request
@@ -92,7 +98,7 @@ def instantiate_req_vars():
 
 @ldp.after_request
 def log_request_end(rsp):
-    logger.info('** End {} {} **\n\n'.format(request.method, request.url))
+    logger.info('** End {} {} **'.format(request.method, request.url))
 
     return rsp
 
@@ -100,7 +106,7 @@ def log_request_end(rsp):
 ## REST SERVICES ##
 
 @ldp.route('/<path:uid>', methods=['GET'], strict_slashes=False)
-@ldp.route('/', defaults={'uid': ''}, methods=['GET'], strict_slashes=False)
+@ldp.route('/', defaults={'uid': '/'}, methods=['GET'], strict_slashes=False)
 @ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['GET'])
 def get_resource(uid, force_rdf=False):
@@ -115,6 +121,7 @@ def get_resource(uid, force_rdf=False):
     a LDP-NR. This is not available in the API but is used e.g. by the
     `*/fcr:metadata` endpoint. The default is False.
     '''
+    logger.info('UID: {}'.format(uid))
     out_headers = std_headers
     repr_options = defaultdict(dict)
     if 'prefer' in request.headers:
@@ -187,10 +194,10 @@ def get_version(uid, ver_uid):
         return _negotiate_content(g.tbox.globalize_graph(gr))
 
 
-@ldp.route('/<path:parent>', methods=['POST'], strict_slashes=False)
-@ldp.route('/', defaults={'parent': ''}, methods=['POST'],
+@ldp.route('/<path:parent_uid>', methods=['POST'], strict_slashes=False)
+@ldp.route('/', defaults={'parent_uid': '/'}, methods=['POST'],
         strict_slashes=False)
-def post_resource(parent):
+def post_resource(parent_uid):
     '''
     https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
 
@@ -209,8 +216,7 @@ def post_resource(parent):
     if LdpFactory.is_rdf_parsable(mimetype):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        local_rdf = global_rdf.replace(
-                g.webroot.encode('utf-8'), nsc['fcres'].encode('utf-8'))
+        local_rdf = g.tbox.localize_payload(global_rdf)
         stream = BytesIO(local_rdf)
         is_rdf = True
     else:
@@ -218,7 +224,7 @@ def post_resource(parent):
 
     try:
         uid = rsrc_api.create(
-                parent, slug, stream=stream, mimetype=mimetype,
+                parent_uid, slug, stream=stream, mimetype=mimetype,
                 handling=handling, disposition=disposition)
     except ResourceNotExistsError as e:
         return str(e), 404
@@ -262,13 +268,7 @@ def put_resource(uid):
     if LdpFactory.is_rdf_parsable(mimetype):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        local_rdf = global_rdf.replace(
-            (g.webroot + '/').encode('utf-8'),
-            nsc['fcres'].encode('utf-8')
-        ).replace(
-            g.webroot.encode('utf-8'),
-            nsc['fcres'].encode('utf-8')
-        )
+        local_rdf = g.tbox.localize_payload(global_rdf)
         stream = BytesIO(local_rdf)
         is_rdf = True
     else:
@@ -484,7 +484,7 @@ def _bistream_from_req():
         mimetype = request.mimetype
 
     if mimetype == '' or mimetype == 'application/x-www-form-urlencoded':
-        if stream.limit == 0:
+        if getattr(stream, 'limit', 0) == 0:
             stream = mimetype = None
         else:
             mimetype = 'application/octet-stream'

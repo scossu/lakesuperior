@@ -15,7 +15,7 @@ from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
-        ResourceNotExistsError)
+        ResourceNotExistsError, TombstoneError)
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource
@@ -32,7 +32,7 @@ class LdpFactory:
     '''
     @staticmethod
     def new_container(uid):
-        if not uid:
+        if not uid.startswith('/') or uid == '/':
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
@@ -105,7 +105,6 @@ class LdpFactory:
             provided_imr = Resource(gr, uri)
 
             # Determine whether it is a basic, direct or indirect container.
-            Ldpr = Ldpr
             if Ldpr.MBR_RSRC_URI in gr.predicates() and \
                     Ldpr.MBR_REL_URI in gr.predicates():
                 if Ldpr.INS_CNT_REL_URI in gr.predicates():
@@ -139,7 +138,7 @@ class LdpFactory:
 
         try:
             types = inst.types
-        except:
+        except (TombstoneError, ResourceNotExistsError):
             types = set()
 
         return inst
@@ -199,32 +198,22 @@ class LdpFactory:
             return uid
 
         # Shortcut!
-        if not path and parent_uid == '':
-            uid = split_if_legacy(str(uuid4()))
-            return uid
+        if not path and parent_uid == '/':
+            return '/' + split_if_legacy(str(uuid4()))
 
-        parent = LdpFactory.from_stored(parent_uid,
-                repr_opts={'incl_children' : False})
+        if not parent_uid.startswith('/'):
+            raise ValueError('Invalid parent UID: {}'.format(parent_uid))
 
-        # Set prefix.
-        if parent_uid:
-            if nsc['ldp'].Container not in parent.types:
-                raise InvalidResourceError(parent_uid,
-                        'Parent {} is not a container.')
-            pfx = parent_uid + '/'
-        else:
-            pfx = ''
+        parent = LdpFactory.from_stored(parent_uid)
+        if nsc['ldp'].Container not in parent.types:
+            raise InvalidResourceError(parent_uid,
+                    'Parent {} is not a container.')
 
-        # Create candidate UID and validate.
         if path:
-            cnd_uid = pfx + path
-            if rdfly.ask_rsrc_exists(cnd_uid):
-                uid = pfx + split_if_legacy(str(uuid4()))
-            else:
-                uid = cnd_uid
-        else:
-            uid = pfx + split_if_legacy(str(uuid4()))
+            cnd_uid = parent_uid + path
+            if not rdfly.ask_rsrc_exists(cnd_uid):
+                return cnd_uid
 
-        return uid
+        return parent_uid + split_if_legacy(str(uuid4()))
 
 

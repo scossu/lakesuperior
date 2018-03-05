@@ -232,7 +232,8 @@ class TestLdp:
         PREFIX res: <http://example-source.org/res/>
         <> ns:p1 res:bogus ;
           ns:p2 <{0}> ;
-          ns:p3 <{0}/nonexistent> .
+          ns:p3 <{0}/> ;
+          ns:p4 <{0}/nonexistent> .
         '''.format(g.webroot)
         put_rsp = self.client.put('/ldp/test_missing_ref', data=data, headers={
             'content-type': 'text/turtle'})
@@ -245,11 +246,12 @@ class TestLdp:
         gr = Graph().parse(data=resp.data, format='text/turtle')
         assert URIRef('http://example-source.org/res/bogus') in \
                 gr.objects(None, URIRef('http://example.org#p1'))
-        #pdb.set_trace()
-        assert URIRef(g.webroot + '/') in \
-                gr.objects(None, URIRef('http://example.org#p2'))
-        assert URIRef(g.webroot + '/nonexistent') not in \
-                gr.objects(None, URIRef('http://example.org#p3'))
+        assert URIRef(g.webroot + '/') in (
+                gr.objects(None, URIRef('http://example.org#p2')))
+        assert URIRef(g.webroot + '/') in (
+                gr.objects(None, URIRef('http://example.org#p3')))
+        assert URIRef(g.webroot + '/nonexistent') not in (
+                gr.objects(None, URIRef('http://example.org#p4')))
 
 
     def test_post_resource(self, client):

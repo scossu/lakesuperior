@@ -20,7 +20,7 @@ class ResourceExistsError(ResourceError):
     This usually surfaces at the HTTP level as a 409.
     '''
     def __str__(self):
-        return self.msg or 'Resource /{} already exists.'.format(self.uid)
+        return self.msg or 'Resource {} already exists.'.format(self.uid)
 
 
 
@@ -32,7 +32,7 @@ class ResourceNotExistsError(ResourceError):
     This usually surfaces at the HTTP level as a 404.
     '''
     def __str__(self):
-        return self.msg or 'Resource /{} not found.'.format(self.uid)
+        return self.msg or 'Resource {} not found.'.format(self.uid)
 
 
 
@@ -43,7 +43,7 @@ class InvalidResourceError(ResourceError):
     This usually surfaces at the HTTP level as a 409 or other error.
     '''
     def __str__(self):
-        return self.msg or 'Resource /{} is invalid.'.format(self.uid)
+        return self.msg or 'Resource {} is invalid.'.format(self.uid)
 
 
 
@@ -59,7 +59,7 @@ class IncompatibleLdpTypeError(ResourceError):
 
 
     def __str__(self):
-        return self.msg or 'Invalid content type \'{}\' for resource /{}'.\
+        return self.msg or 'Invalid content type \'{}\' for resource {}'.\
                 format(self.mimetype, self.uid)
 
 
@@ -159,7 +159,7 @@ class TombstoneError(RuntimeError):
 
     def __str__(self):
         return (
-            'Discovered tombstone resource at /{}, departed: {}\n'
+            'Discovered tombstone resource at {}, departed: {}\n'
             'To resurrect this resource, send a POST request to its tombstone.'
             .format(self.uid, self.ts)
         )

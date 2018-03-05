@@ -12,7 +12,7 @@ RES_CREATED = '_create_'
 RES_DELETED = '_delete_'
 RES_UPDATED = '_update_'
 
-ROOT_UID = ''
+ROOT_UID = '/'
 ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
 
 
