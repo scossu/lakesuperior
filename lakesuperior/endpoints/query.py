@@ -20,8 +20,8 @@ rdfly = env.app_globals.rdfly
 query = Blueprint('query', __name__)
 
 
-@query.route('/find', methods=['GET'])
-def find():
+@query.route('/term_search', methods=['GET'])
+def term_search():
     '''
     Search by entering a search term and optional property and comparison term.
     '''
@@ -36,7 +36,8 @@ def find():
     term = request.args.get('term')
     prop = request.args.get('prop', default=1)
     cmp = request.args.get('cmp', default='=')
-    # @TODO
+
+    return render_template('term_search.html')
 
 
 @query.route('/sparql', methods=['GET', 'POST'])

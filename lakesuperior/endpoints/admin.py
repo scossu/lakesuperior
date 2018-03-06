@@ -2,17 +2,12 @@ import logging
 
 from flask import Blueprint, render_template
 
-from lakesuperior.env import env
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.api import admin as admin_api
 
-# Admin interface and API.
 
-#import threading
-#print('In admin:', threading.current_thread())
-#print('Env: {}'.format(env.__dict__))
+# Admin interface and REST API.
 
 logger = logging.getLogger(__name__)
-app_globals = env.app_globals
 admin = Blueprint('admin', __name__)
 
 
@@ -21,7 +16,7 @@ def stats():
     '''
     Get repository statistics.
     '''
-    def fsize_fmt(num, suffix='B'):
+    def fsize_fmt(num, suffix='b'):
         '''
         Format an integer into 1024-block file size format.
 
@@ -39,12 +34,10 @@ def stats():
             num /= 1024.0
         return "{:.1f} {}{}".format(num, 'Y', suffix)
 
-    with TxnManager(app_globals.rdf_store) as txn:
-        store_stats = app_globals.rdf_store.stats()
-    rsrc_stats = app_globals.rdfly.count_rsrc()
+    repo_stats = admin_api.stats()
+
     return render_template(
-            'stats.html', rsrc_stats=rsrc_stats, store_stats=store_stats,
-            fsize_fmt=fsize_fmt)
+            'stats.html', fsize_fmt=fsize_fmt, **repo_stats)
 
 
 @admin.route('/tools', methods=['GET'])
