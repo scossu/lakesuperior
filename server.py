@@ -10,11 +10,6 @@ from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
 from lakesuperior.env import env
 
-#import threading
-#logger = logging.getLogger(__name__)
-#logger.debug('In main: {}'.format(threading.current_thread()), stack_info=True)
-#print('Env: {}'.format(env.__dict__))
-
 from lakesuperior.app import create_app
 
 dictConfig(env.config['logging'])

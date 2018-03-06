@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+import click
+import os
+import sys
+
+import lakesuperior.env_setup
+
+from lakesuperior.config_parser import config
+from lakesuperior.globals import AppGlobals
+from lakesuperior.env import env
+from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+
+rdfly = env.app_globals.rdfly
+nonrdfly = env.app_globals.nonrdfly
+
+
+@click.group()
+def admin():
+    pass
+
+@click.command()
+def bootstrap():
+    '''
+    Bootstrap binary and graph stores.
+
+    This script will parse configuration files and initialize a filesystem and
+    triplestore with an empty FCREPO repository.
+    It is used in test suites and on a first run.
+
+    Additional scaffolding files may be parsed to create initial contents.
+    '''
+    click.echo(
+            'This operation will WIPE ALL YOUR DATA. Are you sure? '
+            '(Please type `yes` to continue) > ')
+    choice = input().lower()
+    if choice != 'yes':
+        click.echo('Aborting.')
+        sys.exit()
+
+    click.echo('Initializing graph store at {}'.format(rdfly.store.path))
+    with TxnManager(env.app_globals.rdf_store, write=True) as txn:
+        rdfly.bootstrap()
+        rdfly.store.close()
+    click.echo('Graph store initialized.')
+
+    click.echo('Initializing binary store at {}'.format(nonrdfly.root))
+    nonrdfly.bootstrap()
+    click.echo('Binary store initialized.')
+    click.echo('Repository successfully set up. Go to town.')
+
+
+@click.command()
+def cleanup():
+    '''
+    [STUB] Clean up orphaned database items.
+    '''
+    pass
+
+
+@click.command()
+def check_refint():
+    '''
+    [STUB] Check referential integrity.
+    '''
+    pass
+
+
+@click.command()
+def copy_repo():
+    '''
+    [STUB] Copy (backup) repository.
+    '''
+    pass
+
+
+@click.command()
+def export_repo():
+    '''
+    [STUB] High-level repository export.
+    '''
+    pass
+
+
+@click.command()
+def import_repo():
+    '''
+    [STUB] High-level repository import.
+    '''
+    pass
+
+
+admin.add_command(bootstrap)
+admin.add_command(cleanup)
+admin.add_command(check_refint)
+admin.add_command(copy_repo)
+admin.add_command(export_repo)
+admin.add_command(import_repo)
+
+if __name__ == '__main__':
+    admin()
