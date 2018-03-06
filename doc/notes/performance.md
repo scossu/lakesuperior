@@ -19,7 +19,7 @@
 
 ### Benchmark script
 
-[Generator script](../../tests/10K_children.py)
+[Generator script](../../util/benchmark.py)
 
 The script was run with default values: 10,000 children under the same parent,
 PUT requests.

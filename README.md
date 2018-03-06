@@ -54,8 +54,8 @@ divergences with the official Fedora4 implementation.
 1. The [LMDB](https://symas.com/lmdb/) database library. It should be included
 in most Linux distributions' standard package repositories.
 1. A message broker supporting the STOMP protocol. For testing and evaluation
-purposes, Coilmq is included in the dependencies and should be automatically
-installed.
+purposes, [Coilmq](https://github.com/hozn/coilmq) is included with the
+dependencies and should be automatically installed.
 
 ### Installation steps
 
@@ -71,10 +71,10 @@ installed.
    `export FCREPO_CONFIG_DIR=<your config dir location>` (alternatively you can
    add this line to your virtualenv `activate` script)
 1. Configure the application
-1. Start your STOMP broker
+1. Start your STOMP broker, e.g.: `coilmq &`
 1. Run `util/bootstrap.py` to initialize the binary and graph stores
-1. Run `./fcrepo` for a multi-threaded server or `flask run` for a
-   single-threaded development server
+1. Run `./fcrepo` for a single-threaded server (Bjoern) or `./fcrepo-mt` for a
+   multi-threaded development server (GUnicorn).
 
 ### Production deployment
 
@@ -87,9 +87,13 @@ for a rudimentary road map and status.
 
 ## Technical documentation
 
-[Storage Implementation](doc/notes/torage.md)
+[Architecture Overview](doc/notes/architecture.md)
 
-[Performance benchmarks](doc/notes/performance.md)
+[Content Model](doc/notes/model.md)
+
+[Storage Implementation](doc/notes/storage.md)
+
+[Performance Benchmarks](doc/notes/performance.md)
 
 [TODO list](doc/notes/TODO)
 

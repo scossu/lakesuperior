@@ -758,7 +758,7 @@ class Ldpr(metaclass=ABCMeta):
                 parent_rsrc = LdpFactory.new_container(cnd_parent_uid)
                 # This will trigger this method again and recurse until an
                 # existing container or the root node is reached.
-                parent_rsrc.put()
+                parent_rsrc.create_or_replace_rsrc()
                 parent_uid = parent_rsrc.uid
         else:
             parent_uid = ROOT_UID
