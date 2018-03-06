@@ -9,34 +9,26 @@ LAKEsuperior aims at being an uncomplicated, efficient Fedora 4 implementation.
 
 Its main goals are:
 
-- *Simplicity of design:* LAKEsuperior relies on [LMDB](https://symas.com/lmdb/),
-an embedded, high-performance key-value store, for storing metadata and on
-the filesystem to store binaries.
-- *Efficiency:* while raw speed is important, LAKEsuperior also aims at being
-conservative with resources. Its memory and CPU footprint are small. Python C
-extensions are used where possible to improve performance.
-- *Reliability:* fully ACID-compliant writes guarantee consistency of data.
-- *Ease of management:* Contents can be queried directly via term search or
-SPARQL without the aid of external indices. Scripts and interfaces for
-repository administration and monitoring are shipped with the standard release.
-- *Portability:* aims at maintaining a minimal set of dependencies.
+- **Reliability:** Based on solid technologies with stability in mind.
+- **Efficiency:** Small memory and CPU footprint, high scalability.
+- **Ease of management:** Tools to perform monitoring and maintenance included.
+- **Simplicity of design:** Straight-forward architecture, robustness over
+  features.
 
 ## Key features
 
-- Drop-in replacement for Fedora4 (with some caveats: see
-  [Delta document](doc/notes/fcrepo4_deltas.md))—currently being tested with
-  Hyrax 2
+- Drop-in replacement for Fedora4 (with some
+  [caveats](doc/notes/fcrepo4_deltas.md)); currently being tested with Hyrax 2
+- Very stable persistence layer based on [LMDB](https://symas.com/lmdb/) and
+  filesystem. Fully ACID-compliant writes guarantee consistency of data.
 - Term-based search (*planned*) and SPARQL Query API + UI
 - No performance penalty for storing many resources under the same container; no
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
   pairtree segmentation <sup id="a1">[1](#f1)</sup>
-- Constant performance writing to a resource with
-  many children or members; option to omit children in retrieval
-- Migration tools (*planned*)
-- Python API (*planned*): Authors of Python clients can use LAKEsuperior as an
-  embedded repository with no HTTP traffic or interim RDF serialization &
-  de-serialization involved.
-- Fits in a pocket: you can carry over 50M triples in an 8Gb memory stick.
+- Extensible [provenance metadata](doc/notes/model.md) tracking
+- [Multi-modal access](doc/notes/architecture.md): HTTP (REST), command line
+  interface and native Python API.
+- Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
 
 Implementation of the official [Fedora API specs](https://fedora.info/spec/)
 (Fedora 5.x and beyond) is not
@@ -45,6 +37,21 @@ project if it gains support.
 
 Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas.md) for
 divergences with the official Fedora4 implementation.
+
+## Target Audience
+
+LAKEsuperior is for anybody who cares about preserving data in the long term.
+
+Less vaguely, LAKEsuperior is targeted at who needs to store large quantities
+of highly linked metadata and documents.
+
+Its Python/C environment and API make it particularly well suited for academic
+and scientific environment who would be able to embed it in a Python
+application as a library or extend it via plug-ins.
+
+In its current status, LAKEsuperior is aimed at developers and
+hands-on managers who are able to run a Python environment and are
+interested in evaluating this project.
 
 ## Installation
 
@@ -72,9 +79,9 @@ dependencies and should be automatically installed.
    add this line to your virtualenv `activate` script)
 1. Configure the application
 1. Start your STOMP broker, e.g.: `coilmq &`
-1. Run `util/bootstrap.py` to initialize the binary and graph stores
+1. Run `./lsup_admin bootstrap` to initialize the binary and graph stores
 1. Run `./fcrepo` for a single-threaded server (Bjoern) or `./fcrepo-mt` for a
-   multi-threaded development server (GUnicorn).
+   multi-threaded server (GUnicorn).
 
 ### Production deployment
 
@@ -90,6 +97,8 @@ for a rudimentary road map and status.
 [Architecture Overview](doc/notes/architecture.md)
 
 [Content Model](doc/notes/model.md)
+
+[Command-Line Reference](doc/notes/cli.md)
 
 [Storage Implementation](doc/notes/storage.md)
 

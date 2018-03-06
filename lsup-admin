@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import click
+import json
 import os
 import sys
 
 import lakesuperior.env_setup
 
+from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
 from lakesuperior.env import env
@@ -30,12 +32,14 @@ def bootstrap():
     Additional scaffolding files may be parsed to create initial contents.
     '''
     click.echo(
-            'This operation will WIPE ALL YOUR DATA. Are you sure? '
-            '(Please type `yes` to continue) > ')
+            click.style(
+                'WARNING: This operation will WIPE ALL YOUR DATA.\n',
+                bold=True, fg='red')
+            + 'Are you sure? (Please type `yes` to continue) > ', nl=False)
     choice = input().lower()
     if choice != 'yes':
         click.echo('Aborting.')
-        sys.exit()
+        sys.exit(1)
 
     click.echo('Initializing graph store at {}'.format(rdfly.store.path))
     with TxnManager(env.app_globals.rdf_store, write=True) as txn:
@@ -50,9 +54,29 @@ def bootstrap():
 
 
 @click.command()
-def cleanup():
+@click.option(
+    '--human', '-h', is_flag=True, flag_value=True,
+    help='Print a human-readable string. By default, JSON is printed.')
+def stats(human=False):
     '''
-    [STUB] Clean up orphaned database items.
+    Print repository statistics.
+
+    @param human (bool) Whether to output the data in human-readable
+    format.
+    '''
+    stat_data = admin_api.stats()
+    if human:
+        click.echo(
+            'This option is not supported yet. Sorry.\nUse the `/admin/stats`'
+            ' endpoint in the web UI for a pretty printout.')
+    else:
+        click.echo(json.dumps(stat_data))
+
+
+@click.command()
+def check_fixity(uid):
+    '''
+    [STUB] Check fixity of a resource.
     '''
     pass
 
@@ -61,40 +85,76 @@ def cleanup():
 def check_refint():
     '''
     [STUB] Check referential integrity.
+
+    This command scans the graph store to verify that all references to
+    resources within the repository are effectively pointing to existing
+    resources. For repositories set up with the `referencial_integrity` option
+    (the default), this is a pre-condition for a consistent data set.
     '''
     pass
 
 
 @click.command()
-def copy_repo():
+def cleanup():
     '''
-    [STUB] Copy (backup) repository.
-    '''
-    pass
-
-
-@click.command()
-def export_repo():
-    '''
-    [STUB] High-level repository export.
+    [STUB] Clean up orphan database items.
     '''
     pass
 
 
 @click.command()
-def import_repo():
+def copy():
     '''
-    [STUB] High-level repository import.
+    [STUB] Copy (backup) repository data.
+
+    This s a low-level copy, which backs up the data directories containing
+    graph and binary data. It may not even be a necessary command since to
+    back up the repository one just needs to copy the binary and metadata
+    folders.
+    '''
+    pass
+
+
+@click.command()
+@click.argument('src')
+@click.argument('dest')
+@click.option(
+    '--binaries', '-b', show_default=True,
+    help='If set to `include`, full binaries are included in the dump. If '
+    'set to `truncate`, binaries are created as zero-byte files in the proper '
+    'folder structure. If set to `skip`, binaries are not exported. Data '
+    'folders are not created.')
+def dump(src, dest, binaries='include'):
+    '''
+    [STUB] Dump repository to disk.
+
+    Dump a Fedora 4 repository to disk. The Fedora repo can be
+    LAKEsuperior or another compatible implementation.
+    '''
+    pass
+
+
+@click.command()
+@click.argument('src')
+@click.argument('dest')
+def load(src, dest):
+    '''
+    [STUB] Load serialized repository data.
+
+    Load serialized data from a filesystem location into a Fedora repository.
+    The Fedora repo can be LAKEsuperior or another compatible implementation.
     '''
     pass
 
 
 admin.add_command(bootstrap)
-admin.add_command(cleanup)
+admin.add_command(check_fixity)
 admin.add_command(check_refint)
-admin.add_command(copy_repo)
-admin.add_command(export_repo)
-admin.add_command(import_repo)
+admin.add_command(cleanup)
+admin.add_command(copy)
+admin.add_command(dump)
+admin.add_command(load)
+admin.add_command(stats)
 
 if __name__ == '__main__':
     admin()
