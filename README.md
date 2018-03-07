@@ -82,7 +82,8 @@ dependencies and should be automatically installed.
 1. Set the configuration folder location in the environment:
    `export FCREPO_CONFIG_DIR=<your config dir location>` (you can
    add this line at the end of your virtualenv `activate` script)
-1. Configure the application
+1. Configure the application if needed. The default settings should be fine
+   for evaluation.
 1. Start your STOMP broker, e.g.: `coilmq &`
 1. Run `./lsup_admin bootstrap` to initialize the binary and graph stores
 1. Run `./fcrepo`.
@@ -96,6 +97,16 @@ If you like fried repositories for lunch, deploy before 11AM.
 LAKEsuperior is in **alpha** status. Please see the
 [project issues](https://github.com/scossu/lakesuperior/issues) list for a
 rudimentary road map.
+
+## Contributing
+
+This has been so far a single person's off-hours project (with much input from
+several sides). In order to turn into anything close to a Beta release and
+eventually to a production-ready implementation, it needs some community love.
+
+Contributions are welcome in all forms, including ideas, issue reports, or
+even just spinning up the software and providing some feedback. LAKEsuperior is
+meant to live as a community project.
 
 ## Technical documentation
 
