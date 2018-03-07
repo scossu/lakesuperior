@@ -13,6 +13,12 @@ from lakesuperior.env import env
 from lakesuperior.app import create_app
 
 dictConfig(env.config['logging'])
+logger = logging.getLogger(__name__)
+
+logger.info('Graph store location: {}'.format(
+    env.config['application']['store']['ldp_rs']['location']))
+logger.info('Binary store location: {}'.format(
+    env.config['application']['store']['ldp_nr']['path']))
 
 fcrepo = create_app(env.config['application'])
 
