@@ -7,9 +7,7 @@ it.
 
 ## Not yet implemented (but in the plans)
 
-See [TODO](TODO)
-
-- Various header handling
+- Various headers handling
 - Versioning (incomplete)
 - AuthN/Z
 - Fixity check

@@ -93,8 +93,9 @@ If you like fried repositories for lunch, deploy before 11AM.
 
 ## Status and development
 
-LAKEsuperior is in **alpha** status. Please see the [TODO](doc/notes/TODO) list
-for a rudimentary road map and status.
+LAKEsuperior is in **alpha** status. Please see the
+[project issues](https://github.com/scossu/lakesuperior/issues) list for a
+rudimentary road map.
 
 ## Technical documentation
 
@@ -107,8 +108,6 @@ for a rudimentary road map and status.
 [Storage Implementation](doc/notes/storage.md)
 
 [Performance Benchmarks](doc/notes/performance.md)
-
-[TODO list](doc/notes/TODO)
 
 ---
 
