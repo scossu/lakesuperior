@@ -197,9 +197,11 @@ class LdpFactory:
                 uid = tbox.split_uuid(uid)
             return uid
 
+        if path and path.startswith('/'):
+            raise ValueError('Slug cannot start with a slash.')
         # Shortcut!
         if not path and parent_uid == '/':
-            return '/' + split_if_legacy(str(uuid4()))
+            return split_if_legacy(str(uuid4()))
 
         if not parent_uid.startswith('/'):
             raise ValueError('Invalid parent UID: {}'.format(parent_uid))
@@ -209,11 +211,12 @@ class LdpFactory:
             raise InvalidResourceError(parent_uid,
                     'Parent {} is not a container.')
 
+        pfx = parent_uid.rstrip('/') + '/'
         if path:
-            cnd_uid = parent_uid + path
+            cnd_uid = pfx + path
             if not rdfly.ask_rsrc_exists(cnd_uid):
                 return cnd_uid
 
-        return parent_uid + split_if_legacy(str(uuid4()))
+        return pfx + split_if_legacy(str(uuid4()))
 
 

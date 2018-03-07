@@ -151,9 +151,12 @@ def get_resource(uid, force_rdf=False):
                     rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename,
                     mimetype=rsrc.mimetype))
-            rsp.headers = out_headers
-            rsp.headers['Link'] = (
-                    '<{}/fcr:metadata>; rel="describedby"'.format(rsrc.uri))
+            logger.debug('Out headers: {}'.format(out_headers))
+            uri = g.tbox.uid_to_uri(uid)
+            rsp.headers.add('Link',
+                    '<{}/fcr:metadata>; rel="describedby"'.format(uri))
+            for link in out_headers['Link']:
+                rsp.headers.add('Link', link)
             return rsp
 
 

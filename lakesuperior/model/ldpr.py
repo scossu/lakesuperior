@@ -149,7 +149,7 @@ class Ldpr(metaclass=ABCMeta):
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
                 logger.debug(
-                    'Getting RDF representation for resource /{}'
+                    'Getting RDF representation for resource {}'
                     .format(self.uid))
                 #logger.debug('IMR options:{}'.format(self._imr_options))
                 imr_options = self._imr_options
@@ -195,7 +195,7 @@ class Ldpr(metaclass=ABCMeta):
                 self._metadata = self._imr
             else:
                 logger.info(
-                    'Getting metadata for resource /{}'.format(self.uid))
+                    'Getting metadata for resource {}'.format(self.uid))
                 self._metadata = rdfly.get_metadata(self.uid)
 
         return self._metadata
