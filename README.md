@@ -26,8 +26,8 @@ Its main goals are:
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
   pairtree segmentation <sup id="a1">[1](#f1)</sup>
 - Extensible [provenance metadata](doc/notes/model.md) tracking
-- [Multi-modal access](doc/notes/architecture.md): HTTP (REST), command line
-  interface and native Python API.
+- [Multi-modal access](doc/notes/architecture.md#multi-modal-access): HTTP
+  (REST), command line interface and native Python API.
 - Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
 
 Implementation of the official [Fedora API specs](https://fedora.info/spec/)
@@ -46,8 +46,13 @@ Less vaguely, LAKEsuperior is targeted at who needs to store large quantities
 of highly linked metadata and documents.
 
 Its Python/C environment and API make it particularly well suited for academic
-and scientific environment who would be able to embed it in a Python
+and scientific environments who would be able to embed it in a Python
 application as a library or extend it via plug-ins.
+
+LAKEsuperior is able to be exposed to the Web as a
+[Linked Data Platform](https://www.w3.org/TR/ldp-primer/) server. It also acts
+as a SPARQL query (read-only) endpoint, however it is not meant to be used as
+a full-fledged triplestore at the moment.
 
 In its current status, LAKEsuperior is aimed at developers and
 hands-on managers who are able to run a Python environment and are
@@ -69,19 +74,18 @@ dependencies and should be automatically installed.
 1. Install dependencies as indicated above
 1. Create a virtualenv in a project folder:
    `virtualenv -p <python 3.5+ exec path> <virtualenv folder>`
-1. Initialize the virtualenv: `source <path_to_virtualenv>/bin/activate`
+1. Activate the virtualenv: `source <path_to_virtualenv>/bin/activate`
 1. Clone this repo
 1. `cd` into repo folder
 1. Install dependencies: `pip install -r requirements.txt`
 1. Copy the `etc.skeleton` folder to a separate location
 1. Set the configuration folder location in the environment:
-   `export FCREPO_CONFIG_DIR=<your config dir location>` (alternatively you can
-   add this line to your virtualenv `activate` script)
+   `export FCREPO_CONFIG_DIR=<your config dir location>` (you can
+   add this line at the end of your virtualenv `activate` script)
 1. Configure the application
 1. Start your STOMP broker, e.g.: `coilmq &`
 1. Run `./lsup_admin bootstrap` to initialize the binary and graph stores
-1. Run `./fcrepo` for a single-threaded server (Bjoern) or `./fcrepo-mt` for a
-   multi-threaded server (GUnicorn).
+1. Run `./fcrepo`.
 
 ### Production deployment
 

@@ -1,7 +1,3 @@
-#!/usr/bin/env python
+#!/bin/bash
 
-import bjoern
-
-from server import fcrepo
-
-bjoern.run(fcrepo, 'localhost', 8000)
+gunicorn -c "${FCREPO_CONFIG_DIR}/gunicorn.py" server:fcrepo
