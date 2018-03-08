@@ -63,15 +63,12 @@ interested in evaluating this project.
 ### Dependencies
 
 1. Python 3.5 or greater.
-1. The [LMDB](https://symas.com/lmdb/) database library. It should be included
-in most Linux distributions' standard package repositories.
 1. A message broker supporting the STOMP protocol. For testing and evaluation
-purposes, [Coilmq](https://github.com/hozn/coilmq) is included with the
+purposes, [CoilMQ](https://github.com/hozn/coilmq) is included with the
 dependencies and should be automatically installed.
 
 ### Installation steps
 
-1. Install dependencies as indicated above
 1. Create a virtualenv in a project folder:
    `virtualenv -p <python 3.5+ exec path> <virtualenv folder>`
 1. Activate the virtualenv: `source <path_to_virtualenv>/bin/activate`
@@ -84,7 +81,9 @@ dependencies and should be automatically installed.
    add this line at the end of your virtualenv `activate` script)
 1. Configure the application if needed. The default settings should be fine
    for evaluation.
-1. Start your STOMP broker, e.g.: `coilmq &`
+1. Start your STOMP broker, e.g.: `coilmq &`. If you have another queue manager
+   listening to port 61613 you can either configure a different port on the
+   application configuration, or use the existing message queue.
 1. Run `./lsup_admin bootstrap` to initialize the binary and graph stores
 1. Run `./fcrepo`.
 
