@@ -54,7 +54,6 @@ Quickstart:
  (rdflib.term.URIRef('info:fcres/'),
   rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
   rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
-
 '''
 
 def transaction(write=False):
@@ -80,6 +79,7 @@ def transaction(write=False):
             if len(app_globals.changelog):
                 job = Thread(target=process_queue)
                 job.start()
+            logger.debug('Deleting timestamp: {}'.format(getattr(env, 'timestamp')))
             delattr(env, 'timestamp')
             delattr(env, 'timestamp_term')
             return ret
@@ -249,12 +249,12 @@ def create_version(uid, ver_uid):
 
 
 @transaction(True)
-def delete(uid, leave_tstone=True):
+def delete(uid, soft=True):
     '''
     Delete a resource.
 
     @param uid (string) Resource UID.
-    @param leave_tstone (bool) Whether to perform a soft-delete and leave a
+    @param soft (bool) Whether to perform a soft-delete and leave a
     tombstone resource, or wipe any memory of the resource.
     '''
     # If referential integrity is enforced, grab all inbound relationships
@@ -265,7 +265,7 @@ def delete(uid, leave_tstone=True):
 
     children = app_globals.rdfly.get_descendants(uid)
 
-    if leave_tstone:
+    if soft:
         rsrc = LdpFactory.from_stored(uid, repr_opts)
         ret = rsrc.bury_rsrc(inbound)
 
@@ -278,9 +278,10 @@ def delete(uid, leave_tstone=True):
                 continue
             child_rsrc.bury_rsrc(inbound, tstone_pointer=rsrc.uri)
     else:
-        ret = forget(uid, inbound)
+        ret = app_globals.rdfly.forget_rsrc(uid, inbound)
         for child_uri in children:
-            forget(app_globals.rdfly.uri_to_uid(child_uri), inbound)
+            child_uid = app_globals.rdfly.uri_to_uid(child_uri)
+            ret = app_globals.rdfly.forget_rsrc(child_uid, inbound)
 
     return ret
 
@@ -293,21 +294,3 @@ def resurrect(uid):
     @param uid (string) Resource UID.
     '''
     return LdpFactory.from_stored(uid).resurrect_rsrc()
-
-
-@transaction(True)
-def forget(uid, inbound=True):
-    '''
-    Delete a resource completely, removing all its traces.
-
-    @param uid (string) Resource UID.
-    @param inbound (bool) Whether the inbound relationships should be deleted
-    as well. If referential integrity is checked system-wide inbound references
-    are always deleted and this option has no effect.
-    '''
-    refint = app_globals.rdfly.config['referential_integrity']
-    inbound = True if refint else inbound
-    app_globals.rdfly.forget_rsrc(uid, inbound)
-
-    return RES_DELETED
-

@@ -382,7 +382,7 @@ def tombstone(uid):
     except TombstoneError as e:
         if request.method == 'DELETE':
             if e.uid == uid:
-                rsrc_api.forget(uid)
+                rsrc_api.delete(uid, False)
                 return '', 204
             else:
                 return _tombstone_response(e, uid)

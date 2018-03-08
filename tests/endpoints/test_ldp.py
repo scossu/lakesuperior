@@ -462,7 +462,8 @@ class TestLdp:
         for cs in child_suffixes:
             self.client.put('/ldp/test_delete_recursive01/{}'.format(cs))
 
-        self.client.delete('/ldp/test_delete_recursive01')
+        assert self.client.delete(
+                '/ldp/test_delete_recursive01').status_code == 204
 
         tstone_resp = self.client.get('/ldp/test_delete_recursive01')
         assert tstone_resp.status_code == 410
