@@ -187,11 +187,25 @@ class LmdbStore(Store):
     '''
     KEY_HASH_ALGO = 'sha1'
 
-    '''Separator byte. Used to join and split individual term keys.'''
-    SEP_BYTE = b'\x00'
+    '''
+    Fixed length for term keys.
 
-    KEY_LENGTH = 5 # Max key length for terms. That allows for A LOT of terms.
-    KEY_START = 2 # \x00 is reserved as a separator. \x01 is spare.
+    4 or 5 is a safe range. 4 allows for ~4 billion (256 ** 4) unique terms
+    in the store. 5 allows ~1 trillion terms. While these numbers may seem
+    huge (the total number of Internet pages indexed by Google as of 2018 is 45
+    billions), it must be reminded that the keys cannot be reused, so a
+    repository that deletes a lot of triples may burn through a lot of terms.
+
+    If a repository runs ot of keys it can no longer store new terms and must
+    be migrated to a new database, which will regenerate and compact the keys.
+
+    For smaller repositories it should be safe to set this value to 4, which
+    could improve performance since keys make up the vast majority of record
+    exchange between the store and the application. However it is sensible not
+    to expose this value as a configuration option.
+    '''
+    KEY_LENGTH = 5
+    KEY_START = 0
 
     data_keys = (
         # Term key to serialized term content: 1:1
@@ -489,7 +503,7 @@ class LmdbStore(Store):
                 cur.put(ck, b'')
 
         # Add triple:context association.
-        spok = self.SEP_BYTE.join(keys[:3])
+        spok = b''.join(keys[:3])
         with self.cur('spo:c') as dcur:
             if not dcur.set_key_dup(spok, ck):
                 dcur.put(spok, ck)
@@ -827,16 +841,15 @@ class LmdbStore(Store):
         '''
         Convert a key into one or more terms.
 
-        @param key (bytes) The key to be converted. It can be a compound one
-        in which case the function will return multiple terms.
-        '''
-        terms = []
-        with self.cur('t:st') as cur:
-            for k in bytes(key).split(self.SEP_BYTE):
-                pk_t = cur.get(k)
-                terms.append(self._unpickle(pk_t))
+        @param key (bytes | memoryview) The key to be converted. It can be a
+        compound one in which case the function will return multiple terms.
 
-        return tuple(terms)
+        @return tuple
+        '''
+        with self.cur('t:st') as cur:
+            return tuple(
+                   self._unpickle(cur.get(k))
+                   for k in self._split_key(key))
 
 
     def _to_key(self, obj):
@@ -850,8 +863,7 @@ class LmdbStore(Store):
         database. Pairs of terms, as well as triples and quads, are expressed
         as tuples.
 
-        If more than one term is provided, the keys are concatenated using the
-        designated separator byte (`\x00`).
+        If more than one term is provided, the keys are concatenated.
 
         @return bytes
         '''
@@ -866,7 +878,7 @@ class LmdbStore(Store):
                     return None
                 key.append(tk)
 
-        return self.SEP_BYTE.join(key)
+        return b''.join(key)
 
 
     def _hash(self, s):
@@ -874,6 +886,21 @@ class LmdbStore(Store):
         Get the hash value of a serialized object.
         '''
         return hashlib.new(self.KEY_HASH_ALGO, s).digest()
+
+
+    def _split_key(self, keys):
+        '''
+        Split a compound key into individual keys.
+
+        This method relies on the fixed length of all term keys.
+
+        @param keys (bytes | memoryview) Concatenated keys.
+
+        @return tuple: bytes | memoryview
+        '''
+        return tuple(
+                keys[i:i+self.KEY_LENGTH]
+                for i in range(0, len(keys), self.KEY_LENGTH))
 
 
     def _normalize_context(self, context):
@@ -947,7 +974,6 @@ class LmdbStore(Store):
         @TODO This can be called millions of times in a larger SPARQL
         query, so it better be as efficient as it gets.
         '''
-        #import pdb; pdb.set_trace()
         k = self._to_key(term)
         if not k:
             return iter(())
@@ -956,7 +982,7 @@ class LmdbStore(Store):
         with self.cur(idx_name) as cur:
             if cur.set_key(k):
                 for match in cur.iternext_dup():
-                    subkeys = bytes(match).split(self.SEP_BYTE)
+                    subkeys = self._split_key(match)
 
                     # Compose result.
                     out = [None, None, None]
@@ -964,7 +990,7 @@ class LmdbStore(Store):
                     out[term_order[1]] = subkeys[0]
                     out[term_order[2]] = subkeys[1]
 
-                    yield self.SEP_BYTE.join(out)
+                    yield b''.join(out)
 
 
     def _lookup_2bound(self, bound_terms):
@@ -1011,7 +1037,7 @@ class LmdbStore(Store):
             if cur.set_key(luk):
                 # Iterate over matches and filter by second term.
                 for match in cur.iternext_dup():
-                    subkeys = bytes(match).split(self.SEP_BYTE)
+                    subkeys = self._split_key(match)
                     flt_subkey = subkeys[fpos]
                     if flt_subkey == ft:
                         # Remainder (not filter) key used to complete the
@@ -1024,7 +1050,7 @@ class LmdbStore(Store):
                         out[term_order[fpos+1]] = flt_subkey
                         out[term_order[2-fpos]] = r_subkey
 
-                        yield self.SEP_BYTE.join(out)
+                        yield b''.join(out)
 
     def _append(self, cur, values, **kwargs):
         '''
@@ -1057,11 +1083,12 @@ class LmdbStore(Store):
         indexed. Context MUST be specified for 'add'.
         '''
         # Split and rearrange-join keys for association and indices.
-        triple = bytes(spok).split(self.SEP_BYTE)
+        triple = self._split_key(spok)
         sk, pk, ok = triple
-        spk = self.SEP_BYTE.join(triple[:2])
-        sok = bytes(triple[0]) + self.SEP_BYTE + bytes(triple[2])
-        pok = self.SEP_BYTE.join(triple[1:3])
+        spk = b''.join(triple[:2])
+        spk = b''.join(triple[:2])
+        sok = bytes(triple[0]) + bytes(triple[2])
+        pok = b''.join(triple[1:3])
 
         # Associate cursor labels with k/v pairs.
         curs = {
