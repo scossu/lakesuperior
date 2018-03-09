@@ -19,7 +19,7 @@ store:
     # MUST support SPARQL 1.1 query and update.
     ldp_rs:
         # Directory where the RDF data files are stored.
-        location: /tmp/fcrepo/data/ldprs_store
+        location: data/ldprs_store
 
         # store layout. At the moment, only `rsrc_centric_layout`is supported.
         layout: rsrc_centric_layout
@@ -48,7 +48,7 @@ store:
         layout: default_layout
 
         # The filesystem path to the root of the binary store.
-        path: /tmp/fcrepo/data/ldpnr_store
+        path: data/ldpnr_store
 
         # How to split the balanced pairtree to generate a path. The hash
         # string is defined by the uuid.algo parameter value.

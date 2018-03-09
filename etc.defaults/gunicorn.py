@@ -1,7 +1,7 @@
 # See: http://docs.gunicorn.org/en/stable/settings.html
 
 # Directory where to store logs, PIDfile, etc.
-_data_dir = '/tmp'
+_data_dir = 'data/'
 
 # Set app_mode to either 'prod', 'test' or 'dev'.
 # 'prod' is normal running mode. 'test' is used for running test suites.

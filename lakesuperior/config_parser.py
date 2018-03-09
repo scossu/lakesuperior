@@ -1,5 +1,6 @@
-import os
 import sys
+
+from os import path, environ
 
 import hiyapyco
 import yaml
@@ -15,10 +16,11 @@ configs = (
 config = {}
 
 # Parse configuration
-if 'FCREPO_CONFIG_DIR' in os.environ:
-    CONFIG_DIR = os.environ['FCREPO_CONFIG_DIR']
-else:
-    CONFIG_DIR = os.path.dirname(os.path.abspath(__file__)) + '/etc'
+CONFIG_DIR = environ.get(
+        'FCREPO_CONFIG_DIR',
+        path.dirname(path.dirname(path.abspath(__file__))) + '/etc.defaults')
+
+print('Reading configuration at {}'.format(CONFIG_DIR))
 
 for cname in configs:
     file = '{}/{}.yml'.format(CONFIG_DIR , cname)
@@ -31,7 +33,7 @@ error_msg = '''
 ** WARNING! **
 **************
 
-Your test {} store endpoint is set to be the same as the production endpoint.
+Your test {} store location is set to be the same as the production location.
 This means that if you run a test suite, your live data may be wiped clean!
 
 Please review your configuration before starting.
