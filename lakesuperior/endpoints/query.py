@@ -55,9 +55,13 @@ def sparql():
     if request.method == 'GET':
         return render_template('sparql_query.html', nsm=nsm)
     else:
-        logger.debug('Query: {}'.format(request.form['query']))
+        if request.mimetype == 'multipart/form-data':
+            qstr = request.form['query']
+        else:
+            qstr = stream.read()
+        logger.debug('Query: {}'.format(qstr))
         with TxnManager(rdf_store) as txn:
-            qres = query_api.sparql_query(request.form['query'])
+            qres = query_api.sparql_query(qstr)
 
             match = request.accept_mimetypes.best_match(accept_mimetypes.keys())
             if match:
