@@ -395,8 +395,15 @@ class Ldpr(metaclass=ABCMeta):
         return self.create_or_replace_rsrc()
 
 
-    def patch(self, *args, **kwargs):
-        raise NotImplementedError()
+    def patch(self, update_str):
+        '''
+        Update an existing resource by applying a SPARQL-UPDATE query.
+
+        @param update_str (string) SPARQL-Update staements.
+        '''
+        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
+
+        return self._sparql_update(update_str)
 
 
     def bury_rsrc(self, inbound, tstone_pointer=None):
@@ -829,37 +836,53 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Apply a SPARQL update to a resource.
 
-        The SPARQL string is validated beforehand to make sure that it does
-        not contain server-managed terms.
+        @param update_str (string) SPARQL-Update string. All URIs are local.
 
-        In theory, server-managed terms in DELETE statements are harmless
-        because the patch is only applied over the user-provided triples, but
-        at the moment those are also checked.
+        @return 
         '''
-        # Parse the SPARQL update string and validate contents.
-        qry_struct = translateUpdate(parseUpdate(update_str))
-        check_ins_gr = Graph()
-        check_del_gr = Graph()
-        for stmt in qry_struct:
-            try:
-                check_ins_gr += set(stmt.insert.triples)
-            except AttributeError:
-                pass
-            try:
-                check_del_gr += set(stmt.delete.triples)
-            except AttributeError:
-                pass
+        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
+        delta = self._sparql_delta(update_str)
 
-        self._check_mgd_terms(check_ins_gr)
-        self._check_mgd_terms(check_del_gr)
+        return self._modify_rsrc(RES_UPDATED, *delta, notify=notify)
 
-        env.app_globals.rdfly.patch_rsrc(self.uid, update_str)
 
-        if notify and current_app.config.get('messaging'):
-            self._enqueue_msg(RES_UPDATED, check_del_gr, check_ins_gr)
+    def _sparql_delta(self, q):
+        '''
+        Calculate the delta obtained by a SPARQL Update operation.
 
-        # @FIXME Ugly workaround until we find how to recompose a SPARQL query
-        # string from a parsed query object.
-        env.app_globals.rdfly.clear_smt(self.uid)
+        This is a critical component of the SPARQL update prcess and does a
+        couple of things:
 
-        return RES_UPDATED
+        1. It ensures that no resources outside of the subject of the request
+        are modified (e.g. by variable subjects)
+        2. It verifies that none of the terms being modified is server managed.
+
+        This method extracts an in-memory copy of the resource and performs the
+        query on that once it has checked if any of the server managed terms is
+        in the delta. If it is, it raises an exception.
+
+        NOTE: This only checks if a server-managed term is effectively being
+        modified. If a server-managed term is present in the query but does not
+        cause any change in the updated resource, no error is raised.
+
+        @return tuple(rdflib.Graph) Remove and add graphs. These can be used
+        with `BaseStoreLayout.update_resource` and/or recorded as separate
+        events in a provenance tracking system.
+        '''
+        logger.debug('Provided SPARQL query: {}'.format(q))
+        pre_gr = self.imr.graph
+
+        post_gr = pre_gr | Graph()
+        post_gr.update(q)
+
+        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+
+        #logger.debug('Removing: {}'.format(
+        #    remove_gr.serialize(format='turtle').decode('utf8')))
+        #logger.debug('Adding: {}'.format(
+        #    add_gr.serialize(format='turtle').decode('utf8')))
+
+        remove_gr = self._check_mgd_terms(remove_gr)
+        add_gr = self._check_mgd_terms(add_gr)
+
+        return set(remove_gr), set(add_gr)
