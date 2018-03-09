@@ -1,21 +1,17 @@
-# Configuration for repository.
-
-graph:
-    # Name of the "main" graph containing metadata about all resources.
-    #
-    # Default: main
-    main_graph: main
+# Default repository configuration.
+#
+# Copy this file or parts of it in a separate location to override these
+# settings. Individual items can be selectively overridden as long as the YAML
+# hierarchical structure is kept.
 
 # Configuration for binary path and fixity check generation. The hash is a
 # checksumn of the contents of the file.
 uuid:
     # Algorithm used to calculate the hash that generates the content path.
     # One of: sha1, sha224, sha256, sha384, or sha512, corresponding to the
-    # omonymous hashlib function.
-    #
-    # Default: sha1.
+    # omonymous hashlib function:
+    # https://docs.python.org/3/library/hashlib.html
     algo: sha1
-
 
 # Data store configuration.
 store:
@@ -25,8 +21,7 @@ store:
         # Directory where the RDF data files are stored.
         location: /tmp/fcrepo/data/ldprs_store
 
-        # store layout. this corresponds to a sub-class of the
-        # `lakesuperior.store.rdf.base_rdf_layout/baserdflayout`.
+        # store layout. At the moment, only `rsrc_centric_layout`is supported.
         layout: rsrc_centric_layout
 
         # whether to check if the object of a client-provided triple is the uri
@@ -34,13 +29,15 @@ store:
         # if set to false, properties are allowed to point to resources in the
         # repositoy that do not exist. also, if a resource is deleted, inbound
         # relationships may not be cleaned up.
-        # this can be one of `false` (boolean), `lenient` or `strict`. `false`
+        # this can be one of `False` (boolean), `lenient` or `strict`. `False`
         # does not check for referential integrity. `lenient` quietly drops a
         # user-provided triple if its object violates referential integrity.
         # `strict` raises an exception.
+        #
+        # Changes to this parameter require a full migration.
         referential_integrity: lenient
 
-        # this mimics fedora4 behavior which segments an identifier on post.
+        # this mimics Fedora4 behavior which segments an identifier on POST.
         legacy_ptree_split: False
 
     # The path used to persist LDP-NR (bitstreams).
@@ -49,6 +46,7 @@ store:
     ldp_nr:
         # See store.ldp_rs.layout.
         layout: default_layout
+
         # The filesystem path to the root of the binary store.
         path: /tmp/fcrepo/data/ldpnr_store
 
@@ -60,7 +58,7 @@ store:
         # generate max. 65536. Check your filesystem capabilities before
         # setting this to a non-default value.
         #
-        # Default: 2
+        # Changes to this parameter require a full migration.
         pairtree_branch_length: 2
 
         # Max. number of branches to generate. 0 will split the string until
@@ -68,11 +66,13 @@ store:
         # E.g. if the hash value is 0123456789abcdef01234565789abcdef and the
         # branch length value is 2, and the branch number is 4, the path will
         # be 01/23/45/67/89abcdef01234565789abcdef. For a value of 0 it will be
-        # 01/23/45/67/89/ab/cd/ef/01/23/45/67/89/ab/cd/ef. Check your system
-        # capabilities for maximum nested directories before setting this to 0,
-        # especially with longer hash algorithms.
+        # 01/23/45/67/89/ab/cd/ef/01/23/45/67/89/ab/cd/ef. Be aware that deeply
+        # nested directory structures may tax some of the operating system's
+        # services that scan for files, such as `updatedb`. Check your system
+        # capabilities for maximum nested directories before changing the
+        # default.
         #
-        # Default: 4
+        # Changes to this parameter require a full migration.
         pairtree_branches: 4
 
 # Configuration for messaging.
