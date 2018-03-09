@@ -1,6 +1,6 @@
 # LAKEsuperior
 
-LAKEsuperior is an experimental [Fedora Repository](http://fedorarepository.org)
+LAKEsuperior is an alternative [Fedora Repository](http://fedorarepository.org)
 implementation.
 
 ## Guiding Principles
@@ -55,14 +55,13 @@ as a SPARQL query (read-only) endpoint, however it is not meant to be used as
 a full-fledged triplestore at the moment.
 
 In its current status, LAKEsuperior is aimed at developers and
-hands-on managers who are able to run a Python environment and are
-interested in evaluating this project.
+hands-on managers who are interested in evaluating this project.
 
 ## Installation
 
 **Note:** These instructions have been tested on Linux. They may work on Darwin
-with little or no modification, and possibly on Windws with some modifications.
-Feedback is welcome.
+with little or no modification, and possibly on Windows with some
+modifications. Feedback is welcome.
 
 ### Dependencies
 
