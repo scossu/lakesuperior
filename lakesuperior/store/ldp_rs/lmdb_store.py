@@ -431,6 +431,7 @@ class LmdbStore(Store):
                 self.rollback()
 
         self.data_env.close()
+        self.idx_env.close()
 
 
     def destroy(self, path):
@@ -708,9 +709,13 @@ class LmdbStore(Store):
         '''
         Commit main transaction and push action queue.
         '''
-        if self.is_txn_open:
+        logger.debug('Committing transaction.')
+        try:
             self.data_txn.commit()
             self.idx_txn.commit()
+        except lmdb.Error:
+            pass
+
         self.data_txn = self.idx_txn = self.is_txn_rw = None
 
 
@@ -718,10 +723,13 @@ class LmdbStore(Store):
         '''
         Roll back main transaction.
         '''
-        if self.is_txn_open:
+        logger.debug('Rolling back transaction.')
+        try:
             self.data_txn.abort()
             self.idx_txn.abort()
-        self.data_txn = self.idx_txn = self.is_txn_rw = None
+        except lmdb.Error:
+            pass
+        self.is_txn_rw = None
 
 
     ## PRIVATE METHODS ##
