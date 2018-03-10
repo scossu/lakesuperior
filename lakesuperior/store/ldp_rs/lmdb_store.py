@@ -812,6 +812,14 @@ class LmdbStore(Store):
         self.idx_env = lmdb.open(path + '/index', subdir=False, create=create,
                 map_size=self.MAP_SIZE, max_dbs=6, readahead=False)
 
+        # Clear stale readers.
+        data_stale_readers = self.data_env.reader_check()
+        idx_stale_readers = self.idx_env.reader_check()
+        logger.debug(
+                'Cleared data stale readers: {}'.format(data_stale_readers))
+        logger.debug(
+                'Cleared index stale readers: {}'.format(idx_stale_readers))
+
         # Open and optionally create main databases.
         self.dbs = {
             # Main databases.
