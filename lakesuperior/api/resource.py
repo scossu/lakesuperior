@@ -11,7 +11,8 @@ from rdflib import Literal
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
-from lakesuperior.exceptions import InvalidResourceError
+from lakesuperior.exceptions import (
+        InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior.env import env
 from lakesuperior.globals import RES_DELETED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
@@ -32,7 +33,7 @@ Quickstart:
 >>> # Get root resource.
 >>> rsrc = resource.get('/')
 >>> # Dump graph.
->>> set(rsrc.imr())
+>>> set(rsrc.imr)
 {(rdflib.term.URIRef('info:fcres/'),
   rdflib.term.URIRef('http://purl.org/dc/terms/title'),
   rdflib.term.Literal('Repository Root')),

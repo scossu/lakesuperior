@@ -445,6 +445,7 @@ class LmdbStore(Store):
                 self.rollback()
 
         self.data_env.close()
+        self.idx_env.close()
 
 
     def destroy(self, path):
@@ -722,9 +723,13 @@ class LmdbStore(Store):
         '''
         Commit main transaction and push action queue.
         '''
-        if self.is_txn_open:
+        logger.debug('Committing transaction.')
+        try:
             self.data_txn.commit()
             self.idx_txn.commit()
+        except lmdb.Error:
+            pass
+
         self.data_txn = self.idx_txn = self.is_txn_rw = None
 
 
@@ -732,10 +737,13 @@ class LmdbStore(Store):
         '''
         Roll back main transaction.
         '''
-        if self.is_txn_open:
+        logger.debug('Rolling back transaction.')
+        try:
             self.data_txn.abort()
             self.idx_txn.abort()
-        self.data_txn = self.idx_txn = self.is_txn_rw = None
+        except lmdb.Error:
+            pass
+        self.is_txn_rw = None
 
 
     ## PRIVATE METHODS ##
@@ -817,6 +825,14 @@ class LmdbStore(Store):
                 map_size=self.MAP_SIZE, max_dbs=4, readahead=False)
         self.idx_env = lmdb.open(path + '/index', subdir=False, create=create,
                 map_size=self.MAP_SIZE, max_dbs=6, readahead=False)
+
+        # Clear stale readers.
+        data_stale_readers = self.data_env.reader_check()
+        idx_stale_readers = self.idx_env.reader_check()
+        logger.debug(
+                'Cleared data stale readers: {}'.format(data_stale_readers))
+        logger.debug(
+                'Cleared index stale readers: {}'.format(idx_stale_readers))
 
         # Open and optionally create main databases.
         self.dbs = {

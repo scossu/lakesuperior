@@ -1,20 +1,57 @@
 {% extends 'base.html' %}
-{% block title %}{{ rsrc.identifier }}{% endblock %}
+{% block title %}
+    Resource:&nbsp;{{ uid }}
+{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="/ldp/">Root</a>
+        </li>
+        {% set frags = uid.strip('/').split('/') %}
+        {% for frag in frags %}
+            {% set href = '/' + '/'.join(frags[:loop.index]) %}
+            {% if href == uid %}
+            <li class="breadcrumb-item active" aria-current="page">{{frag}}
+            {% else %}
+            <li class="breadcrumb-item">
+                <a href="/ldp{{ href }}">{{frag}}</a>
+            {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</nav>
+{% endblock %}
 {% block content %}
-<h2>Resource</h2>
+{% set created_ts = arrow.get(
+    gr.value(gr.identifier, nsc['fcrepo'].created)).replace(
+    tzinfo='local') %}
+{% set updated_ts = arrow.get(
+    gr.value(gr.identifier, nsc['fcrepo'].lastModified)).replace(
+    tzinfo='local') %}
+<p><strong>Created on:</strong>&nbsp;{{ created_ts }}&nbsp;
+({{created_ts.humanize() }})</p>
+<p><strong>Last updated on:</strong>&nbsp;{{ updated_ts }}&nbsp;
+({{updated_ts.humanize() }})</p>
+<p><strong>Types:</strong>
+{% for t in gr[gr.identifier : nsc['rdf'].type :] | sort %}
+    <span class="label label-primary">{{ t.n3(namespace_manager=nsm) }}</span>
+{% endfor %}
+</p>
+<h2>Properties</h2>
 <table class="table table-striped">
     <thead>
         <tr>
             <!--
             <td>Subject</td>
-            -->
             <td>Predicate</td>
             <td>Object</td>
+            -->
         </tr>
     </thead>
     <tbody>
-    {% for t in rsrc.graph | sort %}
-        {% if t[1] not in blacklist %}
+    {% for t in gr | sort %}
+        {% if t[0] == uri and t[1] not in blacklist %}
         <tr>
             <!--
             <td>
@@ -23,6 +60,49 @@
                 </a>
             </td>
             -->
+            <td>
+                <a href="{{ t[1] }}">
+                    {{ t[1].n3(namespace_manager=nsm) }}
+                </a>
+            </td>
+            <td>
+            {% if 'Literal' in t[2].__class__.__name__ %}
+            "{{ t[2] }}"
+            {% if t[2].datatype %}
+                <span class="label label-primary">
+                    {{ t[2].datatype.n3(namespace_manager=nsm) }}
+                </span>
+            {% endif %}
+            {% else %}
+                <a href="{{ t[2] }}">
+                    {{ t[2].n3(namespace_manager=nsm) }}
+                </a>
+            {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2>Other subjects</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <td>Subject</td>
+            <td>Predicate</td>
+            <td>Object</td>
+        </tr>
+    </thead>
+    <tbody>
+    {% for t in gr | sort %}
+        {% if t[0] != uri and t[1] not in blacklist %}
+        <tr>
+            <td>
+                <a href="{{ t[0] }}">
+                    {{ t[0].n3(namespace_manager=nsm) }}
+                </a>
+            </td>
             <td>
                 <a href="{{ t[1] }}">
                     {{ t[1].n3(namespace_manager=nsm) }}

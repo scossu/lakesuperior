@@ -4,10 +4,18 @@
 
 ### Hardware
 
+#### ‘Rather Snappy’ Laptop
+
 - Dell Precison M3800 Laptop
-- 8x Intel(R) Core(TM) i7-4712HQ CPU @ 2.30GHz
+- 4x Intel(R) Core(TM) i7-4712HQ CPU @ 2.30GHz
 - 12Gb RAM
 - SSD
+
+#### ‘Ole Workhorse’ server
+
+8x Intel(R) Xeon(R) CPU X5550  @ 2.67GHz
+16Gb RAM
+Magnetic drive, XXX RPM
 
 ### Software
 
@@ -15,7 +23,6 @@
 - glibc 2.26-11
 - python 3.5.4
 - lmdb 0.9.21-1
-- db (BerkeleyDB) 5.3.28-3
 
 ### Benchmark script
 
@@ -39,27 +46,67 @@ consistent size and variation:
 
 ## Results
 
-### FCREPO/Modeshape 4.7.5
+### ‘Rather Snappy’ Laptop
+
+#### FCREPO/Modeshape 4.7.5
 
 15'45" running time
-0.094" per resource
+
+0.094" per resource (100%—reference point)
+
 3.4M triples total in repo at the end of the process
 
-Retrieval of parent resource (~10000 triples), pipe to /dev/null: 3.64"
+Retrieval of parent resource (~10000 triples), pipe to /dev/null: 3.64" (100%)
 
 Peak memory usage: 2.47Gb
+
 Database size: 3.3 Gb
 
 
-### LAKEsuperior Alpha 6, LMDB Back End
+#### LAKEsuperior Alpha 6, LMDB Back End
 
 25' running time
-0.152" per resource
 
-Some gaps every ~40-50 requests, probably disk flush
+0.152" per resource (161%)
 
-Retrieval of parent resource (10K triples), pipe to /dev/null: 2.13"
+*Some gaps every ~40-50 requests, probably disk flush*
+
+Retrieval of parent resource (10K triples), pipe to /dev/null: 2.13" (58%)
 
 Peak memory usage: ~650 Mb (3 idle workers, 1 active)
-Database size: 523 Mb
 
+Database size: 523 Mb (16%)
+
+### ‘Ole Workhorse’ server
+
+#### FCREPO
+
+0:47:38 running time
+
+0.285" per resource (100%)
+
+Retrieval of parent resource: 9.6" (100%)
+
+#### LAKEsuperior
+
+1:14:19 running time
+
+0.446" per resource (156%)
+
+Retrieval of parent resource: 5.58" (58%)
+
+## Conclusions
+
+LAKEsuperior appears to be markedly slower on writes and markedly faster on
+reads. Both these factors are very likely related to the underlying LMDB store
+which is optimized for read performance.
+
+Comparison of results between the laptop and the server demonstrates that both
+read and write performance gaps
+are identical in the two environments. Disk speed severely affects the numbers.
+
+**Note:** As you can guess, these are only very partial and specific results. They
+should not be taken as a thorough performance assessment. Such an assessment
+may be impossible and pointless to make given the very different nature of
+the storage models, which may behave radically differently depending on many
+variables.

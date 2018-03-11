@@ -138,13 +138,14 @@ def get_resource(uid, force_rdf=False):
         return _tombstone_response(e, uid)
     else:
         out_headers.update(_headers_from_metadata(rsrc))
+        uri = g.tbox.uid_to_uri(uid)
         if (
                 isinstance(rsrc, LdpRs)
                 or is_accept_hdr_rdf_parsable()
                 or force_rdf):
-            gr = g.tbox.globalize_graph(rsrc.out_graph)
-            gr.namespace_manager = nsm
-            return _negotiate_content(gr, out_headers)
+            ggr = g.tbox.globalize_graph(rsrc.out_graph)
+            ggr.namespace_manager = nsm
+            return _negotiate_content(ggr, out_headers, uid=uid, uri=uri)
         else:
             logger.info('Streaming out binary content.')
             rsp = make_response(send_file(
@@ -152,7 +153,6 @@ def get_resource(uid, force_rdf=False):
                     attachment_filename=rsrc.filename,
                     mimetype=rsrc.mimetype))
             logger.debug('Out headers: {}'.format(out_headers))
-            uri = g.tbox.uid_to_uri(uid)
             rsp.headers.add('Link',
                     '<{}/fcr:metadata>; rel="describedby"'.format(uri))
             for link in out_headers['Link']:
@@ -446,19 +446,18 @@ def patch_version(uid, ver_uid):
 
 ## PRIVATE METHODS ##
 
-def _negotiate_content(rsp, headers=None):
+def _negotiate_content(gr, headers=None, **vw_kwargs):
     '''
     Return HTML or serialized RDF depending on accept headers.
     '''
     if request.accept_mimetypes.best == 'text/html':
-        rsrc = rsp.resource(request.path)
         return render_template(
-                'resource.html', rsrc=rsrc, nsm=nsm,
-                blacklist = vw_blacklist)
+                'resource.html', gr=gr, nsc=nsc, nsm=nsm,
+                blacklist=vw_blacklist, arrow=arrow, **vw_kwargs)
     else:
         for p in vw_blacklist:
-            rsp.remove((None, p, None))
-        return (rsp.serialize(format='turtle'), headers)
+            gr.remove((None, p, None))
+        return (gr.serialize(format='turtle'), headers)
 
 
 def _bistream_from_req():

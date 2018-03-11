@@ -1,6 +1,6 @@
 # LAKEsuperior
 
-LAKEsuperior is an experimental [Fedora Repository](http://fedorarepository.org)
+LAKEsuperior is an alternative [Fedora Repository](http://fedorarepository.org)
 implementation.
 
 ## Guiding Principles
@@ -55,10 +55,13 @@ as a SPARQL query (read-only) endpoint, however it is not meant to be used as
 a full-fledged triplestore at the moment.
 
 In its current status, LAKEsuperior is aimed at developers and
-hands-on managers who are able to run a Python environment and are
-interested in evaluating this project.
+hands-on managers who are interested in evaluating this project.
 
 ## Installation
+
+**Note:** These instructions have been tested on Linux. They may work on Darwin
+with little or no modification, and possibly on Windows with some
+modifications. Feedback is welcome.
 
 ### Dependencies
 
@@ -75,17 +78,35 @@ dependencies and should be automatically installed.
 1. Clone this repo
 1. `cd` into repo folder
 1. Install dependencies: `pip install -r requirements.txt`
-1. Copy the `etc.skeleton` folder to a separate location
-1. Set the configuration folder location in the environment:
-   `export FCREPO_CONFIG_DIR=<your config dir location>` (you can
-   add this line at the end of your virtualenv `activate` script)
-1. Configure the application if needed. The default settings should be fine
-   for evaluation.
 1. Start your STOMP broker, e.g.: `coilmq &`. If you have another queue manager
    listening to port 61613 you can either configure a different port on the
    application configuration, or use the existing message queue.
 1. Run `./lsup_admin bootstrap` to initialize the binary and graph stores
 1. Run `./fcrepo`.
+
+### Configuration
+
+The app should run for testing and evaluation purposes without any further
+configuration. All the application data are stored by default in the `data`
+directory.
+
+To change the default configuration you should:
+
+1. Copy the `etc.skeleton` folder to a separate location
+1. Set the configuration folder location in the environment:
+   `export FCREPO_CONFIG_DIR=<your config dir location>` (you can
+   add this line at the end of your virtualenv `activate` script)
+1. Configure the application
+1. Bootstrap the app or copy the original data folders to the new location if
+   any loction options changed
+1. (Re)start the server: `./fcrepo`
+
+The configuration options are documented in the files.
+
+**Note:** `test.yml` must specify a different location for the graph and for
+the binary stores than the default one, otherwise running a test suite will
+destroy your main data store. The application will issue an error message and
+refuse to start if these locations overlap.
 
 ### Production deployment
 
