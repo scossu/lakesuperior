@@ -205,7 +205,12 @@ class LmdbStore(Store):
     to expose this value as a configuration option.
     '''
     KEY_LENGTH = 5
-    KEY_START = 0
+
+    '''
+    Lexical sequence start. \x01 is fine since no special characters are used,
+    but it's good to leave a spare for potential future use.
+    '''
+    KEY_START = 1
 
     data_keys = (
         # Term key to serialized term content: 1:1
@@ -232,7 +237,7 @@ class LmdbStore(Store):
     looked up first.
 
     If we want to get fancy, this can be rebalanced from time to time by
-    looking up the number of keys in (s:spo, p:spo, o:spo).
+    looking up the number of keys in (s:po, p:so, o:sp).
     '''
     _lookup_rank = ('s', 'o', 'p')
 
@@ -285,6 +290,13 @@ class LmdbStore(Store):
         self._key_seq = LexicalSequence(self.KEY_START, self.KEY_LENGTH)
 
 
+    def __del__(self):
+        '''
+        Properly close store for garbage collection.
+        '''
+        self.close(True)
+
+
     def __len__(self, context=None):
         '''
         Return length of the dataset.
@@ -298,8 +310,7 @@ class LmdbStore(Store):
             #dataset = self.triples((None, None, None), context)
             with self.cur('c:spo') as cur:
                 if cur.set_key(self._to_key(context)):
-                    dataset = set(cur.iternext_dup())
-                    return len(dataset)
+                    return sum(1 for _ in cur.iternext_dup())
                 else:
                     return 0
         else:
@@ -341,7 +352,7 @@ class LmdbStore(Store):
             'read/write' if write else 'read-only'))
 
         self.data_txn = self.data_env.begin(buffers=True, write=write)
-        self.idx_txn = self.idx_env.begin(buffers=False, write=write)
+        self.idx_txn = self.idx_env.begin(buffers=True, write=write)
 
         self.is_txn_rw = write
 
@@ -424,11 +435,9 @@ class LmdbStore(Store):
         @return dict(string, lmdb.Cursor) Keys are index labels, values are
         index cursors.
         '''
-        cur = {}
-        for key in self.idx_keys:
-            cur[key] = txn.cursor(self.dbs[key])
-
-        return cur
+        return {
+            key: txn.cursor(self.dbs[key])
+            for key in self.idx_keys}
 
 
     def close(self, commit_pending_transaction=False):
@@ -489,7 +498,7 @@ class LmdbStore(Store):
             for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
                 thash = self._hash(pk_t)
                 if icur.set_key(thash):
-                    keys[i] = icur.value()
+                    keys[i] = bytes(icur.value())
                 else:
                     # Put new term.
                     with self.cur('t:st') as dcur:
@@ -531,6 +540,7 @@ class LmdbStore(Store):
         else:
             ck = None
 
+        #import pdb; pdb.set_trace()
         for spok in set(self._triple_keys(triple_pattern, context)):
             # Delete context association.
             with self.cur('spo:c') as dcur:
@@ -726,8 +736,11 @@ class LmdbStore(Store):
         logger.debug('Committing transaction.')
         try:
             self.data_txn.commit()
+        except (AttributeError, lmdb.Error):
+            pass
+        try:
             self.idx_txn.commit()
-        except lmdb.Error:
+        except (AttributeError, lmdb.Error):
             pass
 
         self.data_txn = self.idx_txn = self.is_txn_rw = None
@@ -1068,6 +1081,7 @@ class LmdbStore(Store):
 
                         yield b''.join(out)
 
+
     def _append(self, cur, values, **kwargs):
         '''
         Append one or more values to the end of a database.
@@ -1103,7 +1117,7 @@ class LmdbStore(Store):
         sk, pk, ok = triple
         spk = b''.join(triple[:2])
         spk = b''.join(triple[:2])
-        sok = bytes(triple[0]) + bytes(triple[2])
+        sok = b''.join((triple[0], triple[2]))
         pok = b''.join(triple[1:3])
 
         # Associate cursor labels with k/v pairs.
