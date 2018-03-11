@@ -243,7 +243,7 @@ class Ldpr(metaclass=ABCMeta):
         '''
         Retun a graph of the resource's IMR formatted for output.
         '''
-        out_gr = Graph()
+        out_gr = Graph(identifier=self.uri)
 
         for t in self.imr.graph:
             if (

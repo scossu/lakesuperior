@@ -102,7 +102,8 @@ class Toolbox:
         '''
         Localize a graph.
         '''
-        l_gr = Graph()
+        l_id = self.localize_term(gr.identifier)
+        l_gr = Graph(identifier=l_id)
         for trp in gr:
             l_gr.add(self.localize_triple(trp))
 
@@ -197,7 +198,8 @@ class Toolbox:
         '''
         Globalize a graph.
         '''
-        g_gr = Graph()
+        g_id = self.globalize_term(gr.identifier)
+        g_gr = Graph(identifier=g_id)
         for trp in gr:
             g_gr.add(self.globalize_triple(trp))
 

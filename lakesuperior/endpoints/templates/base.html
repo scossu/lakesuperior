@@ -10,10 +10,11 @@
 
         <link href="{{url_for('ldp.static', filename='assets/css/bootstrap.min.css')}}" rel="stylesheet">
         <link href="{{url_for('ldp.static', filename='assets/css/bootstrap-theme.min.css')}}" rel="stylesheet">
-    {% endblock %}
     {% block extra_js %}{% endblock %}
+    {% endblock %}
     </head>
     <body>
+    {% block navbar%}
         <nav class="navbar navbar-default">
           <div class="container-fluid">
             <!-- Brand and toggle get grouped for better mobile display -->
@@ -47,7 +48,9 @@
             </div><!-- /.navbar-collapse -->
           </div><!-- /.container-fluid -->
         </nav>
+    {% endblock %}
         <main class="container">
+            {% block breadcrumbs %}{% endblock %}
             <h1>{{ self.title() }}</h1>
             {% block content %}{% endblock %}
         </main>
