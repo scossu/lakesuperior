@@ -112,6 +112,24 @@ refuse to start if these locations overlap.
 
 If you like fried repositories for lunch, deploy before 11AM.
 
+## Running in Docker
+
+[Docker](http://docker.com/) is a containerization platform that allows you to run
+services in lightweight virtual machine environments without having to worry about
+installing all of the prerequisites on your host machine.
+
+1. Install the correct [Docker Community Edition](https://www.docker.com/community-edition)
+   for your operating system.
+1. Clone this repo: `git clone https://github.com/scossu/lakesuperior.git`
+1. `cd` into repo folder
+1. Run `docker-compose up`
+
+LAKEsuperior should now be available at `http://localhost:8000/`.
+
+The provided Docker configuration includes persistent storage as a self-container Docker
+volume, meaning your data will persist between runs. If you want to clear the decks,
+simply run `docker-compose down -v`.
+
 ## Status and development
 
 LAKEsuperior is in **alpha** status. Please see the

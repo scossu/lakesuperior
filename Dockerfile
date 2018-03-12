@@ -1,9 +1,9 @@
 FROM        python:3.5
 MAINTAINER  Michael B. Klein <michael.klein@northwestern.edu>
-RUN         mkdir -p /var/app /data
-WORKDIR     /var/app
+RUN         mkdir -p /usr/local /data
+WORKDIR     /usr/local
 ADD         . lakesuperior
-WORKDIR     /var/app/lakesuperior
+WORKDIR     /usr/local/lakesuperior
 RUN         cp ./docker/etc/* ./etc.defaults/
 RUN         pip install -r requirements.txt
 CMD         ./docker/docker_entrypoint
