@@ -742,8 +742,7 @@ class LmdbStore(Store):
             self.idx_txn.commit()
         except (AttributeError, lmdb.Error):
             pass
-
-        self.data_txn = self.idx_txn = self.is_txn_rw = None
+        self.is_txn_rw = None
 
 
     def rollback(self):
@@ -753,8 +752,11 @@ class LmdbStore(Store):
         logger.debug('Rolling back transaction.')
         try:
             self.data_txn.abort()
+        except (AttributeError, lmdb.Error):
+            pass
+        try:
             self.idx_txn.abort()
-        except lmdb.Error:
+        except (AttributeError, lmdb.Error):
             pass
         self.is_txn_rw = None
 
