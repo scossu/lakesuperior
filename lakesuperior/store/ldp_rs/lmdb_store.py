@@ -166,6 +166,12 @@ class LmdbStore(Store):
     - o:sp (O key: joined S, P keys; dupsort, dupfixed)
     - c:spo (context → triple association; dupsort, dupfixed)
     - ns:pfx (pickled namespace: prefix; 1:1)
+
+    The default graph is defined in `RDFLIB_DEFAULT_GRAPH_URI`. Adding triples
+    without context will add to this graph. Looking up triples without context
+    (also in a SPARQL query) will look in the  union graph instead of in the
+    default graph. Also, removing triples without specifying a context will
+    remove triples from all contexts.
     '''
 
     context_aware = True
@@ -207,7 +213,7 @@ class LmdbStore(Store):
     KEY_LENGTH = 5
 
     '''
-    Lexical sequence start. \x01 is fine since no special characters are used,
+    Lexical sequence start. `\x01` is fine since no special characters are used,
     but it's good to leave a spare for potential future use.
     '''
     KEY_START = 1
@@ -250,7 +256,6 @@ class LmdbStore(Store):
         'o:sp': (2, 0, 1),
     }
 
-
     data_env = None
     idx_env = None
     db = None
@@ -258,23 +263,6 @@ class LmdbStore(Store):
     data_txn = None
     idx_txn = None
     is_txn_rw = None
-
-    '''
-    List of actions to be performed when a transaction is committed.
-
-    Each element is a tuple of (action name, database index, key, value).
-    '''
-    _data_queue = []
-    '''
-    Set of indices to update. A set has been preferred to a list since the
-    index update don't need to be sequential and there may be duplicate entries
-    that can be eliminated.
-
-    Each element is a tuple of (triple key, pickled context, pre-pickled triple
-    ). The third value can be None, and in that case, it is calculated from
-    the triple key.
-    '''
-    _idx_queue = []
 
 
     def __init__(self, path, identifier=None):
@@ -478,7 +466,6 @@ class LmdbStore(Store):
         'None' inserts in the default graph.
         @param quoted (bool) Not used.
         '''
-        #import pdb; pdb.set_trace()
         context = self._normalize_context(context)
         if context is None:
             context = RDFLIB_DEFAULT_GRAPH_URI
@@ -527,6 +514,13 @@ class LmdbStore(Store):
     def remove(self, triple_pattern, context=None):
         '''
         Remove triples by a pattern.
+
+        @param triple_pattern (tuple:rdflib.term.Identifier|None) 3-tuple of
+        either RDF terms or None, indicating the triple(s) to be removed.
+        None is used as a wildcard.
+        @param context (rdflib.term.Identifier|None) Context to remove the
+        triples from. If None (the default) the matching triples are removed
+        from all contexts.
         '''
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
         #    triple_pattern, context))
@@ -540,11 +534,11 @@ class LmdbStore(Store):
         else:
             ck = None
 
-        #import pdb; pdb.set_trace()
-        for spok in set(self._triple_keys(triple_pattern, context)):
-            # Delete context association.
-            with self.cur('spo:c') as dcur:
-                with self.cur('c:spo') as icur:
+        with self.cur('spo:c') as dcur:
+            with self.cur('c:spo') as icur:
+                for spok in {bytes(k) for k in self._triple_keys(
+                        triple_pattern, context)}:
+                    # Delete context association.
                     if ck:
                         if dcur.set_key_dup(spok, ck):
                             dcur.delete()
@@ -553,16 +547,16 @@ class LmdbStore(Store):
                     else:
                         # If no context is specified, remove all associations.
                         if dcur.set_key(spok):
-                            for ck in dcur.iternext_dup():
+                            for cck in (bytes(k) for k in dcur.iternext_dup()):
                                 # Delete index first while we have the
                                 # context reference.
-                                if icur.set_key_dup(ck, spok):
+                                if icur.set_key_dup(cck, spok):
                                     icur.delete()
                             # Then delete the main entry.
                             dcur.set_key(spok)
                             dcur.delete(dupdata=True)
 
-            self._index_triple('remove', spok)
+                    self._index_triple('remove', spok)
 
 
     def triples(self, triple_pattern, context=None):
@@ -583,8 +577,6 @@ class LmdbStore(Store):
         # This sounds strange, RDFLib should be passing None at this point,
         # but anyway...
         context = self._normalize_context(context)
-        if context == RDFLIB_DEFAULT_GRAPH_URI:
-            context = None
 
         with self.cur('spo:c') as cur:
             for spok in self._triple_keys(triple_pattern, context):
@@ -592,7 +584,7 @@ class LmdbStore(Store):
                     contexts = (Graph(identifier=context),)
                 else:
                     if cur.set_key(spok):
-                        contexts = (
+                        contexts = tuple(
                             Graph(identifier=self._from_key(ck)[0], store=self)
                             for ck in cur.iternext_dup())
 
@@ -604,6 +596,9 @@ class LmdbStore(Store):
     def bind(self, prefix, namespace):
         '''
         Bind a prefix to a namespace.
+
+        @param prefix (string) Namespace prefix.
+        @param namespace (rdflib.URIRef) Fully qualified URI of namespace.
         '''
         prefix = s2b(prefix)
         namespace = s2b(namespace)
@@ -624,6 +619,7 @@ class LmdbStore(Store):
     def namespace(self, prefix):
         '''
         Get the namespace for a prefix.
+        @param prefix (string) Namespace prefix.
         '''
         with self.cur('pfx:ns') as cur:
             ns = cur.get(s2b(prefix))
@@ -636,6 +632,8 @@ class LmdbStore(Store):
 
         @NOTE A namespace can be only bound to one prefix in this
         implementation.
+
+        @param namespace (rdflib.URIRef) Fully qualified URI of namespace.
         '''
         with self.cur('ns:pfx') as cur:
             prefix = cur.get(s2b(namespace))
@@ -685,7 +683,6 @@ class LmdbStore(Store):
 
         @param graph (URIRef) URI of the named graph to add.
         '''
-        #import pdb; pdb.set_trace()
         if isinstance(graph, Graph):
             graph = graph.identifier
         pk_c = self._pickle(graph)
@@ -1002,8 +999,11 @@ class LmdbStore(Store):
         '''
         Lookup triples for a pattern with one bound term.
 
-        @TODO This can be called millions of times in a larger SPARQL
-        query, so it better be as efficient as it gets.
+        @param label (string) Which term is being searched for. One of `s`,
+        `p`, or `o`.
+        @param term (rdflib.URIRef) Bound term to search for.
+
+        @return iterator(bytes) SPO keys matching the pattern.
         '''
         k = self._to_key(term)
         if not k:
@@ -1031,8 +1031,9 @@ class LmdbStore(Store):
         @param bound terms (dict) Triple labels and terms to search for,
         in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
         URIRef('urn:o:1')}
+
+        @return iterator(bytes) SPO keys matching the pattern.
         '''
-        #import pdb; pdb.set_trace()
         if len(bound_terms) != 2:
             raise ValueError(
                     'Exactly 2 terms need to be bound. Got {}'.format(
