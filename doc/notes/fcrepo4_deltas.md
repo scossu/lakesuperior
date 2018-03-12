@@ -116,7 +116,7 @@ identifier rather than returning an error.
 
 LAKEsuperior offers some "legacy" options to replicate the FCREPO4 behavior,
 however encourages new development to use a different approach for some types
-of interactions.
+of interaction.
 
 ### Endpoints
 
