@@ -104,10 +104,10 @@ def send_event_msg(remove_trp, add_trp, metadata):
     Break down delta triples, find subjects and send event message.
     '''
     remove_grp = groupby(remove_trp, lambda x : x[0])
-    remove_dict = { k[0] : k[1] for k in remove_grp }
+    remove_dict = {k[0]: k[1] for k in remove_grp}
 
     add_grp = groupby(add_trp, lambda x : x[0])
-    add_dict = { k[0] : k[1] for k in add_grp }
+    add_dict = {k[0]: k[1] for k in add_grp}
 
     subjects = set(remove_dict.keys()) | set(add_dict.keys())
     for rsrc_uri in subjects:
