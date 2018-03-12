@@ -26,7 +26,7 @@ be performed. The operations are persisted in the repository only if and when
 the transaction is committed.
 
 LAKesuperior only supports atomicity for a single HTTP request. I.e. a single
-HTTTP request that should reult in multiple write operations to the storage
+HTTTP request that should result in multiple write operations to the storage
 layer is only persisted if no exception is thrown. Otherwise, the operation is
 rolled back in order to prevent resources to be left in an inconsistent state.
 
@@ -62,7 +62,7 @@ The same request in LAKEsuperior would create
 `/rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61` (obviously the identifiers will be
 different).
 
-This seems to brak Hyrax at some point, but might have been fixed. This needs
+This seems to break Hyrax at some point, but might have been fixed. This needs
 to be verified further.
 
 
@@ -74,7 +74,7 @@ behavior not endorsed by LDP or other specifications.
 ### Pairtrees
 
 FCREPO4 generates "pairtree" resources if a resource is created in a path whose
-segments are missing. E.g. when crating `/a/b/c/d`, if `/a/b` and `/a/b/c` do
+segments are missing. E.g. when creating `/a/b/c/d`, if `/a/b` and `/a/b/c` do
 not exist, FCREPO4 will create two Pairtree resources. POSTing and PUTting into
 Pairtrees is not allowed. Also, a containment triple is established between the
 closest LDPC and the created resource, e.g. if `a` exists, a `</a> ldp:contains
@@ -90,7 +90,7 @@ The rationale behind this change is that Pairtrees are the byproduct of a
 limitation imposed by Modeshape and introduce complexity in the software stack
 and confusion for the client. LAKEsuperior aligns with the more intuitive UNIX
 filesystem model, where each segment of a path is a "folder" or container
-(except for the leaf nodes that can be eiher folders or files). In any
+(except for the leaf nodes that can be either folders or files). In any
 case, clients are discouraged from generating deep paths in LAKEsuperior
 without a specific purpose because these resources create unnecessary data.
 
@@ -164,7 +164,7 @@ specs should not notice any difference.
 
 ## Optional improvements
 
-The following are improvements in performance or usability that can only taken
+The following are improvements in performance or usability that can only be taken
 advantage of if client code is adjusted.
 
 ### LDP-NR metadata by content negotiation
