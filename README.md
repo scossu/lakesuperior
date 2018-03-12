@@ -57,10 +57,30 @@ a full-fledged triplestore at the moment.
 In its current status, LAKEsuperior is aimed at developers and
 hands-on managers who are interested in evaluating this project.
 
-## Installation
+## Quick Install: Running in Docker
+
+You can run LAKEsuperior in Docker for a hands-off quickstart.
+
+[Docker](http://docker.com/) is a containerization platform that allows you to run
+services in lightweight virtual machine environments without having to worry about
+installing all of the prerequisites on your host machine.
+
+1. Install the correct [Docker Community Edition](https://www.docker.com/community-edition)
+   for your operating system.
+1. Clone this repo: `git clone https://github.com/scossu/lakesuperior.git`
+1. `cd` into repo folder
+1. Run `docker-compose up`
+
+LAKEsuperior should now be available at `http://localhost:8000/`.
+
+The provided Docker configuration includes persistent storage as a self-container Docker
+volume, meaning your data will persist between runs. If you want to clear the decks,
+simply run `docker-compose down -v`.
+
+## Manual Install (a bit less quick, a bit more power)
 
 **Note:** These instructions have been tested on Linux. They may work on Darwin
-with little or no modification, and possibly on Windows with some
+with little modification, and possibly on Windows with some
 modifications. Feedback is welcome.
 
 ### Dependencies
