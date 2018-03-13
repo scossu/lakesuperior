@@ -536,16 +536,19 @@ class LmdbStore(Store):
 
         with self.cur('spo:c') as dcur:
             with self.cur('c:spo') as icur:
-                for spok in {bytes(k) for k in self._triple_keys(
-                        triple_pattern, context)}:
-                    # Delete context association.
-                    if ck:
+                match_set = {bytes(k) for k in self._triple_keys(
+                        triple_pattern, context)}
+                # Delete context association.
+                if ck:
+                    for spok in match_set:
                         if dcur.set_key_dup(spok, ck):
                             dcur.delete()
                             if icur.set_key_dup(ck, spok):
                                 icur.delete()
-                    else:
-                        # If no context is specified, remove all associations.
+                            self._index_triple('remove', spok)
+                # If no context is specified, remove all associations.
+                else:
+                    for spok in match_set:
                         if dcur.set_key(spok):
                             for cck in (bytes(k) for k in dcur.iternext_dup()):
                                 # Delete index first while we have the
@@ -555,8 +558,7 @@ class LmdbStore(Store):
                             # Then delete the main entry.
                             dcur.set_key(spok)
                             dcur.delete(dupdata=True)
-
-                    self._index_triple('remove', spok)
+                            self._index_triple('remove', spok)
 
 
     def triples(self, triple_pattern, context=None):
