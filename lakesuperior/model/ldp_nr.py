@@ -66,7 +66,7 @@ class LdpNr(Ldpr):
         return nonrdfly.local_path(cksum)
 
 
-    def create_or_replace_rsrc(self, create_only=False):
+    def create_or_replace(self, create_only=False):
         '''
         Create a new binary resource with a corresponding RDF representation.
 
@@ -78,7 +78,7 @@ class LdpNr(Ldpr):
         # Try to persist metadata. If it fails, delete the file.
         logger.debug('Persisting LDP-NR triples in {}'.format(self.uri))
         try:
-            ev_type = super().create_or_replace_rsrc(create_only)
+            ev_type = super().create_or_replace(create_only)
         except:
             # self.digest is also the file UID.
             nonrdfly.delete(self.digest)

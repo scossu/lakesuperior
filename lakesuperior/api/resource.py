@@ -185,7 +185,7 @@ def create(parent, slug, **kwargs):
     logger.debug('Minted UID for new resource: {}'.format(uid))
     rsrc = LdpFactory.from_provided(uid, **kwargs)
 
-    rsrc.create_or_replace_rsrc(create_only=True)
+    rsrc.create_or_replace(create_only=True)
 
     return uid
 
@@ -210,12 +210,13 @@ def create_or_replace(uid, stream=None, **kwargs):
     @return string Event type: whether the resource was created or updated.
     '''
     rsrc = LdpFactory.from_provided(uid, stream=stream, **kwargs)
+    create = not rsrc.is_stored
 
     if not stream and rsrc.is_stored:
         raise InvalidResourceError(rsrc.uid,
                 'Resource {} already exists and no data set was provided.')
 
-    return rsrc.create_or_replace_rsrc()
+    return rsrc.create_or_replace(create_only=create)
 
 
 @transaction(True)
