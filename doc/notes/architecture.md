@@ -1,7 +1,5 @@
 # LAKEsuperior Architecture
 
-**DOCUMENTATION AND IMPLEMENTATION OF THIS SECTION ARE WORK-IN-PROGRESS!**
-
 LAKEsuperior is written in Python. It is not excluded that parts of the code
 may be rewritten in [Cython](http://cython.readthedocs.io/) for performance.
 

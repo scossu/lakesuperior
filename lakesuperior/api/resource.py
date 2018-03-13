@@ -101,18 +101,24 @@ def process_queue():
 
 def send_event_msg(remove_trp, add_trp, metadata):
     '''
-    Break down delta triples, find subjects and send event message.
+    Send messages about a changed LDPR.
+
+    A single LDPR message packet can contain multiple resource subjects, e.g.
+    if the resource graph contains hash URIs or even other subjects. This
+    method groups triples by subject and sends a message for each of the
+    subjects found.
     '''
+    # Group delta triples by subject.
     remove_grp = groupby(remove_trp, lambda x : x[0])
-    remove_dict = { k[0] : k[1] for k in remove_grp }
+    remove_dict = {k[0]: k[1] for k in remove_grp}
 
     add_grp = groupby(add_trp, lambda x : x[0])
-    add_dict = { k[0] : k[1] for k in add_grp }
+    add_dict = {k[0]: k[1] for k in add_grp}
 
     subjects = set(remove_dict.keys()) | set(add_dict.keys())
     for rsrc_uri in subjects:
-        logger.info('subject: {}'.format(rsrc_uri))
-        app_globals.messenger.send
+        logger.debug('Processing event for subject: {}'.format(rsrc_uri))
+        app_globals.messenger.send(rsrc_uri, **metadata)
 
 
 ### API METHODS ###
@@ -179,7 +185,7 @@ def create(parent, slug, **kwargs):
     logger.debug('Minted UID for new resource: {}'.format(uid))
     rsrc = LdpFactory.from_provided(uid, **kwargs)
 
-    rsrc.create_or_replace_rsrc(create_only=True)
+    rsrc.create_or_replace(create_only=True)
 
     return uid
 
@@ -204,12 +210,13 @@ def create_or_replace(uid, stream=None, **kwargs):
     @return string Event type: whether the resource was created or updated.
     '''
     rsrc = LdpFactory.from_provided(uid, stream=stream, **kwargs)
+    create = not rsrc.is_stored
 
     if not stream and rsrc.is_stored:
         raise InvalidResourceError(rsrc.uid,
                 'Resource {} already exists and no data set was provided.')
 
-    return rsrc.create_or_replace_rsrc()
+    return rsrc.create_or_replace(create_only=create)
 
 
 @transaction(True)

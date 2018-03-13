@@ -1,11 +1,6 @@
 import logging
 
-from abc import ABCMeta, abstractmethod
-
-from flask import current_app
-from stompest.config import StompConfig
-from stompest.protocol import StompSpec
-from stompest.sync import Stomp
+import stomp
 
 
 class StompHandler(logging.Handler):
@@ -19,23 +14,28 @@ class StompHandler(logging.Handler):
     def __init__(self, conf):
         self.conf = conf
         if self.conf['protocol'] == '11':
-            protocol_v = StompSpec.VERSION_1_1
+            conn_cls = stomp.Connection12
         elif self.conf['protocol'] == '12':
-            protocol_v = StompSpec.VERSION_1_2
+            conn_cls = stomp.Connection11
         else:
-            protocol_v = StompSpec.VERSION_1_0
+            conn_cls = stomp.Connection10
 
-        client_config = StompConfig(
-            'tcp://{}:{}'.format(self.conf['host'], self.conf['port']),
-            login=self.conf['username'],
+        self.conn = conn_cls([(self.conf['host'], self.conf['port'])])
+        self.conn.start()
+        self.conn.connect(
+            username=self.conf['username'],
             passcode=self.conf['password'],
-            version=protocol_v
+            wait=True
         )
-        self.conn = Stomp(client_config)
-        self.conn.connect()
 
         return super().__init__()
 
+
+    def __del_(self):
+        '''
+        Disconnect the client.
+        '''
+        self.conn.disconnect()
 
     def emit(self, record):
         '''

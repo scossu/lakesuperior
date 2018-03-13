@@ -282,6 +282,20 @@ class RsrcCentricLayout:
         return rsrc
 
 
+    def get_user_data(self, uid):
+        '''
+        Get all the user-provided data.
+
+        @param uid (string) Resource UID.
+        '''
+        # @TODO This only works as long as there is only one user-provided
+        # graph. If multiple user-provided graphs will be supported, this
+        # should use another query to get all of them.
+        userdata_gr = self.ds.graph(nsc['fcmain'][uid])
+
+        return userdata_gr | Graph()
+
+
     def get_version_info(self, uid, strict=True):
         '''
         Get all metadata about a resource's versions.
@@ -422,20 +436,20 @@ class RsrcCentricLayout:
         # Remove versions.
         for ver_uri in self.ds.graph(nsc['fcadmin'][uid])[
                 uri : nsc['fcrepo'].hasVersion : None]:
-            self._delete_rsrc(uid_fn(ver_uri), True)
+            self.delete_rsrc(uid_fn(ver_uri), True)
 
         # Remove resource itself.
-        self._delete_rsrc(uid)
+        self.delete_rsrc(uid)
 
 
-    def create_or_replace_rsrc(self, uid, trp):
+    def truncate_rsrc(self, uid):
         '''
-        Create a new resource or replace an existing one.
+        Remove all user-provided data from a resource and only leave admin and
+        structure data.
         '''
-        if self.ask_rsrc_exists(uid):
-            self._delete_rsrc(uid)
+        userdata = set(self.get_user_data(uid))
 
-        return self.modify_rsrc(uid, add_trp=trp)
+        return self.modify_rsrc(uid, remove_trp=userdata)
 
 
     def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
@@ -490,7 +504,7 @@ class RsrcCentricLayout:
             meta_gr.add((gr_uri, RDF.type, gr_type))
 
 
-    def _delete_rsrc(self, uid, historic=False):
+    def delete_rsrc(self, uid, historic=False):
         '''
         Delete all aspect graphs of an individual resource.
 

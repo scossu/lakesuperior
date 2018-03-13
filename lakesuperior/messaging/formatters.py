@@ -21,13 +21,13 @@ class BaseASFormatter(metaclass=ABCMeta):
     }
 
     ev_names = {
-        RES_CREATED : 'Resource Modification',
-        RES_DELETED : 'Resource Creation',
-        RES_UPDATED : 'Resource Deletion',
+        RES_CREATED : 'Resource Creation',
+        RES_DELETED : 'Resource Deletion',
+        RES_UPDATED : 'Resource Modification',
     }
 
-    def __init__(self, uri, ev_type, time, type, data=None,
-                data_fmt='text/turtle', metadata=None):
+    def __init__(
+            self, rsrc_uri, ev_type, timestamp, rsrc_type, actor, data=None):
         '''
         Format output according to granularity level.
 
@@ -36,23 +36,20 @@ class BaseASFormatter(metaclass=ABCMeta):
         are logged under the same level. This it is rather about *what* gets
         logged in a message.
 
-        @param record (dict) This holds a dict with the following keys:
-        - `uri`: URI of the resource.
-        - `ev_type`: one of `create`, `delete` or `update`
-        - `time`: Timestamp of the ev_type.
-        - `data`: if messaging is configured with `provenance` level, this is
-          a `rdflib.Graph` containing the triples that have been removed or
-        added.
-        - `metadata`: provenance metadata as a rdflib.Graph object. This
-        contains properties such as actor(s), action (add/remove), etc. This is
-        only meaningful for `ASDeltaFormatter`.
+        @param rsrc_uri (rdflib.URIRef) URI of the resource.
+        @param ev_type (string) one of `create`, `delete` or `update`
+        @param timestamp (string) Timestamp of the event.
+        @param data (tuple(set)) if messaging is configured with `provenance`
+        level, this is a 2-tuple with one set (as 3-tuples of
+        RDFlib.Identifier instances) for removed triples, and one set for
+        added triples.
         '''
-        self.uri = uri
+        self.rsrc_uri = rsrc_uri
         self.ev_type = ev_type
-        self.time = time
-        self.type = type
-        self.data = data or None
-        self.metadata = metadata
+        self.timestamp = timestamp
+        self.rsrc_type = rsrc_type
+        self.actor = actor
+        self.data = data
 
 
     @abstractmethod
@@ -77,11 +74,11 @@ class ASResourceFormatter(BaseASFormatter):
             'type' : self.ev_types[self.ev_type],
             'name' : self.ev_names[self.ev_type],
             'object' : {
-                'id' : self.uri,
-                'updated' : self.time,
-                'type' : self.type,
+                'id' : self.rsrc_uri,
+                'updated' : self.timestamp,
+                'type' : self.rsrc_type,
             },
-            'actor' : self.metadata.get('actor', None),
+            'actor' : self.actor,
         }
 
         return json.dumps(ret)
@@ -104,11 +101,11 @@ class ASDeltaFormatter(BaseASFormatter):
             'type' : self.ev_types[self.ev_type],
             'name' : self.ev_names[self.ev_type],
             'object' : {
-                'id' : self.uri,
-                'updated' : self.time,
-                'type' : self.type,
+                'id' : self.rsrc_uri,
+                'updated' : self.timestamp,
+                'type' : self.rsrc_type,
             },
-            'actor' : self.metadata.get('actor', None),
+            'actor' : self.actor,
             'data' : self.data,
         }
 

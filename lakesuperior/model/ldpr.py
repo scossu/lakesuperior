@@ -364,7 +364,7 @@ class Ldpr(metaclass=ABCMeta):
         return rdfly.extract_imr(self.uid, ver_uid, **kwargs).graph
 
 
-    def create_or_replace_rsrc(self, create_only=False):
+    def create_or_replace(self, create_only=False):
         '''
         Create or update a resource. PUT and POST methods, which are almost
         identical, are wrappers for this method.
@@ -372,27 +372,34 @@ class Ldpr(metaclass=ABCMeta):
         @param create_only (boolean) Whether this is a create-only operation.
         '''
         create = create_only or not self.is_stored
+        ev_type = RES_CREATED if create else RES_UPDATED
 
         self._add_srv_mgd_triples(create)
-        #self._ensure_single_subject_rdf(self.provided_imr.graph)
         ref_int = rdfly.config['referential_integrity']
         if ref_int:
             self._check_ref_int(ref_int)
 
-        rdfly.create_or_replace_rsrc(self.uid, self.provided_imr.graph)
-        self.imr = self.provided_imr
+        # Delete existing triples if replacing.
+        if not create:
+            rdfly.truncate_rsrc(self.uid)
 
-        self._set_containment_rel()
+        add_trp = set(self.provided_imr.graph) | self._containment_rel(create)
 
-        return RES_CREATED if create else RES_UPDATED
-        #return self._head(self.provided_imr.graph)
+        self._modify_rsrc(ev_type, add_trp=add_trp)
+        new_gr = Graph()
+        for trp in add_trp:
+            new_gr.add(trp)
+
+        self.imr = new_gr.resource(self.uri)
+
+        return ev_type
 
 
     def put(self):
         '''
         https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
         '''
-        return self.create_or_replace_rsrc()
+        return self.create_or_replace()
 
 
     def patch(self, update_str):
@@ -535,8 +542,8 @@ class Ldpr(metaclass=ABCMeta):
         elif nsc['ldp'].Container in laz_gr[: RDF.type :]:
             laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Container))
 
-        self._modify_rsrc(RES_CREATED, tstone_trp, set(laz_gr))
-        self._set_containment_rel()
+        laz_set = set(laz_gr) | self._containment_rel()
+        self._modify_rsrc(RES_CREATED, tstone_trp, laz_set)
 
         return self.uri
 
@@ -581,7 +588,7 @@ class Ldpr(metaclass=ABCMeta):
             # @TODO Check individual objects: if they are repo-managed URIs
             # and not existing or tombstones, they are not added.
 
-        return self.create_or_replace_rsrc(create_only=False)
+        return self.create_or_replace(create_only=False)
 
 
     ## PROTECTED METHODS ##
@@ -610,34 +617,38 @@ class Ldpr(metaclass=ABCMeta):
         @param add_trp (set) Triples to be added.
         @param notify (boolean) Whether to send a message about the change.
         '''
-        ret = rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+        rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        if notify and env.config.get('messaging'):
+        if notify and env.config['application'].get('messaging'):
+            logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
-
-        return ret
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):
         '''
-        Sent a message about a changed (created, modified, deleted) resource.
+        Compose a message about a resource change.
+
+        The message is enqueued for asynchronous processing.
+
+        @param ev_type (string) The event type. See global constants.
+        @param remove_trp (set) Triples removed. Only used if the 
         '''
         try:
-            type = self.types
+            rsrc_type = tuple(str(t) for t in self.types)
             actor = self.metadata.value(nsc['fcrepo'].createdBy)
         except (ResourceNotExistsError, TombstoneError):
-            type = set()
+            rsrc_type = ()
             actor = None
             for t in add_trp:
                 if t[1] == RDF.type:
-                    type.add(t[2])
+                    rsrc_type.add(t[2])
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
         env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
             'ev_type': ev_type,
-            'time': env.timestamp,
-            'type': type,
+            'timestamp': env.timestamp.format(),
+            'rsrc_type': rsrc_type,
             'actor': actor,
         }))
 
@@ -731,7 +742,7 @@ class Ldpr(metaclass=ABCMeta):
         self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
 
 
-    def _set_containment_rel(self):
+    def _containment_rel(self, create):
         '''Find the closest parent in the path indicated by the uid and
         establish a containment triple.
 
@@ -747,6 +758,9 @@ class Ldpr(metaclass=ABCMeta):
           fcres:/a/b/c.
         - If fcres:/e is being created, the root node becomes container of
           fcres:/e.
+
+        @param create (bool) Whether the resource is being created. If false,
+        the parent container is not updated.
         '''
         from lakesuperior.model.ldp_factory import LdpFactory
 
@@ -765,25 +779,32 @@ class Ldpr(metaclass=ABCMeta):
                 parent_rsrc = LdpFactory.new_container(cnd_parent_uid)
                 # This will trigger this method again and recurse until an
                 # existing container or the root node is reached.
-                parent_rsrc.create_or_replace_rsrc()
+                parent_rsrc.create_or_replace()
                 parent_uid = parent_rsrc.uid
         else:
             parent_uid = ROOT_UID
 
-        add_gr = Graph()
-        add_gr.add((nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
         parent_rsrc = LdpFactory.from_stored(
             parent_uid, repr_opts={'incl_children' : False}, handling='none')
-        parent_rsrc._modify_rsrc(RES_UPDATED, add_trp=add_gr)
+
+        # Only update parent if the resource is new.
+        if create:
+            add_gr = Graph()
+            add_gr.add(
+                    (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
+            parent_rsrc._modify_rsrc(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
-        self._add_ldp_dc_ic_rel(parent_rsrc)
+        return self._add_ldp_dc_ic_rel(parent_rsrc)
 
 
     def _dedup_deltas(self, remove_gr, add_gr):
         '''
         Remove duplicate triples from add and remove delta graphs, which would
         otherwise contain unnecessary statements that annul each other.
+
+        @return tuple 2 "clean" sets of respectively remove statements and
+        add statements.
         '''
         return (
             remove_gr - add_gr,
@@ -829,7 +850,7 @@ class Ldpr(metaclass=ABCMeta):
             target_rsrc = LdpFactory.from_stored(rdfly.uri_to_uid(s))
             target_rsrc._modify_rsrc(RES_UPDATED, add_trp={(s, p, o)})
 
-        self._modify_rsrc(RES_UPDATED, add_trp=add_trp)
+        return add_trp
 
 
     def _sparql_update(self, update_str, notify=True):
