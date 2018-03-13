@@ -1,10 +1,6 @@
 import logging
 
-from abc import ABCMeta, abstractmethod
-
 import stomp
-
-from flask import current_app
 
 
 class StompHandler(logging.Handler):

@@ -610,34 +610,39 @@ class Ldpr(metaclass=ABCMeta):
         @param add_trp (set) Triples to be added.
         @param notify (boolean) Whether to send a message about the change.
         '''
-        ret = rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+        pdb.set_trace()
+        rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        if notify and env.config.get('messaging'):
+        if notify and env.config['application'].get('messaging'):
+            logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
-
-        return ret
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):
         '''
-        Sent a message about a changed (created, modified, deleted) resource.
+        Compose a message about a resource change.
+
+        The message is enqueued for asynchronous processing.
+
+        @param ev_type (string) The event type. See global constants.
+        @param remove_trp (set) Triples removed. Only used if the 
         '''
         try:
-            type = self.types
+            rsrc_type = tuple(str(t) for t in self.types)
             actor = self.metadata.value(nsc['fcrepo'].createdBy)
         except (ResourceNotExistsError, TombstoneError):
-            type = set()
+            rsrc_type = ()
             actor = None
             for t in add_trp:
                 if t[1] == RDF.type:
-                    type.add(t[2])
+                    rsrc_type.add(t[2])
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
         env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
             'ev_type': ev_type,
-            'time': env.timestamp,
-            'type': type,
+            'timestamp': env.timestamp.format(),
+            'rsrc_type': rsrc_type,
             'actor': actor,
         }))
 

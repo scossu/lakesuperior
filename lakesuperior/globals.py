@@ -43,12 +43,11 @@ class AppGlobals:
         #logger.info('Non-RDF layout: {}'.format(nonrdfly_mod_name))
 
         # Set up messaging.
-        messenger = Messenger(app_conf['messaging'])
+        self._messenger  = Messenger(app_conf['messaging'])
 
         # Exposed globals.
         self._rdfly = rdfly_cls(app_conf['store']['ldp_rs'])
         self._nonrdfly = nonrdfly_cls(app_conf['store']['ldp_nr'])
-        self._messenger = messenger
         self._changelog = deque()
 
 

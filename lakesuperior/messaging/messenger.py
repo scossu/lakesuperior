@@ -2,6 +2,7 @@ import logging
 
 from lakesuperior.messaging import formatters, handlers
 
+logger = logging.getLogger(__name__)
 messenger = logging.getLogger('_messenger')
 
 
@@ -9,21 +10,29 @@ class Messenger:
     '''
     Very simple message sender using the standard Python logging facility.
     '''
-    _msg_routes = []
-
     def __init__(self, config):
-        for route in config['routes']:
-            handler_cls = getattr(handlers, route['handler'])
-            messenger.addHandler(handler_cls(route))
-            messenger.setLevel(logging.INFO)
-            formatter = getattr(formatters, route['formatter'])
+        '''
+        Set up the messenger.
 
-            self._msg_routes.append((messenger, formatter))
+        @param config (dict) Messenger configuration.
+        '''
+        def msg_routes():
+            for route in config['routes']:
+                handler_cls = getattr(handlers, route['handler'])
+                messenger.addHandler(handler_cls(route))
+                messenger.setLevel(logging.INFO)
+                formatter = getattr(formatters, route['formatter'])
+
+                yield messenger, formatter
+
+        self.config = config
+        self.msg_routes = tuple(r for r in msg_routes())
+        logger.info('Active messaging routes: {}'.format(self.msg_routes))
 
 
     def send(self, *args, **kwargs):
         '''
         Send one or more external messages.
         '''
-        for m, f in self._msg_routes:
-            m.info(f(*args, **kwargs))
+        for msg, fn in self.msg_routes:
+            msg.info(fn(*args, **kwargs))
