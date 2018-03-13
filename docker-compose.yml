@@ -1,0 +1,12 @@
+version: '2'
+
+volumes:
+  lakesuperior:
+
+services:
+  lakesuperior:
+    build: .
+    volumes:
+      - lakesuperior:/data
+    ports:
+      - "8000:8000"
