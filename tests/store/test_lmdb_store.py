@@ -266,48 +266,61 @@ class TestContext:
         trp1 = (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1'))
         trp2 = (URIRef('urn:s:2'), URIRef('urn:p:2'), URIRef('urn:o:2'))
         trp3 = (URIRef('urn:s:3'), URIRef('urn:p:3'), URIRef('urn:o:3'))
+        trp4 = (URIRef('urn:s:4'), URIRef('urn:p:4'), URIRef('urn:o:4'))
 
         with TxnManager(store, True) as txn:
             store.add(trp1, gr_uri)
             store.add(trp2, gr_uri)
-            store.add(trp2, None)
+            store.add(trp2, gr_uri) # Duplicate; dropped.
+            store.add(trp2, None) # Goes to the default graph.
             store.add(trp3, gr2_uri)
-            store.add(trp3)
+            store.add(trp3, gr_uri)
+            store.add(trp4) # Goes to the default graph.
 
-            assert len(set(store.triples((None, None, None)))) == 3
+            assert len(set(store.triples((None, None, None)))) == 4
             assert len(set(store.triples((None, None, None),
-                RDFLIB_DEFAULT_GRAPH_URI))) == 3
-            assert len(set(store.triples((None, None, None), gr_uri))) == 2
+                RDFLIB_DEFAULT_GRAPH_URI))) == 2
+            assert len(set(store.triples((None, None, None), gr_uri))) == 3
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
             assert gr2_uri in {gr.identifier for gr in store.contexts()}
             assert trp1 in _clean(store.triples((None, None, None)))
-            assert trp1 in _clean(store.triples((None, None, None),
+            assert trp1 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
             assert trp2 in _clean(store.triples((None, None, None), gr_uri))
             assert trp2 in _clean(store.triples((None, None, None)))
             assert trp3 in _clean(store.triples((None, None, None), gr2_uri))
-            assert trp3 in _clean(store.triples((None, None, None),
+            assert trp3 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
 
 
-    #def test_delete_from_ctx(self, store):
-    #    '''
-    #    Delete triples from a named graph and from the default graph.
-    #    '''
-    #    gr_uri = URIRef('urn:bogus:graph#a')
-    #    gr2_uri = URIRef('urn:bogus:graph#b')
+    def test_delete_from_ctx(self, store):
+        '''
+        Delete triples from a named graph and from the default graph.
+        '''
+        gr_uri = URIRef('urn:bogus:graph#a')
+        gr2_uri = URIRef('urn:bogus:graph#b')
 
-    #    with TxnManager(store, True) as txn:
-    #        store.remove((None, None, None), gr2_uri)
-    #        assert len(set(store.triples((None, None, None), gr2_uri))) == 0
-    #        assert len(set(store.triples((None, None, None), gr_uri))) == 2
+        with TxnManager(store, True) as txn:
+            store.remove((None, None, None), gr2_uri)
+            assert len(set(store.triples((None, None, None), gr2_uri))) == 0
+            assert len(set(store.triples((None, None, None), gr_uri))) == 3
 
-    #    with TxnManager(store, True) as txn:
-    #        store.remove((None, None, None))
-    #        assert len(set(store.triples((None, None, None)))) == 0
-    #        assert len(set(store.triples((None, None, None), gr_uri))) == 0
-    #        assert len(store) == 0
+        with TxnManager(store, True) as txn:
+            store.remove((URIRef('urn:s:1'), None, None))
+            assert len(set(store.triples((None, None, None), gr_uri))) == 2
+            assert len(set(store.triples((None, None, None)))) == 3
+
+        with TxnManager(store, True) as txn:
+            store.remove((URIRef('urn:s:4'), None, None),
+                    RDFLIB_DEFAULT_GRAPH_URI)
+            assert len(set(store.triples((None, None, None)))) == 2
+
+        with TxnManager(store,True) as txn:
+            store.remove((None, None, None))
+            assert len(set(store.triples((None, None, None)))) == 0
+            assert len(set(store.triples((None, None, None), gr_uri))) == 0
+            assert len(store) == 0
 
 
 @pytest.mark.usefixtures('store')
