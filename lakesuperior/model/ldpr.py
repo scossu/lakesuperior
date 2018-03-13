@@ -371,7 +371,6 @@ class Ldpr(metaclass=ABCMeta):
 
         @param create_only (boolean) Whether this is a create-only operation.
         '''
-        pdb.set_trace()
         create = create_only or not self.is_stored
         ev_type = RES_CREATED if create else RES_UPDATED
 

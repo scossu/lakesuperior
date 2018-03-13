@@ -154,6 +154,8 @@ meant to live as a community project.
 
 [Content Model](doc/notes/model.md)
 
+[Messaging](doc/notes/messaging.md)
+
 [Command-Line Reference](doc/notes/cli.md)
 
 [Storage Implementation](doc/notes/storage.md)
