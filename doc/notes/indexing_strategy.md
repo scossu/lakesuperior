@@ -1,6 +1,10 @@
 # LMDB Store design for RDFLib
 
-Spoiler: Strategy #5 is the one currently used.
+This is a log of subsequent strategies employed to store triples in LMDB.
+
+Strategy #5a is the one currently used. The rest is kept for historic reasons
+and academic curiosity (and also because it was too much work to just wipe out
+of memory).
 
 ## Storage approach
 
@@ -182,7 +186,7 @@ Storage total: 143 bytes per triple
   - No easy way to know if a term is used anywhere in a quad
   - Needs some routine cleanup
   - On the other hand, terms are relatively light-weight and can be reused
-  - Almost surely reusable are UUIDs, message digests, timestamps etc.
+  - Almost surely not reusable are UUIDs, message digests, timestamps etc.
 
 
 ## Strategy #5
@@ -231,19 +235,26 @@ Storage total: 95 bytes per triple
 
 ### Further optimization
 
-In order to minimiza traversing and splittig results, the first retrieval
+In order to minimize traversing and splittig results, the first retrieval
 should be made on the term with less average keys. Search order can be balanced
 by establishing a lookup order for indices.
 
 This can be achieved by calling stats on the index databases and looking up the
 database with *most* keys. Since there is an equal number of entries in each of
-the (s:spo, p:spo, o:spo) indices, the one with most keys will have the least
+the (s:po, p:so, o:sp) indices, the one with most keys will have the least
 average number of values per key. If that lookup is done first, the initial
 data set to traverse and filter will be smaller.
 
-Also, keys can be split into equally size chunks without using a
-separator. This relies on the fixed length of the keys. It also allows to use
-memory views that can be sliced without being copied. The performance gain
-should be estimated, since this changes quite a bit of code in the module.
 
+## Strategy #5a
 
+This is a slightly different implementation of #5 that somewhat simplifies and
+perhaps speeds up things a bit. It is the currently employed solution.
+
+The indexing and lookup strtegy is the same; but instead of using a separator
+byte for splitting compound keys, the logic relies on the fact that keys have
+a fixed length and are sliced instead. This *should* result in faster key
+manipulation, also because in most cases `memoryview` buffers can be used
+directly instead of being copied from memory.
+
+Index storage is 90 bytes per triple.
