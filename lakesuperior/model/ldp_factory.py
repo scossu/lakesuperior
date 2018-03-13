@@ -201,7 +201,7 @@ class LdpFactory:
             raise ValueError('Slug cannot start with a slash.')
         # Shortcut!
         if not path and parent_uid == '/':
-            return split_if_legacy(str(uuid4()))
+            return '/' + split_if_legacy(str(uuid4()))
 
         if not parent_uid.startswith('/'):
             raise ValueError('Invalid parent UID: {}'.format(parent_uid))
