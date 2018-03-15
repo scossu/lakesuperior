@@ -126,10 +126,10 @@ def copy():
     'folders are not created.')
 def dump(src, dest, binaries='include'):
     '''
-    [STUB] Dump repository to disk.
+    Dump a repository or parts of it to disk.
 
-    Dump a Fedora 4 repository to disk. The Fedora repo can be
-    LAKEsuperior or another compatible implementation.
+    Dump an LDP repository to disk. The source repo can be LAKEsuperior or
+    another LDP-compatible implementation.
     '''
     pass
 
