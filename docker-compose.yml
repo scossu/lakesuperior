@@ -5,7 +5,7 @@ volumes:
 
 services:
   lakesuperior:
-    build: .
+    image: scossu/lakesuperior:stable
     volumes:
       - lakesuperior:/data
     ports:

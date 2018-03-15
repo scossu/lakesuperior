@@ -383,9 +383,13 @@ class Ldpr(metaclass=ABCMeta):
         if not create:
             rdfly.truncate_rsrc(self.uid)
 
+        remove_trp = {
+            (self.uri, nsc['fcrepo'].lastModified, None),
+            (self.uri, nsc['fcrepo'].lastModifiedBy, None),
+        }
         add_trp = set(self.provided_imr.graph) | self._containment_rel(create)
 
-        self._modify_rsrc(ev_type, add_trp=add_trp)
+        self._modify_rsrc(ev_type, remove_trp, add_trp)
         new_gr = Graph()
         for trp in add_trp:
             new_gr.add(trp)
