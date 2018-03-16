@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import click
+import click_log
 import json
+import logging
 import os
 import sys
 
@@ -11,6 +13,9 @@ from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
 from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+
+logger = logging.getLogger(__name__)
+click_log.basic_config(logger)
 
 rdfly = env.app_globals.rdfly
 nonrdfly = env.app_globals.nonrdfly
@@ -129,6 +134,7 @@ def copy():
     'set to `truncate`, binaries are created as zero-byte files in the proper '
     'folder structure. If set to `skip`, binaries are not exported. Data '
     'folders are not created.')
+@click_log.simple_verbosity_option(logger)
 def dump(src, dest, start, binaries):
     '''
     Dump a repository or parts of it to disk.
@@ -136,6 +142,7 @@ def dump(src, dest, start, binaries):
     Dump an LDP repository to disk. The source repo can be LAKEsuperior or
     another LDP-compatible implementation.
     '''
+    logger.info('Dumping database.')
     return admin_api.dump(src, dest, start, binaries)
 
 

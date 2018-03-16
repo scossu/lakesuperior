@@ -1,5 +1,6 @@
 import logging
 
+import click_log
 from contextlib import ExitStack
 from shutil import rmtree
 
@@ -35,6 +36,7 @@ def stats():
     return repo_stats
 
 
+@click_log.simple_verbosity_option(logger)
 def dump(
         src, dest, start=('/',), binary_handling='include',
         compact_uris=False):
@@ -91,6 +93,7 @@ def _gather_resources(webroot, start_pts):
             _gather_refs(db, webroot, start)
 
 
+@click_log.simple_verbosity_option(logger)
 def _gather_refs(db, base, path):
     '''
     Get the UID of a resource and its relationships recursively.
@@ -107,6 +110,7 @@ def _gather_refs(db, base, path):
     uri = pfx + path
     # Internal URI of destination.
     iuri = uri.replace(pfx, nsc['fcres'])
+    ibase = base.replace(pfx, nsc['fcres'])
 
     rsp = requests.head(uri)
     rsp.raise_for_status()
@@ -129,7 +133,8 @@ def _gather_refs(db, base, path):
 
     get_req = requests.get(get_uri)
     get_req.raise_for_status()
-    data = get_req.content
+    data = get_req.content.replace(base.encode('utf-8'), ibase.encode('utf-8'))
+    logger.debug('Localized data: {}'.format(data.decode('utf-8')))
     gr = Graph(identifier=iuri).parse(data=data, format='turtle')
 
     # First store the resource, so when we recurse, a resource referring back
@@ -148,12 +153,11 @@ def _gather_refs(db, base, path):
     for pred, obj in gr.predicate_objects():
         if (
                 isinstance(obj, URIRef)
-                and obj.startswith(uri)
+                and obj.startswith(iuri)
                 and pred != nsc['fcrepo'].hasParent):
             with db.begin() as txn:
                 with txn.cursor() as cur:
                     # Avoid ∞
                     if cur.set_key(obj.encode('utf-8')):
-                        #import pdb; pdb.set_trace()
                         continue
-            _gather_refs(db, base, obj.replace(base, ''))
+            _gather_refs(db, base, obj.replace(ibase, ''))
