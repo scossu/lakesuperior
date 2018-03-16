@@ -119,19 +119,24 @@ def copy():
 @click.argument('src')
 @click.argument('dest')
 @click.option(
-    '--binaries', '-b', show_default=True,
+    '--start', '-s', default='/', show_default=True,
+    help='Starting point for looking for resources in the repository.\n'
+    'The default `/` value starts at the root, i.e. dumps the whole '
+    'repository.')
+@click.option(
+    '--binaries', '-b', default='include', show_default=True,
     help='If set to `include`, full binaries are included in the dump. If '
     'set to `truncate`, binaries are created as zero-byte files in the proper '
     'folder structure. If set to `skip`, binaries are not exported. Data '
     'folders are not created.')
-def dump(src, dest, binaries='include'):
+def dump(src, dest, start, binaries):
     '''
     Dump a repository or parts of it to disk.
 
     Dump an LDP repository to disk. The source repo can be LAKEsuperior or
     another LDP-compatible implementation.
     '''
-    pass
+    return admin_api.dump(src, dest, start, binaries)
 
 
 @click.command()
