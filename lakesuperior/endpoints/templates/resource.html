@@ -23,6 +23,13 @@
 </nav>
 {% endblock %}
 {% block content %}
+{% if gr[gr.identifier : nsc['rdf'].type : nsc['ldp'].NonRDFSource] %}
+<div class="pull-right">
+    <a href="{{ gr.identifier }}/fcr:content" class="btn btn-success btn-lg">
+        <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
+        Download Content</a>
+</div>
+{% endif %}
 {% set created_ts = arrow.get(
     gr.value(gr.identifier, nsc['fcrepo'].created)).replace(
     tzinfo='local') %}

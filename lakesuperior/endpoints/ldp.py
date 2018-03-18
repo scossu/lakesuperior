@@ -107,9 +107,11 @@ def log_request_end(rsp):
 
 @ldp.route('/<path:uid>', methods=['GET'], strict_slashes=False)
 @ldp.route('/', defaults={'uid': '/'}, methods=['GET'], strict_slashes=False)
-@ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
+@ldp.route('/<path:uid>/fcr:metadata', defaults={'out_fmt' : 'rdf'},
         methods=['GET'])
-def get_resource(uid, force_rdf=False):
+@ldp.route('/<path:uid>/fcr:content', defaults={'out_fmt' : 'non_rdf'},
+        methods=['GET'])
+def get_resource(uid, out_fmt=None):
     '''
     https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
 
@@ -137,16 +139,21 @@ def get_resource(uid, force_rdf=False):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
+        if out_fmt is None:
+            out_fmt = (
+                    'rdf'
+                    if isinstance(rsrc, LdpRs) or is_accept_hdr_rdf_parsable()
+                    else 'non_rdf')
         out_headers.update(_headers_from_metadata(rsrc))
         uri = g.tbox.uid_to_uri(uid)
-        if (
-                isinstance(rsrc, LdpRs)
-                or is_accept_hdr_rdf_parsable()
-                or force_rdf):
+        if out_fmt == 'rdf':
             ggr = g.tbox.globalize_graph(rsrc.out_graph)
             ggr.namespace_manager = nsm
             return _negotiate_content(ggr, out_headers, uid=uid, uri=uri)
         else:
+            if not getattr(rsrc, 'filename', False):
+                return ('{} has no binary content.'.format(rsrc.uid), 404)
+
             logger.info('Streaming out binary content.')
             rsp = make_response(send_file(
                     rsrc.local_path, as_attachment=True,
