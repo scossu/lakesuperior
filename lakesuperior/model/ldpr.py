@@ -249,7 +249,7 @@ class Ldpr(metaclass=ABCMeta):
             if (
                 # Exclude digest hash and version information.
                 t[1] not in {
-                    nsc['premis'].hasMessageDigest,
+                    #nsc['premis'].hasMessageDigest,
                     nsc['fcrepo'].hasVersion,
                 }
             ) and (

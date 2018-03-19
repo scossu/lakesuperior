@@ -63,7 +63,8 @@ class LdpNr(Ldpr):
     def local_path(self):
         cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term.identifier.replace('urn:sha1:',''))
-        return nonrdfly.local_path(cksum)
+        return nonrdfly.__class__.local_path(
+                nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
 
 
     def create_or_replace(self, create_only=False):

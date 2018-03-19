@@ -143,7 +143,8 @@ def dump(src, dest, start, binaries):
     another LDP-compatible implementation.
     '''
     logger.info('Dumping database.')
-    return admin_api.dump(src, dest, start, binaries)
+    entries = admin_api.dump(src, dest, start, binaries)
+    logger.info('Dumped {} resources.'.format(entries))
 
 
 @click.command()

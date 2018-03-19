@@ -15,6 +15,36 @@ class DefaultLayout(BaseNonRdfLayout):
     '''
     Default file layout.
     '''
+    @staticmethod
+    def local_path(root, uuid, bl=4, bc=4):
+        '''
+        Generate the resource path splitting the resource checksum according to
+        configuration parameters.
+
+        @param uuid (string) The resource UUID. This corresponds to the content
+        checksum.
+        '''
+        logger.debug('Generating path from uuid: {}'.format(uuid))
+        term = len(uuid) if bc == 0 else min(bc * bl, len(uuid))
+
+        path = [uuid[i : i + bl] for i in range(0, term, bl)]
+
+        if bc > 0:
+            path.append(uuid[term :])
+        path.insert(0, root)
+
+        return '/'.join(path)
+
+
+    def __init__(self, *args, **kwargs):
+        '''
+        Set up path segmentation parameters.
+        '''
+        super().__init__(*args, **kwargs)
+
+        self.bl = self.config['pairtree_branch_length']
+        self.bc = self.config['pairtree_branches']
+
 
     ## INTERFACE METHODS ##
 
@@ -60,11 +90,11 @@ class DefaultLayout(BaseNonRdfLayout):
             os.unlink(tmp_file)
             raise
         if size == 0:
-            logger.warn('Zero-file size received.')
+            logger.warn('Zero-length file received.')
 
         # Move temp file to final destination.
         uuid = hash.hexdigest()
-        dst = self.local_path(uuid)
+        dst = __class__.local_path(self.root, uuid, self.bl, self.bc)
         logger.debug('Saving file to disk: {}'.format(dst))
         if not os.access(os.path.dirname(dst), os.X_OK):
             os.makedirs(os.path.dirname(dst))
@@ -84,28 +114,4 @@ class DefaultLayout(BaseNonRdfLayout):
         '''
         See BaseNonRdfLayout.delete.
         '''
-        os.unlink(self.local_path(uuid))
-
-
-    ## PROTECTED METHODS ##
-
-    def local_path(self, uuid):
-        '''
-        Generate the resource path splitting the resource checksum according to
-        configuration parameters.
-
-        @param uuid (string) The resource UUID. This corresponds to the content
-        checksum.
-        '''
-        logger.debug('Generating path from uuid: {}'.format(uuid))
-        bl = self.config['pairtree_branch_length']
-        bc = self.config['pairtree_branches']
-        term = len(uuid) if bc==0 else min(bc*bl, len(uuid))
-
-        path = [ uuid[i:i+bl] for i in range(0, term, bl) ]
-
-        if bc > 0:
-            path.append(uuid[term:])
-        path.insert(0, self.root)
-
-        return '/'.join(path)
+        os.unlink(__class__.local_path(self.root, uuid, self.bl, self.bc))

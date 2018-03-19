@@ -119,9 +119,9 @@ def get_resource(uid, out_fmt=None):
 
     @param uid (string) UID of resource to retrieve. The repository root has
     an empty string for UID.
-    @param force_rdf (boolean) Whether to retrieve RDF even if the resource is
+    @param out_fmt (string) Force output to RDF or non-RDF if the resource is
     a LDP-NR. This is not available in the API but is used e.g. by the
-    `*/fcr:metadata` endpoint. The default is False.
+    `*/fcr:metadata` and `*/fcr:content` endpoints. The default is False.
     '''
     logger.info('UID: {}'.format(uid))
     out_headers = std_headers
@@ -154,7 +154,7 @@ def get_resource(uid, out_fmt=None):
             if not getattr(rsrc, 'filename', False):
                 return ('{} has no binary content.'.format(rsrc.uid), 404)
 
-            logger.info('Streaming out binary content.')
+            logger.debug('Streaming out binary content.')
             rsp = make_response(send_file(
                     rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename,
