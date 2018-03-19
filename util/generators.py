@@ -2,11 +2,14 @@ import io
 import random
 
 from hashlib import sha1
+from math import floor
 
 import requests
 import numpy
 
 from PIL import Image
+from rdflib import Graph, URIRef, Literal
+from rdflib.namespace import Namespace, NamespaceManager
 
 
 # @TODO Update this to include code point ranges to be sampled
@@ -51,3 +54,45 @@ def random_image(name, ts=8, ims=256):
     }
 
 
+nsm = NamespaceManager(Graph())
+nsc = {
+    'extp': Namespace('http://ex.org/exturi_p#'),
+    'intp': Namespace('http://ex.org/inturi_p#'),
+    'litp': Namespace('http://ex.org/lit_p#'),
+}
+for pfx, ns in nsc.items():
+    nsm.bind(pfx, ns)
+
+def random_graph(size, ref):
+    '''
+    Generate a synthetic graph.
+
+    @param size (int) size Size of the graph. It will be rounded by a
+    multiplier of 4.
+    '''
+    gr = Graph()
+    gr.namespace_manager = nsm
+    for ii in range(floor(size / 4)):
+        gr.add((
+            URIRef(''),
+            nsc['intp'][str(ii % size)],
+            URIRef(ref)
+        ))
+        gr.add((
+            URIRef(''),
+            nsc['litp'][str(ii % size)],
+            Literal(random_utf8_string(64))
+        ))
+        gr.add((
+            URIRef(''),
+            nsc['litp'][str(ii % size)],
+            Literal(random_utf8_string(64))
+        ))
+        gr.add((
+            URIRef(''),
+            nsc['extp'][str(ii % size)],
+            URIRef('http://example.edu/res/{}'.format(ii // 10))
+        ))
+
+    #print('Graph: {}'.format(gr.serialize(format='turtle').decode('utf-8')))
+    return gr
