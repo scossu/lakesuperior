@@ -229,13 +229,10 @@ def update(uid, update_str, is_metadata=False):
     If False, and the resource being updated is a LDP-NR, an error is raised.
     '''
     rsrc = LdpFactory.from_stored(uid)
-    if LDP_NR_TYPE in rsrc.ldp_types:
-        if is_metadata:
-            rsrc.patch_metadata(update_str)
-        else:
-            raise InvalidResourceError(uid)
-    else:
-        rsrc.patch(update_str)
+    if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
+        raise InvalidResourceError(uid)
+
+    rsrc.sparql_update(update_str)
 
     return rsrc
 
