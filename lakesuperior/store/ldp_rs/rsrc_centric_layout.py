@@ -2,6 +2,9 @@ import logging
 
 from collections import defaultdict
 from itertools import chain
+from string import Template
+
+import arrow
 
 from rdflib import Dataset, Graph, Literal, URIRef, plugin
 from rdflib.namespace import RDF
@@ -178,7 +181,8 @@ class RsrcCentricLayout:
         store.open()
         with TxnManager(store, True):
             with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
-                self.ds.update(f.read())
+                data = Template(f.read())
+                self.ds.update(data.substitute(timestamp=arrow.utcnow()))
 
 
     def get_raw(self, uri, ctx=None):
