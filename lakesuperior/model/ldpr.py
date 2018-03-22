@@ -121,6 +121,9 @@ class Ldpr(metaclass=ABCMeta):
 
         self.provided_imr = provided_imr
 
+        # Disable all internal checks e.g. for raw I/O.
+        self.disable_checks = rdfly.config.get('disable_checks', False)
+
 
     @property
     def rsrc(self):
@@ -345,22 +348,29 @@ class Ldpr(metaclass=ABCMeta):
         @param create_only (boolean) Whether this is a create-only operation.
         '''
         create = create_only or not self.is_stored
-        ev_type = RES_CREATED if create else RES_UPDATED
 
-        self._add_srv_mgd_triples(create)
-        ref_int = rdfly.config['referential_integrity']
-        if ref_int:
-            self._check_ref_int(ref_int)
+        if not self.disable_checks:
+            ev_type = RES_CREATED if create else RES_UPDATED
+            self._add_srv_mgd_triples(create)
+            ref_int = rdfly.config['referential_integrity']
+            if ref_int:
+                self._check_ref_int(ref_int)
 
-        # Delete existing triples if replacing.
-        if not create:
-            rdfly.truncate_rsrc(self.uid)
+            # Delete existing triples if replacing.
+            if not create:
+                rdfly.truncate_rsrc(self.uid)
 
-        remove_trp = {
-            (self.uri, nsc['fcrepo'].lastModified, None),
-            (self.uri, nsc['fcrepo'].lastModifiedBy, None),
-        }
-        add_trp = set(self.provided_imr.graph) | self._containment_rel(create)
+            remove_trp = {
+                (self.uri, nsc['fcrepo'].lastModified, None),
+                (self.uri, nsc['fcrepo'].lastModifiedBy, None),
+            }
+            add_trp = (
+                    set(self.provided_imr.graph)
+                    | self._containment_rel(create))
+        else:
+            remove_trp = set()
+            add_trp = self.provided_imr.graph
+            ev_type = None
 
         self._modify_rsrc(ev_type, remove_trp, add_trp)
         new_gr = Graph()

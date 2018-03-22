@@ -87,6 +87,7 @@ class LdpFactory:
         @param stream (IOStream | None) The provided data stream. This can be
         RDF or non-RDF content, or None. In the latter case, an empty container
         is created.
+        @param **kwargs Arguments passed to the LDP class constructor.
         '''
         uri = nsc['fcres'][uid]
 
