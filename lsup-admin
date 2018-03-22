@@ -125,26 +125,39 @@ def copy():
 @click.option(
     '--start', '-s', default='/', show_default=True,
     help='Starting point for looking for resources in the repository.\n'
-    'The default `/` value starts at the root, i.e. dumps the whole '
+    'The default `/` value starts at the root, i.e. migrates the whole '
     'repository.')
 @click.option(
-    '--binaries', '-b', default='include', show_default=True,
-    help='If set to `include`, full binaries are included in the dump. If '
-    'set to `truncate`, binaries are created as zero-byte files in the proper '
-    'folder structure. If set to `skip`, binaries are not exported. Data '
-    'folders are not created.')
+    '--zero-binaries', '-z', is_flag=True,
+    help='If set, binaries are created as zero-byte files in the proper '
+    'folder structure rather than having their full content copied.')
 @click_log.simple_verbosity_option(logger)
-def migrate(src, dest, start, binaries):
+def migrate(src, dest, start, zero_binaries):
     '''
-    Dump a repository or parts of it to disk.
+    Migrate an LDP repository to LAKEsuperior.
 
-    Dump an LDP repository to disk. The source repo can be LAKEsuperior or
+    This utility creates a fully functional LAKEshore repository from an
+    existing repository. The source repo can be LAKEsuperior or
     another LDP-compatible implementation.
+
+    A folder will be created in the location indicated by ``dest``. If the
+    folder exists already, it will be deleted and recreated. The folder will be
+    populated with the RDF and binary data directories and a default
+    configuration directory. The new repository can be immediately started
+    from this location.
     '''
-    logger.info('Dumping database.')
+    logger.info('Migrating {} into a new repository on {}.'.format(
+        src, dest))
     entries = admin_api.migrate(
-            src, dest, start=start, binary_handling=binaries)
-    logger.info('Dumped {} resources.'.format(entries))
+            src, dest, start=start, zero_binaries=zero_binaries)
+    logger.info('Migrated {} resources.'.format(entries))
+    logger.info('''Migration complete. To start the new repository, from the
+    directory you launched this script run:
+
+    FCREPO_CONFIG_DIR="{}/etc" ./fcrepo
+
+    Make sure that the default port is not being used by another repository.
+    '''.format(dest))
 
 
 @click.command()

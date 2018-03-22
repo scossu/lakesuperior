@@ -69,7 +69,7 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, start_pts, binary_handling='include',
+            self, src, dest, start_pts, zero_binaries=False,
             compact_uris=False):
         """
         Set up base paths and clean up existing directories.
