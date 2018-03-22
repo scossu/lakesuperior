@@ -5,49 +5,72 @@ from os import path, environ
 import hiyapyco
 import yaml
 
-configs = (
-    'application',
-    'logging',
-    'namespaces',
-    'flask',
-)
 
-# This will hold a dict of all configuration values.
-config = {}
+def parse_config(config_dir=None):
+    """
+    Parse configuration from a directory.
 
-# Parse configuration
-CONFIG_DIR = environ.get(
-        'FCREPO_CONFIG_DIR',
-        path.dirname(path.dirname(path.abspath(__file__))) + '/etc.defaults')
+    This is normally called by the standard endpoints (``lsup_admin``, web
+    server, etc.) or by a Python client by importing
+    :py:mod:`lakesuperior.env_setup` but an application using a non-default
+    configuration may specify an alternative configuration directory.
 
-print('Reading configuration at {}'.format(CONFIG_DIR))
+    The directory must have the same structure as the one provided in
+    ``etc.defaults``.
 
-for cname in configs:
-    file = '{}/{}.yml'.format(CONFIG_DIR , cname)
-    with open(file, 'r') as stream:
-        config[cname] = yaml.load(stream, yaml.SafeLoader)
+    :param config_dir: Location on the filesystem of the configuration
+    directory. The default is set by the ``FCREPO_CONFIG_DIR`` environment
+    variable or, if this is not set, the ``etc.defaults`` stock directory.
+    """
+    configs = (
+        'application',
+        'logging',
+        'namespaces',
+        'flask',
+    )
 
-# Merge default and test configurations.
-error_msg = '''
-**************
-** WARNING! **
-**************
+    if not config_dir:
+        config_dir = environ.get('FCREPO_CONFIG_DIR', path.dirname(
+                path.dirname(path.abspath(__file__))) + '/etc.defaults')
 
-Your test {} store location is set to be the same as the production location.
-This means that if you run a test suite, your live data may be wiped clean!
+    # This will hold a dict of all configuration values.
+    _config = {}
 
-Please review your configuration before starting.
-'''
+    print('Reading configuration at {}'.format(config_dir))
 
-test_config = {'application': hiyapyco.load(CONFIG_DIR + '/application.yml',
-        CONFIG_DIR + '/test.yml', method=hiyapyco.METHOD_MERGE)}
+    for cname in configs:
+        file = '{}/{}.yml'.format(config_dir , cname)
+        with open(file, 'r') as stream:
+            _config[cname] = yaml.load(stream, yaml.SafeLoader)
 
-if config['application']['store']['ldp_rs']['location'] \
-        == test_config['application']['store']['ldp_rs']['location']:
-            raise RuntimeError(error_msg.format('RDF'))
-            sys.exit()
+    error_msg = '''
+    **************
+    ** WARNING! **
+    **************
 
-if config['application']['store']['ldp_nr']['path'] \
-        == test_config['application']['store']['ldp_nr']['path']:
-            raise RuntimeError(error_msg.format('binary'))
-            sys.exit()
+    Your test {} store location is set to be the same as the production
+    location. This means that if you run a test suite, your live data may be
+    wiped clean!
+
+    Please review your configuration before starting.
+    '''
+
+    # Merge default and test configurations.
+    test_config = {'application': hiyapyco.load(
+            config_dir + '/application.yml',
+            config_dir + '/test.yml', method=hiyapyco.METHOD_MERGE)}
+
+    if _config['application']['store']['ldp_rs']['location'] \
+            == test_config['application']['store']['ldp_rs']['location']:
+                raise RuntimeError(error_msg.format('RDF'))
+                sys.exit()
+
+    if _config['application']['store']['ldp_nr']['path'] \
+            == test_config['application']['store']['ldp_nr']['path']:
+                raise RuntimeError(error_msg.format('binary'))
+                sys.exit()
+    return _config
+
+
+# Load default configuration.
+config = parse_config()
