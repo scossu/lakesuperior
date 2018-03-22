@@ -100,14 +100,14 @@ class Migrator:
         cur_dir = path.dirname(path.dirname(path.abspath(__file__)))
         self.dbpath = '{}/data/ldprs_store'.format(dest)
         self.fpath = '{}/data/ldpnr_store'.format(dest)
-        config_dir = '{}/etc'.format(dest)
+        self.config_dir = '{}/etc'.format(dest)
 
         shutil.rmtree(dest, ignore_errors=True)
         shutil.copytree(
-                '{}/etc.defaults'.format(cur_dir), config_dir)
+                '{}/etc.defaults'.format(cur_dir), self.config_dir)
 
         # Modify and overwrite destination configuration.
-        orig_config = parse_config(config_dir)
+        orig_config = parse_config(self.config_dir)
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
         # This sets a "hidden" configuration property that bypasses all server
@@ -115,10 +115,11 @@ class Migrator:
         # triples, etc. This will be removed at the end of the migration.
         orig_config['application']['store']['ldp_rs']['disable_checks'] = True
 
-        with open('{}/application.yml'.format(config_dir), 'w') as config_file:
+        with open('{}/application.yml'.format(self.config_dir), 'w') \
+                as config_file:
             config_file.write(yaml.dump(orig_config['application']))
 
-        env.config = parse_config(config_dir)
+        env.config = parse_config(self.config_dir)
         env.app_globals = AppGlobals(env.config)
 
         with TxnManager(env.app_globals.rdf_store, write=True) as txn:
@@ -152,7 +153,7 @@ class Migrator:
                             .format(start))
 
                 self._crawl(start)
-        #self._remove_temp_options()
+        self._remove_temp_options()
         logger.info('Dumped {} resources.'.format(self._ct))
 
         return self._ct
@@ -240,6 +241,7 @@ class Migrator:
 
     def _remove_temp_options(self):
         """Remove temporary options in configuration."""
-        with open('{}/application.yml'.format(config_dir), 'w') as config_file:
-            config['application']['store']['ldp_rs']['disable_checks'] = True
-            config_file.write(yaml.dump(orig_config['application']))
+        del(env.config['application']['store']['ldp_rs']['disable_checks'])
+        with open('{}/application.yml'.format(self.config_dir), 'w') \
+                as config_file:
+            config_file.write(yaml.dump(env.config['application']))
