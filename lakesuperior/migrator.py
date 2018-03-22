@@ -208,19 +208,19 @@ class Migrator:
             bin_resp = requests.get('{}/fcr:content'.format(uri))
             bin_resp.raise_for_status()
             data = bin_resp.content
+            provided_imr = gr.resource(URIRef(iuri))
             mimetype = bin_resp.headers.get('content-type')
+            self.rsrc_api.create_or_replace(
+                    uid, mimetype=mimetype, provided_imr=provided_imr,
+                    stream=BytesIO(data))
         else:
             mimetype = 'text/turtle'
-
-        # Store the resource, so when we recurse, a resource referring back
-        # to this resource will skip it as already existing and avoid an
-        # infinite loop.
-        # @TODO This can be improved by creating a resource API method for
-        # creating a resource from an RDFLib graph. Here we had to deserialize
-        # the RDF data to gather information but have to pass the original
-        # serialized stream, which has to be deserialized again in the model.
-        self.rsrc_api.create_or_replace(
-                uid, mimetype=mimetype, stream=BytesIO(data))
+            # @TODO This can be improved by creating a resource API method for
+            # creating a resource from an RDFLib graph. Here we had to deserialize
+            # the RDF data to gather information but have to pass the original
+            # serialized stream, which has to be deserialized again in the model.
+            self.rsrc_api.create_or_replace(
+                    uid, mimetype=mimetype, stream=BytesIO(data))
 
         self._ct += 1
         if self._ct % 10 ==0:
@@ -233,7 +233,7 @@ class Migrator:
             if (
                     isinstance(obj, URIRef)
                     and obj.startswith(iuri)
-                    and not self.rsrc_api.exists(uid) # Avoid ∞
+                    and not self.rsrc_api.exists(uid) # Avoid ∞ loop
                     and pred not in self.ignored_preds):
                 self._crawl(uid)
 

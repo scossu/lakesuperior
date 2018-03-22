@@ -368,8 +368,11 @@ class Ldpr(metaclass=ABCMeta):
                     set(self.provided_imr.graph)
                     | self._containment_rel(create))
         else:
-            remove_trp = set()
-            add_trp = self.provided_imr.graph
+            try:
+                remove_trp = set(self.imr.graph)
+            except ResourceNotExistsError:
+                remove_trp = set()
+            add_trp = set(self.provided_imr.graph)
             ev_type = None
 
         self._modify_rsrc(ev_type, remove_trp, add_trp)
