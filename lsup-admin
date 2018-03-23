@@ -136,8 +136,14 @@ def copy():
     '--zero-binaries', '-z', is_flag=True,
     help='If set, binaries are created as zero-byte files in the proper '
     'folder structure rather than having their full content copied.')
+@click.option(
+    '--skip-errors', '-e', is_flag=True,
+    help='If set, when the application encounters an error while retrieving '
+    'a resource from the source repository, it will log the error rather than '
+    'quitting. Other exceptions caused by the application will terminate the '
+    'process as usual.')
 @click_log.simple_verbosity_option(logger)
-def migrate(src, dest, start, list_file, zero_binaries):
+def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     '''
     Migrate an LDP repository to LAKEsuperior.
 
@@ -155,7 +161,7 @@ def migrate(src, dest, start, list_file, zero_binaries):
             src, dest))
     entries = admin_api.migrate(
             src, dest, start_pts=start, list_file=list_file,
-            zero_binaries=zero_binaries)
+            zero_binaries=zero_binaries, skip_errors=skip_errors)
     logger.info('Migrated {} resources.'.format(entries))
     logger.info('''Migration complete. To start the new repository, from the
     directory you launched this script run:

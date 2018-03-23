@@ -71,7 +71,8 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, zero_binaries=False, compact_uris=False):
+            self, src, dest, zero_binaries=False, compact_uris=False,
+            skip_errors=False):
         """
         Set up base paths and clean up existing directories.
 
@@ -127,6 +128,7 @@ class Migrator:
 
         self.src = src.rstrip('/')
         self.zero_binaries = zero_binaries
+        self.skip_errors = skip_errors
 
         from lakesuperior.api import resource as rsrc_api
         self.rsrc_api = rsrc_api
@@ -185,7 +187,11 @@ class Migrator:
         iuri = ibase + uid
 
         rsp = requests.head(uri)
-        rsp.raise_for_status()
+        if not self.skip_errors:
+            rsp.raise_for_status()
+        elif rsp.status_code > 399:
+            print('Error retrieving resource {} headers: {} {}'.format(
+                uri, rsp.status_code, rsp.text))
 
         # Determine LDP type.
         ldp_type = 'ldp_nr'
@@ -214,10 +220,14 @@ class Migrator:
         # links.
         get_uri = (
                 uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
-        get_req = requests.get(get_uri)
-        get_req.raise_for_status()
+        get_rsp = requests.get(get_uri)
+        if not self.skip_errors:
+            get_rsp.raise_for_status()
+        elif get_rsp.status_code > 399:
+            print('Error retrieving resource {} body: {} {}'.format(
+                uri, get_rsp.status_code, get_rsp.text))
 
-        data = get_req.content.replace(
+        data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
         #logger.debug('Localized data: {}'.format(data.decode('utf-8')))
         gr = Graph(identifier=iuri).parse(data=data, format='turtle')
@@ -231,10 +241,14 @@ class Migrator:
                         nsc['ebucore'].hasMimeType,
                         default='application/octet-stream'))
             else:
-                bin_resp = requests.get(uri)
-                bin_resp.raise_for_status()
-                data = bin_resp.content
-                mimetype = bin_resp.headers.get('content-type')
+                bin_rsp = requests.get(uri)
+                if not self.skip_errors:
+                    bin_rsp.raise_for_status()
+                elif bin_rsp.status_code > 399:
+                    print('Error retrieving resource {} body: {} {}'.format(
+                        uri, bin_rsp.status_code, bin_rsp.text))
+                data = bin_rsp.content
+                mimetype = bin_rsp.headers.get('content-type')
 
             self.rsrc_api.create_or_replace(
                     uid, mimetype=mimetype, provided_imr=provided_imr,
@@ -247,10 +261,6 @@ class Migrator:
             # serialized stream, which has to be deserialized again in the model.
             self.rsrc_api.create_or_replace(
                     uid, mimetype=mimetype, stream=BytesIO(data))
-
-        self._ct += 1
-        if self._ct % 10 ==0:
-            print('{} resources processed.'.format(self._ct))
 
         # Now, crawl through outbound links.
         # LDP-NR fcr:metadata must be checked too.
@@ -265,6 +275,10 @@ class Migrator:
                     and pred not in self.ignored_preds
             ):
                 print('Object {} will be crawled.'.format(obj_uid))
+                self._ct += 1
+                if self._ct % 10 ==0:
+                    print('{} resources processed.'.format(self._ct))
+
                 self._crawl(urldefrag(obj_uid).url)
 
 
