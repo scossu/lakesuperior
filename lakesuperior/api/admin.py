@@ -28,18 +28,17 @@ def stats():
     return repo_stats
 
 
-def migrate(src, dest, start=('/',), **kwargs):
+def migrate(src, dest, start_pts=None, list_file=None, **kwargs):
     """
     Migrate an LDP repository to a new LAKEsuperior instance.
 
     See :py:meth:`Migrator.__init__`.
     """
-    start_pts = (
-            (start,)
-            if not isinstance(start, list) and not isinstance(start, tuple)
-            else start)
+    if start_pts:
+        if not isinstance(
+                start_pts, list) and not isinstance(start_pts, tuple):
+            start_pts = (start_pts,)
+    elif not list_file:
+        start_pts = ('/',)
 
-    return Migrator(src, dest, start_pts, **kwargs).migrate()
-
-
-
+    return Migrator(src, dest, **kwargs).migrate(start_pts, list_file)

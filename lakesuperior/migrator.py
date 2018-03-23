@@ -71,8 +71,7 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, start_pts, zero_binaries=False,
-            compact_uris=False):
+            self, src, dest, zero_binaries=False, compact_uris=False):
         """
         Set up base paths and clean up existing directories.
 
@@ -84,9 +83,6 @@ class Migrator:
         it must be a writable directory. It will be deleted and recreated. If
         it does not exist, it will be created along with its parents if
         missing.
-        :param start_pts: (tuple|list) List of starting points to retrieve
-        resources from. It would typically be the repository root in case of a
-        full dump or one or more resources in the repository for a partial one.
         :param binary_handling: (string) One of ``include``, ``truncate`` or
         ``split``.
         :param compact_uris: (bool) NOT IMPLEMENTED. Whether the process should
@@ -130,7 +126,6 @@ class Migrator:
         env.app_globals.nonrdfly.bootstrap()
 
         self.src = src.rstrip('/')
-        self.start_pts = start_pts
         self.zero_binaries = zero_binaries
 
         from lakesuperior.api import resource as rsrc_api
@@ -140,22 +135,33 @@ class Migrator:
 
 
 
-    def migrate(self):
+    def migrate(self, start_pts=None, list_file=None):
         """
         Migrate the database.
 
         This method creates a fully functional and configured LAKEsuperior
-        environment contained in a folder from an LDP repository.
+        data set contained in a folder from an LDP repository.
+
+        :param tuple|list start_pts: List of starting points to retrieve
+        resources from. It would typically be the repository root in case of a
+        full dump or one or more resources in the repository for a partial one.
+        :param str listf_ile: path to a local file containing a list of URIs,
+        one per line.
         """
         self._ct = 0
         with StoreWrapper(env.app_globals.rdfly.store):
-            for start in self.start_pts:
-                if not start.startswith('/'):
-                    raise ValueError(
+            if start_pts:
+                for start in start_pts:
+                    if not start.startswith('/'):
+                        raise ValueError(
                             'Starting point {} does not begin with a slash.'
                             .format(start))
 
-                self._crawl(start)
+                    self._crawl(start)
+            elif list_file:
+                with open(list_file, 'r') as fp:
+                    for uri in fp:
+                        self._crawl(uri.strip().replace(self.src, ''))
         self._remove_temp_options()
         logger.info('Dumped {} resources.'.format(self._ct))
 
@@ -249,6 +255,7 @@ class Migrator:
         # Now, crawl through outbound links.
         # LDP-NR fcr:metadata must be checked too.
         for pred, obj in gr.predicate_objects():
+            #import pdb; pdb.set_trace()
             obj_uid = obj.replace(ibase, '')
             if (
                     isinstance(obj, URIRef)
@@ -258,7 +265,6 @@ class Migrator:
                     and pred not in self.ignored_preds
             ):
                 print('Object {} will be crawled.'.format(obj_uid))
-                #import pdb; pdb.set_trace()
                 self._crawl(urldefrag(obj_uid).url)
 
 

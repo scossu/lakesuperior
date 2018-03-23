@@ -123,16 +123,21 @@ def copy():
 @click.argument('src')
 @click.argument('dest')
 @click.option(
-    '--start', '-s', default='/', show_default=True,
+    '--start', '-s', show_default=True,
     help='Starting point for looking for resources in the repository.\n'
     'The default `/` value starts at the root, i.e. migrates the whole '
     'repository.')
+@click.option(
+    '--list-file', '-l', help='Path to a local file containing URIs to be '
+    'used as starting points, one per line. Use this alternatively to `-s`. '
+    'The URIs can be relative to the repository root (e.g. `/a/b/c`) or fully '
+    'qualified (e.g. `https://example.edu/fcrepo/rest/a/b/c`).')
 @click.option(
     '--zero-binaries', '-z', is_flag=True,
     help='If set, binaries are created as zero-byte files in the proper '
     'folder structure rather than having their full content copied.')
 @click_log.simple_verbosity_option(logger)
-def migrate(src, dest, start, zero_binaries):
+def migrate(src, dest, start, list_file, zero_binaries):
     '''
     Migrate an LDP repository to LAKEsuperior.
 
@@ -147,9 +152,10 @@ def migrate(src, dest, start, zero_binaries):
     from this location.
     '''
     logger.info('Migrating {} into a new repository on {}.'.format(
-        src, dest))
+            src, dest))
     entries = admin_api.migrate(
-            src, dest, start=start, zero_binaries=zero_binaries)
+            src, dest, start_pts=start, list_file=list_file,
+            zero_binaries=zero_binaries)
     logger.info('Migrated {} resources.'.format(entries))
     logger.info('''Migration complete. To start the new repository, from the
     directory you launched this script run:
