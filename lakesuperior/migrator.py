@@ -202,13 +202,8 @@ class Migrator:
                         link.get('rel') == 'type'
                         and (
                             link.get('url') == str(nsc['ldp'].RDFSource)
-<<<<<<< HEAD
-                            or link.get('url') == str(nsc['ldp'].Container)
-                        ):
-=======
                             or link.get('url') == str(nsc['ldp'].Container))
                 ):
->>>>>>> f3821f6... Add conditions to avoid loops.
                     # Resource is an LDP-RS.
                     ldp_type = 'ldp_rs'
                     break
@@ -262,6 +257,10 @@ class Migrator:
             self.rsrc_api.create_or_replace(
                     uid, mimetype=mimetype, stream=BytesIO(data))
 
+        self._ct += 1
+        if self._ct % 10 ==0:
+            print('{} resources processed so far.'.format(self._ct))
+
         # Now, crawl through outbound links.
         # LDP-NR fcr:metadata must be checked too.
         for pred, obj in gr.predicate_objects():
@@ -275,10 +274,6 @@ class Migrator:
                     and pred not in self.ignored_preds
             ):
                 print('Object {} will be crawled.'.format(obj_uid))
-                self._ct += 1
-                if self._ct % 10 ==0:
-                    print('{} resources processed.'.format(self._ct))
-
                 self._crawl(urldefrag(obj_uid).url)
 
 
