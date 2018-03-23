@@ -4,6 +4,7 @@ import shutil
 from io import BytesIO
 from contextlib import ContextDecorator
 from os import path
+from urllib.parse import urldefrag
 
 import lmdb
 import requests
@@ -65,6 +66,7 @@ class Migrator:
     ignored_preds = (
         nsc['fcrepo'].hasParent,
         nsc['fcrepo'].hasTransactionProvider,
+        nsc['fcrepo'].hasFixityService,
     )
 
 
@@ -188,13 +190,19 @@ class Migrator:
                         link.get('rel') == 'type'
                         and (
                             link.get('url') == str(nsc['ldp'].RDFSource)
+<<<<<<< HEAD
                             or link.get('url') == str(nsc['ldp'].Container)
                         ):
+=======
+                            or link.get('url') == str(nsc['ldp'].Container))
+                ):
+>>>>>>> f3821f6... Add conditions to avoid loops.
                     # Resource is an LDP-RS.
                     ldp_type = 'ldp_rs'
                     break
         except TypeError:
-            raise ValueError('URI {} is not an LDP resource.'.format(uri))
+            ldp_type = 'ldp_rs'
+            #raise ValueError('URI {} is not an LDP resource.'.format(uri))
 
         # Get the whole RDF document now because we have to know all outbound
         # links.
@@ -217,12 +225,11 @@ class Migrator:
                         nsc['ebucore'].hasMimeType,
                         default='application/octet-stream'))
             else:
-                bin_resp = requests.get('{}/fcr:content'.format(uri))
+                bin_resp = requests.get(uri)
                 bin_resp.raise_for_status()
                 data = bin_resp.content
                 mimetype = bin_resp.headers.get('content-type')
 
-            import pdb; pdb.set_trace()
             self.rsrc_api.create_or_replace(
                     uid, mimetype=mimetype, provided_imr=provided_imr,
                     stream=BytesIO(data))
@@ -242,13 +249,17 @@ class Migrator:
         # Now, crawl through outbound links.
         # LDP-NR fcr:metadata must be checked too.
         for pred, obj in gr.predicate_objects():
-            uid = obj.replace(ibase, '')
+            obj_uid = obj.replace(ibase, '')
             if (
                     isinstance(obj, URIRef)
                     and obj.startswith(iuri)
-                    and not self.rsrc_api.exists(uid) # Avoid ∞ loop
-                    and pred not in self.ignored_preds):
-                self._crawl(uid)
+                    and str(urldefrag(obj).url) != str(iuri)
+                    and not self.rsrc_api.exists(obj_uid) # Avoid ∞ loop
+                    and pred not in self.ignored_preds
+            ):
+                print('Object {} will be crawled.'.format(obj_uid))
+                #import pdb; pdb.set_trace()
+                self._crawl(urldefrag(obj_uid).url)
 
 
     def _remove_temp_options(self):
