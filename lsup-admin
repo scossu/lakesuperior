@@ -30,6 +30,8 @@ def bootstrap():
 
     Additional scaffolding files may be parsed to create initial contents.
     '''
+    import lakesuperior.env_setup
+
     rdfly = env.app_globals.rdfly
     nonrdfly = env.app_globals.nonrdfly
 
@@ -42,8 +44,6 @@ def bootstrap():
     if choice != 'yes':
         click.echo('Aborting.')
         sys.exit(1)
-
-    import lakesuperior.env_setup
 
     click.echo('Initializing graph store at {}'.format(rdfly.store.path))
     with TxnManager(env.app_globals.rdf_store, write=True) as txn:

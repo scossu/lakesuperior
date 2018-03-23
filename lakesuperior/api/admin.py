@@ -34,7 +34,6 @@ def migrate(src, dest, start=('/',), **kwargs):
 
     See :py:meth:`Migrator.__init__`.
     """
-    # 1. Retrieve list of resources.
     start_pts = (
             (start,)
             if not isinstance(start, list) and not isinstance(start, tuple)

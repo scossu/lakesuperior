@@ -129,6 +129,7 @@ class Migrator:
 
         self.src = src.rstrip('/')
         self.start_pts = start_pts
+        self.zero_binaries = zero_binaries
 
         from lakesuperior.api import resource as rsrc_api
         self.rsrc_api = rsrc_api
@@ -206,11 +207,19 @@ class Migrator:
 
         # Grab binary and set new resource parameters.
         if ldp_type == 'ldp_nr':
-            bin_resp = requests.get('{}/fcr:content'.format(uri))
-            bin_resp.raise_for_status()
-            data = bin_resp.content
             provided_imr = gr.resource(URIRef(iuri))
-            mimetype = bin_resp.headers.get('content-type')
+            if self.zero_binaries:
+                data = b'\x00'
+                mimetype = str(provided_imr.value(
+                        nsc['ebucore'].hasMimeType,
+                        default='application/octet-stream'))
+            else:
+                bin_resp = requests.get('{}/fcr:content'.format(uri))
+                bin_resp.raise_for_status()
+                data = bin_resp.content
+                mimetype = bin_resp.headers.get('content-type')
+
+            import pdb; pdb.set_trace()
             self.rsrc_api.create_or_replace(
                     uid, mimetype=mimetype, provided_imr=provided_imr,
                     stream=BytesIO(data))
