@@ -186,7 +186,10 @@ class Migrator:
                     rsp.headers.get('link')):
                 if (
                         link.get('rel') == 'type'
-                        and link.get('url') == str(nsc['ldp'].RDFSource)):
+                        and (
+                            link.get('url') == str(nsc['ldp'].RDFSource)
+                            or link.get('url') == str(nsc['ldp'].Container)
+                        ):
                     # Resource is an LDP-RS.
                     ldp_type = 'ldp_rs'
                     break
