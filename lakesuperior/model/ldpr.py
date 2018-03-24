@@ -97,6 +97,16 @@ class Ldpr(metaclass=ABCMeta):
     }
 
 
+    # Predicates to remove when a resource is replaced.
+    delete_preds_on_replace = {
+        nsc['ebucore'].hasMimeType, 
+        nsc['fcrepo'].lastModified,
+        nsc['fcrepo'].lastModifiedBy,
+        nsc['premis'].hasSize, 
+        nsc['premis'].hasMessageDigest,
+    }
+
+
     ## MAGIC METHODS ##
 
     def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
@@ -359,9 +369,7 @@ class Ldpr(metaclass=ABCMeta):
             rdfly.truncate_rsrc(self.uid)
 
         remove_trp = {
-            (self.uri, nsc['fcrepo'].lastModified, None),
-            (self.uri, nsc['fcrepo'].lastModifiedBy, None),
-        }
+            (self.uri, pred, None) for pred in self.delete_preds_on_replace}
         add_trp = (
                 set(self.provided_imr.graph)
                 | self._containment_rel(create))
