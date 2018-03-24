@@ -14,7 +14,7 @@ from rdflib import Graph, URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.env import env
-from lakesuperior.globals import AppGlobals
+from lakesuperior.globals import AppGlobals, ROOT_UID
 from lakesuperior.config_parser import parse_config
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
@@ -144,6 +144,7 @@ class Migrator:
         :param str listf_ile: path to a local file containing a list of URIs,
         one per line.
         """
+        from lakesuperior.api import resource as rsrc_api
         self._ct = 0
         with StoreWrapper(self.rdfly.store):
             if start_pts:
@@ -153,11 +154,19 @@ class Migrator:
                             'Starting point {} does not begin with a slash.'
                             .format(start))
 
+                    if start != ROOT_UID:
+                        # Create the full hierarchy with link to the parents.
+                        rsrc_api.create_or_replace(start)
+                    # Then populate the new resource and crawl for more
+                    # relationships.
                     self._crawl(start)
             elif list_file:
                 with open(list_file, 'r') as fp:
                     for uri in fp:
-                        self._crawl(uri.strip().replace(self.src, ''))
+                        uid = uri.strip().replace(self.src, '')
+                        if uid != ROOT_UID:
+                            rsrc_api.create_or_replace(uid)
+                        self._crawl(uid)
         logger.info('Dumped {} resources.'.format(self._ct))
 
         return self._ct
@@ -218,6 +227,7 @@ class Migrator:
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
         gr = Graph(identifier=iuri).parse(data=data, format='turtle')
+
         # Store raw graph data. No checks.
         with TxnManager(self.rdfly.store, True):
             self.rdfly.modify_rsrc(uid, add_trp=set(gr))
@@ -243,7 +253,6 @@ class Migrator:
             makedirs(path.dirname(fpath), exist_ok=True)
             with open(fpath, 'wb') as fh:
                 fh.write(data)
-
 
         self._ct += 1
         if self._ct % 10 == 0:
