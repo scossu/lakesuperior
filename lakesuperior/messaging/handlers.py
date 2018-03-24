@@ -14,9 +14,9 @@ class StompHandler(logging.Handler):
     def __init__(self, conf):
         self.conf = conf
         if self.conf['protocol'] == '11':
-            conn_cls = stomp.Connection12
-        elif self.conf['protocol'] == '12':
             conn_cls = stomp.Connection11
+        elif self.conf['protocol'] == '12':
+            conn_cls = stomp.Connection12
         else:
             conn_cls = stomp.Connection10
 
