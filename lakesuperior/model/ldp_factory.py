@@ -78,7 +78,8 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_provided(uid, mimetype, stream=None, provided_imr=None, **kwargs):
+    def from_provided(
+            uid, mimetype=None, stream=None, provided_imr=None, **kwargs):
         '''
         Determine LDP type from request content.
 
@@ -91,12 +92,11 @@ class LdpFactory:
         '''
         uri = nsc['fcres'][uid]
 
-        if not stream:
+        if not stream and not mimetype:
             # Create empty LDPC.
             logger.info('No data received in request. '
                     'Creating empty container.')
             inst = Ldpc(uid, provided_imr=Resource(Graph(), uri), **kwargs)
-
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
             input_rdf = stream.read()
