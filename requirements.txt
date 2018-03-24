@@ -10,6 +10,7 @@ gunicorn==19.7.1
 lmdb==0.93
 numpy==1.14.1
 pytest==3.2.2
+pytest-flask==0.10.0
 rdflib==4.2.2
 requests-toolbelt==0.8.0
 requests==2.18.4
