@@ -56,21 +56,21 @@ def parse_config(config_dir=None):
     '''
 
     # Merge default and test configurations.
-    test_config = {'application': hiyapyco.load(
+    _test_config = {'application': hiyapyco.load(
             config_dir + '/application.yml',
             config_dir + '/test.yml', method=hiyapyco.METHOD_MERGE)}
 
     if _config['application']['store']['ldp_rs']['location'] \
-            == test_config['application']['store']['ldp_rs']['location']:
+            == _test_config['application']['store']['ldp_rs']['location']:
                 raise RuntimeError(error_msg.format('RDF'))
                 sys.exit()
 
     if _config['application']['store']['ldp_nr']['path'] \
-            == test_config['application']['store']['ldp_nr']['path']:
+            == _test_config['application']['store']['ldp_nr']['path']:
                 raise RuntimeError(error_msg.format('binary'))
                 sys.exit()
-    return _config
+    return _config, _test_config
 
 
 # Load default configuration.
-config = parse_config()
+config, test_config = parse_config()

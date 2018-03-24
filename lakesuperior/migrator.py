@@ -106,7 +106,7 @@ class Migrator:
                 '{}/etc.defaults'.format(cur_dir), self.config_dir)
 
         # Modify and overwrite destination configuration.
-        orig_config = parse_config(self.config_dir)
+        orig_config, _ = parse_config(self.config_dir)
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
 
@@ -114,7 +114,7 @@ class Migrator:
                 as config_file:
             config_file.write(yaml.dump(orig_config['application']))
 
-        env.config = parse_config(self.config_dir)
+        env.config, _ = parse_config(self.config_dir)
         env.app_globals = AppGlobals(env.config)
 
         self.rdfly = env.app_globals.rdfly
