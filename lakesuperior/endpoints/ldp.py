@@ -151,7 +151,7 @@ def get_resource(uid, out_fmt=None):
             ggr.namespace_manager = nsm
             return _negotiate_content(ggr, out_headers, uid=uid, uri=uri)
         else:
-            if not getattr(rsrc, 'filename', False):
+            if not getattr(rsrc, 'local_path', False):
                 return ('{} has no binary content.'.format(rsrc.uid), 404)
 
             logger.debug('Streaming out binary content.')
@@ -272,7 +272,6 @@ def put_resource(uid):
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
 
     handling, disposition = set_post_put_params()
-    #import pdb; pdb.set_trace()
     stream, mimetype = _bistream_from_req()
 
     if LdpFactory.is_rdf_parsable(mimetype):
@@ -499,13 +498,6 @@ def _bistream_from_req():
             mimetype = 'application/octet-stream'
 
     return stream, mimetype
-
-
-def _get_bitstream(rsrc):
-    # @TODO This may change in favor of more low-level handling if the file
-    # system is not local.
-    return send_file(rsrc.local_path, as_attachment=True,
-            attachment_filename=rsrc.filename)
 
 
 def _tombstone_response(e, uid):
