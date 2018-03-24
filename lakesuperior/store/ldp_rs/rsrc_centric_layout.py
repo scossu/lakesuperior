@@ -495,7 +495,8 @@ class RsrcCentricLayout:
             # Add metadata.
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
-            meta_gr.set((gr_uri, nsc['fcrepo'].created, env.timestamp_term))
+            ts = getattr(env, 'timestamp_term', Literal(arrow.utcnow()))
+            meta_gr.set((gr_uri, nsc['fcrepo'].created, ts))
             if historic:
                 # @FIXME Ugly reverse engineering.
                 ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')

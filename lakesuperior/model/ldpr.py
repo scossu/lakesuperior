@@ -122,7 +122,6 @@ class Ldpr(metaclass=ABCMeta):
         self.provided_imr = provided_imr
 
         # Disable all internal checks e.g. for raw I/O.
-        self.disable_checks = rdfly.config.get('disable_checks', False)
 
 
     @property
@@ -349,31 +348,23 @@ class Ldpr(metaclass=ABCMeta):
         '''
         create = create_only or not self.is_stored
 
-        if not self.disable_checks:
-            ev_type = RES_CREATED if create else RES_UPDATED
-            self._add_srv_mgd_triples(create)
-            ref_int = rdfly.config['referential_integrity']
-            if ref_int:
-                self._check_ref_int(ref_int)
+        ev_type = RES_CREATED if create else RES_UPDATED
+        self._add_srv_mgd_triples(create)
+        ref_int = rdfly.config['referential_integrity']
+        if ref_int:
+            self._check_ref_int(ref_int)
 
-            # Delete existing triples if replacing.
-            if not create:
-                rdfly.truncate_rsrc(self.uid)
+        # Delete existing triples if replacing.
+        if not create:
+            rdfly.truncate_rsrc(self.uid)
 
-            remove_trp = {
-                (self.uri, nsc['fcrepo'].lastModified, None),
-                (self.uri, nsc['fcrepo'].lastModifiedBy, None),
-            }
-            add_trp = (
-                    set(self.provided_imr.graph)
-                    | self._containment_rel(create))
-        else:
-            try:
-                remove_trp = set(self.imr.graph)
-            except ResourceNotExistsError:
-                remove_trp = set()
-            add_trp = set(self.provided_imr.graph)
-            ev_type = None
+        remove_trp = {
+            (self.uri, nsc['fcrepo'].lastModified, None),
+            (self.uri, nsc['fcrepo'].lastModifiedBy, None),
+        }
+        add_trp = (
+                set(self.provided_imr.graph)
+                | self._containment_rel(create))
 
         self._modify_rsrc(ev_type, remove_trp, add_trp)
         new_gr = Graph()
@@ -593,8 +584,7 @@ class Ldpr(metaclass=ABCMeta):
 
         if (
                 ev_type is not None
-                and env.config['application'].get('messaging')
-                and not self.disable_checks):
+                and env.config['application'].get('messaging')):
             logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
 

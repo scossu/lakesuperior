@@ -3,7 +3,7 @@ import shutil
 
 from io import BytesIO
 from contextlib import ContextDecorator
-from os import path
+from os import makedirs, path
 from urllib.parse import urldefrag
 
 import lmdb
@@ -109,10 +109,6 @@ class Migrator:
         orig_config = parse_config(self.config_dir)
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
-        # This sets a "hidden" configuration property that bypasses all server
-        # management on resource load: referential integrity, server-managed
-        # triples, etc. This will be removed at the end of the migration.
-        orig_config['application']['store']['ldp_rs']['disable_checks'] = True
 
         with open('{}/application.yml'.format(self.config_dir), 'w') \
                 as config_file:
@@ -121,19 +117,17 @@ class Migrator:
         env.config = parse_config(self.config_dir)
         env.app_globals = AppGlobals(env.config)
 
+        self.rdfly = env.app_globals.rdfly
+        self.nonrdfly = env.app_globals.nonrdfly
+
         with TxnManager(env.app_globals.rdf_store, write=True) as txn:
-            env.app_globals.rdfly.bootstrap()
-            env.app_globals.rdfly.store.close()
+            self.rdfly.bootstrap()
+            self.rdfly.store.close()
         env.app_globals.nonrdfly.bootstrap()
 
         self.src = src.rstrip('/')
         self.zero_binaries = zero_binaries
         self.skip_errors = skip_errors
-
-        from lakesuperior.api import resource as rsrc_api
-        self.rsrc_api = rsrc_api
-        print('Environment: {}'.format(env))
-        print('Resource API Environment: {}'.format(self.rsrc_api.env))
 
 
 
@@ -151,7 +145,7 @@ class Migrator:
         one per line.
         """
         self._ct = 0
-        with StoreWrapper(env.app_globals.rdfly.store):
+        with StoreWrapper(self.rdfly.store):
             if start_pts:
                 for start in start_pts:
                     if not start.startswith('/'):
@@ -164,7 +158,6 @@ class Migrator:
                 with open(list_file, 'r') as fp:
                     for uri in fp:
                         self._crawl(uri.strip().replace(self.src, ''))
-        self._remove_temp_options()
         logger.info('Dumped {} resources.'.format(self._ct))
 
         return self._ct
@@ -224,17 +217,16 @@ class Migrator:
 
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
-        #logger.debug('Localized data: {}'.format(data.decode('utf-8')))
         gr = Graph(identifier=iuri).parse(data=data, format='turtle')
+        # Store raw graph data. No checks.
+        with TxnManager(self.rdfly.store, True):
+            self.rdfly.modify_rsrc(uid, add_trp=set(gr))
 
         # Grab binary and set new resource parameters.
         if ldp_type == 'ldp_nr':
             provided_imr = gr.resource(URIRef(iuri))
             if self.zero_binaries:
-                data = b'\x00'
-                mimetype = str(provided_imr.value(
-                        nsc['ebucore'].hasMimeType,
-                        default='application/octet-stream'))
+                data = b''
             else:
                 bin_rsp = requests.get(uri)
                 if not self.skip_errors:
@@ -243,22 +235,18 @@ class Migrator:
                     print('Error retrieving resource {} body: {} {}'.format(
                         uri, bin_rsp.status_code, bin_rsp.text))
                 data = bin_rsp.content
-                mimetype = bin_rsp.headers.get('content-type')
+            #import pdb; pdb.set_trace()
+            uuid = str(gr.value(
+                URIRef(iuri), nsc['premis'].hasMessageDigest)).split(':')[-1]
+            fpath = self.nonrdfly.local_path(
+                    self.nonrdfly.config['path'], uuid)
+            makedirs(path.dirname(fpath), exist_ok=True)
+            with open(fpath, 'wb') as fh:
+                fh.write(data)
 
-            self.rsrc_api.create_or_replace(
-                    uid, mimetype=mimetype, provided_imr=provided_imr,
-                    stream=BytesIO(data))
-        else:
-            mimetype = 'text/turtle'
-            # @TODO This can be improved by creating a resource API method for
-            # creating a resource from an RDFLib graph. Here we had to deserialize
-            # the RDF data to gather information but have to pass the original
-            # serialized stream, which has to be deserialized again in the model.
-            self.rsrc_api.create_or_replace(
-                    uid, mimetype=mimetype, stream=BytesIO(data))
 
         self._ct += 1
-        if self._ct % 10 ==0:
+        if self._ct % 10 == 0:
             print('{} resources processed so far.'.format(self._ct))
 
         # Now, crawl through outbound links.
@@ -266,20 +254,16 @@ class Migrator:
         for pred, obj in gr.predicate_objects():
             #import pdb; pdb.set_trace()
             obj_uid = obj.replace(ibase, '')
-            if (
+            with TxnManager(self.rdfly.store, True):
+                conditions = bool(
                     isinstance(obj, URIRef)
                     and obj.startswith(iuri)
+                    # Avoid ∞ loop with fragment URIs.
                     and str(urldefrag(obj).url) != str(iuri)
-                    and not self.rsrc_api.exists(obj_uid) # Avoid ∞ loop
+                    # Avoid ∞ loop with circular references.
+                    and not self.rdfly.ask_rsrc_exists(obj_uid)
                     and pred not in self.ignored_preds
-            ):
+                )
+            if conditions:
                 print('Object {} will be crawled.'.format(obj_uid))
                 self._crawl(urldefrag(obj_uid).url)
-
-
-    def _remove_temp_options(self):
-        """Remove temporary options in configuration."""
-        del(env.config['application']['store']['ldp_rs']['disable_checks'])
-        with open('{}/application.yml'.format(self.config_dir), 'w') \
-                as config_file:
-            config_file.write(yaml.dump(env.config['application']))

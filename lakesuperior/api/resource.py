@@ -79,7 +79,6 @@ def transaction(write=False):
             if len(env.app_globals.changelog):
                 job = Thread(target=process_queue)
                 job.start()
-            logger.debug('Deleting timestamp: {}'.format(getattr(env, 'timestamp')))
             delattr(env, 'timestamp')
             delattr(env, 'timestamp_term')
             return ret

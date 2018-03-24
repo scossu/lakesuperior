@@ -90,7 +90,6 @@ class LdpFactory:
         @param **kwargs Arguments passed to the LDP class constructor.
         '''
         uri = nsc['fcres'][uid]
-        disable_checks = rdfly.config.get('disable_checks', False)
 
         if not stream:
             # Create empty LDPC.
@@ -118,13 +117,12 @@ class LdpFactory:
 
             inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
-            if not disable_checks:
-                # Make sure we are not updating an LDP-RS with an LDP-NR.
-                if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
-                    raise IncompatibleLdpTypeError(uid, mimetype)
+            # Make sure we are not updating an LDP-RS with an LDP-NR.
+            if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
+                raise IncompatibleLdpTypeError(uid, mimetype)
 
-                if kwargs.get('handling', 'strict') != 'none':
-                    inst._check_mgd_terms(inst.provided_imr.graph)
+            if kwargs.get('handling', 'strict') != 'none':
+                inst._check_mgd_terms(inst.provided_imr.graph)
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.
@@ -134,10 +132,9 @@ class LdpFactory:
             inst = LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 
-            if not disable_checks:
-                # Make sure we are not updating an LDP-NR with an LDP-RS.
-                if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
-                    raise IncompatibleLdpTypeError(uid, mimetype)
+            # Make sure we are not updating an LDP-NR with an LDP-RS.
+            if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
+                raise IncompatibleLdpTypeError(uid, mimetype)
 
         logger.info('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
