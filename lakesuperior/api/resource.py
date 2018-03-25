@@ -20,7 +20,6 @@ from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
 logger = logging.getLogger(__name__)
-app_globals = env.app_globals
 
 __doc__ = '''
 Primary API for resource manipulation.
@@ -75,12 +74,11 @@ def transaction(write=False):
             # update timestamps on resources.
             env.timestamp = arrow.utcnow()
             env.timestamp_term = Literal(env.timestamp, datatype=XSD.dateTime)
-            with TxnManager(app_globals.rdf_store, write=write) as txn:
+            with TxnManager(env.app_globals.rdf_store, write=write) as txn:
                 ret = fn(*args, **kwargs)
-            if len(app_globals.changelog):
+            if len(env.app_globals.changelog):
                 job = Thread(target=process_queue)
                 job.start()
-            logger.debug('Deleting timestamp: {}'.format(getattr(env, 'timestamp')))
             delattr(env, 'timestamp')
             delattr(env, 'timestamp_term')
             return ret
@@ -94,8 +92,8 @@ def process_queue():
     '''
     lock = Lock()
     lock.acquire()
-    while len(app_globals.changelog):
-        send_event_msg(*app_globals.changelog.popleft())
+    while len(env.app_globals.changelog):
+        send_event_msg(*env.app_globals.changelog.popleft())
     lock.release()
 
 
@@ -118,10 +116,34 @@ def send_event_msg(remove_trp, add_trp, metadata):
     subjects = set(remove_dict.keys()) | set(add_dict.keys())
     for rsrc_uri in subjects:
         logger.debug('Processing event for subject: {}'.format(rsrc_uri))
-        app_globals.messenger.send(rsrc_uri, **metadata)
+        env.app_globals.messenger.send(rsrc_uri, **metadata)
 
 
 ### API METHODS ###
+
+@transaction()
+def exists(uid):
+    '''
+    Return whether a resource exists (is stored) in the repository.
+
+    @param uid (string) Resource UID.
+    '''
+    try:
+        exists = LdpFactory.from_stored(uid).is_stored
+    except ResourceNotExistsError:
+        exists = False
+    return exists
+
+
+@transaction()
+def get_metadata(uid):
+    '''
+    Get metadata (admin triples) of an LDPR resource.
+
+    @param uid (string) Resource UID.
+    '''
+    return LdpFactory.from_stored(uid).metadata
+
 
 @transaction()
 def get(uid, repr_options={}):
@@ -229,13 +251,10 @@ def update(uid, update_str, is_metadata=False):
     If False, and the resource being updated is a LDP-NR, an error is raised.
     '''
     rsrc = LdpFactory.from_stored(uid)
-    if LDP_NR_TYPE in rsrc.ldp_types:
-        if is_metadata:
-            rsrc.patch_metadata(update_str)
-        else:
-            raise InvalidResourceError(uid)
-    else:
-        rsrc.patch(update_str)
+    if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
+        raise InvalidResourceError(uid)
+
+    rsrc.sparql_update(update_str)
 
     return rsrc
 
@@ -266,11 +285,11 @@ def delete(uid, soft=True):
     '''
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.
-    refint = app_globals.rdfly.config['referential_integrity']
+    refint = env.app_globals.rdfly.config['referential_integrity']
     inbound = True if refint else inbound
     repr_opts = {'incl_inbound' : True} if refint else {}
 
-    children = app_globals.rdfly.get_descendants(uid)
+    children = env.app_globals.rdfly.get_descendants(uid)
 
     if soft:
         rsrc = LdpFactory.from_stored(uid, repr_opts)
@@ -279,16 +298,16 @@ def delete(uid, soft=True):
         for child_uri in children:
             try:
                 child_rsrc = LdpFactory.from_stored(
-                    app_globals.rdfly.uri_to_uid(child_uri),
+                    env.app_globals.rdfly.uri_to_uid(child_uri),
                     repr_opts={'incl_children' : False})
             except (TombstoneError, ResourceNotExistsError):
                 continue
             child_rsrc.bury_rsrc(inbound, tstone_pointer=rsrc.uri)
     else:
-        ret = app_globals.rdfly.forget_rsrc(uid, inbound)
+        ret = env.app_globals.rdfly.forget_rsrc(uid, inbound)
         for child_uri in children:
-            child_uid = app_globals.rdfly.uri_to_uid(child_uri)
-            ret = app_globals.rdfly.forget_rsrc(child_uid, inbound)
+            child_uid = env.app_globals.rdfly.uri_to_uid(child_uri)
+            ret = env.app_globals.rdfly.forget_rsrc(child_uid, inbound)
 
     return ret
 

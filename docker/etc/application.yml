@@ -87,11 +87,14 @@ messaging:
           # for this route.
           active: True
 
+          # Protocol version. One of `10`, `11` or `12`.
+          protocol: '11'
           host: 127.0.0.1
           port: 61613
+
+          # Credentials are optional.
           username:
           password:
-          protocol: '12'
           destination: '/topic/fcrepo'
 
           # Message format: at the moment the following are supported:

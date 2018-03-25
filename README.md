@@ -1,5 +1,9 @@
 # LAKEsuperior
 
+[![build status](
+  http://img.shields.io/travis/scossu/lakesuperior/master.svg?style=flat)](
+ https://travis-ci.org/username/repo)
+
 LAKEsuperior is an alternative [Fedora Repository](http://fedorarepository.org)
 implementation.
 
@@ -155,6 +159,8 @@ meant to live as a community project.
 [Content Model](doc/notes/model.md)
 
 [Messaging](doc/notes/messaging.md)
+
+[Migration Guide](doc/notes/migration.md)
 
 [Command-Line Reference](doc/notes/cli.md)
 

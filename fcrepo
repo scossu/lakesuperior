@@ -2,4 +2,4 @@
 default_conf_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/etc.defaults"
 conf_dir=${FCREPO_CONFIG_DIR:-$default_conf_dir}
 
-gunicorn -c "${conf_dir}/gunicorn.py" server:fcrepo
+gunicorn -c "${conf_dir}/gunicorn.py" server:fcrepo --preload
