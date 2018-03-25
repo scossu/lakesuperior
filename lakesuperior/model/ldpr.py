@@ -1,5 +1,4 @@
 import logging
-import pdb
 
 from abc import ABCMeta
 from collections import defaultdict
@@ -7,12 +6,9 @@ from uuid import uuid4
 
 import arrow
 
-from flask import current_app
 from rdflib import Graph, URIRef, Literal
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
-from rdflib.plugins.sparql.algebra import translateUpdate
-from rdflib.plugins.sparql.parser import parseUpdate
 
 from lakesuperior.env import env
 from lakesuperior.globals import (

@@ -1,12 +1,10 @@
 import logging
 import shutil
 
-from io import BytesIO
 from contextlib import ContextDecorator
 from os import makedirs, path
 from urllib.parse import urldefrag
 
-import lmdb
 import requests
 import yaml
 

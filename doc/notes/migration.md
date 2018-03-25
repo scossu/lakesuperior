@@ -1,7 +1,16 @@
-# Migration Guide
+# Migration, Backup & Restore
 
-A command-line utility is available as part of the `lsup-admin` suite
-to migrate contents from a Fedora implementation to LAKEsuperior.
+All LAKEsuperior data is by default fully contained in a folder. This means
+that only the data, configurations and code folders are needed for it to run.
+No Postgres, Redis, or such. Data and configuration folders can be moved around
+as needed.
+
+## Migration Tool
+
+Migration is the process of importing and converting data from a different
+Fedora or LDP implementation into a new LAKEsuperior instance. This process
+uses the HTTP/LDP API of the original repository. A command-line utility is
+available as part of the `lsup-admin` suite to assist in such operation.
 
 A repository can be migrated with a one-line command such as:
 
@@ -41,4 +50,9 @@ Two approaches to migration are possible:
    The resources can be indicated by their fully qualified URIs or paths
    relative to the repository root. (*TODO latter option needs testing*)
 
+## Backup And Restore
 
+A back up of a LAKEshore repository consists in copying the RDF and non-RDF
+data folders. These folders are indicated in the application configuration. The
+default commands provided by your OS (`cp`, `rsync`, `tar` etc. for Unix) are
+all is needed.
