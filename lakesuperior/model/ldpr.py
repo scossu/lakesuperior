@@ -97,6 +97,16 @@ class Ldpr(metaclass=ABCMeta):
     }
 
 
+    # Predicates to remove when a resource is replaced.
+    delete_preds_on_replace = {
+        nsc['ebucore'].hasMimeType, 
+        nsc['fcrepo'].lastModified,
+        nsc['fcrepo'].lastModifiedBy,
+        nsc['premis'].hasSize, 
+        nsc['premis'].hasMessageDigest,
+    }
+
+
     ## MAGIC METHODS ##
 
     def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
@@ -120,6 +130,8 @@ class Ldpr(metaclass=ABCMeta):
         self.tbox = Toolbox()
 
         self.provided_imr = provided_imr
+
+        # Disable all internal checks e.g. for raw I/O.
 
 
     @property
@@ -212,33 +224,6 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
-    def stored_or_new_imr(self):
-        '''
-        Extract an in-memory resource for harmless manipulation and output.
-
-        If the resource is not stored (yet), initialize a new IMR with basic
-        triples.
-
-        @return rdflib.resource.Resource
-        '''
-        if not hasattr(self, '_imr'):
-            if hasattr(self, '_imr_options'):
-                #logger.debug('IMR options:{}'.format(self._imr_options))
-                imr_options = self._imr_options
-            else:
-                imr_options = {}
-            options = dict(imr_options, strict=True)
-            try:
-                self._imr = rdfly.extract_imr(self.uid, **options)
-            except ResourceNotExistsError:
-                self._imr = Resource(Graph(), self.uri)
-                for t in self.base_types:
-                    self.imr.add(RDF.type, t)
-
-        return self._imr
-
-
-    @property
     def out_graph(self):
         '''
         Retun a graph of the resource's IMR formatted for output.
@@ -249,7 +234,7 @@ class Ldpr(metaclass=ABCMeta):
             if (
                 # Exclude digest hash and version information.
                 t[1] not in {
-                    nsc['premis'].hasMessageDigest,
+                    #nsc['premis'].hasMessageDigest,
                     nsc['fcrepo'].hasVersion,
                 }
             ) and (
@@ -372,8 +357,8 @@ class Ldpr(metaclass=ABCMeta):
         @param create_only (boolean) Whether this is a create-only operation.
         '''
         create = create_only or not self.is_stored
-        ev_type = RES_CREATED if create else RES_UPDATED
 
+        ev_type = RES_CREATED if create else RES_UPDATED
         self._add_srv_mgd_triples(create)
         ref_int = rdfly.config['referential_integrity']
         if ref_int:
@@ -384,10 +369,10 @@ class Ldpr(metaclass=ABCMeta):
             rdfly.truncate_rsrc(self.uid)
 
         remove_trp = {
-            (self.uri, nsc['fcrepo'].lastModified, None),
-            (self.uri, nsc['fcrepo'].lastModifiedBy, None),
-        }
-        add_trp = set(self.provided_imr.graph) | self._containment_rel(create)
+            (self.uri, pred, None) for pred in self.delete_preds_on_replace}
+        add_trp = (
+                set(self.provided_imr.graph)
+                | self._containment_rel(create))
 
         self._modify_rsrc(ev_type, remove_trp, add_trp)
         new_gr = Graph()
@@ -397,24 +382,6 @@ class Ldpr(metaclass=ABCMeta):
         self.imr = new_gr.resource(self.uri)
 
         return ev_type
-
-
-    def put(self):
-        '''
-        https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
-        '''
-        return self.create_or_replace()
-
-
-    def patch(self, update_str):
-        '''
-        Update an existing resource by applying a SPARQL-UPDATE query.
-
-        @param update_str (string) SPARQL-Update staements.
-        '''
-        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
-
-        return self._sparql_update(update_str)
 
 
     def bury_rsrc(self, inbound, tstone_pointer=None):
@@ -510,7 +477,7 @@ class Ldpr(metaclass=ABCMeta):
             (self.uri, nsc['fcrepo'].hasVersion, ver_uri),
             (self.uri, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
         }
-        self._modify_rsrc(RES_UPDATED, add_trp=rsrc_add_gr, notify=False)
+        self._modify_rsrc(RES_UPDATED, add_trp=rsrc_add_gr)
 
         return ver_uid
 
@@ -608,7 +575,7 @@ class Ldpr(metaclass=ABCMeta):
 
 
     def _modify_rsrc(
-            self, ev_type, remove_trp=set(), add_trp=set(), notify=True):
+            self, ev_type, remove_trp=set(), add_trp=set()):
         '''
         Low-level method to modify a graph for a single resource.
 
@@ -616,14 +583,16 @@ class Ldpr(metaclass=ABCMeta):
         store that needs to be notified should be performed by invoking this
         method.
 
-        @param ev_type (string) The type of event (create, update, delete).
+        @param ev_type (string|None) The type of event (create, update,
+        delete) or None. In the latter case, no notification is sent.
         @param remove_trp (set) Triples to be removed.
         @param add_trp (set) Triples to be added.
-        @param notify (boolean) Whether to send a message about the change.
         '''
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        if notify and env.config['application'].get('messaging'):
+        if (
+                ev_type is not None
+                and env.config['application'].get('messaging')):
             logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
 
@@ -857,7 +826,7 @@ class Ldpr(metaclass=ABCMeta):
         return add_trp
 
 
-    def _sparql_update(self, update_str, notify=True):
+    def sparql_update(self, update_str):
         '''
         Apply a SPARQL update to a resource.
 
@@ -868,7 +837,7 @@ class Ldpr(metaclass=ABCMeta):
         self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
         delta = self._sparql_delta(update_str)
 
-        return self._modify_rsrc(RES_UPDATED, *delta, notify=notify)
+        return self._modify_rsrc(RES_UPDATED, *delta)
 
 
     def _sparql_delta(self, q):

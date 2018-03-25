@@ -7,10 +7,11 @@ from uuid import uuid4
 import arrow
 import requests
 
-from rdflib import Graph, URIRef, Literal
+from util.generators import random_image, random_graph, random_utf8_string
 
-from util.generators import random_utf8_string
-
+__doc__ = '''
+Benchmark script to measure write performance.
+'''
 
 default_n = 10000
 webroot = 'http://localhost:8000/ldp'
@@ -31,7 +32,9 @@ if choice and choice.lower() not in ('post', 'put'):
     raise ValueError('Not a valid verb.')
 method = choice.lower() or 'put'
 
-# Generate 10,000 children of root node.
+sys.stdout.write('RDF Sources (r), Non-RDF (n), or Both 50/50 (b)? [b] >')
+choice = input().lower()
+res_type = choice or 'b'
 
 if del_cont  == 'y':
     requests.delete(container_uri, headers={'prefer': 'no-tombstone'})
@@ -44,52 +47,37 @@ ckpt = start
 print('Inserting {} children.'.format(n))
 
 # URI used to establish an in-repo relationship.
-prev_uri = container_uri
-size = 50 # Size of graph to be multiplied by 4.
+ref = container_uri
+size = 200 # Size of graph.
 
 try:
-    for i in range(1, n):
+    for i in range(1, n + 1):
         url = '{}/{}'.format(container_uri, uuid4()) if method == 'put' \
                 else container_uri
 
-        # Generate synthetic graph.
-        #print('generating graph: {}'.format(i))
-        g = Graph()
-        for ii in range(size):
-            g.add((
-                URIRef(''),
-                URIRef('urn:inturi_p:{}'.format(ii % size)),
-                URIRef(prev_uri)
-            ))
-            g.add((
-                URIRef(''),
-                URIRef('urn:lit_p:{}'.format(ii % size)),
-                Literal(random_utf8_string(64))
-            ))
-            g.add((
-                URIRef(''),
-                URIRef('urn:lit_p:{}'.format(ii % size)),
-                Literal(random_utf8_string(64))
-            ))
-            g.add((
-                URIRef(''),
-                URIRef('urn:exturi_p:{}'.format(ii % size)),
-                URIRef('http://exmple.edu/res/{}'.format(ii // 10))
-            ))
+        if res_type == 'r' or (res_type == 'b' and i % 2 == 0):
+            data = random_graph(size, ref).serialize(format='ttl')
+            headers = {'content-type': 'text/turtle'}
+        else:
+            img = random_image(name=uuid4(), ts=16, ims=512)
+            data = img['content']
+            data.seek(0)
+            headers = {
+                    'content-type': 'image/png',
+                    'content-disposition': 'attachment; filename="{}"'
+                        .format(uuid4())}
 
-        # Send request.
-        rsp = requests.request(
-                method, url, data=g.serialize(format='ttl'),
-                headers={ 'content-type': 'text/turtle'})
+        #import pdb; pdb.set_trace()
+        rsp = requests.request(method, url, data=data, headers=headers)
         rsp.raise_for_status()
-        prev_uri = rsp.headers['location']
+        ref = rsp.headers['location']
         if i % 10 == 0:
             now = arrow.utcnow()
             tdelta = now - ckpt
             ckpt = now
             print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
 except KeyboardInterrupt:
-    print('Interruped after {} iterations.'.format(i))
+    print('Interrupted after {} iterations.'.format(i))
 
 tdelta = arrow.utcnow() - start
 print('Total elapsed time: {}'.format(tdelta))

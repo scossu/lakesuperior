@@ -160,6 +160,8 @@ meant to live as a community project.
 
 [Messaging](doc/notes/messaging.md)
 
+[Migration Guide](doc/notes/migration.md)
+
 [Command-Line Reference](doc/notes/cli.md)
 
 [Storage Implementation](doc/notes/storage.md)
