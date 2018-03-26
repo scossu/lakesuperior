@@ -2,7 +2,7 @@
 
 [![build status](
   http://img.shields.io/travis/scossu/lakesuperior/master.svg?style=flat)](
- https://travis-ci.org/username/repo)
+ https://travis-ci.org/scossu/lakesuperior)
 
 LAKEsuperior is an alternative [Fedora Repository](http://fedorarepository.org)
 implementation.
