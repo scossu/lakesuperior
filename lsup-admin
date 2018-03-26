@@ -21,7 +21,7 @@ def admin():
 
 @click.command()
 def bootstrap():
-    '''
+    """
     Bootstrap binary and graph stores.
 
     This script will parse configuration files and initialize a filesystem and
@@ -29,7 +29,7 @@ def bootstrap():
     It is used in test suites and on a first run.
 
     Additional scaffolding files may be parsed to create initial contents.
-    '''
+    """
     import lakesuperior.env_setup
 
     rdfly = env.app_globals.rdfly
@@ -62,12 +62,12 @@ def bootstrap():
     '--human', '-h', is_flag=True, flag_value=True,
     help='Print a human-readable string. By default, JSON is printed.')
 def stats(human=False):
-    '''
+    """
     Print repository statistics.
 
     @param human (bool) Whether to output the data in human-readable
     format.
-    '''
+    """
     stat_data = admin_api.stats()
     if human:
         click.echo(
@@ -79,9 +79,9 @@ def stats(human=False):
 
 @click.command()
 def check_fixity(uid):
-    '''
+    """
     [STUB] Check fixity of a resource.
-    '''
+    """
     pass
 
 
@@ -116,22 +116,9 @@ def check_refint(config_folder=None):
 
 @click.command()
 def cleanup():
-    '''
+    """
     [STUB] Clean up orphan database items.
-    '''
-    pass
-
-
-@click.command()
-def copy():
-    '''
-    [STUB] Copy (backup) repository data.
-
-    This s a low-level copy, which backs up the data directories containing
-    graph and binary data. It may not even be a necessary command since to
-    back up the repository one just needs to copy the binary and metadata
-    folders.
-    '''
+    """
     pass
 
 
@@ -160,7 +147,7 @@ def copy():
     'process as usual.')
 @click_log.simple_verbosity_option(logger)
 def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
-    '''
+    """
     Migrate an LDP repository to LAKEsuperior.
 
     This utility creates a fully functional LAKEshore repository from an
@@ -172,19 +159,20 @@ def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     populated with the RDF and binary data directories and a default
     configuration directory. The new repository can be immediately started
     from this location.
-    '''
+    """
     logger.info('Migrating {} into a new repository on {}.'.format(
             src, dest))
     entries = admin_api.migrate(
             src, dest, start_pts=start, list_file=list_file,
             zero_binaries=zero_binaries, skip_errors=skip_errors)
     logger.info('Migrated {} resources.'.format(entries))
-    logger.info('''Migration complete. To start the new repository, from the
+    logger.info("""Migration complete. To start the new repository, from the
     directory you launched this script run:
 
     FCREPO_CONFIG_DIR="{}/etc" ./fcrepo
 
     Make sure that the default port is not being used by another repository.
+    """.format(dest))
 
 
 admin.add_command(bootstrap)

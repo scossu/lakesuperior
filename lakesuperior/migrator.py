@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 class StoreWrapper(ContextDecorator):
-    '''
+    """
     Open and close a store.
-    '''
+    """
     def __init__(self, store):
         self.store = store
 
@@ -74,17 +74,17 @@ class Migrator:
         """
         Set up base paths and clean up existing directories.
 
-        :param src: (URIRef) Webroot of source repository. This must
+        :param rdflib.URIRef src: Webroot of source repository. This must
         correspond to the LDP root node (for Fedora it can be e.g.
         ``http://localhost:8080fcrepo/rest/``) and is used to determine if URIs
         retrieved are managed by this repository.
-        :param dest: (str) Destination repository path. If the location exists
+        :param str dest: Destination repository path. If the location exists
         it must be a writable directory. It will be deleted and recreated. If
         it does not exist, it will be created along with its parents if
         missing.
-        :param binary_handling: (string) One of ``include``, ``truncate`` or
+        :param str binary_handling: One of ``include``, ``truncate`` or
         ``split``.
-        :param compact_uris: (bool) NOT IMPLEMENTED. Whether the process should
+        :param bool compact_uris: NOT IMPLEMENTED. Whether the process should
         attempt to compact URIs generated with broken up path segments. If the
         UID matches a pattern such as `/12/34/56/123456...` it is converted to
         `/123456...`. This would remove a lot of cruft caused by the pairtree
@@ -112,7 +112,7 @@ class Migrator:
                 as config_file:
             config_file.write(yaml.dump(orig_config['application']))
 
-        env.config, _ = parse_config(self.config_dir)
+        env.config = parse_config(self.config_dir)[0]
         env.app_globals = AppGlobals(env.config)
 
         self.rdfly = env.app_globals.rdfly
@@ -136,7 +136,8 @@ class Migrator:
         This method creates a fully functional and configured LAKEsuperior
         data set contained in a folder from an LDP repository.
 
-        :param tuple|list start_pts: List of starting points to retrieve
+        :param start_pts: List of starting points to retrieve
+        :type start_pts: tuple or list 
         resources from. It would typically be the repository root in case of a
         full dump or one or more resources in the repository for a partial one.
         :param str listf_ile: path to a local file containing a list of URIs,
@@ -177,7 +178,7 @@ class Migrator:
         This method recurses into itself each time a reference to a resource
         managed by the repository is encountered.
 
-        @param uid (string) The path relative to the source server webroot
+        :param str uid: The path relative to the source server webroot
         pointing to the resource to crawl, effectively the resource UID.
         """
         ibase = str(nsc['fcres'])
