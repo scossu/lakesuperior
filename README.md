@@ -63,6 +63,8 @@ hands-on managers who are interested in evaluating this project.
 
 ## Quick Install: Running in Docker
 
+Thanks to @mbklein for docker image and instructions.
+
 You can run LAKEsuperior in Docker for a hands-off quickstart.
 
 [Docker](http://docker.com/) is a containerization platform that allows you to run
