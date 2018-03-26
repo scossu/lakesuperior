@@ -1,9 +1,8 @@
 # Migration, Backup & Restore
 
-All LAKEsuperior data is by default fully contained in a folder. This means
-that only the data, configurations and code folders are needed for it to run.
-No Postgres, Redis, or such. Data and configuration folders can be moved around
-as needed.
+The LAKEsuperior dataset is by default fully contained in a folder. This means
+that only the data, configuration and code are needed for it to run.
+No Postgres, Redis, or such. These folders can be moved around as needed.
 
 ## Migration Tool
 
@@ -50,9 +49,9 @@ Two approaches to migration are possible:
    The resources can be indicated by their fully qualified URIs or paths
    relative to the repository root. (*TODO latter option needs testing*)
 
-## Backup And Restore
+## Backup & Restore
 
 A back up of a LAKEshore repository consists in copying the RDF and non-RDF
-data folders. These folders are indicated in the application configuration. The
-default commands provided by your OS (`cp`, `rsync`, `tar` etc. for Unix) are
-all is needed.
+data folders. The location of these folders is indicated in the application
+configuration. The default commands provided by your OS (`cp`, `rsync`,
+`tar` etc. for Unix) are all is needed.
