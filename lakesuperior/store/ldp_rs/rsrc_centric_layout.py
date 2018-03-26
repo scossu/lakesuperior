@@ -534,21 +534,6 @@ class RsrcCentricLayout:
         return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
 
 
-    def clear_smt(self, uid):
-        '''
-        This is an ugly way to deal with lenient SPARQL update statements
-        that may insert server-managed triples into a user graph.
-
-        @TODO Deprecate when a solution to provide a sanitized SPARQL update
-        sring is found.
-        '''
-        gr = self.ds.graph(nsc['fcmain'][uid])
-        for p in srv_mgd_predicates:
-            gr.remove((None, p, None))
-        for t in srv_mgd_types:
-            gr.remove((None, RDF.type, t))
-
-
     def uri_to_uid(self, uri):
         '''
         Convert an internal URI to a UID.
