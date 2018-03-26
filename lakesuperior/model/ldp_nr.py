@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class LdpNr(Ldpr):
-    '''LDP-NR (Non-RDF Source).
+    """LDP-NR (Non-RDF Source).
 
     Definition: https://www.w3.org/TR/ldp/#ldpnr
-    '''
+    """
 
     base_types = {
         nsc['fcrepo'].Binary,
@@ -31,9 +31,9 @@ class LdpNr(Ldpr):
 
     def __init__(self, uuid, stream=None, mimetype=None,
             disposition=None, **kwargs):
-        '''
+        """
         Extends Ldpr.__init__ by adding LDP-NR specific parameters.
-        '''
+        """
         super().__init__(uuid, **kwargs)
 
         self._imr_options = {}
@@ -68,11 +68,12 @@ class LdpNr(Ldpr):
 
 
     def create_or_replace(self, create_only=False):
-        '''
+        """
         Create a new binary resource with a corresponding RDF representation.
 
-        @param file (Stream) A Stream resource representing the uploaded file.
-        '''
+        :param bool create_only: Whether the resource is being created or
+        updated.
+        """
         # Persist the stream.
         self.digest, self.size = nonrdfly.persist(self.stream)
 
@@ -91,14 +92,14 @@ class LdpNr(Ldpr):
     ## PROTECTED METHODS ##
 
     def _add_srv_mgd_triples(self, create=False):
-        '''
+        """
         Add all metadata for the RDF representation of the LDP-NR.
 
-        @param stream (BufferedIO) The uploaded data stream.
-        @param mimetype (string) MIME type of the uploaded file.
-        @param disposition (defaultdict) The `Content-Disposition` header
-        content, parsed through `parse_rfc7240`.
-        '''
+        :param BufferedIO stream: The uploaded data stream.
+        :param str mimetype: MIME type of the uploaded file.
+        :param defaultdict disposition: The ``Content-Disposition`` header
+        content, parsed through ``parse_rfc7240``.
+        """
         super()._add_srv_mgd_triples(create)
 
         # File size.

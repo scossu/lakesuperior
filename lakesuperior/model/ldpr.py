@@ -106,8 +106,8 @@ class Ldpr(metaclass=ABCMeta):
     ## MAGIC METHODS ##
 
     def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
-        """Instantiate an in-memory LDP resource that can be loaded from and
-        persisted to storage.
+        """
+        Instantiate an in-memory LDP resource.
 
         :param str uid: uid of the resource. If None (must be explicitly
         set) it refers to the root node. It can also be the full URI or URN,
@@ -136,7 +136,7 @@ class Ldpr(metaclass=ABCMeta):
         The RDFLib resource representing this LDPR. This is a live
         representation of the stored data if present.
 
-        @return rdflib.resource.Resource
+        :rtype: rdflib.resource.Resource
         """
         if not hasattr(self, '_rsrc'):
             self._rsrc = rdfly.ds.resource(self.uri)
@@ -285,7 +285,7 @@ class Ldpr(metaclass=ABCMeta):
     def types(self):
         """All RDF types.
 
-        @return set(rdflib.term.URIRef)
+        :rtype: set(rdflib.term.URIRef)
         """
         if not hasattr(self, '_types'):
             if len(self.metadata.graph):
@@ -305,7 +305,7 @@ class Ldpr(metaclass=ABCMeta):
     def ldp_types(self):
         """The LDP types.
 
-        @return set(rdflib.term.URIRef)
+        :rtype: set(rdflib.term.URIRef)
         """
         if not hasattr(self, '_ldp_types'):
             self._ldp_types = {t for t in self.types if nsc['ldp'] in t}
@@ -486,14 +486,14 @@ class Ldpr(metaclass=ABCMeta):
         """
         tstone_trp = set(rdfly.extract_imr(self.uid, strict=False).graph)
 
-        ver_rsp = self.version_info.graph.query("""
+        ver_rsp = self.version_info.graph.query('''
         SELECT ?uid {
           ?latest fcrepo:hasVersionLabel ?uid ;
             fcrepo:created ?ts .
         }
         ORDER BY DESC(?ts)
         LIMIT 1
-        """)
+        ''')
         ver_uid = str(ver_rsp.bindings[0]['uid'])
         ver_trp = set(rdfly.get_metadata(self.uid, ver_uid).graph)
 
@@ -686,7 +686,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Add server-managed triples to a provided IMR.
 
-        :param  create: Whether the resource is being created.
+        :param create: Whether the resource is being created.
         """
         # Base LDP types.
         for t in self.base_types:
@@ -725,11 +725,11 @@ class Ldpr(metaclass=ABCMeta):
         is found.
 
         E.g. if only fcres:/a exists:
-        - If fcres:/a/b/c/d is being created, a becomes container of
-          fcres:/a/b/c/d. Also, containers are created for fcres:a/b and
-          fcres:/a/b/c.
-        - If fcres:/e is being created, the root node becomes container of
-          fcres:/e.
+        - If ``fcres:/a/b/c/d`` is being created, a becomes container of
+          ``fcres:/a/b/c/d``. Also, containers are created for fcres:a/b and
+          ``fcres:/a/b/c``.
+        - If ``fcres:/e`` is being created, the root node becomes container of
+          ``fcres:/e``.
 
         :param bool create: Whether the resource is being created. If false,
         the parent container is not updated.
@@ -775,7 +775,8 @@ class Ldpr(metaclass=ABCMeta):
         Remove duplicate triples from add and remove delta graphs, which would
         otherwise contain unnecessary statements that annul each other.
 
-        @return tuple 2 "clean" sets of respectively remove statements and
+        :rtype: tuple
+        :return: 2 "clean" sets of respectively remove statements and
         add statements.
         """
         return (
