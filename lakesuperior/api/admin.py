@@ -1,6 +1,8 @@
 import logging
 
+from lakesuperior.config_parser import parse_config
 from lakesuperior.env import env
+from lakesuperior.globals import AppGlobals
 from lakesuperior.migrator import Migrator
 from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
@@ -18,7 +20,8 @@ def stats():
     """
     Get repository statistics.
 
-    @return dict Store statistics, resource statistics.
+    :rtype: dict
+    :return: Store statistics, resource statistics.
     """
     import lakesuperior.env_setup
     repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
@@ -42,3 +45,19 @@ def migrate(src, dest, start_pts=None, list_file=None, **kwargs):
         start_pts = ('/',)
 
     return Migrator(src, dest, **kwargs).migrate(start_pts, list_file)
+
+
+def integrity_check(config_dir=None):
+    """
+    Check integrity of the data set.
+
+    At the moment this is limited to referential integrity. Other checks can
+    be added and triggered by different argument flags.
+    """
+    if config_dir:
+        env.config = parse_config(config_dir)[0]
+        env.app_globals = AppGlobals(env.config)
+    else:
+        import lakesuperior.env_setup
+    with TxnManager(env.app_globals.rdfly.store):
+        return { t for t in env.app_globals.rdfly.find_refint_violations()}

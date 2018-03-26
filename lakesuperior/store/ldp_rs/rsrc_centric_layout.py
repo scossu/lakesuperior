@@ -556,6 +556,28 @@ class RsrcCentricLayout:
         return str(uri).replace(nsc['fcres'], '')
 
 
+    def find_refint_violations(self):
+        """
+        Find all referential integrity violations.
+
+        This method looks for dangling relationships within a repository by
+        checking the objects of each triple; if the object is an in-repo
+        resource reference, and no resource with that URI results to be in the
+        repo, that triple is reported.
+
+        :rtype: set
+        :return: Triples referencing a repository URI that is not a resource.
+        """
+        for obj in self.store.all_terms('o'):
+            if (
+                    isinstance(obj, URIRef)
+                    and str(obj).startswith(nsc['fcres'])
+                    and not self.ask_rsrc_exists(self.uri_to_uid(obj))):
+                print('Object not found: {}'.format(obj))
+                for trp in self.store.triples((None, None, obj)):
+                    yield trp
+
+
     ## PROTECTED MEMBERS ##
 
     def _check_rsrc_status(self, rsrc):

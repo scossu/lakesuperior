@@ -85,17 +85,33 @@ def check_fixity(uid):
     pass
 
 
+@click.option(
+    '--config-folder', '-c', default=None, help='Alternative configuration '
+    'folder to look up. If not set, the location set in the environment or '
+    'the default configuration is used.')
 @click.command()
-def check_refint():
-    '''
-    [STUB] Check referential integrity.
+def check_refint(config_folder=None):
+    """
+    Check referential integrity.
 
     This command scans the graph store to verify that all references to
     resources within the repository are effectively pointing to existing
-    resources. For repositories set up with the `referencial_integrity` option
+    resources. For repositories set up with the `referential_integrity` option
     (the default), this is a pre-condition for a consistent data set.
-    '''
-    pass
+
+    Note: this check is run regardless of whether the repository enforces
+    referential integrity.
+    """
+    check_results = admin_api.integrity_check(config_folder)
+    click.echo('Integrity check results:')
+    if len(check_results):
+        click.echo(click.style('Inconsistencies found!', fg='red', bold=True))
+        click.echo('Missing object in the following triples:')
+        for trp in check_results:
+            click.echo(' '.join([str(t) for t in trp[0]]))
+    else:
+        click.echo(click.style('Clean. ', fg='green', bold=True)
+                + 'No inconsistency found.')
 
 
 @click.command()
