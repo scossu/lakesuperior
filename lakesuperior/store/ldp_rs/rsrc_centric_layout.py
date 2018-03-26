@@ -2,6 +2,9 @@ import logging
 
 from collections import defaultdict
 from itertools import chain
+from string import Template
+
+import arrow
 
 from rdflib import Dataset, Graph, Literal, URIRef, plugin
 from rdflib.namespace import RDF
@@ -178,7 +181,8 @@ class RsrcCentricLayout:
         store.open()
         with TxnManager(store, True):
             with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
-                self.ds.update(f.read())
+                data = Template(f.read())
+                self.ds.update(data.substitute(timestamp=arrow.utcnow()))
 
 
     def get_raw(self, uri, ctx=None):
@@ -491,7 +495,8 @@ class RsrcCentricLayout:
             # Add metadata.
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
-            meta_gr.set((gr_uri, nsc['fcrepo'].created, env.timestamp_term))
+            ts = getattr(env, 'timestamp_term', Literal(arrow.utcnow()))
+            meta_gr.set((gr_uri, nsc['fcrepo'].created, ts))
             if historic:
                 # @FIXME Ugly reverse engineering.
                 ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')
@@ -529,26 +534,33 @@ class RsrcCentricLayout:
         return '{}/{}/{}'.format(uid, VERS_CONT_LABEL, ver_uid)
 
 
-    def clear_smt(self, uid):
-        '''
-        This is an ugly way to deal with lenient SPARQL update statements
-        that may insert server-managed triples into a user graph.
-
-        @TODO Deprecate when a solution to provide a sanitized SPARQL update
-        sring is found.
-        '''
-        gr = self.ds.graph(nsc['fcmain'][uid])
-        for p in srv_mgd_predicates:
-            gr.remove((None, p, None))
-        for t in srv_mgd_types:
-            gr.remove((None, RDF.type, t))
-
-
     def uri_to_uid(self, uri):
         '''
         Convert an internal URI to a UID.
         '''
         return str(uri).replace(nsc['fcres'], '')
+
+
+    def find_refint_violations(self):
+        """
+        Find all referential integrity violations.
+
+        This method looks for dangling relationships within a repository by
+        checking the objects of each triple; if the object is an in-repo
+        resource reference, and no resource with that URI results to be in the
+        repo, that triple is reported.
+
+        :rtype: set
+        :return: Triples referencing a repository URI that is not a resource.
+        """
+        for obj in self.store.all_terms('o'):
+            if (
+                    isinstance(obj, URIRef)
+                    and str(obj).startswith(nsc['fcres'])
+                    and not self.ask_rsrc_exists(self.uri_to_uid(obj))):
+                print('Object not found: {}'.format(obj))
+                for trp in self.store.triples((None, None, obj)):
+                    yield trp
 
 
     ## PROTECTED MEMBERS ##

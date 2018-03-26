@@ -167,13 +167,22 @@ specs should not notice any difference.
 The following are improvements in performance or usability that can only be taken
 advantage of if client code is adjusted.
 
-### LDP-NR metadata by content negotiation
+### LDP-NR content and metadata
 
 FCREPO4 relies on the `/fcr:metadata` identifier to retrieve RDF metadata about
 an LDP-NR. LAKEsuperior supports this as a legacy option, but encourages the
-use of content negotiation to do the same. Any request to an LDP-NR with an
-`Accept` header set to one of the supported RDF serialization formats will
-yield the RDF metadata of the resource instead of the binary contents.
+use of content negotiation to do the same while offering explicit endpoints
+for RDF and non-RDF content retrieval.
+
+Any request to an LDP-NR with an `Accept` header set to one of the supported
+RDF serialization formats will yield the RDF metadata of the resource instead
+of the binary contents.
+
+The `fcr:metadata` URI returns the RDF metadata of a LDP-NR.
+
+The `fcr:content` URI returns the non-RDF content.
+
+The two optionsabove return an HTTP error if requested for a LDP-RS.
 
 ### "Include" and "Omit" options for children
 

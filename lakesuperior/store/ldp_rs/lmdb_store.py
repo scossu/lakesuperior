@@ -595,6 +595,30 @@ class LmdbStore(Store):
                 yield self._from_key(spok), contexts
 
 
+    def all_terms(self, term_type):
+        """
+        Return all terms of a type (``s``, ``p``, or ``o``) in the store.
+
+        :param str term_type: one of ``s``, ``p`` or ``o``.
+
+        :rtype: Iterator(rdflib.term.Identifier)
+        :return: Iterator of all terms.
+        :raise ValueError: if the term type is not one of the expected values.
+        """
+        if term_type == 's':
+            idx_label = 's:po'
+        elif term_type == 'p':
+            idx_label = 'p:so'
+        elif term_type == 'o':
+            idx_label = 'o:sp'
+        else:
+            raise ValueError('Term type must be \'s\', \'p\' or \'o\'.')
+
+        with self.cur(idx_label) as cur:
+            for key in cur.iternext_nodup():
+                yield self._from_key(key)[0]
+
+
     def bind(self, prefix, namespace):
         '''
         Bind a prefix to a namespace.

@@ -63,7 +63,8 @@ class LdpNr(Ldpr):
     def local_path(self):
         cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term.identifier.replace('urn:sha1:',''))
-        return nonrdfly.local_path(cksum)
+        return nonrdfly.__class__.local_path(
+                nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
 
 
     def create_or_replace(self, create_only=False):
@@ -85,17 +86,6 @@ class LdpNr(Ldpr):
             raise
         else:
             return ev_type
-
-
-    def patch_metadata(self, update_str):
-        '''
-        Update resource metadata by applying a SPARQL-UPDATE query.
-
-        @param update_str (string) SPARQL-Update staements.
-        '''
-        self.handling = 'lenient' # FCREPO does that and Hyrax requires it.
-
-        return self._sparql_update(update_str)
 
 
     ## PROTECTED METHODS ##

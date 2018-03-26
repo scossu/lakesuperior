@@ -23,15 +23,20 @@
 </nav>
 {% endblock %}
 {% block content %}
+{% if gr[gr.identifier : nsc['rdf'].type : nsc['ldp'].NonRDFSource] %}
+<div class="pull-right">
+    <a href="{{ gr.identifier }}/fcr:content" class="btn btn-success btn-lg">
+        <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
+        Download Content</a>
+</div>
+{% endif %}
 {% set created_ts = arrow.get(
-    gr.value(gr.identifier, nsc['fcrepo'].created)).replace(
-    tzinfo='local') %}
+    gr.value(gr.identifier, nsc['fcrepo'].created)).to('local') %}
 {% set updated_ts = arrow.get(
-    gr.value(gr.identifier, nsc['fcrepo'].lastModified)).replace(
-    tzinfo='local') %}
-<p><strong>Created on:</strong>&nbsp;{{ created_ts }}&nbsp;
+    gr.value(gr.identifier, nsc['fcrepo'].lastModified)).to('local') %}
+<p><strong>Created on:</strong>&nbsp;{{ created_ts.format('YYYY-MM-DD HH:mm:ss ZZ') }}&nbsp;
 ({{created_ts.humanize() }})</p>
-<p><strong>Last updated on:</strong>&nbsp;{{ updated_ts }}&nbsp;
+<p><strong>Last updated on:</strong>&nbsp;{{ updated_ts.format('YYYY-MM-DD HH:mm:ss ZZ') }}&nbsp;
 ({{updated_ts.humanize() }})</p>
 <p><strong>Types:</strong>
 {% for t in gr[gr.identifier : nsc['rdf'].type :] | sort %}
