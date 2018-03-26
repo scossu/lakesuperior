@@ -22,15 +22,15 @@ Its main goals are:
 ## Key features
 
 - Drop-in replacement for Fedora4 (with some
-  [caveats](doc/notes/fcrepo4_deltas.md)); currently being tested with Hyrax 2
+  [caveats](docs/notes/fcrepo4_deltas.md)); currently being tested with Hyrax 2
 - Very stable persistence layer based on [LMDB](https://symas.com/lmdb/) and
   filesystem. Fully ACID-compliant writes guarantee consistency of data.
 - Term-based search (*planned*) and SPARQL Query API + UI
 - No performance penalty for storing many resources under the same container; no
   [kudzu](https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml)
   pairtree segmentation <sup id="a1">[1](#f1)</sup>
-- Extensible [provenance metadata](doc/notes/model.md) tracking
-- [Multi-modal access](doc/notes/architecture.md#multi-modal-access): HTTP
+- Extensible [provenance metadata](docs/notes/model.md) tracking
+- [Multi-modal access](docs/notes/architecture.md#multi-modal-access): HTTP
   (REST), command line interface and native Python API.
 - Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
 
@@ -39,7 +39,7 @@ Implementation of the official [Fedora API specs](https://fedora.info/spec/)
 foreseen in the short term, however it would be a natural evolution of this
 project if it gains support.
 
-Please make sure you read the [Delta document](doc/notes/fcrepo4_deltas.md) for
+Please make sure you read the [Delta document](docs/notes/fcrepo4_deltas.md) for
 divergences with the official Fedora4 implementation.
 
 ## Target Audience
@@ -154,19 +154,19 @@ meant to live as a community project.
 
 ## Technical documentation
 
-[Architecture Overview](doc/notes/architecture.md)
+[Architecture Overview](docs/notes/architecture.md)
 
-[Content Model](doc/notes/model.md)
+[Content Model](docs/notes/model.md)
 
-[Messaging](doc/notes/messaging.md)
+[Messaging](docs/notes/messaging.md)
 
-[Migration, Backup & Restore](doc/notes/migration.md)
+[Migration, Backup & Restore](docs/notes/migration.md)
 
-[Command-Line Reference](doc/notes/cli.md)
+[Command-Line Reference](docs/notes/cli.md)
 
-[Storage Implementation](doc/notes/storage.md)
+[Storage Implementation](docs/notes/storage.md)
 
-[Performance Benchmarks](doc/notes/performance.md)
+[Performance Benchmarks](docs/notes/performance.md)
 
 ---
 
