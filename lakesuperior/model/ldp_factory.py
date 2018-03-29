@@ -80,15 +80,16 @@ class LdpFactory:
     @staticmethod
     def from_provided(
             uid, mimetype=None, stream=None, provided_imr=None, **kwargs):
-        """
+        r"""
         Determine LDP type from request content.
 
         :param str uid: UID of the resource to be created or updated.
         :param str mimetype: The provided content MIME type.
-        :param IOStream | None stream: The provided data stream. This can be
-        RDF or non-RDF content, or None. In the latter case, an empty container
-        is created.
-        @param **kwargs Arguments passed to the LDP class constructor.
+        :param stream: The provided data stream. This can be
+            RDF or non-RDF content, or None. In the latter case, an empty
+            container is created.
+        :type stream: IOStream or None
+        :param \*\*kwargs: Arguments passed to the LDP class constructor.
         """
         uri = nsc['fcres'][uid]
 
@@ -189,11 +190,12 @@ class LdpFactory:
         found or a 409 if the parent is not a valid container.
 
         :param str parent_uid: UID of the parent resource. It must be an
-        existing LDPC.
+            existing LDPC.
         :param str path: path to the resource, relative to the parent.
 
-        @return string The confirmed resource UID. This may be different from
-        what has been indicated.
+        :rtype: str
+        :return: The confirmed resource UID. This may be different from
+            what has been indicated.
         """
         def split_if_legacy(uid):
             if config['application']['store']['ldp_rs']['legacy_ptree_split']:

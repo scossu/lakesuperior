@@ -181,18 +181,17 @@ class LmdbStore(Store):
     graph_aware = True
     transaction_aware = True
 
+    MAP_SIZE = 1024 ** 4 # 1Tb
     """
     LMDB map size. See http://lmdb.readthedocs.io/en/release/#environment-class
     """
-    MAP_SIZE = 1024 ** 4 # 1Tb
 
+    TERM_HASH_ALGO = 'sha1'
     """
-    Key hashing algorithm. If you are paranoid, use SHA1. Otherwise, MD5 is
-    faster and takes up less space (16 bytes vs. 20 bytes). This may make a
-    visible difference because keys are generated and parsed very often.
+    Term hashing algorithm. SHA1 is the default.
     """
-    KEY_HASH_ALGO = 'sha1'
 
+    KEY_LENGTH = 5
     """
     Fixed length for term keys.
 
@@ -210,13 +209,12 @@ class LmdbStore(Store):
     exchange between the store and the application. However it is sensible not
     to expose this value as a configuration option.
     """
-    KEY_LENGTH = 5
 
-    """
-    Lexical sequence start. `\x01` is fine since no special characters are used,
-    but it's good to leave a spare for potential future use.
-    """
     KEY_START = 1
+    """
+    Lexical sequence start. ``\\x01`` is fine since no special characters are
+    used, but it's good to leave a spare for potential future use.
+    """
 
     data_keys = (
         # Term key to serialized term content: 1:1
@@ -237,6 +235,7 @@ class LmdbStore(Store):
         's:po', 'p:so', 'o:sp', 'c:spo',
     )
 
+    _lookup_rank = ('s', 'o', 'p')
     """
     Order in which keys are looked up if two terms are bound.
     The indices with the smallest average number of values per key should be
@@ -245,16 +244,15 @@ class LmdbStore(Store):
     If we want to get fancy, this can be rebalanced from time to time by
     looking up the number of keys in (s:po, p:so, o:sp).
     """
-    _lookup_rank = ('s', 'o', 'p')
 
-    """
-    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
-    """
     _lookup_ordering = {
         's:po': (0, 1, 2),
         'p:so': (1, 0, 2),
         'o:sp': (2, 0, 1),
     }
+    """
+    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
+    """
 
     data_env = None
     idx_env = None
@@ -412,8 +410,8 @@ class LmdbStore(Store):
 
         :param lmdb.Transaction txn: This can be a read or write transaction.
 
-        @return dict(string, lmdb.Cursor) Keys are index labels, values are
-        index cursors.
+        :rtype: dict(string, lmdb.Cursor)
+        :return: dict of index labels, index cursors.
         """
         return {
             key: txn.cursor(self.dbs[key])
@@ -453,7 +451,7 @@ class LmdbStore(Store):
         """
         Add a triple and start indexing.
 
-        :param tuple:rdflib.Identifier triple: Tuple of three identifiers.
+        :param tuple(rdflib.Identifier) triple: Tuple of three identifiers.
         :param context: Context identifier. ``None`` inserts in the default
         graph.
         :type context: rdflib.Identifier or None
@@ -649,10 +647,12 @@ class LmdbStore(Store):
         """
         Get the prefix associated with a namespace.
 
-        @NOTE A namespace can be only bound to one prefix in this
+        **Note:** A namespace can be only bound to one prefix in this
         implementation.
 
-        :param rdflib.URIRef namespace: Fully qualified URI of namespace.
+        :param rdflib.Namespace namespace: Fully qualified namespace.
+
+        :rtype: str or None
         """
         with self.cur('ns:pfx') as cur:
             prefix = cur.get(s2b(namespace))
@@ -660,7 +660,10 @@ class LmdbStore(Store):
 
 
     def namespaces(self):
-        """Get an iterator of all prefix: namespace bindings."""
+        """Get an iterator of all prefix: namespace bindings.
+
+        :rtype: Iterator(tuple(str, rdflib.Namespace))
+        """
         with self.cur('pfx:ns') as cur:
             for pfx, ns in iter(cur):
                 yield (b2s(pfx), Namespace(b2s(ns)))
@@ -670,7 +673,7 @@ class LmdbStore(Store):
         """
         Get a list of all contexts.
 
-        @return generator(Graph)
+        :rtype: Iterator(rdflib.Graph)
         """
         if triple and any(triple):
             with self.cur('spo:c') as cur:
@@ -698,7 +701,7 @@ class LmdbStore(Store):
         Therefore it needs to open a write transaction. This is not ideal
         but the only way to handle datasets in RDFLib.
 
-        :param URIRef graph: URI of the named graph to add.
+        :param rdflib.URIRef graph: URI of the named graph to add.
         """
         if isinstance(graph, Graph):
             graph = graph.identifier
@@ -732,7 +735,7 @@ class LmdbStore(Store):
         """
         Remove all triples from graph and the graph itself.
 
-        :param URIRef graph: URI of the named graph to remove.
+        :param rdflib.URIRef graph: URI of the named graph to remove.
         """
         if isinstance(graph, Graph):
             graph = graph.identifier
@@ -887,7 +890,9 @@ class LmdbStore(Store):
         :type key: bytes or memoryview
         compound one in which case the function will return multiple terms.
 
-        @return tuple
+        :rtype: tuple(rdflib.term.Identifier)
+        :return: The term(s) associated with the key(s). The result is always
+        a tuple even for single results.
         """
         with self.cur('t:st') as cur:
             return tuple(
@@ -900,7 +905,7 @@ class LmdbStore(Store):
         Convert a triple, quad or term into a key.
 
         The key is the checksum of the pickled object, therefore unique for
-        that object. The hashing algorithm is specified in `KEY_HASH_ALGO`.
+        that object. The hashing algorithm is specified in `TERM_HASH_ALGO`.
 
         :param Object obj: Anything that can be reduced to terms stored in the
         database. Pairs of terms, as well as triples and quads, are expressed
@@ -927,7 +932,7 @@ class LmdbStore(Store):
 
     def _hash(self, s):
         """Get the hash value of a serialized object."""
-        return hashlib.new(self.KEY_HASH_ALGO, s).digest()
+        return hashlib.new(self.TERM_HASH_ALGO, s).digest()
 
 
     def _split_key(self, keys):

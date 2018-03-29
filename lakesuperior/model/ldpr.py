@@ -36,21 +36,16 @@ class Ldpr(metaclass=ABCMeta):
     the vanilla LDP specifications. This is extended by the
     `lakesuperior.fcrepo.Resource` class.
 
-    Inheritance graph: https://www.w3.org/TR/ldp/#fig-ldpc-types
+    See inheritance graph: https://www.w3.org/TR/ldp/#fig-ldpc-types
 
-    Note: Even though LdpNr (which is a subclass of Ldpr) handles binary files,
-    it still has an RDF representation in the triplestore. Hence, some of the
-    RDF-related methods are defined in this class rather than in the LdpRs
-    class.
+    **Note**: Even though LdpNr (which is a subclass of Ldpr) handles binary
+    files, it still has an RDF representation in the triplestore. Hence, some
+    of the RDF-related methods are defined in this class rather than in
+    :class:`~lakesuperior.model.ldp_rs.LdpRs`.
 
-    Convention notes:
-
-    All the methods in this class handle internal UUIDs (URN). Public-facing
-    URIs are converted from URNs and passed by these methods to the methods
-    handling HTTP negotiation.
-
-    The data passed to the store layout for processing should be in a graph.
-    All conversion from request payload strings is done here.
+    **Note:** Only internal facing (``info:fcres``-prefixed) URIs are handled
+    in this class. Public-facing URI conversion is handled in the
+    :mod:`~lakesuperior.endpoints.ldp` module.
     """
 
     EMBED_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
@@ -67,33 +62,35 @@ class Ldpr(metaclass=ABCMeta):
     WRKF_INBOUND = '_workflow:inbound_'
     WRKF_OUTBOUND = '_workflow:outbound_'
 
-    # Default user to be used for the `createdBy` and `lastUpdatedBy` if a user
-    # is not provided.
     DEFAULT_USER = Literal('BypassAdmin')
+    """
+    Default user to be used for the `createdBy` and `lastUpdatedBy` if a user
+    is not provided.
+    """
 
-    # RDF Types that populate a new resource.
     base_types = {
         nsc['fcrepo'].Resource,
         nsc['ldp'].Resource,
         nsc['ldp'].RDFSource,
     }
+    """RDF Types that populate a new resource."""
 
-    # Predicates that do not get removed when a resource is replaced.
     protected_pred = (
         nsc['fcrepo'].created,
         nsc['fcrepo'].createdBy,
         nsc['ldp'].contains,
     )
+    """Predicates that do not get removed when a resource is replaced."""
 
-    # Server-managed RDF types ignored in the RDF payload if the resource is
-    # being created. N.B. These still raise an error if the resource exists.
     smt_allow_on_create = {
         nsc['ldp'].DirectContainer,
         nsc['ldp'].IndirectContainer,
     }
+    """
+    Server-managed RDF types ignored in the RDF payload if the resource is
+    being created. N.B. These still raise an error if the resource exists.
+    """
 
-
-    # Predicates to remove when a resource is replaced.
     delete_preds_on_replace = {
         nsc['ebucore'].hasMimeType,
         nsc['fcrepo'].lastModified,
@@ -101,6 +98,7 @@ class Ldpr(metaclass=ABCMeta):
         nsc['premis'].hasSize,
         nsc['premis'].hasMessageDigest,
     }
+    """Predicates to remove when a resource is replaced."""
 
 
     ## MAGIC METHODS ##
@@ -385,9 +383,10 @@ class Ldpr(metaclass=ABCMeta):
         Delete a single resource and create a tombstone.
 
         :param boolean inbound: Whether to delete the inbound relationships.
-        :param URIRef tstone_pointer: If set to a URN, this creates a pointer
-        to the tombstone of the resource that used to contain the deleted
-        resource. Otherwise the deleted resource becomes a tombstone.
+        :param rdflib.URIRef tstone_pointer: If set to a URN, this creates a
+            pointer to the tombstone of the resource that used to contain the
+            deleted resource. Otherwise the deleted resource becomes a
+            tombstone.
         """
         logger.info('Burying resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
@@ -520,12 +519,12 @@ class Ldpr(metaclass=ABCMeta):
         """
         Create a new version of the resource.
 
-        NOTE: This creates an event only for the resource being updated (due
-        to the added `hasVersion` triple and possibly to the `hasVersions` one)
-        but not for the version being created.
+        **Note:** This creates an event only for the resource being updated
+        (due to the added `hasVersion` triple and possibly to the
+        ``hasVersions`` one) but not for the version being created.
 
-        :param  ver_uid: Version ver_uid. If already existing, an exception is
-        raised.
+        :param str ver_uid: Version UID. If already existing, a new version UID
+            is minted.
         """
         if not ver_uid or ver_uid in self.version_uids:
             ver_uid = str(uuid4())
@@ -539,7 +538,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param str ver_uid: Version UID.
         :param boolean backup: Whether to create a backup snapshot. Default is
-        true.
+            True.
         """
         # Create a backup snapshot.
         if backup:

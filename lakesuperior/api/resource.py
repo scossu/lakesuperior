@@ -156,8 +156,8 @@ def get(uid, repr_options={}):
 
     :param string uid: Resource UID.
     :param  repr_options: (dict(bool)) Representation options. This is a dict
-    that is unpacked downstream in the process. The default empty dict results
-    in default values. The accepted dict keys are:
+        that is unpacked downstream in the process. The default empty dict
+        results in default values. The accepted dict keys are:
 
     - incl_inbound: include inbound references. Default: False.
     - incl_children: include children URIs. Default: True.
@@ -188,7 +188,7 @@ def get_version(uid, ver_uid):
 
 @transaction(True)
 def create(parent, slug, **kwargs):
-    """
+    r"""
     Mint a new UID and create a resource.
 
     The UID is computed from a given parent UID and a "slug", a proposed path
@@ -196,13 +196,13 @@ def create(parent, slug, **kwargs):
     path but it may use a different one if a conflict with an existing resource
     arises.
 
-    :param string parent: UID of the parent resource.
-    :param string slug: Tentative path relative to the parent UID.
-    :param **kwargs: Other parameters are passed to the
-    LdpFactory.from_provided method. Please see the documentation for that
-    method for explanation of individual parameters.
+    :param str parent: UID of the parent resource.
+    :param str slug: Tentative path relative to the parent UID.
+    :param \*\*kwargs: Other parameters are passed to the
+      :meth:`LdpFactory.from_provided` method.
 
-    @return string UID of the new resource.
+    :rtype: str
+    :return: UID of the new resource.
     """
     uid = LdpFactory.mint_uid(parent, slug)
     logger.debug('Minted UID for new resource: {}'.format(uid))
@@ -215,7 +215,7 @@ def create(parent, slug, **kwargs):
 
 @transaction(True)
 def create_or_replace(uid, stream=None, **kwargs):
-    """
+    r"""
     Create or replace a resource with a specified UID.
 
     If the resource already exists, all user-provided properties of the
@@ -225,12 +225,12 @@ def create_or_replace(uid, stream=None, **kwargs):
 
     :param string uid: UID of the resource to be created or updated.
     :param BytesIO stream: Content stream. If empty, an empty container is
-    created.
-    :param **kwargs: Other parameters are passed to the
-    LdpFactory.from_provided method. Please see the documentation for that
-    method for explanation of individual parameters.
+        created.
+    :param \*\*kwargs: Other parameters are passed to the
+        :meth:`LdpFactory.from_provided` method.
 
-    @return string Event type: whether the resource was created or updated.
+    :rtype: str
+    :return: Event type: whether the resource was created or updated.
     """
     rsrc = LdpFactory.from_provided(uid, stream=stream, **kwargs)
 
@@ -249,7 +249,8 @@ def update(uid, update_str, is_metadata=False):
     :param string uid: Resource UID.
     :param string update_str: SPARQL-Update statements.
     :param bool is_metadata: Whether the resource metadata is being updated.
-    If False, and the resource being updated is a LDP-NR, an error is raised.
+        If False, and the resource being updated is a LDP-NR, an error is
+        raised.
     """
     rsrc = LdpFactory.from_stored(uid)
     if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
@@ -267,10 +268,11 @@ def create_version(uid, ver_uid):
 
     :param string uid: Resource UID.
     :param string ver_uid: Version UID to be appended to the resource URI.
-    NOTE: this is a "slug", i.e. the version URI is not guaranteed to be the
-    one indicated.
+      NOTE: this is a "slug", i.e. the version URI is not guaranteed to be the
+      one indicated.
 
-    @return string Version UID.
+    :rtype: str
+    :return: Version UID.
     """
     return LdpFactory.from_stored(uid).create_version(ver_uid)
 
@@ -282,7 +284,7 @@ def delete(uid, soft=True):
 
     :param string uid: Resource UID.
     :param bool soft: Whether to perform a soft-delete and leave a
-    tombstone resource, or wipe any memory of the resource.
+      tombstone resource, or wipe any memory of the resource.
     """
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.
@@ -318,6 +320,6 @@ def resurrect(uid):
     """
     Reinstate a buried (soft-deleted) resource.
 
-    :param string uid: Resource UID.
+    :param str uid: Resource UID.
     """
     return LdpFactory.from_stored(uid).resurrect_rsrc()

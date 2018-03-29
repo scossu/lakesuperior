@@ -18,10 +18,10 @@ def sparql_query(qry_str, fmt):
     Send a SPARQL query to the triplestore.
 
     :param str qry_str: SPARQL query string. SPARQL 1.1 Query Language
-    (https://www.w3.org/TR/sparql11-query/) is supported.
+        (https://www.w3.org/TR/sparql11-query/) is supported.
     :param str fmt: Serialization format. This varies depending on the
-    query type (SELECT, ASK, CONSTRUCT, etc.). [@TODO Add reference to RDFLib
-    serialization formats]
+        query type (SELECT, ASK, CONSTRUCT, etc.). [TODO Add reference to
+        RDFLib serialization formats]
 
     :rtype: BytesIO
     :return: Serialized SPARQL results.

@@ -72,7 +72,7 @@ class LdpNr(Ldpr):
         Create a new binary resource with a corresponding RDF representation.
 
         :param bool create_only: Whether the resource is being created or
-        updated.
+            updated.
         """
         # Persist the stream.
         self.digest, self.size = nonrdfly.persist(self.stream)
@@ -98,7 +98,7 @@ class LdpNr(Ldpr):
         :param BufferedIO stream: The uploaded data stream.
         :param str mimetype: MIME type of the uploaded file.
         :param defaultdict disposition: The ``Content-Disposition`` header
-        content, parsed through ``parse_rfc7240``.
+            content, parsed through ``parse_rfc7240``.
         """
         super()._add_srv_mgd_triples(create)
 
