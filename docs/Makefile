@@ -3,7 +3,9 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+# Workaround to prevent lmdb from throwing an exception when loaded from Sphinx
+SPHINXBUILD   = python -m sphinx
+#SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = lakesuperior
 SOURCEDIR     = .
 BUILDDIR      = _build

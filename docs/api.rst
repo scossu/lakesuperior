@@ -3,46 +3,30 @@ API Documentation
 
 .. module:: lakesuperior
 
+Resource API
+~~~~~~~~~~~~
+
 .. automodule:: lakesuperior.api.resource
    :members:
 
+Query API
+~~~~~~~~~
+
 .. automodule:: lakesuperior.api.query
    :members:
+
+Admin API
+~~~~~~~~~
 
 .. automodule:: lakesuperior.api.admin
    :members:
 
 
-Resource API
-~~~~~~~~~~~~
-
-.. autoclass:: lakesuperior.model.ldpr.Ldpr
-   :members:
-   :inherited-members:
-
-.. autoclass:: lakesuperior.model.ldp_factory.LdpFactory
-   :members:
-   :inherited-members:
-
-Low-Level API
+Full API docs
 ~~~~~~~~~~~~~
 
-Store Layout
-^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 3
+   :glob:
 
-.. autoclass:: lakesuperior.store.ldp_rs.rsrc_centric_layout.RsrcCentricLayout
-   :members:
-   :inherited-members:
-
-.. autoclass:: lakesuperior.store.ldp_nr.base_non_rdf_layout.BaseNonRdfLayout
-   :members:
-   :inherited-members:
-
-RDF Store Abstraction
-^^^^^^^^^^^^^^^^^^^^^
-
-.. automodule:: lakesuperior.store.ldp_rs.lmdb_store
-   :members:
-   :inherited-members:
-
-
+   apidoc/*
