@@ -123,9 +123,9 @@ treated as a fully qualified identifier. The ``fcrepo:hasVersionLabel``
 predicate, however ambiguous in this context, will be kept until the
 adoption of Memento, which will change the retrieval mechanisms.
 
-Also, if a POST is issued on the same resource ``fcr:versions`` location
-using a version ID that already exists, LAKEsuperior will just mint a
-random identifier rather than returning an error.
+Another notable difference is that if a POST is issued on the same resource
+``fcr:versions`` location using a version ID that already exists, LAKEsuperior
+will just mint a random identifier rather than returning an error.
 
 Deprecation track
 -----------------
@@ -143,9 +143,6 @@ The FCREPO root endpoint is ``/rest``. The LAKEsuperior root endpoint is
 This should not pose a problem if a client does not have ``rest``
 hard-coded in its code, but in any event, the ``/rest`` endpoint is
 provided for backwards compatibility.
-
-LAKEsuperior adds the (currently stub) ``query`` endpoint. Other
-endpoints for non-LDP services may be opened in the future.
 
 Automatic LDP class assignment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

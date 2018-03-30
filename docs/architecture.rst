@@ -39,10 +39,10 @@ jobs for example.
 
 The Python API is divided in three main areas:
 
--  `Resource API <../../lakesuperior/api/resource.py>`__. This API is in
-   charge of all the resource CRUD operations and implements the
-   majority of the Fedora specs.
--  `Admin API <../../lakesuperior/api/admin.py>`__. This exposes utility
-   methods, mostly long-running maintenance jobs.
--  `Query API <../../lakesuperior/api/query.py>`__. This provides
-   several facilities for querying repository data.
+-  Resource API: this API in charge of all the resource CRUD operations and
+   implements the majority of the Fedora specs.
+-  Admin API: exposes utility methods, mostly long-running maintenance jobs.
+-  Query API: provides several facilities for querying repository data.
+
+
+See :doc:`API documentation<api>` for more details.
