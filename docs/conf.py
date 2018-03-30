@@ -19,6 +19,9 @@
 #
 import os
 import sys
+
+from unittest.mock import MagicMock
+
 #sys.path.insert(0, os.path.abspath('../'))
 sys.path.append(os.path.abspath('../'))
 import lakesuperior.env_setup
@@ -176,3 +179,12 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['lmdb']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
