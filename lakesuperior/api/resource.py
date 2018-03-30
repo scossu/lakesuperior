@@ -21,7 +21,7 @@ from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 logger = logging.getLogger(__name__)
 
-__doc__ = '''
+__doc__ = """
 Primary API for resource manipulation.
 
 Quickstart:
@@ -54,10 +54,10 @@ Quickstart:
  (rdflib.term.URIRef('info:fcres/'),
   rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
   rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
-'''
+"""
 
 def transaction(write=False):
-    '''
+    """
     Handle atomic operations in a store.
 
     This wrapper ensures that a write operation is performed atomically. It
@@ -66,7 +66,7 @@ def transaction(write=False):
 
     ALL write operations on the LDP-RS and LDP-NR stores go through this
     wrapper.
-    '''
+    """
     def _transaction_deco(fn):
         @wraps(fn)
         def _wrapper(*args, **kwargs):
@@ -87,9 +87,9 @@ def transaction(write=False):
 
 
 def process_queue():
-    '''
+    """
     Process the message queue on a separate thread.
-    '''
+    """
     lock = Lock()
     lock.acquire()
     while len(env.app_globals.changelog):
@@ -98,14 +98,14 @@ def process_queue():
 
 
 def send_event_msg(remove_trp, add_trp, metadata):
-    '''
+    """
     Send messages about a changed LDPR.
 
     A single LDPR message packet can contain multiple resource subjects, e.g.
     if the resource graph contains hash URIs or even other subjects. This
     method groups triples by subject and sends a message for each of the
     subjects found.
-    '''
+    """
     # Group delta triples by subject.
     remove_grp = groupby(remove_trp, lambda x : x[0])
     remove_dict = {k[0]: k[1] for k in remove_grp}
@@ -123,11 +123,11 @@ def send_event_msg(remove_trp, add_trp, metadata):
 
 @transaction()
 def exists(uid):
-    '''
+    """
     Return whether a resource exists (is stored) in the repository.
 
-    @param uid (string) Resource UID.
-    '''
+    :param string uid: Resource UID.
+    """
     try:
         exists = LdpFactory.from_stored(uid).is_stored
     except ResourceNotExistsError:
@@ -137,31 +137,32 @@ def exists(uid):
 
 @transaction()
 def get_metadata(uid):
-    '''
+    """
     Get metadata (admin triples) of an LDPR resource.
 
-    @param uid (string) Resource UID.
-    '''
+    :param string uid: Resource UID.
+    """
     return LdpFactory.from_stored(uid).metadata
 
 
 @transaction()
 def get(uid, repr_options={}):
-    '''
+    """
     Get an LDPR resource.
 
     The resource comes preloaded with user data and metadata as indicated by
     the `repr_options` argument. Any further handling of this resource is done
     outside of a transaction.
 
-    @param uid (string) Resource UID.
-    @param repr_options (dict(bool)) Representation options. This is a dict
-    that is unpacked downstream in the process. The default empty dict results
-    in default values. The accepted dict keys are:
+    :param string uid: Resource UID.
+    :param  repr_options: (dict(bool)) Representation options. This is a dict
+        that is unpacked downstream in the process. The default empty dict
+        results in default values. The accepted dict keys are:
+
     - incl_inbound: include inbound references. Default: False.
     - incl_children: include children URIs. Default: True.
     - embed_children: Embed full graph of all child resources. Default: False
-    '''
+    """
     rsrc = LdpFactory.from_stored(uid, repr_options)
     # Load graph before leaving the transaction.
     rsrc.imr
@@ -171,23 +172,23 @@ def get(uid, repr_options={}):
 
 @transaction()
 def get_version_info(uid):
-    '''
+    """
     Get version metadata (fcr:versions).
-    '''
+    """
     return LdpFactory.from_stored(uid).version_info
 
 
 @transaction()
 def get_version(uid, ver_uid):
-    '''
+    """
     Get version metadata (fcr:versions).
-    '''
+    """
     return LdpFactory.from_stored(uid).get_version(ver_uid)
 
 
 @transaction(True)
 def create(parent, slug, **kwargs):
-    '''
+    r"""
     Mint a new UID and create a resource.
 
     The UID is computed from a given parent UID and a "slug", a proposed path
@@ -195,14 +196,14 @@ def create(parent, slug, **kwargs):
     path but it may use a different one if a conflict with an existing resource
     arises.
 
-    @param parent (string) UID of the parent resource.
-    @param slug (string) Tentative path relative to the parent UID.
-    @param **kwargs Other parameters are passed to the
-    LdpFactory.from_provided method. Please see the documentation for that
-    method for explanation of individual parameters.
+    :param str parent: UID of the parent resource.
+    :param str slug: Tentative path relative to the parent UID.
+    :param \*\*kwargs: Other parameters are passed to the
+      :meth:`LdpFactory.from_provided` method.
 
-    @return string UID of the new resource.
-    '''
+    :rtype: str
+    :return: UID of the new resource.
+    """
     uid = LdpFactory.mint_uid(parent, slug)
     logger.debug('Minted UID for new resource: {}'.format(uid))
     rsrc = LdpFactory.from_provided(uid, **kwargs)
@@ -214,7 +215,7 @@ def create(parent, slug, **kwargs):
 
 @transaction(True)
 def create_or_replace(uid, stream=None, **kwargs):
-    '''
+    r"""
     Create or replace a resource with a specified UID.
 
     If the resource already exists, all user-provided properties of the
@@ -222,15 +223,15 @@ def create_or_replace(uid, stream=None, **kwargs):
     content is empty, an exception is raised (not sure why, but that's how
     FCREPO4 handles it).
 
-    @param uid (string) UID of the resource to be created or updated.
-    @param stream (BytesIO) Content stream. If empty, an empty container is
-    created.
-    @param **kwargs Other parameters are passed to the
-    LdpFactory.from_provided method. Please see the documentation for that
-    method for explanation of individual parameters.
+    :param string uid: UID of the resource to be created or updated.
+    :param BytesIO stream: Content stream. If empty, an empty container is
+        created.
+    :param \*\*kwargs: Other parameters are passed to the
+        :meth:`LdpFactory.from_provided` method.
 
-    @return string Event type: whether the resource was created or updated.
-    '''
+    :rtype: str
+    :return: Event type: whether the resource was created or updated.
+    """
     rsrc = LdpFactory.from_provided(uid, stream=stream, **kwargs)
 
     if not stream and rsrc.is_stored:
@@ -242,14 +243,15 @@ def create_or_replace(uid, stream=None, **kwargs):
 
 @transaction(True)
 def update(uid, update_str, is_metadata=False):
-    '''
+    """
     Update a resource with a SPARQL-Update string.
 
-    @param uid (string) Resource UID.
-    @param update_str (string) SPARQL-Update statements.
-    @param is_metadata (bool) Whether the resource metadata is being updated.
-    If False, and the resource being updated is a LDP-NR, an error is raised.
-    '''
+    :param string uid: Resource UID.
+    :param string update_str: SPARQL-Update statements.
+    :param bool is_metadata: Whether the resource metadata is being updated.
+        If False, and the resource being updated is a LDP-NR, an error is
+        raised.
+    """
     rsrc = LdpFactory.from_stored(uid)
     if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
         raise InvalidResourceError(uid)
@@ -261,28 +263,29 @@ def update(uid, update_str, is_metadata=False):
 
 @transaction(True)
 def create_version(uid, ver_uid):
-    '''
+    """
     Create a resource version.
 
-    @param uid (string) Resource UID.
-    @param ver_uid (string) Version UID to be appended to the resource URI.
-    NOTE: this is a "slug", i.e. the version URI is not guaranteed to be the
-    one indicated.
+    :param string uid: Resource UID.
+    :param string ver_uid: Version UID to be appended to the resource URI.
+      NOTE: this is a "slug", i.e. the version URI is not guaranteed to be the
+      one indicated.
 
-    @return string Version UID.
-    '''
+    :rtype: str
+    :return: Version UID.
+    """
     return LdpFactory.from_stored(uid).create_version(ver_uid)
 
 
 @transaction(True)
 def delete(uid, soft=True):
-    '''
+    """
     Delete a resource.
 
-    @param uid (string) Resource UID.
-    @param soft (bool) Whether to perform a soft-delete and leave a
-    tombstone resource, or wipe any memory of the resource.
-    '''
+    :param string uid: Resource UID.
+    :param bool soft: Whether to perform a soft-delete and leave a
+      tombstone resource, or wipe any memory of the resource.
+    """
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.
     refint = env.app_globals.rdfly.config['referential_integrity']
@@ -314,9 +317,9 @@ def delete(uid, soft=True):
 
 @transaction(True)
 def resurrect(uid):
-    '''
+    """
     Reinstate a buried (soft-deleted) resource.
 
-    @param uid (string) Resource UID.
-    '''
+    :param str uid: Resource UID.
+    """
     return LdpFactory.from_stored(uid).resurrect_rsrc()

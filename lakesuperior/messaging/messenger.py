@@ -7,15 +7,15 @@ messenger = logging.getLogger('_messenger')
 
 
 class Messenger:
-    '''
+    """
     Very simple message sender using the standard Python logging facility.
-    '''
+    """
     def __init__(self, config):
-        '''
+        """
         Set up the messenger.
 
-        @param config (dict) Messenger configuration.
-        '''
+        :param dict config: Messenger configuration.
+        """
         def msg_routes():
             for route in config['routes']:
                 handler_cls = getattr(handlers, route['handler'])
@@ -31,8 +31,6 @@ class Messenger:
 
 
     def send(self, *args, **kwargs):
-        '''
-        Send one or more external messages.
-        '''
+        """Send one or more external messages."""
         for msg, fn in self.msg_routes:
             msg.info(fn(*args, **kwargs))

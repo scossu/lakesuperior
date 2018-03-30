@@ -12,18 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 class DefaultLayout(BaseNonRdfLayout):
-    '''
+    """
     Default file layout.
-    '''
+
+    This is a simple filesystem layout that stores binaries in pairtree folders
+    in a local filesystem. Parameters can be specified for the 
+    """
     @staticmethod
     def local_path(root, uuid, bl=4, bc=4):
-        '''
+        """
         Generate the resource path splitting the resource checksum according to
         configuration parameters.
 
-        @param uuid (string) The resource UUID. This corresponds to the content
+        :param str uuid: The resource UUID. This corresponds to the content
         checksum.
-        '''
+        """
         logger.debug('Generating path from uuid: {}'.format(uuid))
         term = len(uuid) if bc == 0 else min(bc * bl, len(uuid))
 
@@ -37,9 +40,7 @@ class DefaultLayout(BaseNonRdfLayout):
 
 
     def __init__(self, *args, **kwargs):
-        '''
-        Set up path segmentation parameters.
-        '''
+        """Set up path segmentation parameters."""
         super().__init__(*args, **kwargs)
 
         self.bl = self.config['pairtree_branch_length']
@@ -49,9 +50,7 @@ class DefaultLayout(BaseNonRdfLayout):
     ## INTERFACE METHODS ##
 
     def bootstrap(self):
-        '''
-        Initialize binary file store.
-        '''
+        """Initialize binary file store."""
         try:
             shutil.rmtree(self.root)
         except FileNotFoundError:
@@ -60,7 +59,7 @@ class DefaultLayout(BaseNonRdfLayout):
 
 
     def persist(self, stream, bufsize=8192):
-        '''
+        """
         Store the stream in the file system.
 
         This method handles the file in chunks. for each chunk it writes to a
@@ -68,9 +67,9 @@ class DefaultLayout(BaseNonRdfLayout):
         to disk and hashed, the temp file is moved to its final location which
         is determined by the hash value.
 
-        @param stream (IOstream): file-like object to persist.
-        @param bufsize (int) Chunk size. 2**12 to 2**15 is a good range.
-        '''
+        :param IOstream stream:: file-like object to persist.
+        :param int bufsize: Chunk size. 2**12 to 2**15 is a good range.
+        """
         tmp_file = '{}/tmp/{}'.format(self.root, uuid4())
         try:
             with open(tmp_file, 'wb') as f:
@@ -111,7 +110,5 @@ class DefaultLayout(BaseNonRdfLayout):
 
 
     def delete(self, uuid):
-        '''
-        See BaseNonRdfLayout.delete.
-        '''
+        """See BaseNonRdfLayout.delete."""
         os.unlink(__class__.local_path(self.root, uuid, self.bl, self.bc))
