@@ -24,7 +24,19 @@ from unittest.mock import MagicMock
 
 #sys.path.insert(0, os.path.abspath('../'))
 sys.path.append(os.path.abspath('../'))
+
+class MockModule(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+# LMDB raises an issue if imported by Sphinx. This bypasses the issue.
+# https://github.com/dw/py-lmdb/issues/172
+MOCK_MODULES = ['lmdb']
+sys.modules.update((mod_name, MockModule()) for mod_name in MOCK_MODULES)
+
 import lakesuperior.env_setup
+
 
 # -- General configuration ------------------------------------------------
 
@@ -174,17 +186,6 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
-
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-MOCK_MODULES = ['lmdb']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
