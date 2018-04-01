@@ -17,7 +17,8 @@ Installation
 
 The following instructions are aimed at a manual install using this git
 repository. For a hands-off install using Docker, see
-:doc:`the setup documentation <setup>`.
+`the setup documentation
+<http://lakesuperior.readthedocs.io/en/latest/setup.html>`__.
 
 Dependencies
 ~~~~~~~~~~~~
