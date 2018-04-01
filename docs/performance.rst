@@ -18,7 +18,9 @@ Hardware
 ‘Ole Workhorse’ server
 ^^^^^^^^^^^^^^^^^^^^^^
 
-8x Intel(R) Xeon(R) CPU X5550 @ 2.67GHz 16Gb RAM Magnetic drive, XXX RPM
+-  8x Intel(R) Xeon(R) CPU X5550 @ 2.67GHz
+-  16Gb RAM
+-  Magnetic drive, XXX RPM
 
 Software
 ~~~~~~~~

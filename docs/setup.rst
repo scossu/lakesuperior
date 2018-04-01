@@ -26,6 +26,8 @@ self-container Docker volume, meaning your data will persist between
 runs. If you want to clear the decks, simply run
 ``docker-compose down -v``.
 
+.. _manual_install:
+
 Manual Install (a bit less quick, a bit more power)
 ---------------------------------------------------
 
@@ -36,28 +38,37 @@ modifications. Feedback is welcome.
 Dependencies
 ~~~~~~~~~~~~
 
-1. Python 3.5 or greater.
-2. A message broker supporting the STOMP protocol. For testing and
+#. Python 3.5 or greater.
+#. A message broker supporting the STOMP protocol. For testing and
    evaluation purposes, `CoilMQ <https://github.com/hozn/coilmq>`__ is
    included with the dependencies and should be automatically installed.
 
 Installation steps
 ~~~~~~~~~~~~~~~~~~
 
-1. Create a virtualenv in a project folder:
+#. Create a virtualenv in a project folder:
    ``virtualenv -p <python 3.5+ exec path> <virtualenv folder>``
-2. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
-3. Clone this repo:
+#. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
+#. Clone this repo:
    ``git clone https://github.com/scossu/lakesuperior.git``
-4. ``cd`` into repo folder
-5. Install dependencies: ``pip install -r requirements.txt``
-6. Start your STOMP broker, e.g.: ``coilmq &``. If you have another
-   queue manager listening to port 61613 you can either configure a
-   different port on the application configuration, or use the existing
-   message queue.
-7. Run ``./lsup-admin bootstrap`` to initialize the binary and graph
-   stores
-8. Run ``./fcrepo``.
+#. ``cd`` into repo folder
+#. Install dependencies: ``pip install -r requirements.txt``
+
+   - (Optional) For a development server, install additional dependencies:
+     ``pip install -r requirements_dev.txt``. These include some heavyweight
+     packages needed for development and testing but not for regular operation.
+
+#. Start your STOMP broker, e.g.: ``coilmq &``.
+
+   - If you have another
+     queue manager listening to port 61613 you can either configure a
+     different port on the application configuration, or use the existing
+     message queue.
+
+#. Make sure that the ``lsup-admin`` and ``fcrepo`` files are executable.
+#. Run ``./lsup-admin bootstrap`` to initialize the binary and graph
+   stores.
+#. Run ``./fcrepo``.
 
 Configuration
 -------------

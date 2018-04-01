@@ -193,7 +193,7 @@ class RsrcCentricLayout:
 
         :param rdflib.term.URIRef s: URI of the subject.
         :param rdflib.term.URIRef ctx: URI of the optional context. If None,
-        all named graphs are queried.
+            all named graphs are queried.
 
         :rtype: rdflib.Graph
         """
@@ -348,7 +348,7 @@ class RsrcCentricLayout:
 
         :param rdflib.URIRef subj_uri: Subject URI.
         :param boolean full_triple: Whether to return the full triples found
-        or only the subjects. By default, full triples are returned.
+            or only the subjects. By default, full triples are returned.
 
         :rtype: Iterator(tuple(rdflib.term.Identifier) or rdflib.URIRef)
         :return: Inbound triples or subjects.
@@ -368,10 +368,9 @@ class RsrcCentricLayout:
         """
         Get descendants (recursive children) of a resource.
 
-        :param string uid: Resource UID.
-        result set.
+        :param str uid: Resource UID.
 
-        :rtype: iterator(rdflib.URIRef)
+        :rtype: Iterator(rdflib.URIRef)
         :return: Subjects of descendant resources.
         """
         ds = self.ds
@@ -399,7 +398,7 @@ class RsrcCentricLayout:
         The statement(s) is/are executed on the user-provided graph only
         to ensure that the scope is limited to the resource.
 
-        :param string uid: UID of the resource to be patched.
+        :param str uid: UID of the resource to be patched.
         :param dict qry: Parsed and translated query, or query string.
         """
         # Add meta graph for user-defined triples. This may not be used but

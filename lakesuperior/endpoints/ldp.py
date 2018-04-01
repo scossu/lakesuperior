@@ -112,16 +112,17 @@ def log_request_end(rsp):
 @ldp.route('/<path:uid>/fcr:content', defaults={'out_fmt' : 'non_rdf'},
         methods=['GET'])
 def get_resource(uid, out_fmt=None):
-    """
+    r"""
     https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
 
     Retrieve RDF or binary content.
 
     :param str uid: UID of resource to retrieve. The repository root has
-    an empty string for UID.
+        an empty string for UID.
     :param str out_fmt: Force output to RDF or non-RDF if the resource is
-    a LDP-NR. This is not available in the API but is used e.g. by the
-    `*/fcr:metadata` and `*/fcr:content` endpoints. The default is False.
+        a LDP-NR. This is not available in the API but is used e.g. by the
+        ``\*/fcr:metadata`` and ``\*/fcr:content`` endpoints. The default is
+        False.
     """
     logger.info('UID: {}'.format(uid))
     out_headers = std_headers
@@ -171,6 +172,8 @@ def get_resource(uid, out_fmt=None):
 def get_version_info(uid):
     """
     Get version info (`fcr:versions`).
+
+    :param str uid: UID of resource to retrieve versions for.
     """
     try:
         gr = rsrc_api.get_version_info(uid)
@@ -353,7 +356,7 @@ def delete_resource(uid):
     one more version snapshot of the resource prior to being deleted.
 
     In order to completely wipe out all traces of a resource, the tombstone
-    must be deleted as well, or the `Prefer:no-tombstone` header can be used.
+    must be deleted as well, or the ``Prefer:no-tombstone`` header can be used.
     The latter will forget (completely delete) the resource immediately.
     """
     headers = std_headers
@@ -595,7 +598,7 @@ def _headers_from_metadata(rsrc):
     Create a dict of headers from a metadata graph.
 
     :param lakesuperior.model.ldpr.Ldpr rsrc: Resource to extract metadata
-    from.
+        from.
     """
     out_headers = defaultdict(list)
 

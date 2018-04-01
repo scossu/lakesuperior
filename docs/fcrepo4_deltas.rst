@@ -144,6 +144,11 @@ This should not pose a problem if a client does not have ``rest``
 hard-coded in its code, but in any event, the ``/rest`` endpoint is
 provided for backwards compatibility.
 
+Future implementations of the Fedora API specs may employ a "versioned"
+endpoint scheme that allows multiple Fedora API versions to be available to the
+client, e.g. ``/ldp/fc4`` for the current LDP API version, ``/ldp/fc5`` for
+Fedora version 5.x, etc.
+
 Automatic LDP class assignment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -154,7 +159,7 @@ from the provided properties: if the ``ldp:hasMemberRelation`` and
 Direct Container. If in addition to these the
 ``ldp:insertedContentRelation`` property is present, the resource is an
 Indirect Container. If any of the first two are missing, the resource is
-a Container (@TODO discuss: shall it be a Basic Container?)
+a Container.
 
 Clients are encouraged to omit LDP types in PUT, POST and PATCH
 requests.

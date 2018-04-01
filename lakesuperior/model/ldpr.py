@@ -134,7 +134,7 @@ class Ldpr(metaclass=ABCMeta):
         The RDFLib resource representing this LDPR. This is a live
         representation of the stored data if present.
 
-        :rtype: rdflib.resource.Resource
+        :rtype: rdflib.Resource
         """
         if not hasattr(self, '_rsrc'):
             self._rsrc = rdfly.ds.resource(self.uri)
@@ -150,7 +150,7 @@ class Ldpr(metaclass=ABCMeta):
         If the resource is not stored (yet), a `ResourceNotExistsError` is
         raised.
 
-        @return rdflib.resource.Resource
+        :rtype: rdflib.Resource
         """
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):

@@ -39,8 +39,8 @@ recording of provenance metadata while providing reasonable performance.
 
 Store layout modules could be replaceable (work needs to be done to
 develop an interface to allow that). The default (and only at the
-moment) layout shipped with LAKEsuperior is the `resource-centric
-layout <../../lakesuperior/store/ldp_rs/rsrc_centric_layout>`__. This
+moment) layout shipped with LAKEsuperior is the :mod:`resource-centric
+layout <lakesuperior.store.ldp_rs.rsrc_centric_layout>`. This
 layout implements a so-called `graph-per-aspect
 pattern <http://patterns.dataincubator.org/book/graph-per-aspect.html>`__
 which stores different sets of statements about a resource in separate
@@ -55,9 +55,8 @@ The named graphs used for each resource are:
    reserved for containment triples. The reason for this separation is
    purely convenience, since it makes it easy to retrieve all the
    properties of a large container without its child references.
--  One (and, possibly, in the future, more user-defined) named graph for
-   user-provided data
-   (``info:fcsystem/graph/userdata/_main<resource UID>``).
+-  One (and, possibly, in the future, more user\-defined) named graph for
+   user-provided data (``info:fcsystem/graph/userdata/_main<resource UID>``).
 
 Each of these graphs can be annotated with provenance metadata. The
 layout decides which triples go in which graph based on the predicate or

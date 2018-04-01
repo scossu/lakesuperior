@@ -1,32 +1,25 @@
+==================
 API Documentation
 ==================
 
-.. module:: lakesuperior
+Main Interface
+==============
 
-Resource API
-~~~~~~~~~~~~
+The LAKEsuperior API modules of most interest for a client are:
 
-.. automodule:: lakesuperior.api.resource
-   :members:
+- :mod:`Resource API <lakesuperior.api.resource>`
+- :mod:`Query API <lakesupeiror.api.query>`
+- :mod:`Admin API <lakesuperior.api.admin>`
 
-Query API
-~~~~~~~~~
+When manipulating resources the
+:mod:`Resource module <lakesuperior.model.ldpr>` is used.
 
-.. automodule:: lakesuperior.api.query
-   :members:
+The full API docs are listed below.
 
-Admin API
-~~~~~~~~~
-
-.. automodule:: lakesuperior.api.admin
-   :members:
-
-
-Full API docs
-~~~~~~~~~~~~~
+Full API Documentation
+======================
 
 .. toctree::
-   :maxdepth: 3
-   :glob:
+   :caption: Modules
 
-   apidoc/*
+   apidoc/modules

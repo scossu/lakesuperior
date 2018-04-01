@@ -6,7 +6,11 @@ Subpackages
 
 .. toctree::
 
+    lakesuperior.api
+    lakesuperior.endpoints
+    lakesuperior.messaging
     lakesuperior.model
+    lakesuperior.store
 
 Submodules
 ----------

@@ -25,7 +25,7 @@ class DefaultLayout(BaseNonRdfLayout):
         configuration parameters.
 
         :param str uuid: The resource UUID. This corresponds to the content
-        checksum.
+            checksum.
         """
         logger.debug('Generating path from uuid: {}'.format(uuid))
         term = len(uuid) if bc == 0 else min(bc * bl, len(uuid))
@@ -59,7 +59,7 @@ class DefaultLayout(BaseNonRdfLayout):
 
 
     def persist(self, stream, bufsize=8192):
-        """
+        r"""
         Store the stream in the file system.
 
         This method handles the file in chunks. for each chunk it writes to a
@@ -67,8 +67,8 @@ class DefaultLayout(BaseNonRdfLayout):
         to disk and hashed, the temp file is moved to its final location which
         is determined by the hash value.
 
-        :param IOstream stream:: file-like object to persist.
-        :param int bufsize: Chunk size. 2**12 to 2**15 is a good range.
+        :param IOstream stream: file-like object to persist.
+        :param int bufsize: Chunk size. 2\*\*12 to 2\*\*15 is a good range.
         """
         tmp_file = '{}/tmp/{}'.format(self.root, uuid4())
         try:

@@ -36,7 +36,7 @@ class TxnManager(ContextDecorator):
     """
     Handle ACID transactions with an LmdbStore.
 
-    Wrap this within a `with` statement:
+    Wrap this within a ``with`` statement:
 
     >>> with TxnManager(store, True):
     ...     # Do something with the database
@@ -50,7 +50,7 @@ class TxnManager(ContextDecorator):
 
         :param LmdbStore store: The store to open a transaction on.
         :param bool write: Whether the transaction is read-write. Default is
-        False (read-only transaction).
+            ``False`` (read-only transaction).
         """
         self.store = store
         self.write = write
@@ -79,12 +79,13 @@ class LexicalSequence:
         Create a new lexical sequence.
 
         :param bytes start: Starting byte value. Bytes below this value are
-        never found in this sequence. This is useful to allot special bytes
-        to be used e.g. as separators.
+            never found in this sequence. This is useful to allot special bytes
+            to be used e.g. as separators.
         :param int max_len: Maximum number of bytes that a byte string can
-        contain. This should be chosen carefully since the number of all
-        possible key combinations is determined by this value and the `start`
-        value. The default args provide 255**5 (~1 Tn) unique combinations.
+            contain. This should be chosen carefully since the number of all
+            possible key combinations is determined by this value and the
+            ``start`` value. The default args provide 255**5 (~1 Tn) unique
+            combinations.
         """
         self.start = start
         self.length = max_len
@@ -152,26 +153,26 @@ class LmdbStore(Store):
 
     There are 4 main data sets (preservation worthy data):
 
-    - t:st (term key: serialized term; 1:1)
-    - spo:c (joined S, P, O keys: context key; dupsort, dupfixed)
-    - c: (context keys only, values are the empty bytestring; 1:1)
-    - pfx:ns (prefix: pickled namespace; 1:1)
+    - `t:st` (term key: serialized term; 1:1)
+    - `spo:c` (joined S, P, O keys: context key; dupsort, dupfixed)
+    - `c:` (context keys only, values are the empty bytestring; 1:1)
+    - `pfx:ns` (prefix: pickled namespace; 1:1)
 
     And 6 indices to optimize lookup for all possible bound/unbound term
     combination in a triple:
 
-    - th:t (term hash: term key; 1:1)
-    - s:po (S key: joined P, O keys; dupsort, dupfixed)
-    - p:so (P key: joined S, O keys; dupsort, dupfixed)
-    - o:sp (O key: joined S, P keys; dupsort, dupfixed)
-    - c:spo (context → triple association; dupsort, dupfixed)
-    - ns:pfx (pickled namespace: prefix; 1:1)
+    - `th:t` (term hash: term key; 1:1)
+    - `s:po` (S key: joined P, O keys; dupsort, dupfixed)
+    - `p:so` (P key: joined S, O keys; dupsort, dupfixed)
+    - `o:sp` (O key: joined S, P keys; dupsort, dupfixed)
+    - `c:spo` (context → triple association; dupsort, dupfixed)
+    - `ns:pfx` (pickled namespace: prefix; 1:1)
 
-    The default graph is defined in `RDFLIB_DEFAULT_GRAPH_URI`. Adding triples
-    without context will add to this graph. Looking up triples without context
-    (also in a SPARQL query) will look in the  union graph instead of in the
-    default graph. Also, removing triples without specifying a context will
-    remove triples from all contexts.
+    The default graph is defined in :data:`RDFLIB_DEFAULT_GRAPH_URI`. Adding
+    triples without context will add to this graph. Looking up triples without
+    context (also in a SPARQL query) will look in the  union graph instead of
+    in the default graph. Also, removing triples without specifying a context
+    will remove triples from all contexts.
     """
 
     context_aware = True
@@ -453,7 +454,7 @@ class LmdbStore(Store):
 
         :param tuple(rdflib.Identifier) triple: Tuple of three identifiers.
         :param context: Context identifier. ``None`` inserts in the default
-        graph.
+            graph.
         :type context: rdflib.Identifier or None
         :param bool quoted: Not used.
         """
@@ -557,11 +558,15 @@ class LmdbStore(Store):
         Generator over matching triples.
 
         :param tuple triple_pattern: 3 RDFLib terms
-        :param rdflib.Graph | None context: Context graph, if available.
+        :param context: Context graph, if available.
+        :type context: rdflib.Graph or None
 
+        :rtype: Iterator
         :return: Generator over triples and contexts in which each result has
-        the following format:
-        > (s, p, o), generator(contexts)
+            the following format::
+
+            (s, p, o), generator(contexts)
+
         Where the contexts generator lists all context that the triple appears
         in.
         """
