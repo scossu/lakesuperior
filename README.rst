@@ -1,7 +1,7 @@
 LAKEsuperior
 ============
 
-|build status|
+|build status| |docs|
 
 LAKEsuperior is an alternative `Fedora
 Repository <http://fedorarepository.org>`__ implementation.
@@ -62,3 +62,8 @@ improve, document and test the project.
 
 .. |build status| image:: http://img.shields.io/travis/scossu/lakesuperior/master.svg?style=flat
    :target: https://travis-ci.org/username/repo
+
+.. |docs| image:: https://readthedocs.org/projects/lakesuperior/badge/
+    :alt: Documentation Status
+    :scale: 100%
+    :target: https://lakesuperior.readthedocs.io/en/latest/?badge=latest
