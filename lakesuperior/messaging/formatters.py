@@ -8,12 +8,12 @@ from lakesuperior.globals import RES_CREATED, RES_DELETED, RES_UPDATED
 
 
 class BaseASFormatter(metaclass=ABCMeta):
-    '''
+    """
     Format message as ActivityStreams.
 
     This is not really a `logging.Formatter` subclass, but a plain string
     builder.
-    '''
+    """
     ev_types = {
         RES_CREATED : 'Create',
         RES_DELETED : 'Delete',
@@ -28,7 +28,7 @@ class BaseASFormatter(metaclass=ABCMeta):
 
     def __init__(
             self, rsrc_uri, ev_type, timestamp, rsrc_type, actor, data=None):
-        '''
+        """
         Format output according to granularity level.
 
         NOTE: Granularity level does not refer to the logging levels, i.e.
@@ -36,14 +36,14 @@ class BaseASFormatter(metaclass=ABCMeta):
         are logged under the same level. This it is rather about *what* gets
         logged in a message.
 
-        @param rsrc_uri (rdflib.URIRef) URI of the resource.
-        @param ev_type (string) one of `create`, `delete` or `update`
-        @param timestamp (string) Timestamp of the event.
-        @param data (tuple(set)) if messaging is configured with `provenance`
+        :param rdflib.URIRef rsrc_uri: URI of the resource.
+        :param str ev_type: one of `create`, `delete` or `update`
+        :param str timestamp: Timestamp of the event.
+        :param  data: (tuple(set)) if messaging is configured with `provenance`
         level, this is a 2-tuple with one set (as 3-tuples of
         RDFlib.Identifier instances) for removed triples, and one set for
         added triples.
-        '''
+        """
         self.rsrc_uri = rsrc_uri
         self.ev_type = ev_type
         self.timestamp = timestamp
@@ -59,15 +59,13 @@ class BaseASFormatter(metaclass=ABCMeta):
 
 
 class ASResourceFormatter(BaseASFormatter):
-    '''
+    """
     Sends information about a resource being created, updated or deleted, by
     who and when, with no further information about what changed.
-    '''
+    """
 
     def __str__(self):
-        '''
-        Output structured data as string.
-        '''
+        """Output structured data as string."""
         ret = {
             '@context': 'https://www.w3.org/ns/activitystreams',
             'id' : 'urn:uuid:{}'.format(uuid.uuid4()),
@@ -86,15 +84,13 @@ class ASResourceFormatter(BaseASFormatter):
 
 
 class ASDeltaFormatter(BaseASFormatter):
-    '''
+    """
     Sends the same information as `ASResourceFormatter` with the addition of
     the triples that were added and the ones that were removed in the request.
     This may be used to send rich provenance data to a preservation system.
-    '''
+    """
     def __str__(self):
-        '''
-        Output structured data as string.
-        '''
+        """Output structured data as string."""
         ret = {
             '@context': 'https://www.w3.org/ns/activitystreams',
             'id' : 'urn:uuid:{}'.format(uuid.uuid4()),

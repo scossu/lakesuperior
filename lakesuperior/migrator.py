@@ -75,22 +75,23 @@ class Migrator:
         Set up base paths and clean up existing directories.
 
         :param rdflib.URIRef src: Webroot of source repository. This must
-        correspond to the LDP root node (for Fedora it can be e.g.
-        ``http://localhost:8080fcrepo/rest/``) and is used to determine if URIs
-        retrieved are managed by this repository.
+            correspond to the LDP root node (for Fedora it can be e.g.
+            ``http://localhost:8080fcrepo/rest/``) and is used to determine if
+            URIs retrieved are managed by this repository.
         :param str dest: Destination repository path. If the location exists
-        it must be a writable directory. It will be deleted and recreated. If
-        it does not exist, it will be created along with its parents if
-        missing.
+            it must be a writable directory. It will be deleted and recreated.
+            If it does not exist, it will be created along with its parents if
+            missing.
         :param str binary_handling: One of ``include``, ``truncate`` or
-        ``split``.
+            ``split``.
         :param bool compact_uris: NOT IMPLEMENTED. Whether the process should
-        attempt to compact URIs generated with broken up path segments. If the
-        UID matches a pattern such as `/12/34/56/123456...` it is converted to
-        `/123456...`. This would remove a lot of cruft caused by the pairtree
-        segments. Note that this will change the publicly exposed URIs. If
-        durability is a concern, a rewrite directive can be added to the HTTP
-        server that proxies the WSGI endpoint.
+            attempt to compact URIs generated with broken up path segments. If
+            the UID matches a pattern such as ``/12/34/56/123456...`` it is
+            converted to ``/123456...``. This would remove a lot of cruft
+            caused by the pairtree segments. Note that this will change the
+            publicly exposed URIs. If durability is a concern, a rewrite
+            directive can be added to the HTTP server that proxies the WSGI
+            endpoint.
         """
         # Set up repo folder structure and copy default configuration to
         # destination file.
@@ -137,11 +138,12 @@ class Migrator:
         data set contained in a folder from an LDP repository.
 
         :param start_pts: List of starting points to retrieve
-        :type start_pts: tuple or list 
-        resources from. It would typically be the repository root in case of a
-        full dump or one or more resources in the repository for a partial one.
+        :type start_pts: tuple or list
+            resources from. It would typically be the repository root in case
+            of a full dump or one or more resources in the repository for a
+            partial one.
         :param str listf_ile: path to a local file containing a list of URIs,
-        one per line.
+            one per line.
         """
         from lakesuperior.api import resource as rsrc_api
         self._ct = 0
@@ -179,7 +181,7 @@ class Migrator:
         managed by the repository is encountered.
 
         :param str uid: The path relative to the source server webroot
-        pointing to the resource to crawl, effectively the resource UID.
+            pointing to the resource to crawl, effectively the resource UID.
         """
         ibase = str(nsc['fcres'])
         # Public URI of source repo.

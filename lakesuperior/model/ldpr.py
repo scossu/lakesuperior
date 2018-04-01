@@ -36,21 +36,16 @@ class Ldpr(metaclass=ABCMeta):
     the vanilla LDP specifications. This is extended by the
     `lakesuperior.fcrepo.Resource` class.
 
-    Inheritance graph: https://www.w3.org/TR/ldp/#fig-ldpc-types
+    See inheritance graph: https://www.w3.org/TR/ldp/#fig-ldpc-types
 
-    Note: Even though LdpNr (which is a subclass of Ldpr) handles binary files,
-    it still has an RDF representation in the triplestore. Hence, some of the
-    RDF-related methods are defined in this class rather than in the LdpRs
-    class.
+    **Note**: Even though LdpNr (which is a subclass of Ldpr) handles binary
+    files, it still has an RDF representation in the triplestore. Hence, some
+    of the RDF-related methods are defined in this class rather than in
+    :class:`~lakesuperior.model.ldp_rs.LdpRs`.
 
-    Convention notes:
-
-    All the methods in this class handle internal UUIDs (URN). Public-facing
-    URIs are converted from URNs and passed by these methods to the methods
-    handling HTTP negotiation.
-
-    The data passed to the store layout for processing should be in a graph.
-    All conversion from request payload strings is done here.
+    **Note:** Only internal facing (``info:fcres``-prefixed) URIs are handled
+    in this class. Public-facing URI conversion is handled in the
+    :mod:`~lakesuperior.endpoints.ldp` module.
     """
 
     EMBED_CHILD_RES_URI = nsc['fcrepo'].EmbedResources
@@ -67,33 +62,35 @@ class Ldpr(metaclass=ABCMeta):
     WRKF_INBOUND = '_workflow:inbound_'
     WRKF_OUTBOUND = '_workflow:outbound_'
 
-    # Default user to be used for the `createdBy` and `lastUpdatedBy` if a user
-    # is not provided.
     DEFAULT_USER = Literal('BypassAdmin')
+    """
+    Default user to be used for the `createdBy` and `lastUpdatedBy` if a user
+    is not provided.
+    """
 
-    # RDF Types that populate a new resource.
     base_types = {
         nsc['fcrepo'].Resource,
         nsc['ldp'].Resource,
         nsc['ldp'].RDFSource,
     }
+    """RDF Types that populate a new resource."""
 
-    # Predicates that do not get removed when a resource is replaced.
     protected_pred = (
         nsc['fcrepo'].created,
         nsc['fcrepo'].createdBy,
         nsc['ldp'].contains,
     )
+    """Predicates that do not get removed when a resource is replaced."""
 
-    # Server-managed RDF types ignored in the RDF payload if the resource is
-    # being created. N.B. These still raise an error if the resource exists.
     smt_allow_on_create = {
         nsc['ldp'].DirectContainer,
         nsc['ldp'].IndirectContainer,
     }
+    """
+    Server-managed RDF types ignored in the RDF payload if the resource is
+    being created. N.B. These still raise an error if the resource exists.
+    """
 
-
-    # Predicates to remove when a resource is replaced.
     delete_preds_on_replace = {
         nsc['ebucore'].hasMimeType,
         nsc['fcrepo'].lastModified,
@@ -101,13 +98,14 @@ class Ldpr(metaclass=ABCMeta):
         nsc['premis'].hasSize,
         nsc['premis'].hasMessageDigest,
     }
+    """Predicates to remove when a resource is replaced."""
 
 
     ## MAGIC METHODS ##
 
     def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
-        """Instantiate an in-memory LDP resource that can be loaded from and
-        persisted to storage.
+        """
+        Instantiate an in-memory LDP resource.
 
         :param str uid: uid of the resource. If None (must be explicitly
         set) it refers to the root node. It can also be the full URI or URN,
@@ -136,7 +134,7 @@ class Ldpr(metaclass=ABCMeta):
         The RDFLib resource representing this LDPR. This is a live
         representation of the stored data if present.
 
-        @return rdflib.resource.Resource
+        :rtype: rdflib.Resource
         """
         if not hasattr(self, '_rsrc'):
             self._rsrc = rdfly.ds.resource(self.uri)
@@ -152,7 +150,7 @@ class Ldpr(metaclass=ABCMeta):
         If the resource is not stored (yet), a `ResourceNotExistsError` is
         raised.
 
-        @return rdflib.resource.Resource
+        :rtype: rdflib.Resource
         """
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
@@ -285,7 +283,7 @@ class Ldpr(metaclass=ABCMeta):
     def types(self):
         """All RDF types.
 
-        @return set(rdflib.term.URIRef)
+        :rtype: set(rdflib.term.URIRef)
         """
         if not hasattr(self, '_types'):
             if len(self.metadata.graph):
@@ -305,7 +303,7 @@ class Ldpr(metaclass=ABCMeta):
     def ldp_types(self):
         """The LDP types.
 
-        @return set(rdflib.term.URIRef)
+        :rtype: set(rdflib.term.URIRef)
         """
         if not hasattr(self, '_ldp_types'):
             self._ldp_types = {t for t in self.types if nsc['ldp'] in t}
@@ -385,9 +383,10 @@ class Ldpr(metaclass=ABCMeta):
         Delete a single resource and create a tombstone.
 
         :param boolean inbound: Whether to delete the inbound relationships.
-        :param URIRef tstone_pointer: If set to a URN, this creates a pointer
-        to the tombstone of the resource that used to contain the deleted
-        resource. Otherwise the deleted resource becomes a tombstone.
+        :param rdflib.URIRef tstone_pointer: If set to a URN, this creates a
+            pointer to the tombstone of the resource that used to contain the
+            deleted resource. Otherwise the deleted resource becomes a
+            tombstone.
         """
         logger.info('Burying resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
@@ -486,14 +485,14 @@ class Ldpr(metaclass=ABCMeta):
         """
         tstone_trp = set(rdfly.extract_imr(self.uid, strict=False).graph)
 
-        ver_rsp = self.version_info.graph.query("""
+        ver_rsp = self.version_info.graph.query('''
         SELECT ?uid {
           ?latest fcrepo:hasVersionLabel ?uid ;
             fcrepo:created ?ts .
         }
         ORDER BY DESC(?ts)
         LIMIT 1
-        """)
+        ''')
         ver_uid = str(ver_rsp.bindings[0]['uid'])
         ver_trp = set(rdfly.get_metadata(self.uid, ver_uid).graph)
 
@@ -520,12 +519,12 @@ class Ldpr(metaclass=ABCMeta):
         """
         Create a new version of the resource.
 
-        NOTE: This creates an event only for the resource being updated (due
-        to the added `hasVersion` triple and possibly to the `hasVersions` one)
-        but not for the version being created.
+        **Note:** This creates an event only for the resource being updated
+        (due to the added `hasVersion` triple and possibly to the
+        ``hasVersions`` one) but not for the version being created.
 
-        :param  ver_uid: Version ver_uid. If already existing, an exception is
-        raised.
+        :param str ver_uid: Version UID. If already existing, a new version UID
+            is minted.
         """
         if not ver_uid or ver_uid in self.version_uids:
             ver_uid = str(uuid4())
@@ -539,7 +538,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param str ver_uid: Version UID.
         :param boolean backup: Whether to create a backup snapshot. Default is
-        true.
+            True.
         """
         # Create a backup snapshot.
         if backup:
@@ -686,7 +685,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Add server-managed triples to a provided IMR.
 
-        :param  create: Whether the resource is being created.
+        :param create: Whether the resource is being created.
         """
         # Base LDP types.
         for t in self.base_types:
@@ -725,11 +724,11 @@ class Ldpr(metaclass=ABCMeta):
         is found.
 
         E.g. if only fcres:/a exists:
-        - If fcres:/a/b/c/d is being created, a becomes container of
-          fcres:/a/b/c/d. Also, containers are created for fcres:a/b and
-          fcres:/a/b/c.
-        - If fcres:/e is being created, the root node becomes container of
-          fcres:/e.
+        - If ``fcres:/a/b/c/d`` is being created, a becomes container of
+          ``fcres:/a/b/c/d``. Also, containers are created for fcres:a/b and
+          ``fcres:/a/b/c``.
+        - If ``fcres:/e`` is being created, the root node becomes container of
+          ``fcres:/e``.
 
         :param bool create: Whether the resource is being created. If false,
         the parent container is not updated.
@@ -775,7 +774,8 @@ class Ldpr(metaclass=ABCMeta):
         Remove duplicate triples from add and remove delta graphs, which would
         otherwise contain unnecessary statements that annul each other.
 
-        @return tuple 2 "clean" sets of respectively remove statements and
+        :rtype: tuple
+        :return: 2 "clean" sets of respectively remove statements and
         add statements.
         """
         return (

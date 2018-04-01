@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class LdpFactory:
-    '''
+    """
     Generate LDP instances.
     The instance classes are based on provided client data or on stored data.
-    '''
+    """
     @staticmethod
     def new_container(uid):
         if not uid.startswith('/') or uid == '/':
@@ -43,7 +43,7 @@ class LdpFactory:
 
     @staticmethod
     def from_stored(uid, repr_opts={}, **kwargs):
-        '''
+        """
         Create an instance for retrieval purposes.
 
         This factory method creates and returns an instance of an LDPR subclass
@@ -52,8 +52,8 @@ class LdpFactory:
 
         N.B. The resource must exist.
 
-        @param uid UID of the instance.
-        '''
+        :param  uid: UID of the instance.
+        """
         #logger.info('Retrieving stored resource: {}'.format(uid))
         imr_urn = nsc['fcres'][uid]
 
@@ -80,16 +80,17 @@ class LdpFactory:
     @staticmethod
     def from_provided(
             uid, mimetype=None, stream=None, provided_imr=None, **kwargs):
-        '''
+        r"""
         Determine LDP type from request content.
 
-        @param uid (string) UID of the resource to be created or updated.
-        @param mimetype (string) The provided content MIME type.
-        @param stream (IOStream | None) The provided data stream. This can be
-        RDF or non-RDF content, or None. In the latter case, an empty container
-        is created.
-        @param **kwargs Arguments passed to the LDP class constructor.
-        '''
+        :param str uid: UID of the resource to be created or updated.
+        :param str mimetype: The provided content MIME type.
+        :param stream: The provided data stream. This can be
+            RDF or non-RDF content, or None. In the latter case, an empty
+            container is created.
+        :type stream: IOStream or None
+        :param \*\*kwargs: Arguments passed to the LDP class constructor.
+        """
         uri = nsc['fcres'][uid]
 
         if not stream and not mimetype:
@@ -149,11 +150,11 @@ class LdpFactory:
 
     @staticmethod
     def is_rdf_parsable(mimetype):
-        '''
+        """
         Checks whether a MIME type support RDF parsing by a RDFLib plugin.
 
-        @param mimetype (string) MIME type to check.
-        '''
+        :param str mimetype: MIME type to check.
+        """
         try:
             plugin.get(mimetype, parser.Parser)
         except plugin.PluginException:
@@ -164,11 +165,11 @@ class LdpFactory:
 
     @staticmethod
     def is_rdf_serializable(mimetype):
-        '''
+        """
         Checks whether a MIME type support RDF serialization by a RDFLib plugin
 
-        @param mimetype (string) MIME type to check.
-        '''
+        :param str mimetype: MIME type to check.
+        """
         try:
             plugin.get(mimetype, serializer.Serializer)
         except plugin.PluginException:
@@ -179,7 +180,7 @@ class LdpFactory:
 
     @staticmethod
     def mint_uid(parent_uid, path=None):
-        '''
+        """
         Mint a new resource UID based on client directives.
 
         This method takes a parent ID and a tentative path and returns an LDP
@@ -188,13 +189,14 @@ class LdpFactory:
         This may raise an exception resulting in a 404 if the parent is not
         found or a 409 if the parent is not a valid container.
 
-        @param parent_uid (string) UID of the parent resource. It must be an
-        existing LDPC.
-        @param path (string) path to the resource, relative to the parent.
+        :param str parent_uid: UID of the parent resource. It must be an
+            existing LDPC.
+        :param str path: path to the resource, relative to the parent.
 
-        @return string The confirmed resource UID. This may be different from
-        what has been indicated.
-        '''
+        :rtype: str
+        :return: The confirmed resource UID. This may be different from
+            what has been indicated.
+        """
         def split_if_legacy(uid):
             if config['application']['store']['ldp_rs']['legacy_ptree_split']:
                 uid = tbox.split_uuid(uid)

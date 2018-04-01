@@ -13,17 +13,13 @@ main = Blueprint('main', __name__, template_folder='templates',
 
 @main.route('/', methods=['GET'])
 def index():
-    '''
-    Homepage.
-    '''
+    """Homepage."""
     return render_template('index.html')
 
 
 @main.route('/debug', methods=['GET'])
 def debug():
-    '''
-    Debug page.
-    '''
+    """Debug page."""
     raise RuntimeError()
 
 
