@@ -58,10 +58,12 @@ Contributions are welcome in all forms, including ideas, issue reports,
 or even just spinning up the software and providing some feedback.
 LAKEsuperior is meant to live as a community project.
 
-See :doc:`related document <contributing>` for further details onhow to fork,
-improve, document and test the project.
+See `related document
+<http://lakesuperior.readthedocs.io/en/development/contributing.html>`__
+for further details onhow to fork, improve, document and test the project.
 
 .. |build status| image:: http://img.shields.io/travis/scossu/lakesuperior/master.svg?style=flat
+   :alt: Build Status
    :target: https://travis-ci.org/username/repo
 
 .. |docs| image:: https://readthedocs.org/projects/lakesuperior/badge/
