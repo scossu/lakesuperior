@@ -5,25 +5,48 @@ from importlib import import_module
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
-'''
-Constants used in messaging to identify an event type.
-'''
 RES_CREATED = '_create_'
+"""A resource was created."""
 RES_DELETED = '_delete_'
+"""A resource was deleted."""
 RES_UPDATED = '_update_'
+"""A resource was updated."""
 
 ROOT_UID = '/'
+"""Root node UID."""
 ROOT_RSRC_URI = nsc['fcres'][ROOT_UID]
+"""Internal URI of root resource."""
 
 
 class AppGlobals:
-    '''
+    """
     Application Globals.
 
-    This class sets up all connections and exposes them across the application
-    outside of the Flask app context.
-    '''
+    This class is instantiated and used as a carrier for all connections and
+    various global variables outside of the Flask app context.
+
+    The variables are set on initialization by passing a configuration dict.
+    Usually this is done when starting an application. The instance with the
+    loaded variables is then assigned to the :data:`lakesuperior.env.env`
+    global variable.
+
+    You can either load the default configuration::
+
+        >>>from lakesuperior import env_setup
+
+    Or set up an environment with a custom configuration::
+
+        >>>from lakesuperior.env import env
+        >>>from lakesuperior.app_globals import AppGlobals
+        >>>my_config = {'name': 'value', '...': '...'}
+        >>>env.config = my_config
+        >>>env.app_globals = AppGlobals(my_config)
+
+    """
     def __init__(self, conf):
+        """
+        Generate global variables from configuration.
+        """
         from lakesuperior.messaging.messenger import Messenger
 
         app_conf = conf['application']
@@ -53,18 +76,45 @@ class AppGlobals:
 
     @property
     def rdfly(self):
+        """
+        Current RDF layout.
+
+        This is an instance of
+        :class:`~lakesuperior.store.ldp_rs.rsrc_centric_layout.RsrcCentricLayout`.
+
+        *TODO:* Update class reference when interface will be separated from
+        implementation.
+        """
         return self._rdfly
 
     @property
     def rdf_store(self):
+        """
+        Current RDF low-level store.
+
+        This is an instance of
+        :class:`~lakesuperior.store.ldp_rs.lmdb_store.LmdbStore`.
+        """
         return self._rdfly.store
 
     @property
     def nonrdfly(self):
         return self._nonrdfly
+        """
+        Current non-RDF (binary contents) layout.
+
+        This is an instance of
+        :class:`~lakesuperior.store.ldp_nr.base_non_rdf_layout.BaseNonRdfLayout`.
+        """
 
     @property
     def messenger(self):
+        """
+        Current message handler.
+
+        This is an instance of
+        :class:`~lakesuperior.messaging.messenger.Messenger`.
+        """
         return self._messenger
 
     @property
@@ -73,9 +123,9 @@ class AppGlobals:
 
 
     def camelcase(self, word):
-        '''
+        """
         Convert a string with underscores to a camel-cased one.
 
         Ripped from https://stackoverflow.com/a/6425628
-        '''
+        """
         return ''.join(x.capitalize() or '_' for x in word.split('_'))

@@ -48,24 +48,24 @@ class Migrator:
     regular intervals.
     """
 
-    """
-    LMDB database parameters.
-
-    See :meth:`lmdb.Environment.__init__`
-    """
     db_params = {
         'map_size': 1024 ** 4,
         'metasync': False,
         'readahead': False,
         'meminit': False,
     }
+    """
+    LMDB database parameters.
 
-    """List of predicates to ignore when looking for links."""
+    See :meth:`lmdb.Environment.__init__`
+    """
+
     ignored_preds = (
         nsc['fcrepo'].hasParent,
         nsc['fcrepo'].hasTransactionProvider,
         nsc['fcrepo'].hasFixityService,
     )
+    """List of predicates to ignore when looking for links."""
 
 
     def __init__(
@@ -138,11 +138,11 @@ class Migrator:
         data set contained in a folder from an LDP repository.
 
         :param start_pts: List of starting points to retrieve
-        :type start_pts: tuple or list
             resources from. It would typically be the repository root in case
             of a full dump or one or more resources in the repository for a
             partial one.
-        :param str listf_ile: path to a local file containing a list of URIs,
+        :type start_pts: tuple or list
+        :param str list_file: path to a local file containing a list of URIs,
             one per line.
         """
         from lakesuperior.api import resource as rsrc_api
