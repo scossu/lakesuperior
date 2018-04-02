@@ -99,7 +99,7 @@ dependencies and should be automatically installed.
 ### Installation steps
 
 1. Create a virtualenv in a project folder:
-   `virtualenv -p <python 3.5+ exec path> <virtualenv folder>`
+   `python3 -m venv <virtualenv folder>`
 1. Activate the virtualenv: `source <path_to_virtualenv>/bin/activate`
 1. Clone this repo: `git clone https://github.com/scossu/lakesuperior.git`
 1. `cd` into repo folder
