@@ -153,22 +153,22 @@ class LmdbStore(Store):
 
     There are 4 main data sets (preservation worthy data):
 
-    - `t:st` (term key: serialized term; 1:1)
-    - `spo:c` (joined S, P, O keys: context key; dupsort, dupfixed)
-    - `c:` (context keys only, values are the empty bytestring; 1:1)
-    - `pfx:ns` (prefix: pickled namespace; 1:1)
+    - ``t:st`` (term key: serialized term; 1:1)
+    - ``spo:c`` (joined S, P, O keys: context key; dupsort, dupfixed)
+    - ``c:`` (context keys only, values are the empty bytestring; 1:1)
+    - ``pfx:ns`` (prefix: pickled namespace; 1:1)
 
     And 6 indices to optimize lookup for all possible bound/unbound term
     combination in a triple:
 
-    - `th:t` (term hash: term key; 1:1)
-    - `s:po` (S key: joined P, O keys; dupsort, dupfixed)
-    - `p:so` (P key: joined S, O keys; dupsort, dupfixed)
-    - `o:sp` (O key: joined S, P keys; dupsort, dupfixed)
-    - `c:spo` (context → triple association; dupsort, dupfixed)
-    - `ns:pfx` (pickled namespace: prefix; 1:1)
+    - ``th:t`` (term hash: term key; 1:1)
+    - ``s:po`` (S key: joined P, O keys; dupsort, dupfixed)
+    - ``p:so`` (P key: joined S, O keys; dupsort, dupfixed)
+    - ``o:sp`` (O key: joined S, P keys; dupsort, dupfixed)
+    - ``c:spo`` (context → triple association; dupsort, dupfixed)
+    - ``ns:pfx`` (pickled namespace: prefix; 1:1)
 
-    The default graph is defined in :data:`RDFLIB_DEFAULT_GRAPH_URI`. Adding
+    The default graph is defined in :data:``RDFLIB_DEFAULT_GRAPH_URI``. Adding
     triples without context will add to this graph. Looking up triples without
     context (also in a SPARQL query) will look in the  union graph instead of
     in the default graph. Also, removing triples without specifying a context
@@ -565,7 +565,7 @@ class LmdbStore(Store):
         :return: Generator over triples and contexts in which each result has
             the following format::
 
-            (s, p, o), generator(contexts)
+                (s, p, o), generator(contexts)
 
         Where the contexts generator lists all context that the triple appears
         in.

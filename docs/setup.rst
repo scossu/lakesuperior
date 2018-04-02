@@ -47,7 +47,7 @@ Installation steps
 ~~~~~~~~~~~~~~~~~~
 
 #. Create a virtualenv in a project folder:
-   ``virtualenv -p <python 3.5+ exec path> <virtualenv folder>``
+   ``python3 -m venv <virtualenv folder>``
 #. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
 #. Clone this repo:
    ``git clone https://github.com/scossu/lakesuperior.git``
