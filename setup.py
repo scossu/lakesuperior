@@ -10,6 +10,7 @@ import sys
 from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
+from glob import glob
 from os import path
 
 here = path.abspath(path.dirname(__file__))
@@ -26,7 +27,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='lakesuperior',
-    version='1.0.0a91',
+    version='1.0.0a98',
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
@@ -100,15 +101,24 @@ setup(
         'pytest-flask',
     ],
 
+    include_package_data=True,
     #extras_require={},
-    #package_data={},
-    #data_files=[],
+    #package_data={
+    #    'endpoints': ['templates/*'],
+    #},
+    data_files=[
+        ('etc', glob('etc.defaults/*.yml')),
+        ('data/bootstrap', glob('data/bootstrap/*')),
+        ('data/ldpnr_store', ['data/ldpnr_store/.keep']),
+        ('data/ldprs_store', ['data/ldprs_store/.keep']),
+    ],
 
     entry_points={
         'console_scripts': [
-            'lsup-admin=lsup_admin:admin',
-            'profiler=profiler:run',
-            'fcrepo=wsgi:run',
+            'fcrepo=lakesuperior.wsgi:run',
+            'lsup-admin=lakesuperior.lsup_admin:admin',
+            'lsup-benchmark=lakesuperior.util.benchmark:run',
+            'profiler=lakesuperior.profiler:run',
         ],
     },
 

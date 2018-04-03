@@ -6,9 +6,11 @@ sys.path.append('.')
 from lakesuperior.config_parser import test_config
 from lakesuperior.globals import AppGlobals
 from lakesuperior.env import env
+
+env.config = test_config
 env.app_globals = AppGlobals(test_config)
 from lakesuperior.app import create_app
-from util.generators import random_image
+from lakesuperior.util.generators import random_image
 
 env.config = test_config
 
