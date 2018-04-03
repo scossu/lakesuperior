@@ -5,7 +5,7 @@ WORKDIR     /usr/local
 ADD         . lakesuperior
 WORKDIR     /usr/local/lakesuperior
 RUN         cp ./docker/etc/* ./etc.defaults/
-RUN         pip install -r requirements.txt
+RUN         pip install -e .
 CMD         ./docker/docker_entrypoint
 EXPOSE      8000
 HEALTHCHECK --interval=30s --timeout=5s \
