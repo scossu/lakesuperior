@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import logging
 from logging.config import dictConfig
 from werkzeug.contrib.profiler import ProfilerMiddleware
@@ -18,9 +16,11 @@ options = {
 
 from lakesuperior.app import create_app
 
-if __name__ == '__main__':
+def run():
     fcrepo = create_app(config['application'])
     fcrepo.wsgi_app = ProfilerMiddleware(fcrepo.wsgi_app, **options)
     fcrepo.config['PROFILE'] = True
     fcrepo.run(debug = True)
 
+if __name__ == '__main__':
+    run()

@@ -3,7 +3,6 @@ python:
   - "3.5"
   - "3.6"
 install:
-  - pip install -r requirements.txt
-  - coilmq&
+  - pip -e .
 script:
-- pytest tests
+  - python setup.py test
