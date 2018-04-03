@@ -26,7 +26,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='lakesuperior',
-    version='1.0.0a9pre1',
+    version='1.0.0a91',
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
