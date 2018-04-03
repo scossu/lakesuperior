@@ -1,11 +1,11 @@
 import multiprocessing
 import yaml
 
-from os import environ, path
+from os import environ, makedirs, path
 
 import gunicorn.app.base
 
-from server import fcrepo
+from lakesuperior.server import fcrepo
 
 
 default_config_dir = '{}/etc.defaults'.format(
@@ -20,7 +20,12 @@ listen_addr = config.get('listen_addr', '0.0.0.0')
 listen_port = config.get('listen_port', 8000)
 preload_app = config.get('preload_app', True)
 app_mode = config.get('app_mode', 'prod')
+
 data_dir = path.realpath(config.get('data_dir'))
+run_dir = '{}/run'.format(data_dir)
+log_dir = '{}/log'.format(data_dir)
+makedirs(log_dir, exist_ok=True)
+makedirs(run_dir, exist_ok=True)
 
 def default_workers():
     return (multiprocessing.cpu_count() * 2) + 1
@@ -40,11 +45,10 @@ options = {
     'daemon': app_mode=='prod',
     'reload': app_mode=='dev' and not preload_app,
 
-    'pidfile': '{}/run/fcrepo.pid'.format(data_dir),
-    'accesslog': '{}/log/gunicorn-access.log'.format(data_dir),
-    'errorlog': '{}/log/gunicorn-error.log'.format(data_dir),
+    'pidfile': '{}/fcrepo.pid'.format(run_dir),
+    'accesslog': '{}/gunicorn-access.log'.format(log_dir),
+    'errorlog': '{}/gunicorn-error.log'.format(log_dir),
 }
-
 
 class WsgiApp(gunicorn.app.base.BaseApplication):
 

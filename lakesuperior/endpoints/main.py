@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 # Blueprint for main pages. Not much here.
 
 main = Blueprint('main', __name__, template_folder='templates',
-        static_folder='../../static')
+        static_folder='templates/static')
 
 ## GENERIC ROUTES ##
 

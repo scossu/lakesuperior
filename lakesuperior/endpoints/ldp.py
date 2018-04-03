@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 ldp = Blueprint(
         'ldp', __name__, template_folder='templates',
-        static_url_path='/static', static_folder='../../static')
+        static_url_path='/static', static_folder='templates/static')
 
 accept_patch = (
     'application/sparql-update',
