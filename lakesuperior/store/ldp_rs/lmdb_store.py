@@ -168,7 +168,8 @@ class LmdbStore(Store):
     - ``c:spo`` (context → triple association; dupsort, dupfixed)
     - ``ns:pfx`` (pickled namespace: prefix; 1:1)
 
-    The default graph is defined in :data:``RDFLIB_DEFAULT_GRAPH_URI``. Adding
+    The default graph is defined in
+    :data:`rdflib.graph.RDFLIB_DEFAULT_GRAPH_URI`. Adding
     triples without context will add to this graph. Looking up triples without
     context (also in a SPARQL query) will look in the  union graph instead of
     in the default graph. Also, removing triples without specifying a context
