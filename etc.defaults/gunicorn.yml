@@ -1,0 +1,24 @@
+# Set up main GUnicorn options.
+# See: http://docs.gunicorn.org/en/stable/settings.html
+
+# Commented values are the application defaults.
+
+# Directory where the WSGI server data are stored.
+data_dir: 'data'
+
+# Set app_mode to either 'prod', 'test' or 'dev'.
+# 'prod' is normal running mode. 'test' is used for running test suites.
+# 'dev' is similar to normal mode but with reload and debug enabled.
+app_mode: 'dev'
+
+#listen_addr: '0.0.0.0'
+#listen_port: 8000
+#workers: 4
+#worker_class: 'gevent'
+#max_requests: 512
+
+#user: ''
+#group: ''
+
+#preload_app: True
+

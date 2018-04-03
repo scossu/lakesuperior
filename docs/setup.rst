@@ -49,26 +49,14 @@ Installation steps
 #. Create a virtualenv in a project folder:
    ``python3 -m venv <virtualenv folder>``
 #. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
-#. Clone this repo:
-   ``git clone https://github.com/scossu/lakesuperior.git``
-#. ``cd`` into repo folder
 #. Install dependencies: ``pip install -r requirements.txt``
-
-   - (Optional) For a development server, install additional dependencies:
-     ``pip install -r requirements_dev.txt``. These include some heavyweight
-     packages needed for development and testing but not for regular operation.
-
-#. Start your STOMP broker, e.g.: ``coilmq &``.
-
-   - If you have another
-     queue manager listening to port 61613 you can either configure a
-     different port on the application configuration, or use the existing
-     message queue.
-
-#. Make sure that the ``lsup-admin`` and ``fcrepo`` files are executable.
-#. Run ``./lsup-admin bootstrap`` to initialize the binary and graph
+#. Start your STOMP broker, e.g.: ``coilmq &``. If you have another
+   queue manager listening to port 61613 you can either configure a
+   different port on the application configuration, or use the existing
+   message queue.
+#. Run ``lsup-admin bootstrap`` to initialize the binary and graph
    stores.
-#. Run ``./fcrepo``.
+#. Run ``fcrepo``.
 
 Configuration
 -------------
@@ -79,14 +67,14 @@ the ``data`` directory.
 
 To change the default configuration you should:
 
-1. Copy the ``etc.skeleton`` folder to a separate location
-2. Set the configuration folder location in the environment:
+#. Copy the ``etc.skeleton`` folder to a separate location
+#. Set the configuration folder location in the environment:
    ``export FCREPO_CONFIG_DIR=<your config dir location>`` (you can add
    this line at the end of your virtualenv ``activate`` script)
-3. Configure the application
-4. Bootstrap the app or copy the original data folders to the new
+#. Configure the application
+#. Bootstrap the app or copy the original data folders to the new
    location if any loction options changed
-5. (Re)start the server: ``./fcrepo``
+#. (Re)start the server: ``./fcrepo``
 
 The configuration options are documented in the files.
 

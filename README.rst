@@ -31,20 +31,17 @@ Dependencies
 Installation steps
 ~~~~~~~~~~~~~~~~~~
 
-1. Create a virtualenv in a project folder:
-   ``virtualenv -p <python 3.5+ exec path> <virtualenv folder>``
-2. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
-3. Clone this repo:
-   ``git clone https://github.com/scossu/lakesuperior.git``
-4. ``cd`` into repo folder
-5. Install dependencies: ``pip install -r requirements.txt``
-6. Start your STOMP broker, e.g.: ``coilmq &``. If you have another
+#. Create a virtualenv in a project folder:
+   ``python3 -m venv <virtualenv folder>``
+#. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
+#. Install dependencies: ``pip install -r requirements.txt``
+#. Start your STOMP broker, e.g.: ``coilmq &``. If you have another
    queue manager listening to port 61613 you can either configure a
    different port on the application configuration, or use the existing
    message queue.
-7. Run ``./lsup-admin bootstrap`` to initialize the binary and graph
-   stores
-8. Run ``./fcrepo``.
+#. Run ``lsup-admin bootstrap`` to initialize the binary and graph
+   stores.
+#. Run ``fcrepo``.
 
 Contributing
 ------------
