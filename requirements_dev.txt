@@ -1,6 +1,0 @@
-Pillow==4.3.0
-numpy==1.14.1
-pytest==3.2.2
-pytest-flask==0.10.0
-sphinx-rtd-theme==0.2.4
-wheel==0.30.0a0
