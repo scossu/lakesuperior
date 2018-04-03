@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import click
 import click_log
 import json
