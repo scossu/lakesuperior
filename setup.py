@@ -107,8 +107,6 @@ setup(
     #},
     data_files=[
         ('data/bootstrap', glob('data/bootstrap/*')),
-        ('data/ldpnr_store', ['data/ldpnr_store/.keep']),
-        ('data/ldprs_store', ['data/ldprs_store/.keep']),
     ],
 
     entry_points={
