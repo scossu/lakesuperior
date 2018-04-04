@@ -56,7 +56,6 @@ and paste the lines below in your console.
     python3 -m venv .
     source bin/activate
     pip install lakesuperior
-    export FCREPO_CONFIG_DIR=./etc.defaults
     # Start the message broker. If you have another
     # queue manager listening to port 61613 you can either configure a
     # different port on the application configuration, or use the existing

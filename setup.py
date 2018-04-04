@@ -106,7 +106,6 @@ setup(
     #package_data={
     #},
     data_files=[
-        #('etc.defaults', glob('etc.defaults/*.yml')),
         ('data/bootstrap', glob('data/bootstrap/*')),
         ('data/ldpnr_store', ['data/ldpnr_store/.keep']),
         ('data/ldprs_store', ['data/ldprs_store/.keep']),
