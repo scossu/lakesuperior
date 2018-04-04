@@ -26,8 +26,6 @@ self-container Docker volume, meaning your data will persist between
 runs. If you want to clear the decks, simply run
 ``docker-compose down -v``.
 
-.. _manual_install:
-
 Manual Install (a bit less quick, a bit more power)
 ---------------------------------------------------
 
@@ -69,6 +67,12 @@ and paste the lines below in your console.
 Test if it works::
 
     curl http://localhost:8000/ldp/
+
+Advanced Install
+----------------
+
+A "developer mode" install is detailed in the
+:ref:`Development Setup<manual_install>` section.
 
 Configuration
 -------------

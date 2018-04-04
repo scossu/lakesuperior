@@ -6,58 +6,46 @@ LAKEsuperior
 LAKEsuperior is an alternative `Fedora
 Repository <http://fedorarepository.org>`__ implementation.
 
-Documentation
--------------
+Fedora is a mature repository software system historically adopted by
+major cultural heritage institutions. It exposes an
+`LDP <https://www.w3.org/TR/ldp-primer/>`__ endpoint to manage
+any type of binary files and their metadata in Linked Data format.
 
 The full documentation is maintained in `Read The Docs
-<http://lakesuperior.readthedocs.io/>`__. Please refer to that for more info.
+<http://lakesuperior.readthedocs.io/>`__. Please refer to that for more info,
+including installation instructions.
 
-Installation
+Guiding Principles
+------------------
+
+LAKEsuperior aims at being an uncomplicated, efficient Fedora 4
+implementation.
+
+Its main goals are:
+
+-  **Reliability:** Based on solid technologies with stability in mind.
+-  **Efficiency:** Small memory and CPU footprint, high scalability.
+-  **Ease of management:** Tools to perform monitoring and maintenance
+   included.
+-  **Simplicity of design:** Straight-forward architecture, robustness
+   over features.
+
+Key features
 ------------
 
-The following instructions are aimed at a manual install using this git
-repository. For a hands-off install using Docker, see
-`the setup documentation
-<http://lakesuperior.readthedocs.io/en/latest/setup.html>`__.
-
-Dependencies
-~~~~~~~~~~~~
-
-1. Python 3.5 or greater.
-2. A message broker supporting the STOMP protocol. For testing and
-   evaluation purposes, `CoilMQ <https://github.com/hozn/coilmq>`__ is
-   included with the dependencies and should be automatically installed.
-
-Installation steps
-~~~~~~~~~~~~~~~~~~
-
-#. Create a virtualenv in a project folder:
-   ``python3 -m venv <virtualenv folder>``
-#. Activate the virtualenv: ``source <path_to_virtualenv>/bin/activate``
-#. Install dependencies: ``pip install -r requirements.txt``
-#. Start your STOMP broker, e.g.: ``coilmq &``. If you have another
-   queue manager listening to port 61613 you can either configure a
-   different port on the application configuration, or use the existing
-   message queue.
-#. Run ``lsup-admin bootstrap`` to initialize the binary and graph
-   stores.
-#. Run ``fcrepo``.
-
-Contributing
-------------
-
-This has been so far a single person’s off-hours project (with much
-input from several sides). In order to turn into anything close to a
-Beta release and eventually to a production-ready implementation, it
-needs some community love.
-
-Contributions are welcome in all forms, including ideas, issue reports,
-or even just spinning up the software and providing some feedback.
-LAKEsuperior is meant to live as a community project.
-
-See `Contributing Guidelines
-<http://lakesuperior.readthedocs.io/en/latest/contributing.html>`__
-for further details on how to fork, improve, document and test the project.
+-  Drop-in replacement for Fedora4 (with some
+   :doc:`caveats <fcrepo4_deltas>`); currently being tested
+   with Hyrax 2
+-  Very stable persistence layer based on
+   `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
+   ACID-compliant writes guarantee consistency of data.
+-  Term-based search (*planned*) and SPARQL Query API + UI
+-  No performance penalty for storing many resources under the same
+   container
+-  Extensible provenance metadata tracking
+-  Multi-modal access: HTTP (REST), command line interface and native Python
+   API.
+-  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
 
 .. |build status| image:: http://img.shields.io/travis/scossu/lakesuperior/master.svg?style=flat
    :alt: Build Status
@@ -65,5 +53,4 @@ for further details on how to fork, improve, document and test the project.
 
 .. |docs| image:: https://readthedocs.org/projects/lakesuperior/badge/
     :alt: Documentation Status
-    :scale: 100%
     :target: https://lakesuperior.readthedocs.io/en/latest/?badge=latest

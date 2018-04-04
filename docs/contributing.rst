@@ -10,12 +10,22 @@ Contributions are welcome in all forms, including ideas, issue reports,
 or even just spinning up the software and providing some feedback.
 LAKEsuperior is meant to live as a community project.
 
+.. _dev_setup:
+
 Development Setup
 -----------------
 
-To set up the software for developing code, documentation, or tests, follow the
-:ref:`manual installation <manual_install>` instructions.
-The additional packages indicated as optional need to be installed.
+To set up the software for developing code, documentation, or tests::
+
+    mkdir lsup # or whatever you may want to call it
+    cd lsup
+    python3 -m venv .
+    source bin/activate
+    git clone https://github.com/scossu/lakesuperior.git app
+    cd app
+    python setup.py develop
+
+This will allow to alter the code without having to recompile it after changes.
 
 Contribution Guidelines
 -----------------------
