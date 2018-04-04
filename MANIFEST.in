@@ -1,3 +1,4 @@
 include README.rst
 include LICENSE
 graft lakesuperior/endpoints/templates
+graft lakesuperior/etc.defaults
