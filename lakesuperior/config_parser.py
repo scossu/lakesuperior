@@ -6,6 +6,10 @@ import hiyapyco
 import yaml
 
 
+default_config_dir = environ.get('FCREPO_CONFIG_DIR', path.dirname(
+            path.abspath(__file__)) + '/etc.defaults')
+
+
 def parse_config(config_dir=None):
     """
     Parse configuration from a directory.
@@ -30,8 +34,7 @@ def parse_config(config_dir=None):
     )
 
     if not config_dir:
-        config_dir = environ.get('FCREPO_CONFIG_DIR', path.dirname(
-                path.dirname(path.abspath(__file__))) + '/etc.defaults')
+        config_dir = default_config_dir
 
     # This will hold a dict of all configuration values.
     _config = {}
