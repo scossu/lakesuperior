@@ -27,7 +27,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='lakesuperior',
-    version='1.0.0a98',
+    version='1.0.0a99',
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
@@ -104,10 +104,9 @@ setup(
     include_package_data=True,
     #extras_require={},
     #package_data={
-    #    'endpoints': ['templates/*'],
     #},
     data_files=[
-        ('etc', glob('etc.defaults/*.yml')),
+        #('etc.defaults', glob('etc.defaults/*.yml')),
         ('data/bootstrap', glob('data/bootstrap/*')),
         ('data/ldpnr_store', ['data/ldpnr_store/.keep']),
         ('data/ldprs_store', ['data/ldprs_store/.keep']),

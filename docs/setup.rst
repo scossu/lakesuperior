@@ -56,6 +56,7 @@ and paste the lines below in your console.
     python3 -m venv .
     source bin/activate
     pip install lakesuperior
+    export FCREPO_CONFIG_DIR=./etc.defaults
     # Start the message broker. If you have another
     # queue manager listening to port 61613 you can either configure a
     # different port on the application configuration, or use the existing
@@ -79,14 +80,14 @@ the ``data`` directory.
 
 To change the default configuration you should:
 
-#. Copy the ``etc.skeleton`` folder to a separate location
+#. Copy the ``etc.default`` folder to a separate location
 #. Set the configuration folder location in the environment:
    ``export FCREPO_CONFIG_DIR=<your config dir location>`` (you can add
    this line at the end of your virtualenv ``activate`` script)
 #. Configure the application
 #. Bootstrap the app or copy the original data folders to the new
    location if any loction options changed
-#. (Re)start the server: ``./fcrepo``
+#. (Re)start the server: ``fcrepo``
 
 The configuration options are documented in the files.
 
