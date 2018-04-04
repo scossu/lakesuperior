@@ -6,12 +6,10 @@ from os import environ, makedirs, path
 import gunicorn.app.base
 
 from lakesuperior.server import fcrepo
+from lakesuperior.config_parser import default_config_dir
 
 
-default_config_dir = '{}/etc.defaults'.format(
-        path.dirname(path.abspath(__file__)))
-config_dir = environ.get('FCREPO_CONFIG_DIR', default_config_dir)
-config_file = '{}/gunicorn.yml'.format(config_dir)
+config_file = '{}/gunicorn.yml'.format(default_config_dir)
 
 with open(config_file, 'r') as fh:
     config = yaml.load(fh, yaml.SafeLoader)
