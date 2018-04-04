@@ -5,9 +5,20 @@ from os import path, environ
 import hiyapyco
 import yaml
 
+import lakesuperior
+
 
 default_config_dir = environ.get('FCREPO_CONFIG_DIR', path.dirname(
-            path.abspath(__file__)) + '/etc.defaults')
+            path.abspath(lakesuperior.__file__)) + '/etc.defaults')
+"""
+Default configuration directory.
+
+This value falls back to the provided ``etc.defaults`` directory if the
+``FCREPO_CONFIG_DIR`` environment variable is not set.
+
+This value can still be overridden by custom applications by passing the
+``config_dir`` value to :func:`parse_config` explicitly.
+"""
 
 
 def parse_config(config_dir=None):
