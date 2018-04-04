@@ -20,9 +20,9 @@ query = Blueprint('query', __name__)
 
 @query.route('/term_search', methods=['GET'])
 def term_search():
-    '''
+    """
     Search by entering a search term and optional property and comparison term.
-    '''
+    """
     valid_operands = (
         ('=', 'Equals'),
         ('>', 'Greater Than'),
@@ -40,11 +40,11 @@ def term_search():
 
 @query.route('/sparql', methods=['GET', 'POST'])
 def sparql():
-    '''
+    """
     Perform a direct SPARQL query on the underlying triplestore.
 
-    @param qry SPARQL query string.
-    '''
+    :param str qry: SPARQL query string.
+    """
     accept_mimetypes = {
         'text/csv': 'csv',
         'application/sparql-results+json': 'json',

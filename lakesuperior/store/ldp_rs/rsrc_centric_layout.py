@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class RsrcCentricLayout:
-    '''
+    """
     This class exposes an interface to build graph store layouts. It also
     provides the basics of the triplestore connection.
 
@@ -53,7 +53,7 @@ class RsrcCentricLayout:
     E.g. if the configuration indicates `simple_layout` the application will
     look for
     `lakesuperior.store.rdf.simple_layout.SimpleLayout`.
-    '''
+    """
     _graph_uids = ('fcadmin', 'fcmain', 'fcstruct')
 
     # @TODO Move to a config file?
@@ -116,14 +116,14 @@ class RsrcCentricLayout:
     ## MAGIC METHODS ##
 
     def __init__(self, config):
-        '''Initialize the graph store and a layout.
+        """Initialize the graph store and a layout.
 
         NOTE: `rdflib.Dataset` requires a RDF 1.1 compliant store with support
         for Graph Store HTTP protocol
         (https://www.w3.org/TR/sparql11-http-rdf-update/). Blazegraph supports
         this only in the (currently unreleased) 2.2 branch. It works with Jena,
         which is currently the reference implementation.
-        '''
+        """
         self.config = config
         self.store = plugin.get('Lmdb', Store)(config['location'])
         self.ds = Dataset(self.store, default_union=True)
@@ -132,30 +132,30 @@ class RsrcCentricLayout:
 
     @property
     def attr_routes(self):
-        '''
+        """
         This is a map that allows specific triples to go to certain graphs.
         It is a machine-friendly version of the static attribute `attr_map`
         which is formatted for human readability and to avoid repetition.
         The attributes not mapped here (usually user-provided triples with no
         special meaning to the application) go to the `fcmain:` graph.
 
-        The output of this is a dict with a similar structure:
+        The output of this is a dict with a similar structure::
 
-        {
-            'p': {
-                <Predicate P1>: <destination graph G1>,
-                <Predicate P2>: <destination graph G1>,
-                <Predicate P3>: <destination graph G1>,
-                <Predicate P4>: <destination graph G2>,
-                [...]
-            },
-            't': {
-                <RDF Type T1>: <destination graph G1>,
-                <RDF Type T2>: <destination graph G3>,
-                [...]
+            {
+                'p': {
+                    <Predicate P1>: <destination graph G1>,
+                    <Predicate P2>: <destination graph G1>,
+                    <Predicate P3>: <destination graph G1>,
+                    <Predicate P4>: <destination graph G2>,
+                    [...]
+                },
+                't': {
+                    <RDF Type T1>: <destination graph G1>,
+                    <RDF Type T2>: <destination graph G3>,
+                    [...]
+                }
             }
-        }
-        '''
+        """
         if not hasattr(self, '_attr_routes'):
             self._attr_routes = {'p': {}, 't': {}}
             for dest in self.attr_map.keys():
@@ -168,9 +168,9 @@ class RsrcCentricLayout:
 
 
     def bootstrap(self):
-        '''
+        """
         Delete all graphs and insert the basic triples.
-        '''
+        """
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
@@ -186,25 +186,25 @@ class RsrcCentricLayout:
 
 
     def get_raw(self, uri, ctx=None):
-        '''
+        """
         Get a raw graph of a non-LDP resource.
 
         The graph is queried across all contexts or within a specific one.
 
-        @param s(rdflib.term.URIRef) URI of the subject.
-        @param ctx (rdflib.term.URIRef) URI of the optional context. If None,
-        all named graphs are queried.
+        :param rdflib.term.URIRef s: URI of the subject.
+        :param rdflib.term.URIRef ctx: URI of the optional context. If None,
+            all named graphs are queried.
 
-        return rdflib.Graph
-        '''
+        :rtype: rdflib.Graph
+        """
         return self.store.triples((nsc['fcres'][uid], None, None), ctx)
 
 
     def count_rsrc(self):
-        '''
+        """
         Return a count of first-class resources, subdivided in "live" and
         historic snapshots.
-        '''
+        """
         with TxnManager(self.ds.store) as txn:
             main = set(
                     self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
@@ -215,18 +215,18 @@ class RsrcCentricLayout:
 
 
     def raw_query(self, qry_str):
-        '''
+        """
         Perform a straight query to the graph store.
-        '''
+        """
         return self.ds.query(qry_str)
 
 
     def extract_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, **kwargs):
-        '''
+        """
         See base_rdf_layout.extract_imr.
-        '''
+        """
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
 
@@ -260,9 +260,9 @@ class RsrcCentricLayout:
 
 
     def ask_rsrc_exists(self, uid):
-        '''
+        """
         See base_rdf_layout.ask_rsrc_exists.
-        '''
+        """
         logger.debug('Checking if resource exists: {}'.format(uid))
         meta_gr = self.ds.graph(nsc['fcadmin'][uid])
         return bool(
@@ -270,9 +270,9 @@ class RsrcCentricLayout:
 
 
     def get_metadata(self, uid, ver_uid=None, strict=True):
-        '''
+        """
         This is an optimized query to get only the administrative metadata.
-        '''
+        """
         logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
@@ -287,12 +287,12 @@ class RsrcCentricLayout:
 
 
     def get_user_data(self, uid):
-        '''
+        """
         Get all the user-provided data.
 
-        @param uid (string) Resource UID.
-        '''
-        # @TODO This only works as long as there is only one user-provided
+        :param string uid: Resource UID.
+        """
+        # *TODO* This only works as long as there is only one user-provided
         # graph. If multiple user-provided graphs will be supported, this
         # should use another query to get all of them.
         userdata_gr = self.ds.graph(nsc['fcmain'][uid])
@@ -301,18 +301,19 @@ class RsrcCentricLayout:
 
 
     def get_version_info(self, uid, strict=True):
-        '''
+        """
         Get all metadata about a resource's versions.
-        '''
-        # @NOTE This pretty much bends the ontology—it replaces the graph URI
+        """
+        # **Note:** This pretty much bends the ontology—it replaces the graph URI
         # with the subject URI. But the concepts of data and metadata in Fedora
         # are quite fluid anyways...
+
         # WIP—Is it worth to replace SPARQL here?
         #versions = self.ds.graph(nsc['fcadmin'][uid]).triples(
         #        (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
         #for version in versions:
         #    version_meta = self.ds.graph(HIST_GRAPH_URI).triples(
-        qry = '''
+        qry = """
         CONSTRUCT {
           ?s fcrepo:hasVersion ?v .
           ?v ?p ?o .
@@ -325,13 +326,13 @@ class RsrcCentricLayout:
             ?vm  ?p ?o .
             FILTER (?o != ?v)
           }
-        }'''
+        }"""
         gr = self._parse_construct(qry, init_bindings={
             'ag': nsc['fcadmin'][uid],
             'hg': HIST_GR_URI,
             's': nsc['fcres'][uid]})
         rsrc = Resource(gr, nsc['fcres'][uid])
-        # @TODO Should return a graph.
+        # TODO Should return a graph.
         if strict:
             self._check_rsrc_status(rsrc)
 
@@ -339,19 +340,19 @@ class RsrcCentricLayout:
 
 
     def get_inbound_rel(self, subj_uri, full_triple=True):
-        '''
+        """
         Query inbound relationships for a subject.
 
         This can be a list of either complete triples, or of subjects referring
         to the given URI. It excludes historic version snapshots.
 
-        @param subj_uri (rdflib.URIRef) Subject URI.
-        @param full_triple (boolean) Whether to return the full triples found
-        or only the subjects. By default, full triples are returned.
+        :param rdflib.URIRef subj_uri: Subject URI.
+        :param boolean full_triple: Whether to return the full triples found
+            or only the subjects. By default, full triples are returned.
 
-        @return iterator(tuple(rdflib.term.Identifier) | rdflib.URIRef)
-        Inbound triples or subjects.
-        '''
+        :rtype: Iterator(tuple(rdflib.term.Identifier) or rdflib.URIRef)
+        :return: Inbound triples or subjects.
+        """
         # Only return non-historic graphs.
         meta_gr = self.ds.graph(META_GR_URI)
         ptopic_uri = nsc['foaf'].primaryTopic
@@ -364,14 +365,14 @@ class RsrcCentricLayout:
 
 
     def get_descendants(self, uid, recurse=True):
-        '''
+        """
         Get descendants (recursive children) of a resource.
 
-        @param uid (string) Resource UID.
-        result set.
+        :param str uid: Resource UID.
 
-        @return iterator(rdflib.URIRef) Subjects of descendant resources.
-        '''
+        :rtype: Iterator(rdflib.URIRef)
+        :return: Subjects of descendant resources.
+        """
         ds = self.ds
         subj_uri = nsc['fcres'][uid]
         ctx_uri = nsc['fcstruct'][uid]
@@ -391,15 +392,15 @@ class RsrcCentricLayout:
 
 
     def patch_rsrc(self, uid, qry):
-        '''
+        """
         Patch a resource with SPARQL-Update statements.
 
         The statement(s) is/are executed on the user-provided graph only
         to ensure that the scope is limited to the resource.
 
-        @param uid (string) UID of the resource to be patched.
-        @param qry (dict) Parsed and translated query, or query string.
-        '''
+        :param str uid: UID of the resource to be patched.
+        :param dict qry: Parsed and translated query, or query string.
+        """
         # Add meta graph for user-defined triples. This may not be used but
         # it's simple and harmless to add here.
         self.ds.graph(META_GR_URI).add(
@@ -413,12 +414,12 @@ class RsrcCentricLayout:
 
 
     def forget_rsrc(self, uid, inbound=True, children=True):
-        '''
+        """
         Completely delete a resource and (optionally) its children and inbound
         references.
 
         NOTE: inbound references in historic versions are not affected.
-        '''
+        """
         # Localize variables to be used in loops.
         uri = nsc['fcres'][uid]
         topic_uri = nsc['foaf'].primaryTopic
@@ -447,23 +448,23 @@ class RsrcCentricLayout:
 
 
     def truncate_rsrc(self, uid):
-        '''
+        """
         Remove all user-provided data from a resource and only leave admin and
         structure data.
-        '''
+        """
         userdata = set(self.get_user_data(uid))
 
         return self.modify_rsrc(uid, remove_trp=userdata)
 
 
     def modify_rsrc(self, uid, remove_trp=set(), add_trp=set()):
-        '''
+        """
         Modify triples about a subject.
 
         This method adds and removes triple sets from specific graphs,
         indicated by the term router. It also adds metadata about the changed
         graphs.
-        '''
+        """
         remove_routes = defaultdict(set)
         add_routes = defaultdict(set)
         historic = VERS_CONT_LABEL in uid
@@ -502,7 +503,7 @@ class RsrcCentricLayout:
                 ver_uid = uid.split(VERS_CONT_LABEL)[1].lstrip('/')
                 meta_gr.set((
                     gr_uri, nsc['fcrepo'].hasVersionLabel, Literal(ver_uid)))
-            # @TODO More provenance metadata can be added here.
+            # *TODO* More provenance metadata can be added here.
 
         # Add graph RDF types.
         for gr_uri, gr_type in graph_types:
@@ -510,12 +511,12 @@ class RsrcCentricLayout:
 
 
     def delete_rsrc(self, uid, historic=False):
-        '''
+        """
         Delete all aspect graphs of an individual resource.
 
-        @param uid Resource UID.
-        @param historic (bool) Whether the UID is of a historic version.
-        '''
+        :param uid: Resource UID.
+        :param bool historic: Whether the UID is of a historic version.
+        """
         meta_gr_uri = HIST_GR_URI if historic else META_GR_URI
         for gr_uri in self.ds.graph(meta_gr_uri)[
                 : nsc['foaf'].primaryTopic : nsc['fcres'][uid]]:
@@ -524,9 +525,9 @@ class RsrcCentricLayout:
 
 
     def snapshot_uid(self, uid, ver_uid):
-        '''
+        """
         Create a versioned UID string from a main UID and a version UID.
-        '''
+        """
         if VERS_CONT_LABEL in uid:
             raise InvalidResourceError(uid,
                     'Resource \'{}\' is already a version.')
@@ -535,9 +536,9 @@ class RsrcCentricLayout:
 
 
     def uri_to_uid(self, uri):
-        '''
+        """
         Convert an internal URI to a UID.
-        '''
+        """
         return str(uri).replace(nsc['fcres'], '')
 
 
@@ -566,9 +567,9 @@ class RsrcCentricLayout:
     ## PROTECTED MEMBERS ##
 
     def _check_rsrc_status(self, rsrc):
-        '''
+        """
         Check if a resource is not existing or if it is a tombstone.
-        '''
+        """
         uid = self.uri_to_uid(rsrc.identifier)
         if not len(rsrc.graph):
             raise ResourceNotExistsError(uid)
@@ -585,9 +586,11 @@ class RsrcCentricLayout:
 
 
     def _parse_construct(self, qry, init_bindings={}):
-        '''
-        Parse a CONSTRUCT query and return a Graph.
-        '''
+        """
+        Parse a CONSTRUCT query.
+
+        :rtype: rdflib.Graph
+        """
         try:
             qres = self.ds.query(qry, initBindings=init_bindings)
         except ResultException:
@@ -598,11 +601,12 @@ class RsrcCentricLayout:
 
 
     def _map_graph_uri(self, t, uid):
-        '''
+        """
         Map a triple to a namespace prefix corresponding to a graph.
 
-        @return Tuple with a graph URI and an associated RDF type.
-        '''
+        :rtype: tuple
+        :return: 2-tuple with a graph URI and an associated RDF type.
+        """
         if t[1] in self.attr_routes['p'].keys():
             pfx = self.attr_routes['p'][t[1]]
         elif t[1] == RDF.type and t[2] in self.attr_routes['t'].keys():

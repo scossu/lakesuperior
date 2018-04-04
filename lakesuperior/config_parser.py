@@ -19,8 +19,8 @@ def parse_config(config_dir=None):
     ``etc.defaults``.
 
     :param config_dir: Location on the filesystem of the configuration
-    directory. The default is set by the ``FCREPO_CONFIG_DIR`` environment
-    variable or, if this is not set, the ``etc.defaults`` stock directory.
+        directory. The default is set by the ``FCREPO_CONFIG_DIR`` environment
+        variable or, if this is not set, the ``etc.defaults`` stock directory.
     """
     configs = (
         'application',

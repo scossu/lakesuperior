@@ -2,8 +2,9 @@
 
 mkdir -p /data/log /data/run /data/bootstrap
 cp ./data/bootstrap/* /data/bootstrap
+pip install -e .
 coilmq &
 if [ ! -d /data/ldpnr_store ] && [ ! -d /data/ldprs_store ]; then
-  echo yes | ./lsup-admin bootstrap
+  echo yes | lsup-admin bootstrap
 fi
-exec ./fcrepo
+exec fcrepo

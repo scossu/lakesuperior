@@ -19,39 +19,39 @@ logger = logging.getLogger(__name__)
 
 
 def s2b(u, enc='UTF-8'):
-    '''
+    """
     Convert a string into a bytes object.
-    '''
+    """
     return u.encode(enc)
 
 
 def b2s(u, enc='UTF-8'):
-    '''
+    """
     Convert a bytes or memoryview object into a string.
-    '''
+    """
     return bytes(u).decode(enc)
 
 
 class TxnManager(ContextDecorator):
-    '''
+    """
     Handle ACID transactions with an LmdbStore.
 
-    Wrap this within a `with` statement:
+    Wrap this within a ``with`` statement:
 
     >>> with TxnManager(store, True):
     ...     # Do something with the database
     >>>
 
     The transaction will be opened and handled automatically.
-    '''
+    """
     def __init__(self, store, write=False):
-        '''
+        """
         Begin and close a transaction in a store.
 
-        @param store (LmdbStore) The store to open a transaction on.
-        @param write (bool) Whether the transaction is read-write. Default is
-        False (read-only transaction).
-        '''
+        :param LmdbStore store: The store to open a transaction on.
+        :param bool write: Whether the transaction is read-write. Default is
+            ``False`` (read-only transaction).
+        """
         self.store = store
         self.write = write
 
@@ -69,34 +69,35 @@ class TxnManager(ContextDecorator):
 
 
 class LexicalSequence:
-    '''
+    """
     Fixed-length lexicographically ordered byte sequence.
 
     Useful to generate optimized sequences of keys in LMDB.
-    '''
+    """
     def __init__(self, start=1, max_len=5):
-        '''
-        @param start (bytes) Starting byte value. Bytes below this value are
-        never found in this sequence. This is useful to allot special bytes
-        to be used e.g. as separators.
-        @param max_len (int) Maximum number of bytes that a byte string can
-        contain. This should be chosen carefully since the number of all
-        possible key combinations is determined by this value and the `start`
-        value. The default args provide 255**5 (~1 Tn) unique combinations.
-        '''
+        """
+        Create a new lexical sequence.
+
+        :param bytes start: Starting byte value. Bytes below this value are
+            never found in this sequence. This is useful to allot special bytes
+            to be used e.g. as separators.
+        :param int max_len: Maximum number of bytes that a byte string can
+            contain. This should be chosen carefully since the number of all
+            possible key combinations is determined by this value and the
+            ``start`` value. The default args provide 255**5 (~1 Tn) unique
+            combinations.
+        """
         self.start = start
         self.length = max_len
 
 
     def first(self):
-        '''
-        First possible combination.
-        '''
+        """First possible combination."""
         return bytearray([self.start] * self.length)
 
 
     def next(self, n):
-        '''
+        """
         Calculate the next closest byte sequence in lexicographical order.
 
         This is used to fill the next available slot after the last one in
@@ -107,8 +108,8 @@ class LexicalSequence:
         This function assumes that all the keys are padded with the `start`
         value up to the `max_len` length.
 
-        @param n (bytes) Current byte sequence to add to.
-        '''
+        :param bytes n: Current byte sequence to add to.
+        """
         if not n:
             n = self.first()
         elif isinstance(n, bytes) or isinstance(n, memoryview):
@@ -137,7 +138,7 @@ class LexicalSequence:
 
 
 class LmdbStore(Store):
-    '''
+    """
     LMDB-backed store.
 
     This is an implementation of the RDFLib Store interface:
@@ -152,27 +153,28 @@ class LmdbStore(Store):
 
     There are 4 main data sets (preservation worthy data):
 
-    - t:st (term key: serialized term; 1:1)
-    - spo:c (joined S, P, O keys: context key; dupsort, dupfixed)
-    - c: (context keys only, values are the empty bytestring; 1:1)
-    - pfx:ns (prefix: pickled namespace; 1:1)
+    - ``t:st`` (term key: serialized term; 1:1)
+    - ``spo:c`` (joined S, P, O keys: context key; dupsort, dupfixed)
+    - ``c:`` (context keys only, values are the empty bytestring; 1:1)
+    - ``pfx:ns`` (prefix: pickled namespace; 1:1)
 
     And 6 indices to optimize lookup for all possible bound/unbound term
     combination in a triple:
 
-    - th:t (term hash: term key; 1:1)
-    - s:po (S key: joined P, O keys; dupsort, dupfixed)
-    - p:so (P key: joined S, O keys; dupsort, dupfixed)
-    - o:sp (O key: joined S, P keys; dupsort, dupfixed)
-    - c:spo (context → triple association; dupsort, dupfixed)
-    - ns:pfx (pickled namespace: prefix; 1:1)
+    - ``th:t`` (term hash: term key; 1:1)
+    - ``s:po`` (S key: joined P, O keys; dupsort, dupfixed)
+    - ``p:so`` (P key: joined S, O keys; dupsort, dupfixed)
+    - ``o:sp`` (O key: joined S, P keys; dupsort, dupfixed)
+    - ``c:spo`` (context → triple association; dupsort, dupfixed)
+    - ``ns:pfx`` (pickled namespace: prefix; 1:1)
 
-    The default graph is defined in `RDFLIB_DEFAULT_GRAPH_URI`. Adding triples
-    without context will add to this graph. Looking up triples without context
-    (also in a SPARQL query) will look in the  union graph instead of in the
-    default graph. Also, removing triples without specifying a context will
-    remove triples from all contexts.
-    '''
+    The default graph is defined in
+    :data:`rdflib.graph.RDFLIB_DEFAULT_GRAPH_URI`. Adding
+    triples without context will add to this graph. Looking up triples without
+    context (also in a SPARQL query) will look in the  union graph instead of
+    in the default graph. Also, removing triples without specifying a context
+    will remove triples from all contexts.
+    """
 
     context_aware = True
     # This is a hassle to maintain for no apparent gain. If some use is devised
@@ -181,19 +183,18 @@ class LmdbStore(Store):
     graph_aware = True
     transaction_aware = True
 
-    '''
-    LMDB map size. See http://lmdb.readthedocs.io/en/release/#environment-class
-    '''
     MAP_SIZE = 1024 ** 4 # 1Tb
+    """
+    LMDB map size. See http://lmdb.readthedocs.io/en/release/#environment-class
+    """
 
-    '''
-    Key hashing algorithm. If you are paranoid, use SHA1. Otherwise, MD5 is
-    faster and takes up less space (16 bytes vs. 20 bytes). This may make a
-    visible difference because keys are generated and parsed very often.
-    '''
-    KEY_HASH_ALGO = 'sha1'
+    TERM_HASH_ALGO = 'sha1'
+    """
+    Term hashing algorithm. SHA1 is the default.
+    """
 
-    '''
+    KEY_LENGTH = 5
+    """
     Fixed length for term keys.
 
     4 or 5 is a safe range. 4 allows for ~4 billion (256 ** 4) unique terms
@@ -209,14 +210,13 @@ class LmdbStore(Store):
     could improve performance since keys make up the vast majority of record
     exchange between the store and the application. However it is sensible not
     to expose this value as a configuration option.
-    '''
-    KEY_LENGTH = 5
+    """
 
-    '''
-    Lexical sequence start. `\x01` is fine since no special characters are used,
-    but it's good to leave a spare for potential future use.
-    '''
     KEY_START = 1
+    """
+    Lexical sequence start. ``\\x01`` is fine since no special characters are
+    used, but it's good to leave a spare for potential future use.
+    """
 
     data_keys = (
         # Term key to serialized term content: 1:1
@@ -237,24 +237,24 @@ class LmdbStore(Store):
         's:po', 'p:so', 'o:sp', 'c:spo',
     )
 
-    '''
+    _lookup_rank = ('s', 'o', 'p')
+    """
     Order in which keys are looked up if two terms are bound.
     The indices with the smallest average number of values per key should be
     looked up first.
 
     If we want to get fancy, this can be rebalanced from time to time by
     looking up the number of keys in (s:po, p:so, o:sp).
-    '''
-    _lookup_rank = ('s', 'o', 'p')
+    """
 
-    '''
-    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
-    '''
     _lookup_ordering = {
         's:po': (0, 1, 2),
         'p:so': (1, 0, 2),
         'o:sp': (2, 0, 1),
     }
+    """
+    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
+    """
 
     data_env = None
     idx_env = None
@@ -279,19 +279,17 @@ class LmdbStore(Store):
 
 
     def __del__(self):
-        '''
-        Properly close store for garbage collection.
-        '''
+        """Properly close store for garbage collection."""
         self.close(True)
 
 
     def __len__(self, context=None):
-        '''
+        """
         Return length of the dataset.
 
-        @param context (rdflib.URIRef | rdflib.Graph) Context to restrict count
-        to.
-        '''
+        :param context: Context to restrict count to.
+        :type context: rdflib.URIRef or rdflib.Graph
+        """
         context = self._normalize_context(context)
 
         if context is not None:
@@ -311,7 +309,7 @@ class LmdbStore(Store):
 
 
     def open(self, configuration=None, create=True):
-        '''
+        """
         Open the database.
 
         The database is best left open for the lifespan of the server. Read
@@ -321,7 +319,7 @@ class LmdbStore(Store):
 
         This method is called outside of the main transaction. All cursors
         are created separately within the transaction.
-        '''
+        """
         self._init_db_environments(create)
         if self.data_env == NO_STORE:
             return NO_STORE
@@ -331,9 +329,9 @@ class LmdbStore(Store):
 
 
     def begin(self, write=False):
-        '''
+        """
         Begin the main write transaction and create cursors.
-        '''
+        """
         if not self.is_open:
             raise RuntimeError('Store must be opened first.')
         logger.debug('Beginning a {} transaction.'.format(
@@ -346,9 +344,7 @@ class LmdbStore(Store):
 
 
     def stats(self):
-        '''
-        Gather statistics about the database.
-        '''
+        """Gather statistics about the database."""
         stats = {
             'data_db_stats': {
                 db_label: self.data_txn.stat(self.dbs[db_label])
@@ -368,9 +364,7 @@ class LmdbStore(Store):
 
     @property
     def is_txn_open(self):
-        '''
-        Whether the main transaction is open.
-        '''
+        """Whether the main transaction is open."""
         try:
             self.data_txn.id()
             self.idx_txn.id()
@@ -383,9 +377,7 @@ class LmdbStore(Store):
 
 
     def cur(self, index):
-        '''
-        Return a new cursor by its index.
-        '''
+        """Return a new cursor by its index."""
         if index in self.idx_keys:
             txn = self.idx_txn
             src = self.idx_keys
@@ -399,14 +391,14 @@ class LmdbStore(Store):
 
 
     def get_data_cursors(self, txn):
-        '''
+        """
         Build the main data cursors for a transaction.
 
-        @param txn (lmdb.Transaction) This can be a read or write transaction.
+        :param lmdb.Transaction txn: This can be a read or write transaction.
 
-        @return dict(string, lmdb.Cursor) Keys are index labels, values are
-        index cursors.
-        '''
+        :rtype: dict(string, lmdb.Cursor)
+        :return: Keys are index labels, values are index cursors.
+        """
         return {
             'tk:t': txn.cursor(self.dbs['tk:t']),
             'tk:c': txn.cursor(self.dbs['tk:c']),
@@ -415,25 +407,25 @@ class LmdbStore(Store):
 
 
     def get_idx_cursors(self, txn):
-        '''
+        """
         Build the index cursors for a transaction.
 
-        @param txn (lmdb.Transaction) This can be a read or write transaction.
+        :param lmdb.Transaction txn: This can be a read or write transaction.
 
-        @return dict(string, lmdb.Cursor) Keys are index labels, values are
-        index cursors.
-        '''
+        :rtype: dict(string, lmdb.Cursor)
+        :return: dict of index labels, index cursors.
+        """
         return {
             key: txn.cursor(self.dbs[key])
             for key in self.idx_keys}
 
 
     def close(self, commit_pending_transaction=False):
-        '''
+        """
         Close the database connection.
 
         Do this at server shutdown.
-        '''
+        """
         self.__open = False
         if self.is_txn_open:
             if commit_pending_transaction:
@@ -446,26 +438,27 @@ class LmdbStore(Store):
 
 
     def destroy(self, path):
-        '''
+        """
         Destroy the store.
 
         https://www.youtube.com/watch?v=lIVq7FJnPwg
 
-        @param path (string) Path of the folder containing the database(s).
-        '''
+        :param str path: Path of the folder containing the database(s).
+        """
         if exists(path):
             rmtree(path)
 
 
     def add(self, triple, context=None, quoted=False):
-        '''
+        """
         Add a triple and start indexing.
 
-        @param triple (tuple:rdflib.Identifier) Tuple of three identifiers.
-        @param context (rdflib.Identifier | None) Context identifier.
-        'None' inserts in the default graph.
-        @param quoted (bool) Not used.
-        '''
+        :param tuple(rdflib.Identifier) triple: Tuple of three identifiers.
+        :param context: Context identifier. ``None`` inserts in the default
+            graph.
+        :type context: rdflib.Identifier or None
+        :param bool quoted: Not used.
+        """
         context = self._normalize_context(context)
         if context is None:
             context = RDFLIB_DEFAULT_GRAPH_URI
@@ -512,16 +505,16 @@ class LmdbStore(Store):
 
 
     def remove(self, triple_pattern, context=None):
-        '''
+        """
         Remove triples by a pattern.
 
-        @param triple_pattern (tuple:rdflib.term.Identifier|None) 3-tuple of
+        :param tuple:rdflib.term.Identifier|None triple_pattern: 3-tuple of
         either RDF terms or None, indicating the triple(s) to be removed.
         None is used as a wildcard.
-        @param context (rdflib.term.Identifier|None) Context to remove the
-        triples from. If None (the default) the matching triples are removed
-        from all contexts.
-        '''
+        :param context: Context to remove the triples from. If None (the
+        default) the matching triples are removed from all contexts.
+        :type context: rdflib.term.Identifier or None
+        """
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
         #    triple_pattern, context))
         context = self._normalize_context(context)
@@ -562,18 +555,22 @@ class LmdbStore(Store):
 
 
     def triples(self, triple_pattern, context=None):
-        '''
+        """
         Generator over matching triples.
 
-        @param triple_pattern (tuple) 3 RDFLib terms
-        @param context (rdflib.Graph | None) Context graph, if available.
+        :param tuple triple_pattern: 3 RDFLib terms
+        :param context: Context graph, if available.
+        :type context: rdflib.Graph or None
 
-        @return Generator over triples and contexts in which each result has
-        the following format:
-        > (s, p, o), generator(contexts)
+        :rtype: Iterator
+        :return: Generator over triples and contexts in which each result has
+            the following format::
+
+                (s, p, o), generator(contexts)
+
         Where the contexts generator lists all context that the triple appears
         in.
-        '''
+        """
         #logger.debug('Getting triples for pattern: {} and context: {}'.format(
         #    triple_pattern, context))
         # This sounds strange, RDFLib should be passing None at this point,
@@ -620,12 +617,12 @@ class LmdbStore(Store):
 
 
     def bind(self, prefix, namespace):
-        '''
+        """
         Bind a prefix to a namespace.
 
-        @param prefix (string) Namespace prefix.
-        @param namespace (rdflib.URIRef) Fully qualified URI of namespace.
-        '''
+        :param str prefix: Namespace prefix.
+        :param rdflib.URIRef namespace: Fully qualified URI of namespace.
+        """
         prefix = s2b(prefix)
         namespace = s2b(namespace)
         if self.is_txn_rw:
@@ -643,44 +640,47 @@ class LmdbStore(Store):
 
 
     def namespace(self, prefix):
-        '''
+        """
         Get the namespace for a prefix.
-        @param prefix (string) Namespace prefix.
-        '''
+        :param str prefix: Namespace prefix.
+        """
         with self.cur('pfx:ns') as cur:
             ns = cur.get(s2b(prefix))
             return Namespace(b2s(ns)) if ns is not None else None
 
 
     def prefix(self, namespace):
-        '''
+        """
         Get the prefix associated with a namespace.
 
-        @NOTE A namespace can be only bound to one prefix in this
+        **Note:** A namespace can be only bound to one prefix in this
         implementation.
 
-        @param namespace (rdflib.URIRef) Fully qualified URI of namespace.
-        '''
+        :param rdflib.Namespace namespace: Fully qualified namespace.
+
+        :rtype: str or None
+        """
         with self.cur('ns:pfx') as cur:
             prefix = cur.get(s2b(namespace))
             return b2s(prefix) if prefix is not None else None
 
 
     def namespaces(self):
-        '''
-        Get an iterator of all prefix: namespace bindings.
-        '''
+        """Get an iterator of all prefix: namespace bindings.
+
+        :rtype: Iterator(tuple(str, rdflib.Namespace))
+        """
         with self.cur('pfx:ns') as cur:
             for pfx, ns in iter(cur):
                 yield (b2s(pfx), Namespace(b2s(ns)))
 
 
     def contexts(self, triple=None):
-        '''
+        """
         Get a list of all contexts.
 
-        @return generator(Graph)
-        '''
+        :rtype: Iterator(rdflib.Graph)
+        """
         if triple and any(triple):
             with self.cur('spo:c') as cur:
                 if cur.set_key(self._to_key(triple)):
@@ -695,7 +695,7 @@ class LmdbStore(Store):
 
 
     def add_graph(self, graph):
-        '''
+        """
         Add a graph to the database.
 
         This creates an empty graph by associating the graph URI with the
@@ -707,8 +707,8 @@ class LmdbStore(Store):
         Therefore it needs to open a write transaction. This is not ideal
         but the only way to handle datasets in RDFLib.
 
-        @param graph (URIRef) URI of the named graph to add.
-        '''
+        :param rdflib.URIRef graph: URI of the named graph to add.
+        """
         if isinstance(graph, Graph):
             graph = graph.identifier
         pk_c = self._pickle(graph)
@@ -738,11 +738,11 @@ class LmdbStore(Store):
 
 
     def remove_graph(self, graph):
-        '''
+        """
         Remove all triples from graph and the graph itself.
 
-        @param graph (URIRef) URI of the named graph to remove.
-        '''
+        :param rdflib.URIRef graph: URI of the named graph to remove.
+        """
         if isinstance(graph, Graph):
             graph = graph.identifier
         self.remove((None, None, None), graph)
@@ -753,9 +753,7 @@ class LmdbStore(Store):
 
 
     def commit(self):
-        '''
-        Commit main transaction and push action queue.
-        '''
+        """Commit main transaction."""
         logger.debug('Committing transaction.')
         try:
             self.data_txn.commit()
@@ -769,9 +767,7 @@ class LmdbStore(Store):
 
 
     def rollback(self):
-        '''
-        Roll back main transaction.
-        '''
+        """Roll back main transaction."""
         logger.debug('Rolling back transaction.')
         try:
             self.data_txn.abort()
@@ -787,16 +783,17 @@ class LmdbStore(Store):
     ## PRIVATE METHODS ##
 
     def _triple_keys(self, triple_pattern, context=None):
-        '''
+        """
         Generator over matching triple keys.
 
         This method is used by `triples` which returns native Python tuples,
         as well as by other methods that need to iterate and filter triple
         keys without incurring in the overhead of converting them to triples.
 
-        @param triple_pattern (tuple) 3 RDFLib terms
-        @param context (rdflib.Graph | None) Context graph or URI, or None.
-        '''
+        :param tuple triple_pattern: 3 RDFLib terms
+        :param context: Context graph or URI, or None.
+        :type context: rdflib.term.Identifier or None
+        """
         if context == self:
             context = None
 
@@ -842,16 +839,16 @@ class LmdbStore(Store):
 
 
     def _init_db_environments(self, create=True):
-        '''
+        """
         Initialize the DB environment.
 
         The main database is kept in one file, the indices in a separate one
         (these may be even further split up depending on performance
         considerations).
 
-        @param create (bool) If True, the environment and its databases are
+        :param bool create: If True, the environment and its databases are
         created.
-        '''
+        """
         path = self.path
         if not exists(path):
             if create is True:
@@ -892,14 +889,17 @@ class LmdbStore(Store):
 
 
     def _from_key(self, key):
-        '''
+        """
         Convert a key into one or more terms.
 
-        @param key (bytes | memoryview) The key to be converted. It can be a
+        :param key: The key to be converted. It can be a
+        :type key: bytes or memoryview
         compound one in which case the function will return multiple terms.
 
-        @return tuple
-        '''
+        :rtype: tuple(rdflib.term.Identifier)
+        :return: The term(s) associated with the key(s). The result is always
+        a tuple even for single results.
+        """
         with self.cur('t:st') as cur:
             return tuple(
                    self._unpickle(cur.get(k))
@@ -907,20 +907,21 @@ class LmdbStore(Store):
 
 
     def _to_key(self, obj):
-        '''
+        """
         Convert a triple, quad or term into a key.
 
         The key is the checksum of the pickled object, therefore unique for
-        that object. The hashing algorithm is specified in `KEY_HASH_ALGO`.
+        that object. The hashing algorithm is specified in `TERM_HASH_ALGO`.
 
-        @param obj (Object) Anything that can be reduced to terms stored in the
+        :param Object obj: Anything that can be reduced to terms stored in the
         database. Pairs of terms, as well as triples and quads, are expressed
         as tuples.
 
         If more than one term is provided, the keys are concatenated.
 
-        @return bytes
-        '''
+        :rtype: memoryview
+        :return: Keys stored for the term(s)
+        """
         if not isinstance(obj, list) and not isinstance(obj, tuple):
             obj = (obj,)
         key = []
@@ -936,33 +937,33 @@ class LmdbStore(Store):
 
 
     def _hash(self, s):
-        '''
-        Get the hash value of a serialized object.
-        '''
-        return hashlib.new(self.KEY_HASH_ALGO, s).digest()
+        """Get the hash value of a serialized object."""
+        return hashlib.new(self.TERM_HASH_ALGO, s).digest()
 
 
     def _split_key(self, keys):
-        '''
+        """
         Split a compound key into individual keys.
 
         This method relies on the fixed length of all term keys.
 
-        @param keys (bytes | memoryview) Concatenated keys.
+        :param keys: Concatenated keys.
+        :type keys: bytes or memoryview
 
-        @return tuple: bytes | memoryview
-        '''
+        :rtype: tuple(memoryview)
+        """
         return tuple(
                 keys[i:i+self.KEY_LENGTH]
                 for i in range(0, len(keys), self.KEY_LENGTH))
 
 
     def _normalize_context(self, context):
-        '''
+        """
         Normalize a context parameter to conform to the model expectations.
 
-        @param context (URIRef | Graph | None) Context URI or graph.
-        '''
+        :param context: Context URI or graph.
+        :type context: URIRef or Graph or None
+        """
         if isinstance(context, Graph):
             if context == self or isinstance(context.identifier, Variable):
                 context = None
@@ -974,11 +975,12 @@ class LmdbStore(Store):
 
 
     def _lookup(self, triple_pattern):
-        '''
+        """
         Look up triples in the indices based on a triple pattern.
 
-        @return iterator of matching triple keys.
-        '''
+        :rtype: Iterator
+        :return: Matching triple keys.
+        """
         s, p, o = triple_pattern
 
         if s is not None:
@@ -1022,15 +1024,16 @@ class LmdbStore(Store):
 
 
     def _lookup_1bound(self, label, term):
-        '''
+        """
         Lookup triples for a pattern with one bound term.
 
-        @param label (string) Which term is being searched for. One of `s`,
+        :param str label: Which term is being searched for. One of `s`,
         `p`, or `o`.
-        @param term (rdflib.URIRef) Bound term to search for.
+        :param rdflib.URIRef term: Bound term to search for.
 
-        @return iterator(bytes) SPO keys matching the pattern.
-        '''
+        :rtype: iterator(bytes)
+        :return: SPO keys matching the pattern.
+        """
         k = self._to_key(term)
         if not k:
             return iter(())
@@ -1051,15 +1054,16 @@ class LmdbStore(Store):
 
 
     def _lookup_2bound(self, bound_terms):
-        '''
+        """
         Look up triples for a pattern with two bound terms.
 
-        @param bound terms (dict) Triple labels and terms to search for,
+        :param  bound: terms (dict) Triple labels and terms to search for,
         in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
         URIRef('urn:o:1')}
 
-        @return iterator(bytes) SPO keys matching the pattern.
-        '''
+        :rtype: iterator(bytes)
+        :return: SPO keys matching the pattern.
+        """
         if len(bound_terms) != 2:
             raise ValueError(
                     'Exactly 2 terms need to be bound. Got {}'.format(
@@ -1112,14 +1116,15 @@ class LmdbStore(Store):
 
 
     def _append(self, cur, values, **kwargs):
-        '''
+        """
         Append one or more values to the end of a database.
 
-        @param cur (lmdb.Cursor) The write cursor to act on.
-        @param data (list(bytes)) Value(s) to append.
+        :param lmdb.Cursor cur: The write cursor to act on.
+        :param list(bytes) values: Value(s) to append.
 
-        @return list(bytes) Last key(s) inserted.
-        '''
+        :rtype: list(memoryview)
+        :return: Last key(s) inserted.
+        """
         if not isinstance(values, list) and not isinstance(values, tuple):
             raise ValueError('Input must be a list or tuple.')
         data = []
@@ -1134,13 +1139,12 @@ class LmdbStore(Store):
 
 
     def _index_triple(self, action, spok):
-        '''
+        """
         Update index for a triple and context (add or remove).
 
-        @param action (string) 'add' or 'remove'.
-        @param spok (bytes) Triple key.
-        indexed. Context MUST be specified for 'add'.
-        '''
+        :param str action: 'add' or 'remove'.
+        :param bytes spok: Triple key.
+        """
         # Split and rearrange-join keys for association and indices.
         triple = self._split_key(spok)
         sk, pk, ok = triple
@@ -1173,13 +1177,14 @@ class LmdbStore(Store):
     ## debugging.
 
     def _keys_in_ctx(self, pk_ctx):
-        '''
+        """
         Convenience method to list all keys in a context.
 
-        @param pk_ctx (bytes) Pickled context URI.
+        :param bytes pk_ctx: Pickled context URI.
 
-        @return Iterator:tuple Generator of triples.
-        '''
+        :rtype: Iterator(tuple)
+        :return: Generator of triples.
+        """
         with self.cur('c:spo') as cur:
             if cur.set_key(pk_ctx):
                 tkeys = cur.iternext_dup()
@@ -1189,13 +1194,14 @@ class LmdbStore(Store):
 
 
     def _ctx_for_key(self, tkey):
-        '''
+        """
         Convenience method to list all contexts that a key is in.
 
-        @param tkey (bytes) Triple key.
+        :param bytes tkey: Triple key.
 
-        @return Iterator:URIRef Generator of context URIs.
-        '''
+        :rtype: Iterator(rdflib.URIRef)
+        :return: Generator of context URIs.
+        """
         with self.cur('spo:c') as cur:
             if cur.set_key(tkey):
                 ctx = cur.iternext_dup()

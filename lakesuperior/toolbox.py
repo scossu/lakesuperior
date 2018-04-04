@@ -24,11 +24,11 @@ class Toolbox:
         '''
         Replace the domain of a term.
 
-        @param term (URIRef) The term (URI) to change.
-        @param search (string) Domain string to replace.
-        @param replace (string) Domain string to use for replacement.
+        :param rdflib.URIRef term: The term (URI) to change.
+        :param str search: Domain string to replace.
+        :param str replace: Domain string to use for replacement.
 
-        @return URIRef
+        :rtype: rdflib.URIRef
         '''
         s = str(term)
         if s.startswith(search):
@@ -40,7 +40,7 @@ class Toolbox:
     def uid_to_uri(self, uid):
         '''Convert a UID to a URI.
 
-        @return URIRef
+        :rtype: rdflib.URIRef
         '''
         return URIRef(g.webroot + uid)
 
@@ -48,7 +48,7 @@ class Toolbox:
     def uri_to_uid(self, uri):
         '''Convert an absolute URI (internal or external) to a UID.
 
-        @return string
+        :rtype: str
         '''
         if uri.startswith(nsc['fcres']):
             return str(uri).replace(nsc['fcres'], '')
@@ -59,9 +59,9 @@ class Toolbox:
     def localize_uri_string(self, s):
         '''Convert URIs into URNs in a string using the application base URI.
 
-        @param string s Input string.
+        :param str: s Input string.
 
-        @return string
+        :rtype: str
         '''
         if s.strip('/') == g.webroot:
             return str(ROOT_RSRC_URI)
@@ -74,9 +74,9 @@ class Toolbox:
         '''
         Localize an individual term.
 
-        @param rdflib.term.URIRef urn Input URI.
+        :param rdflib.URIRef: urn Input URI.
 
-        @return rdflib.term.URIRef
+        :rtype: rdflib.URIRef
         '''
         return URIRef(self.localize_uri_string(str(uri)))
 
@@ -85,9 +85,9 @@ class Toolbox:
         '''
         Localize terms in a triple.
 
-        @param trp (tuple(rdflib.term.URIRef)) The triple to be converted
+        :param tuple(rdflib.URIRef) trp: The triple to be converted
 
-        @return tuple(rdflib.term.URIRef)
+        :rtype: tuple(rdflib.URIRef)
         '''
         s, p, o = trp
         if s.startswith(g.webroot):
@@ -114,9 +114,9 @@ class Toolbox:
         '''
         Localize an RDF stream with domain-specific URIs.
 
-        @param data (bytes) Binary RDF data.
+        :param bytes data: Binary RDF data.
 
-        @return bytes
+        :rtype: bytes
         '''
         return data.replace(
             (g.webroot + '/').encode('utf-8'),
@@ -159,9 +159,9 @@ class Toolbox:
     def globalize_string(self, s):
         '''Convert URNs into URIs in a string using the application base URI.
 
-        @param string s Input string.
+        :param string s: Input string.
 
-        @return string
+        :rtype: string
         '''
         return s.replace(str(nsc['fcres']), g.webroot)
 
@@ -170,9 +170,9 @@ class Toolbox:
         '''
         Convert an URN into an URI using the application base URI.
 
-        @param rdflib.term.URIRef urn Input URN.
+        :param rdflib.URIRef urn: Input URN.
 
-        @return rdflib.term.URIRef
+        :rtype: rdflib.URIRef
         '''
         return URIRef(self.globalize_string(str(urn)))
 
@@ -181,9 +181,9 @@ class Toolbox:
         '''
         Globalize terms in a triple.
 
-        @param trp (tuple(rdflib.term.URIRef)) The triple to be converted
+        :param tuple(rdflib.URIRef) trp: The triple to be converted
 
-        @return tuple(rdflib.term.URIRef)
+        :rtype: tuple(rdflib.URIRef)
         '''
         s, p, o = trp
         if s.startswith(nsc['fcres']):
@@ -221,13 +221,13 @@ class Toolbox:
 
     def parse_rfc7240(self, h_str):
         '''
-        Parse `Prefer` header as per https://tools.ietf.org/html/rfc7240
+        Parse ``Prefer`` header as per https://tools.ietf.org/html/rfc7240
 
-        The `cgi.parse_header` standard method does not work with all possible
-        use cases for this header.
+        The ``cgi.parse_header`` standard method does not work with all
+        possible use cases for this header.
 
-        @param h_str (string) The header(s) as a comma-separated list of Prefer
-        statements, excluding the `Prefer: ` token.
+        :param str h_str: The header(s) as a comma-separated list of Prefer
+            statements, excluding the ``Prefer:`` token.
         '''
         parsed_hdr = defaultdict(dict)
 
@@ -267,9 +267,10 @@ class Toolbox:
 
         @TODO This can be later reworked to use a custom hashing algorithm.
 
-        @param rdflib.Graph gr The graph to be hashed.
+        :param rdflib.Graph: gr The graph to be hashed.
 
-        @return string SHA1 checksum.
+        :rtype: str
+        :return: SHA1 checksum.
         '''
         # Remove the messageDigest property, which very likely reflects the
         # previous state of the resource.
@@ -283,6 +284,10 @@ class Toolbox:
     def split_uuid(self, uuid):
         '''
         Split a UID into pairtree segments. This mimics FCREPO4 behavior.
+
+        :param str uuid: UUID to split.
+
+        :rtype: str
         '''
         path = '{}/{}/{}/{}/{}'.format(uuid[:2], uuid[2:4],
                 uuid[4:6], uuid[6:8], uuid)

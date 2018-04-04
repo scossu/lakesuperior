@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 ldp = Blueprint(
         'ldp', __name__, template_folder='templates',
-        static_url_path='/static', static_folder='../../static')
+        static_url_path='/static', static_folder='templates/static')
 
 accept_patch = (
     'application/sparql-update',
@@ -62,7 +62,7 @@ std_headers = {
     #'Allow' : ','.join(allow),
 }
 
-'''Predicates excluded by view.'''
+"""Predicates excluded by view."""
 vw_blacklist = {
 }
 
@@ -112,17 +112,18 @@ def log_request_end(rsp):
 @ldp.route('/<path:uid>/fcr:content', defaults={'out_fmt' : 'non_rdf'},
         methods=['GET'])
 def get_resource(uid, out_fmt=None):
-    '''
+    r"""
     https://www.w3.org/TR/ldp/#ldpr-HTTP_GET
 
     Retrieve RDF or binary content.
 
-    @param uid (string) UID of resource to retrieve. The repository root has
-    an empty string for UID.
-    @param out_fmt (string) Force output to RDF or non-RDF if the resource is
-    a LDP-NR. This is not available in the API but is used e.g. by the
-    `*/fcr:metadata` and `*/fcr:content` endpoints. The default is False.
-    '''
+    :param str uid: UID of resource to retrieve. The repository root has
+        an empty string for UID.
+    :param str out_fmt: Force output to RDF or non-RDF if the resource is
+        a LDP-NR. This is not available in the API but is used e.g. by the
+        ``\*/fcr:metadata`` and ``\*/fcr:content`` endpoints. The default is
+        False.
+    """
     logger.info('UID: {}'.format(uid))
     out_headers = std_headers
     repr_options = defaultdict(dict)
@@ -169,9 +170,11 @@ def get_resource(uid, out_fmt=None):
 
 @ldp.route('/<path:uid>/fcr:versions', methods=['GET'])
 def get_version_info(uid):
-    '''
+    """
     Get version info (`fcr:versions`).
-    '''
+
+    :param str uid: UID of resource to retrieve versions for.
+    """
     try:
         gr = rsrc_api.get_version_info(uid)
     except ResourceNotExistsError as e:
@@ -186,12 +189,12 @@ def get_version_info(uid):
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
 def get_version(uid, ver_uid):
-    '''
+    """
     Get an individual resource version.
 
-    @param uid (string) Resource UID.
-    @param ver_uid (string) Version UID.
-    '''
+    :param str uid: Resource UID.
+    :param str ver_uid: Version UID.
+    """
     try:
         gr = rsrc_api.get_version(uid, ver_uid)
     except ResourceNotExistsError as e:
@@ -208,11 +211,11 @@ def get_version(uid, ver_uid):
 @ldp.route('/', defaults={'parent_uid': '/'}, methods=['POST'],
         strict_slashes=False)
 def post_resource(parent_uid):
-    '''
+    """
     https://www.w3.org/TR/ldp/#ldpr-HTTP_POST
 
     Add a new resource in a new URI.
-    '''
+    """
     out_headers = std_headers
     try:
         slug = request.headers['Slug']
@@ -261,11 +264,11 @@ def post_resource(parent_uid):
 @ldp.route('/<path:uid>/fcr:metadata', defaults={'force_rdf' : True},
         methods=['PUT'])
 def put_resource(uid):
-    '''
+    """
     https://www.w3.org/TR/ldp/#ldpr-HTTP_PUT
 
     Add or replace a new resource at a specified URI.
-    '''
+    """
     # Parse headers.
     logger.debug('Request headers: {}'.format(request.headers))
 
@@ -310,11 +313,11 @@ def put_resource(uid):
 
 @ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
 def patch_resource(uid, is_metadata=False):
-    '''
+    """
     https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
 
     Update an existing resource with a SPARQL-UPDATE payload.
-    '''
+    """
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
     if request.mimetype != 'application/sparql-update':
         return 'Provided content type is not a valid parsable format: {}'\
@@ -344,7 +347,7 @@ def patch_resource_metadata(uid):
 
 @ldp.route('/<path:uid>', methods=['DELETE'])
 def delete_resource(uid):
-    '''
+    """
     Delete a resource and optionally leave a tombstone.
 
     This behaves differently from FCREPO. A tombstone indicated that the
@@ -353,9 +356,9 @@ def delete_resource(uid):
     one more version snapshot of the resource prior to being deleted.
 
     In order to completely wipe out all traces of a resource, the tombstone
-    must be deleted as well, or the `Prefer:no-tombstone` header can be used.
+    must be deleted as well, or the ``Prefer:no-tombstone`` header can be used.
     The latter will forget (completely delete) the resource immediately.
-    '''
+    """
     headers = std_headers
 
     if 'prefer' in request.headers:
@@ -377,12 +380,12 @@ def delete_resource(uid):
 @ldp.route('/<path:uid>/fcr:tombstone', methods=['GET', 'POST', 'PUT',
         'PATCH', 'DELETE'])
 def tombstone(uid):
-    '''
+    """
     Handle all tombstone operations.
 
     The only allowed methods are POST and DELETE; any other verb will return a
     405.
-    '''
+    """
     try:
         rsrc = rsrc_api.get(uid)
     except TombstoneError as e:
@@ -409,9 +412,9 @@ def tombstone(uid):
 
 @ldp.route('/<path:uid>/fcr:versions', methods=['POST', 'PUT'])
 def post_version(uid):
-    '''
+    """
     Create a new resource version.
-    '''
+    """
     if request.method == 'PUT':
         return 'Method not allowed.', 405
     ver_uid = request.headers.get('slug', None)
@@ -430,14 +433,14 @@ def post_version(uid):
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['PATCH'])
 def patch_version(uid, ver_uid):
-    '''
+    """
     Revert to a previous version.
 
     NOTE: This creates a new version snapshot.
 
-    @param uid (string) Resource UID.
-    @param ver_uid (string) Version UID.
-    '''
+    :param str uid: Resource UID.
+    :param str ver_uid: Version UID.
+    """
     try:
         LdpFactory.from_stored(uid).revert_to_version(ver_uid)
     except ResourceNotExistsError as e:
@@ -453,9 +456,9 @@ def patch_version(uid, ver_uid):
 ## PRIVATE METHODS ##
 
 def _negotiate_content(gr, headers=None, **vw_kwargs):
-    '''
+    """
     Return HTML or serialized RDF depending on accept headers.
-    '''
+    """
     if request.accept_mimetypes.best == 'text/html':
         return render_template(
                 'resource.html', gr=gr, nsc=nsc, nsm=nsm,
@@ -467,9 +470,9 @@ def _negotiate_content(gr, headers=None, **vw_kwargs):
 
 
 def _bistream_from_req():
-    '''
+    """
     Find how a binary file and its MIMEtype were uploaded in the request.
-    '''
+    """
     #logger.debug('Content type: {}'.format(request.mimetype))
     #logger.debug('files: {}'.format(request.files))
     #logger.debug('stream: {}'.format(request.stream))
@@ -508,9 +511,9 @@ def _tombstone_response(e, uid):
 
 
 def set_post_put_params():
-    '''
+    """
     Sets handling and content disposition for POST and PUT by parsing headers.
-    '''
+    """
     handling = 'strict'
     if 'prefer' in request.headers:
         prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
@@ -528,10 +531,10 @@ def set_post_put_params():
 
 
 def is_accept_hdr_rdf_parsable():
-    '''
+    """
     Check if any of the 'Accept' header values provided is a RDF parsable
     format.
-    '''
+    """
     for mimetype in request.accept_mimetypes.values():
         if LdpFactory.is_rdf_parsable(mimetype):
             return True
@@ -539,14 +542,14 @@ def is_accept_hdr_rdf_parsable():
 
 
 def parse_repr_options(retr_opts):
-    '''
+    """
     Set options to retrieve IMR.
 
     Ideally, IMR retrieval is done once per request, so all the options
     are set once in the `imr()` property.
 
-    @param retr_opts (dict): Options parsed from `Prefer` header.
-    '''
+    :param dict retr_opts:: Options parsed from `Prefer` header.
+    """
     logger.debug('Parsing retrieval options: {}'.format(retr_opts))
     imr_options = {}
 
@@ -591,12 +594,12 @@ def parse_repr_options(retr_opts):
 
 
 def _headers_from_metadata(rsrc):
-    '''
+    """
     Create a dict of headers from a metadata graph.
 
-    @param rsrc (lakesuperior.model.ldpr.Ldpr) Resource to extract metadata
-    from.
-    '''
+    :param lakesuperior.model.ldpr.Ldpr rsrc: Resource to extract metadata
+        from.
+    """
     out_headers = defaultdict(list)
 
     digest = rsrc.metadata.value(nsc['premis'].hasMessageDigest)

@@ -1,19 +1,2 @@
-CoilMQ==1.0.1
-Flask==0.12.2
-HiYaPyCo==0.4.11
-Pillow==4.3.0
-PyYAML==3.12
-arrow==0.10.0
-click==6.7
-click-log==0.2.1
-gevent==1.2.2
-gunicorn==19.7.1
-lmdb==0.93
-numpy==1.14.1
-pytest==3.2.2
-pytest-flask==0.10.0
-rdflib==4.2.2
-requests-toolbelt==0.8.0
-requests==2.18.4
-stomp.py==4.1.20
-wheel==0.30.0a0
+--index-url https://pypi.python.org/lakesuperior/
+-e .
