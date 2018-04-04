@@ -19,22 +19,17 @@ A repository can be migrated with a one-line command such as:
 
 ::
 
-    ./lsup-admin migrate http://source-repo.edu/rest /local/dest/folder
+    lsup-admin migrate http://source-repo.edu/rest /local/dest/folder
 
 For more options, enter
 
 ::
 
-    ./lsup-admin migrate --help
+    lsup-admin migrate --help
 
 The script will crawl through the resources and crawl through outbound
 links within them. In order to do this, resources are added as raw
-triples ( i.e. no consistency checks are made).
-
-**Note:** the consistency check tool has not yet been implemented at the
-moment but its release should follow shortly. This will ensure that all
-the links between resources are consistent in regard to referential
-integrity.
+triples, i.e. no consistency checks are made.
 
 This script will create a full dataset in the specified destination
 folder, complete with a default configuration that allows to start the
@@ -55,6 +50,19 @@ Two approaches to migration are possible:
    triplestore, etc.). The resources can be indicated by their fully
    qualified URIs or paths relative to the repository root. (*TODO
    latter option needs testing*)
+
+Consistency check can (and should) be run after the migration::
+
+    lsup-admin check_refint
+
+This is critical to ensure that all resources in the repository are referencing
+to other repository resources that are actually existing.
+
+This feature has been added in alpha9.
+
+*TODO: The output of ``check_refint`` is somewhat crude. Improvements can be
+made to output integrity violations to a machine-readable log and integrate
+with the migration tool.*
 
 Backup And Restore
 ------------------

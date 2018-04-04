@@ -43,7 +43,13 @@ You can contribute by (from least to most involved):
 
 Please open a ticket and discuss the issue you are raising before opening a PR.
 
-Development is done on the development branch. If you have any suggested
+Documentation is critical. If you implement new modules, class or methods, or
+modify them, please document them thoroughly and verify that the API docs are
+displaying and linking correctly.
+
+Likewise, please add mindful testing to new fatures or bug fixes.
+
+Development is done on the ``development`` branch. If you have any suggested
 addition to the code, please fork the repo, create a new branch for your topic
 and open a pull request against development. In case you find a critical bug,
 a hotfix can be proposed against master if agreed in the related issue

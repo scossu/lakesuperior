@@ -72,7 +72,7 @@ Advanced Install
 ----------------
 
 A "developer mode" install is detailed in the
-:ref:`Development Setup<manual_install>` section.
+:ref:`Development Setup<dev_setup>` section.
 
 Configuration
 -------------

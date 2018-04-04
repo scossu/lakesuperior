@@ -1,8 +1,8 @@
 Sample Usage
-------------
+============
 
 LDP API
-=======
+-------
 
 The following are very basic examples of LDP interaction. For a more complete
 reference, please consult the `Fedora API guide
