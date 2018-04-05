@@ -9,7 +9,8 @@ from rdflib import Graph, Literal, URIRef
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
-        InvalidResourceError, ResourceNotExistsError, TombstoneError)
+        IncompatibleLdpTypeError, InvalidResourceError, ResourceNotExistsError,
+        TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldpr import Ldpr
 
@@ -107,6 +108,19 @@ class TestResourceApi:
                 rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
 
+    def test_create_ldp_nr(self):
+        """
+        Create a non-RDF resource (LDP-NR).
+        """
+        uid = '/{}'.format(uuid4())
+        data = b'Hello. This is some dummy content.'
+        rsrc_api.create_or_replace(
+                uid, stream=BytesIO(data), mimetype='text/plain')
+
+        rsrc = rsrc_api.get(uid)
+        assert rsrc.content.read() == data
+
+
     def test_replace_rsrc(self):
         uid = '/test_replace'
         uri = nsc['fcres'][uid]
@@ -136,3 +150,33 @@ class TestResourceApi:
                 rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#B')]
         assert rsrc.imr[
                 rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
+
+
+    def test_replace_incompatible_type(self):
+        """
+        Verify replacing resources with incompatible type.
+
+        Replacing a LDP-NR with a LDP-RS, or vice versa, should fail.
+        """
+        uid_rs = '/test_incomp_rs'
+        uid_nr = '/test_incomp_nr'
+        data = b'mock binary content'
+        gr = Graph().parse(
+            data='<> a <http://ex.org/type#A> .', format='turtle',
+            publicID=nsc['fcres'][uid_rs])
+
+        rsrc_api.create_or_replace(uid_rs, init_gr=gr)
+        rsrc_api.create_or_replace(
+            uid_nr, stream=BytesIO(data), mimetype='text/plain')
+
+        with pytest.raises(IncompatibleLdpTypeError):
+            rsrc_api.create_or_replace(uid_nr, init_gr=gr)
+
+        with pytest.raises(IncompatibleLdpTypeError):
+            rsrc_api.create_or_replace(
+                uid_rs, stream=BytesIO(data), mimetype='text/plain')
+
+        with pytest.raises(IncompatibleLdpTypeError):
+            rsrc_api.create_or_replace(uid_nr)
+
+

@@ -56,11 +56,32 @@ class LdpNr(Ldpr):
 
     @property
     def filename(self):
+        """
+        File name of the original uploaded file.
+
+        :rtype: str
+        """
         return self.imr.value(self.uri, nsc['ebucore'].filename)
 
 
     @property
+    def content(self):
+        """
+        Binary content.
+
+        :return: File handle of the resource content.
+        :rtype: io.BufferedReader
+        """
+        return open(self.local_path, 'rb')
+
+
+    @property
     def local_path(self):
+        """
+        Path on disk of the binary content.
+
+        :rtype: str
+        """
         cksum_term = self.imr.value(self.uri, nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term.replace('urn:sha1:',''))
         return nonrdfly.__class__.local_path(
