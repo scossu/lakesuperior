@@ -76,6 +76,19 @@ identifiers will be different).
 This seems to break Hyrax at some point, but might have been fixed. This
 needs to be verified further.
 
+Allow PUT requests with empty body on existing resources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FCREPO4 returns a ``409 Conflict`` if a PUT request with no payload is sent
+to an existing resource.
+
+LAKEsuperior allows to perform this operation, which would result in deleting
+all the user-provided properties in that resource.
+
+If the original resource is an LDP-NR, however, the operation will raise a
+``415 Unsupported Media Type`` because the resource will be treated as an empty
+LDP-RS, which cannot replace an existing LDP-NR.
+
 Non-standard client breaking changes
 ------------------------------------
 

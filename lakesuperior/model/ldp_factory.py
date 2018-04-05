@@ -105,6 +105,11 @@ class LdpFactory:
                     'Creating empty container.')
             inst = Ldpc(uid, provided_imr=Graph(identifier=uri), **kwargs)
 
+            # Make sure we are not updating an LDP-NR with an LDP-RS.
+            if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
+                raise IncompatibleLdpTypeError(uid, mimetype)
+
+        # Otherwise, determine LDP type from provided content.
         else:
             # If the stream is RDF, or an IMR is provided, create a container
             # and populate it with provided RDF data.
@@ -119,7 +124,8 @@ class LdpFactory:
             #        pformat(set(provided_imr))))
 
             if not mimetype or __class__.is_rdf_parsable(mimetype):
-                # Determine whether it is a basic, direct or indirect container.
+                # Determine whether it is a basic, direct or indirect
+                # container.
                 if Ldpr.MBR_RSRC_URI in provided_imr.predicates() and \
                         Ldpr.MBR_REL_URI in provided_imr.predicates():
                     if Ldpr.INS_CNT_REL_URI in provided_imr.predicates():
@@ -131,7 +137,7 @@ class LdpFactory:
 
                 inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
-                # Make sure we are not updating an LDP-RS with an LDP-NR.
+                # Make sure we are not updating an LDP-NR with an LDP-RS.
                 if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
                     raise IncompatibleLdpTypeError(uid, mimetype)
 
@@ -143,7 +149,7 @@ class LdpFactory:
                 inst = LdpNr(uid, stream=stream, mimetype=mimetype,
                         provided_imr=provided_imr, **kwargs)
 
-                # Make sure we are not updating an LDP-NR with an LDP-RS.
+                # Make sure we are not updating an LDP-RS with an LDP-NR.
                 if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
                     raise IncompatibleLdpTypeError(uid, mimetype)
 

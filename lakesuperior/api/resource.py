@@ -215,14 +215,9 @@ def create(parent, slug, **kwargs):
 
 
 @transaction(True)
-def create_or_replace(uid, stream=None, **kwargs):
+def create_or_replace(uid, **kwargs):
     r"""
     Create or replace a resource with a specified UID.
-
-    If the resource already exists, all user-provided properties of the
-    existing resource are deleted. If the resource exists and the provided
-    content is empty, an exception is raised (not sure why, but that's how
-    FCREPO4 handles it).
 
     :param string uid: UID of the resource to be created or updated.
     :param BytesIO stream: Content stream. If empty, an empty container is
@@ -234,11 +229,7 @@ def create_or_replace(uid, stream=None, **kwargs):
     :rtype: str
     :return: Event type: whether the resource was created or updated.
     """
-    rsrc = LdpFactory.from_provided(uid, stream=stream, **kwargs)
-
-    if not stream and rsrc.is_stored:
-        raise InvalidResourceError(rsrc.uid,
-                'Resource {} already exists and no data set was provided.')
+    rsrc = LdpFactory.from_provided(uid, **kwargs)
 
     return rsrc.create_or_replace()
 
