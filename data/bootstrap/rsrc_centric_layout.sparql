@@ -11,7 +11,7 @@ INSERT DATA {
   GRAPH <info:fcsystem/graph/admin/> {
     <info:fcres/> a
       fcrepo:RepositoryRoot , fcrepo:Resource , fcrepo:Container ,
-      ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
+      ldp:Resource , ldp:Container , ldp:BasicContainer , ldp:RDFSource ;
       fcrepo:created "$timestamp"^^xsd:dateTime ;
       fcrepo:lastModified "$timestamp"^^xsd:dateTime ;
     .

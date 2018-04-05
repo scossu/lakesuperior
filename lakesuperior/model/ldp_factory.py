@@ -36,7 +36,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = Ldpc(uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Graph(identifier=nsc['fcres'][uid]))
 
         return rsrc
 
@@ -59,8 +59,8 @@ class LdpFactory:
 
         rsrc_meta = rdfly.get_metadata(uid)
         #logger.debug('Extracted metadata: {}'.format(
-        #        pformat(set(rsrc_meta.graph))))
-        rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
+        #        pformat(set(rsrc_meta))))
+        rdf_types = set(rsrc_meta[imr_urn : RDF.type])
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')
@@ -97,19 +97,20 @@ class LdpFactory:
             # Create empty LDPC.
             logger.info('No data received in request. '
                     'Creating empty container.')
-            inst = Ldpc(uid, provided_imr=Resource(Graph(), uri), **kwargs)
+            inst = Ldpc(uid, provided_imr=Graph(identifier=uri), **kwargs)
         elif __class__.is_rdf_parsable(mimetype):
             # Create container and populate it with provided RDF data.
             input_rdf = stream.read()
-            gr = Graph().parse(data=input_rdf, format=mimetype, publicID=uri)
+            imr = Graph(identifier=uri).parse(
+                    data=input_rdf, format=mimetype, publicID=uri)
             #logger.debug('Provided graph: {}'.format(
             #        pformat(set(provided_gr))))
-            provided_imr = Resource(gr, uri)
+            provided_imr = imr
 
             # Determine whether it is a basic, direct or indirect container.
-            if Ldpr.MBR_RSRC_URI in gr.predicates() and \
-                    Ldpr.MBR_REL_URI in gr.predicates():
-                if Ldpr.INS_CNT_REL_URI in gr.predicates():
+            if Ldpr.MBR_RSRC_URI in imr.predicates() and \
+                    Ldpr.MBR_REL_URI in imr.predicates():
+                if Ldpr.INS_CNT_REL_URI in imr.predicates():
                     cls = LdpIc
                 else:
                     cls = LdpDc
@@ -123,13 +124,13 @@ class LdpFactory:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
             if kwargs.get('handling', 'strict') != 'none':
-                inst._check_mgd_terms(inst.provided_imr.graph)
+                inst._check_mgd_terms(inst.provided_imr)
 
         else:
             # Create a LDP-NR and equip it with the binary file provided.
             # The IMR can also be provided for additional metadata.
             if not provided_imr:
-                provided_imr = Resource(Graph(), uri)
+                provided_imr = Graph(identifier=uri)
             inst = LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 

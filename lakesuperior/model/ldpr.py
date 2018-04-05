@@ -7,7 +7,6 @@ from uuid import uuid4
 import arrow
 
 from rdflib import Graph, URIRef, Literal
-from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior.env import env
@@ -162,7 +161,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 imr_options = {}
             options = dict(imr_options, strict=True)
-            self._imr = rdfly.extract_imr(self.uid, **options)
+            self._imr = rdfly.get_imr(self.uid, **options)
 
         return self._imr
 
@@ -175,11 +174,8 @@ class Ldpr(metaclass=ABCMeta):
         :param v: New set of triples to populate the IMR with.
         :type v: set or rdflib.Graph
         """
-        if isinstance(v, Resource):
-            v = v.graph
-        self._imr = Resource(Graph(), self.uri)
-        gr = self._imr.graph
-        gr += v
+        self._imr = Graph(identifier=self.uri)
+        self._imr += v
 
 
     @imr.deleter
@@ -224,7 +220,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         out_gr = Graph(identifier=self.uri)
 
-        for t in self.imr.graph:
+        for t in self.imr:
             if (
                 # Exclude digest hash and version information.
                 t[1] not in {
@@ -248,8 +244,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         if not hasattr(self, '_version_info'):
             try:
-                #@ TODO get_version_info should return a graph.
-                self._version_info = rdfly.get_version_info(self.uid).graph
+                self._version_info = rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
                 self._version_info = Graph(identifier=self.uri)
 
@@ -272,7 +267,7 @@ class Ldpr(metaclass=ABCMeta):
     def is_stored(self):
         if not hasattr(self, '_is_stored'):
             if hasattr(self, '_imr'):
-                self._is_stored = len(self.imr.graph) > 0
+                self._is_stored = len(self.imr) > 0
             else:
                 self._is_stored = rdfly.ask_rsrc_exists(self.uid)
 
@@ -286,15 +281,15 @@ class Ldpr(metaclass=ABCMeta):
         :rtype: set(rdflib.term.URIRef)
         """
         if not hasattr(self, '_types'):
-            if len(self.metadata.graph):
+            if len(self.metadata):
                 metadata = self.metadata
             elif getattr(self, 'provided_imr', None) and \
-                    len(self.provided_imr.graph):
+                    len(self.provided_imr):
                 metadata = self.provided_imr
             else:
                 return set()
 
-            self._types = set(metadata.graph[self.uri: RDF.type])
+            self._types = set(metadata[self.uri: RDF.type])
 
         return self._types
 
@@ -319,12 +314,13 @@ class Ldpr(metaclass=ABCMeta):
         """
         out_headers = defaultdict(list)
 
-        digest = self.metadata.value(nsc['premis'].hasMessageDigest)
+        digest = self.metadata.value(self.uri, nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
             out_headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = self.metadata.value(nsc['fcrepo'].lastModified)
+        last_updated_term = self.metadata.value(
+            self.uri, nsc['fcrepo'].lastModified)
         if last_updated_term:
             out_headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -340,7 +336,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Get a version by label.
         """
-        return rdfly.extract_imr(self.uid, ver_uid, **kwargs).graph
+        return rdfly.get_imr(self.uid, ver_uid, **kwargs)
 
 
     def create_or_replace(self, create_only=False):
@@ -365,15 +361,15 @@ class Ldpr(metaclass=ABCMeta):
         remove_trp = {
             (self.uri, pred, None) for pred in self.delete_preds_on_replace}
         add_trp = (
-            set(self.provided_imr.graph) |
+            set(self.provided_imr) |
             self._containment_rel(create))
 
         self._modify_rsrc(ev_type, remove_trp, add_trp)
-        new_gr = Graph()
+        new_gr = Graph(identifier=self.uri)
         for trp in add_trp:
             new_gr.add(trp)
 
-        self.imr = new_gr.resource(self.uri)
+        self.imr = new_gr
 
         return ev_type
 
@@ -393,7 +389,7 @@ class Ldpr(metaclass=ABCMeta):
         self.create_rsrc_snapshot(uuid4())
 
         remove_trp = {
-            trp for trp in self.imr.graph
+            trp for trp in self.imr
             if trp[1] != nsc['fcrepo'].hasVersion}
 
         if tstone_pointer:
@@ -408,7 +404,7 @@ class Ldpr(metaclass=ABCMeta):
         self._modify_rsrc(RES_DELETED, remove_trp, add_trp)
 
         if inbound:
-            for ib_rsrc_uri in self.imr.graph.subjects(None, self.uri):
+            for ib_rsrc_uri in self.imr.subjects(None, self.uri):
                 remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
@@ -444,7 +440,7 @@ class Ldpr(metaclass=ABCMeta):
         ver_uid = '{}/{}'.format(vers_uid, ver_uid)
         ver_uri = nsc['fcres'][ver_uid]
         ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
-        for t in self.imr.graph:
+        for t in self.imr:
             if (
                 t[1] == RDF.type and t[2] in {
                     nsc['fcrepo'].Binary,
@@ -483,9 +479,9 @@ class Ldpr(metaclass=ABCMeta):
 
         @EXPERIMENTAL
         """
-        tstone_trp = set(rdfly.extract_imr(self.uid, strict=False).graph)
+        tstone_trp = set(rdfly.get_imr(self.uid, strict=False))
 
-        ver_rsp = self.version_info.graph.query('''
+        ver_rsp = self.version_info.query('''
         SELECT ?uid {
           ?latest fcrepo:hasVersionLabel ?uid ;
             fcrepo:created ?ts .
@@ -494,7 +490,7 @@ class Ldpr(metaclass=ABCMeta):
         LIMIT 1
         ''')
         ver_uid = str(ver_rsp.bindings[0]['uid'])
-        ver_trp = set(rdfly.get_metadata(self.uid, ver_uid).graph)
+        ver_trp = set(rdfly.get_metadata(self.uid, ver_uid))
 
         laz_gr = Graph()
         for t in ver_trp:
@@ -544,13 +540,13 @@ class Ldpr(metaclass=ABCMeta):
         if backup:
             self.create_version()
 
-        ver_gr = rdfly.extract_imr(
+        ver_gr = rdfly.get_imr(
             self.uid, ver_uid=ver_uid, incl_children=False)
-        self.provided_imr = Resource(Graph(), self.uri)
+        self.provided_imr = Graph(identifier=self.uri)
 
-        for t in ver_gr.graph:
+        for t in ver_gr:
             if not self._is_trp_managed(t):
-                self.provided_imr.add(t[1], t[2])
+                self.provided_imr.add((self.uri, t[1], t[2]))
             # @TODO Check individual objects: if they are repo-managed URIs
             # and not existing or tombstones, they are not added.
 
@@ -606,7 +602,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         try:
             rsrc_type = tuple(str(t) for t in self.types)
-            actor = self.metadata.value(nsc['fcrepo'].createdBy)
+            actor = self.metadata.value(self.uri, nsc['fcrepo'].createdBy)
         except (ResourceNotExistsError, TombstoneError):
             rsrc_type = ()
             actor = None
@@ -625,9 +621,14 @@ class Ldpr(metaclass=ABCMeta):
 
 
     def _check_ref_int(self, config):
-        gr = self.provided_imr.graph
+        """
+        Check referential integrity of a resource.
 
-        for o in gr.objects():
+        :param str config: If set to ``strict``, a
+           :class:`lakesuperior.exceptions.RefIntViolationError` is raised.
+           Otherwise, the violation is simply logged.
+        """
+        for o in self.provided_imr.objects():
             if isinstance(o, URIRef) and str(o).startswith(nsc['fcres']):
                 obj_uid = rdfly.uri_to_uid(o)
                 if not rdfly.ask_rsrc_exists(obj_uid):
@@ -637,7 +638,7 @@ class Ldpr(metaclass=ABCMeta):
                         logger.info(
                             'Removing link to non-existent repo resource: {}'
                             .format(obj_uid))
-                        gr.remove((None, None, o))
+                        self.provided_imr.remove((None, None, o))
 
 
     def _check_mgd_terms(self, gr):
@@ -689,28 +690,32 @@ class Ldpr(metaclass=ABCMeta):
         """
         # Base LDP types.
         for t in self.base_types:
-            self.provided_imr.add(RDF.type, t)
+            self.provided_imr.add((self.uri, RDF.type, t))
 
         # Message digest.
-        cksum = self.tbox.rdf_cksum(self.provided_imr.graph)
-        self.provided_imr.set(
-            nsc['premis'].hasMessageDigest,
-            URIRef('urn:sha1:{}'.format(cksum)))
+        cksum = self.tbox.rdf_cksum(self.provided_imr)
+        self.provided_imr.set((
+            self.uri, nsc['premis'].hasMessageDigest,
+            URIRef('urn:sha1:{}'.format(cksum))))
 
         # Create and modify timestamp.
         if create:
-            self.provided_imr.set(nsc['fcrepo'].created, env.timestamp_term)
-            self.provided_imr.set(nsc['fcrepo'].createdBy, self.DEFAULT_USER)
+            self.provided_imr.set((
+                self.uri, nsc['fcrepo'].created, env.timestamp_term))
+            self.provided_imr.set((
+                self.uri, nsc['fcrepo'].createdBy, self.DEFAULT_USER))
         else:
-            self.provided_imr.set(
-                nsc['fcrepo'].created, self.metadata.value(
-                    nsc['fcrepo'].created))
-            self.provided_imr.set(
-                nsc['fcrepo'].createdBy, self.metadata.value(
-                    nsc['fcrepo'].createdBy))
+            self.provided_imr.set((
+                self.uri, nsc['fcrepo'].created, self.metadata.value(
+                    self.uri, nsc['fcrepo'].created)))
+            self.provided_imr.set((
+                self.uri, nsc['fcrepo'].createdBy, self.metadata.value(
+                    self.uri, nsc['fcrepo'].createdBy)))
 
-        self.provided_imr.set(nsc['fcrepo'].lastModified, env.timestamp_term)
-        self.provided_imr.set(nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER)
+        self.provided_imr.set((
+            self.uri, nsc['fcrepo'].lastModified, env.timestamp_term))
+        self.provided_imr.set((
+            self.uri, nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER))
 
 
     def _containment_rel(self, create):
@@ -790,7 +795,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param rdflib.resource.Resouce cont_rsrc:  The container resource.
         """
-        cont_p = set(cont_rsrc.metadata.graph.predicates())
+        cont_p = set(cont_rsrc.metadata.predicates())
 
         logger.info('Checking direct or indirect containment.')
         logger.debug('Parent predicates: {}'.format(cont_p))
@@ -800,8 +805,8 @@ class Ldpr(metaclass=ABCMeta):
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             from lakesuperior.model.ldp_factory import LdpFactory
 
-            s = cont_rsrc.metadata.value(self.MBR_RSRC_URI).identifier
-            p = cont_rsrc.metadata.value(self.MBR_REL_URI).identifier
+            s = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_RSRC_URI)
+            p = cont_rsrc.metadata.value(cont_rsrc_uri, self.MBR_REL_URI)
 
             if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
                 logger.info('Parent is a direct container.')
@@ -815,8 +820,8 @@ class Ldpr(metaclass=ABCMeta):
                     self.INS_CNT_REL_URI in cont_p):
                 logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
-                    self.INS_CNT_REL_URI).identifier
-                o = self.provided_imr.value(cont_rel_uri).identifier
+                    cont_rsrc.uri, self.INS_CNT_REL_URI)
+                o = self.provided_imr.value(self.uri, cont_rel_uri)
                 logger.debug('Target URI: {}'.format(o))
                 logger.debug('Creating IC triples.')
 
@@ -864,7 +869,7 @@ class Ldpr(metaclass=ABCMeta):
         events in a provenance tracking system.
         """
         logger.debug('Provided SPARQL query: {}'.format(q))
-        pre_gr = self.imr.graph
+        pre_gr = self.imr
 
         post_gr = pre_gr | Graph()
         post_gr.update(q)
