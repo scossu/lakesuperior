@@ -27,15 +27,13 @@ logger = logging.getLogger(__name__)
 
 
 class Ldpr(metaclass=ABCMeta):
-    """LDPR (LDP Resource).
-
-    Definition: https://www.w3.org/TR/ldp/#ldpr-resource
+    """
+    LDPR (LDP Resource).
 
     This class and related subclasses contain the implementation pieces of
-    the vanilla LDP specifications. This is extended by the
-    `lakesuperior.fcrepo.Resource` class.
-
-    See inheritance graph: https://www.w3.org/TR/ldp/#fig-ldpc-types
+    the `LDP Resource <https://www.w3.org/TR/ldp/#ldpr-resource>`__
+    specifications, according to their `inheritance graph
+    <https://www.w3.org/TR/ldp/#fig-ldpc-types>`__.
 
     **Note**: Even though LdpNr (which is a subclass of Ldpr) handles binary
     files, it still has an RDF representation in the triplestore. Hence, some
@@ -144,12 +142,26 @@ class Ldpr(metaclass=ABCMeta):
     @property
     def imr(self):
         """
-        Extract an in-memory resource from the graph store.
+        In-Memory Resource.
 
-        If the resource is not stored (yet), a `ResourceNotExistsError` is
-        raised.
+        This is a copy of the resource extracted from the graph store. It is a
+        graph resource whose identifier is the URI of the resource.
 
-        :rtype: rdflib.Resource
+        >>> rsrc = rsrc_api.get('/')
+        >>> rsrc.imr.identifier
+        rdflib.term.URIRef('info:fcres/')
+        >>> rsrc.imr.value(rsrc.imr.identifier, nsc['fcrepo'].lastModified)
+        rdflib.term.Literal(
+            '2018-04-03T05:20:33.774746+00:00',
+            datatype=rdflib.term.URIRef(
+                'http://www.w3.org/2001/XMLSchema#dateTime'))
+
+        The IMR can be read and manipulated, as well as used to
+        update the stored resource.
+
+        :rtype: rdflib.Graph
+        :raise lakesuperior.exceptions.ResourceNotExistsError: If the resource
+            is not stored (yet).
         """
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):

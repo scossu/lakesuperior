@@ -77,7 +77,7 @@ def transaction(write=False):
             with TxnManager(env.app_globals.rdf_store, write=write) as txn:
                 ret = fn(*args, **kwargs)
             if len(env.app_globals.changelog):
-                job = Thread(target=process_queue)
+                job = Thread(target=_process_queue)
                 job.start()
             delattr(env, 'timestamp')
             delattr(env, 'timestamp_term')
@@ -86,18 +86,18 @@ def transaction(write=False):
     return _transaction_deco
 
 
-def process_queue():
+def _process_queue():
     """
     Process the message queue on a separate thread.
     """
     lock = Lock()
     lock.acquire()
     while len(env.app_globals.changelog):
-        send_event_msg(*env.app_globals.changelog.popleft())
+        _send_event_msg(*env.app_globals.changelog.popleft())
     lock.release()
 
 
-def send_event_msg(remove_trp, add_trp, metadata):
+def _send_event_msg(remove_trp, add_trp, metadata):
     """
     Send messages about a changed LDPR.
 
@@ -199,7 +199,8 @@ def create(parent, slug, **kwargs):
     :param str parent: UID of the parent resource.
     :param str slug: Tentative path relative to the parent UID.
     :param \*\*kwargs: Other parameters are passed to the
-      :meth:`LdpFactory.from_provided` method.
+      :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+      method.
 
     :rtype: str
     :return: UID of the new resource.
@@ -227,7 +228,8 @@ def create_or_replace(uid, stream=None, **kwargs):
     :param BytesIO stream: Content stream. If empty, an empty container is
         created.
     :param \*\*kwargs: Other parameters are passed to the
-        :meth:`LdpFactory.from_provided` method.
+        :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+        method.
 
     :rtype: str
     :return: Event type: whether the resource was created or updated.
