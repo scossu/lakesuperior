@@ -114,4 +114,80 @@ Immediately forget a resource
 Python API
 ----------
 
-**TODO**
+Set up the environment
+~~~~~~~~~~~~~~~~~~~~~~
+
+Before using the API, either do::
+
+    >>> import lakesuperior.env_setup
+
+Or, to specify an alternative configuration::
+
+    >>> from lakesuperior.config_parser import parse_config
+    >>> from lakesuperior.globals import AppGlobals
+    >>> env.config, test_config = parse_config('/my/custom/config_dir')
+    Reading configuration at /my/custom/config_dir
+    >>> env.app_globals = AppGlobals(env.config)
+
+Create and replace resources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Providing a serialized RDF stream::
+
+    >>> from lakesuperior.api import resource as rsrc_api
+    >>> from io import BytesIO
+    >>> from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+    >>> uid = '/rsrc_from_stream'
+    >>> uri = nsc['fcres'][uid]
+    >>> stream = BytesIO(b'<> a <http://ex.org/type#A> .')
+    >>> rsrc_api.create_or_replace(uid, stream=stream, mimetype='text/turtle')
+    '_create_'
+
+
+Providng a Graph object::
+
+    >>> from rdflib import Graph, URIRef
+    >>> uid = '/rsrc_from_graph'
+    >>> gr = Graph().parse(data='<> a <http://ex.org/type#A> .',
+    ...     format='text/turtle', publicID=nsc['fcres'][uid])
+    >>> rsrc_api.create_or_replace(uid, init_gr=gr)
+
+Issuing a ``create_or_replace()`` on an existing UID will replace the existing
+property set with the provided one (PUT style).
+
+Create an LDP-NR::
+
+    >>> uid = '/test_ldpnr01'
+    >>> data = b'Hello. This is some dummy content.'
+    >>> rsrc_api.create_or_replace(
+    ...     uid, stream=BytesIO(data), mimetype='text/plain')
+    '_create_'
+
+Create under a known parent, providing a slug (POST style)::
+
+    >>> rsrc_api.create('/rsrc_from_stream', 'res1')
+
+
+Retrieve resources
+~~~~~~~~~~~~~~~~~~
+
+Retrieve a resource::
+
+    >>> rsrc = rsrc_api.get('/rsrc_from_stream')
+    >>> rsrc.uid
+    '/rsrc_from_stream'
+    >>> rsrc.uri
+    rdflib.term.URIRef('info:fcres/rsrc_from_stream')
+    >>> set(rsrc.metadata)
+    {(rdflib.term.URIRef('info:fcres/rsrc_from_stream'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#created'),
+      rdflib.term.Literal('2018-04-06T03:30:49.460274+00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime'))),
+    [...]
+
+Retrieve non-RDF content::
+
+    >>> ldpnr = rsrc_api.get('/test_ldpnr01')
+    >>> ldpnr.content.read()
+    b'Hello. This is some dummy content.'
+
+See the :doc:`API docs <api>` for more details on resource methods.
