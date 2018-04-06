@@ -66,7 +66,7 @@ class TestLdp:
         assert put2_resp.status_code == 204
 
         put2_resp = self.client.put(path)
-        assert put2_resp.status_code == 409
+        assert put2_resp.status_code == 204
 
 
     def test_put_tree(self, client):
@@ -561,7 +561,7 @@ class TestPrefHeader:
         '''
         Trying to PUT an existing resource should:
 
-        - Return a 409 if the payload is empty
+        - Return a 204 if the payload is empty
         - Return a 204 if the payload is RDF, server-managed triples are
           included and the 'Prefer' header is set to 'handling=lenient'
         - Return a 412 (ServerManagedTermError) if the payload is RDF,
@@ -571,7 +571,7 @@ class TestPrefHeader:
         path = '/ldp/put_pref_header01'
         assert self.client.put(path).status_code == 201
         assert self.client.get(path).status_code == 200
-        assert self.client.put(path).status_code == 409
+        assert self.client.put(path).status_code == 204
 
         # Default handling is strict.
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
