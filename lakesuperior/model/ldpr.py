@@ -2,6 +2,7 @@ import logging
 
 from abc import ABCMeta
 from collections import defaultdict
+from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
@@ -641,7 +642,10 @@ class Ldpr(metaclass=ABCMeta):
            Otherwise, the violation is simply logged.
         """
         for o in self.provided_imr.objects():
-            if isinstance(o, URIRef) and str(o).startswith(nsc['fcres']):
+            if(
+                    isinstance(o, URIRef) and
+                    str(o).startswith(nsc['fcres']) and
+                    urldefrag(o).url.rstrip('/') != str(self.uri)):
                 obj_uid = rdfly.uri_to_uid(o)
                 if not rdfly.ask_rsrc_exists(obj_uid):
                     if config == 'strict':

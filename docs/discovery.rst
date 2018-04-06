@@ -27,7 +27,7 @@ LAKEsuperior both as an API and a Web UI.
 
    LAKEsuperior SPARQL Query Window
 
-The UI is based on `YasGUI <http://yasgui.org/>`__.
+The UI is based on `YASGUI <http://about.yasgui.org/>`__.
 
 Note that:
 
@@ -49,7 +49,7 @@ implementation that it is based upon can be quite efficient for certain
 queries but has some downsides. For example, do **not** attempt the following
 query in a graph with more than a few thousands resources::
 
-    SELECT ?s {
+    SELECT ?p ?o {
       GRAPH ?g {
         <info:fcres/my-uid> ?p ?o .
       }

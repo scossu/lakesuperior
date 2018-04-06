@@ -132,19 +132,7 @@ Or, to specify an alternative configuration::
 Create and replace resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Providing a serialized RDF stream::
-
-    >>> from lakesuperior.api import resource as rsrc_api
-    >>> from io import BytesIO
-    >>> from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-    >>> uid = '/rsrc_from_stream'
-    >>> uri = nsc['fcres'][uid]
-    >>> stream = BytesIO(b'<> a <http://ex.org/type#A> .')
-    >>> rsrc_api.create_or_replace(uid, stream=stream, mimetype='text/turtle')
-    '_create_'
-
-
-Providng a Graph object::
+Create an LDP-RS (RDF reseouce) providng a Graph object::
 
     >>> from rdflib import Graph, URIRef
     >>> uid = '/rsrc_from_graph'
@@ -155,7 +143,7 @@ Providng a Graph object::
 Issuing a ``create_or_replace()`` on an existing UID will replace the existing
 property set with the provided one (PUT style).
 
-Create an LDP-NR::
+Create an LDP-NR (non-RDF source)::
 
     >>> uid = '/test_ldpnr01'
     >>> data = b'Hello. This is some dummy content.'

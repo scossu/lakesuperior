@@ -30,7 +30,7 @@ Indices and tables
    :maxdepth: 3
    :caption: User Reference
 
-    Discovery & query <discovery>
+    Discovery & Query <discovery>
     Divergences from Fedora 4 <fcrepo4_deltas>
     Messaging <messaging>
     Migration Guide <migration>

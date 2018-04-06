@@ -69,9 +69,9 @@ class TestResourceApi:
             gr = rsrc_api.get('/{}'.format(uuid4()))
 
 
-    def test_create_from_graph(self):
+    def test_create_ldp_rs(self):
         """
-        Create a resource from a provided graph.
+        Create an RDF resource (LDP-RS) from a provided graph.
         """
         uid = '/rsrc_from_graph'
         uri = nsc['fcres'][uid]
@@ -79,31 +79,11 @@ class TestResourceApi:
             data='<> a <http://ex.org/type#A> .', format='turtle',
             publicID=uri)
         #pdb.set_trace()
-        evt = rsrc_api.create_or_replace(uid, init_gr=gr)
+        evt = rsrc_api.create_or_replace(uid, graph=gr)
 
         rsrc = rsrc_api.get(uid)
         assert rsrc.imr[
                 rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
-
-
-    def test_create_from_rdf_stream(self):
-        """
-        Create a resource from a RDF stream (Turtle).
-
-        This is the same method used by the LDP endpoint.
-        """
-        uid = '/rsrc_from_stream'
-        uri = nsc['fcres'][uid]
-        stream = BytesIO(b'<> a <http://ex.org/type#B> .')
-        #pdb.set_trace()
-        evt = rsrc_api.create_or_replace(
-            uid, stream=stream, mimetype='text/turtle')
-
-        rsrc = rsrc_api.get(uid)
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#B')]
         assert rsrc.imr[
                 rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
@@ -127,7 +107,7 @@ class TestResourceApi:
         gr1 = Graph().parse(
             data='<> a <http://ex.org/type#A> .', format='turtle',
             publicID=uri)
-        evt = rsrc_api.create_or_replace(uid, init_gr=gr1)
+        evt = rsrc_api.create_or_replace(uid, graph=gr1)
         assert evt == RES_CREATED
 
         rsrc = rsrc_api.get(uid)
@@ -140,7 +120,7 @@ class TestResourceApi:
             data='<> a <http://ex.org/type#B> .', format='turtle',
             publicID=uri)
         #pdb.set_trace()
-        evt = rsrc_api.create_or_replace(uid, init_gr=gr2)
+        evt = rsrc_api.create_or_replace(uid, graph=gr2)
         assert evt == RES_UPDATED
 
         rsrc = rsrc_api.get(uid)
@@ -165,12 +145,12 @@ class TestResourceApi:
             data='<> a <http://ex.org/type#A> .', format='turtle',
             publicID=nsc['fcres'][uid_rs])
 
-        rsrc_api.create_or_replace(uid_rs, init_gr=gr)
+        rsrc_api.create_or_replace(uid_rs, graph=gr)
         rsrc_api.create_or_replace(
             uid_nr, stream=BytesIO(data), mimetype='text/plain')
 
         with pytest.raises(IncompatibleLdpTypeError):
-            rsrc_api.create_or_replace(uid_nr, init_gr=gr)
+            rsrc_api.create_or_replace(uid_nr, graph=gr)
 
         with pytest.raises(IncompatibleLdpTypeError):
             rsrc_api.create_or_replace(
