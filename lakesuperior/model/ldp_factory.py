@@ -36,7 +36,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = Ldpc(uid, provided_imr=Resource(Graph(), nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Graph(identifier=nsc['fcres'][uid]))
 
         return rsrc
 
@@ -59,8 +59,8 @@ class LdpFactory:
 
         rsrc_meta = rdfly.get_metadata(uid)
         #logger.debug('Extracted metadata: {}'.format(
-        #        pformat(set(rsrc_meta.graph))))
-        rdf_types = set(rsrc_meta.graph[imr_urn : RDF.type])
+        #        pformat(set(rsrc_meta))))
+        rdf_types = set(rsrc_meta[imr_urn : RDF.type])
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')
@@ -78,38 +78,43 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_provided(
-            uid, mimetype=None, stream=None, provided_imr=None, **kwargs):
+    def from_provided(uid, mimetype=None, stream=None, graph=None, **kwargs):
         r"""
-        Determine LDP type from request content.
+        Create and LDPR instance from provided data.
+
+        the LDP class (LDP-RS, LDP_NR, etc.) is determined by the contents
+        passed.
 
         :param str uid: UID of the resource to be created or updated.
-        :param str mimetype: The provided content MIME type.
-        :param stream: The provided data stream. This can be
-            RDF or non-RDF content, or None. In the latter case, an empty
-            container is created.
-        :type stream: IOStream or None
+        :param str mimetype: The provided content MIME type. If this is
+            specified the resource is considered a LDP-NR and a ``stream``
+            *must* be provided.
+        :param IOStream stream: The provided data stream.
+        :param rdflib.Graph graph: Initial graph to populate the
+            resource with. This can be used for LDP-RS and LDP-NR types alike.
         :param \*\*kwargs: Arguments passed to the LDP class constructor.
+
+        :raise ValueError: if ``mimetype`` is specified but no data stream is
+            provided.
         """
         uri = nsc['fcres'][uid]
 
-        if not stream and not mimetype:
-            # Create empty LDPC.
-            logger.info('No data received in request. '
-                    'Creating empty container.')
-            inst = Ldpc(uid, provided_imr=Resource(Graph(), uri), **kwargs)
-        elif __class__.is_rdf_parsable(mimetype):
-            # Create container and populate it with provided RDF data.
-            input_rdf = stream.read()
-            gr = Graph().parse(data=input_rdf, format=mimetype, publicID=uri)
-            #logger.debug('Provided graph: {}'.format(
-            #        pformat(set(provided_gr))))
-            provided_imr = Resource(gr, uri)
+        provided_imr = Graph(identifier=uri)
+        if graph:
+            provided_imr += graph
+        #logger.debug('Provided graph: {}'.format(
+        #        pformat(set(provided_imr))))
+
+        if stream is None:
+            # Resource is a LDP-RS.
+            if mimetype:
+                raise ValueError(
+                    'Binary stream must be provided if mimetype is specified.')
 
             # Determine whether it is a basic, direct or indirect container.
-            if Ldpr.MBR_RSRC_URI in gr.predicates() and \
-                    Ldpr.MBR_REL_URI in gr.predicates():
-                if Ldpr.INS_CNT_REL_URI in gr.predicates():
+            if Ldpr.MBR_RSRC_URI in provided_imr.predicates() and \
+                    Ldpr.MBR_REL_URI in provided_imr.predicates():
+                if Ldpr.INS_CNT_REL_URI in provided_imr.predicates():
                     cls = LdpIc
                 else:
                     cls = LdpDc
@@ -118,32 +123,27 @@ class LdpFactory:
 
             inst = cls(uid, provided_imr=provided_imr, **kwargs)
 
-            # Make sure we are not updating an LDP-RS with an LDP-NR.
+            # Make sure we are not updating an LDP-NR with an LDP-RS.
             if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
             if kwargs.get('handling', 'strict') != 'none':
-                inst._check_mgd_terms(inst.provided_imr.graph)
+                inst.check_mgd_terms(inst.provided_imr)
 
         else:
-            # Create a LDP-NR and equip it with the binary file provided.
-            # The IMR can also be provided for additional metadata.
-            if not provided_imr:
-                provided_imr = Resource(Graph(), uri)
+            # Resource is a LDP-NR.
+            if not mimetype:
+                mimetype = 'application/octet-stream'
+
             inst = LdpNr(uid, stream=stream, mimetype=mimetype,
                     provided_imr=provided_imr, **kwargs)
 
-            # Make sure we are not updating an LDP-NR with an LDP-RS.
+            # Make sure we are not updating an LDP-RS with an LDP-NR.
             if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
-        logger.info('Creating resource of type: {}'.format(
+        logger.debug('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
-
-        try:
-            types = inst.types
-        except (TombstoneError, ResourceNotExistsError):
-            types = set()
 
         return inst
 

@@ -221,11 +221,11 @@ class RsrcCentricLayout:
         return self.ds.query(qry_str)
 
 
-    def extract_imr(
+    def get_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
                 incl_children=True, embed_children=False, **kwargs):
         """
-        See base_rdf_layout.extract_imr.
+        See base_rdf_layout.get_imr.
         """
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
@@ -241,22 +241,20 @@ class RsrcCentricLayout:
                 for gr in graphs]
         resultset = set(chain.from_iterable(rsrc_graphs))
 
-        gr = Graph()
-        gr += resultset
+        imr = Graph(identifier=nsc['fcres'][uid])
+        imr += resultset
 
         # Include inbound relationships.
-        if incl_inbound and len(gr):
-            gr += self.get_inbound_rel(nsc['fcres'][uid])
+        if incl_inbound and len(imr):
+            imr += self.get_inbound_rel(nsc['fcres'][uid])
 
         #logger.debug('Found resource: {}'.format(
-        #        gr.serialize(format='turtle').decode('utf-8')))
-
-        rsrc = Resource(gr, nsc['fcres'][uid])
+        #        imr.serialize(format='turtle').decode('utf-8')))
 
         if strict:
-            self._check_rsrc_status(rsrc)
+            self._check_rsrc_status(imr)
 
-        return rsrc
+        return imr
 
 
     def ask_rsrc_exists(self, uid):
@@ -276,14 +274,14 @@ class RsrcCentricLayout:
         logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
-        gr = self.ds.graph(nsc['fcadmin'][uid]) | Graph()
         uri = nsc['fcres'][uid]
+        gr = Graph(identifier=uri)
+        gr += self.ds.graph(nsc['fcadmin'][uid])
 
-        rsrc = Resource(gr, uri)
         if strict:
-            self._check_rsrc_status(rsrc)
+            self._check_rsrc_status(gr)
 
-        return rsrc
+        return gr
 
 
     def get_user_data(self, uid):
@@ -295,9 +293,10 @@ class RsrcCentricLayout:
         # *TODO* This only works as long as there is only one user-provided
         # graph. If multiple user-provided graphs will be supported, this
         # should use another query to get all of them.
-        userdata_gr = self.ds.graph(nsc['fcmain'][uid])
+        userdata_gr = Graph(identifier=nsc['fcres'][uid])
+        userdata_gr += self.ds.graph(nsc['fcmain'][uid])
 
-        return userdata_gr | Graph()
+        return userdata_gr
 
 
     def get_version_info(self, uid, strict=True):
@@ -331,12 +330,12 @@ class RsrcCentricLayout:
             'ag': nsc['fcadmin'][uid],
             'hg': HIST_GR_URI,
             's': nsc['fcres'][uid]})
-        rsrc = Resource(gr, nsc['fcres'][uid])
-        # TODO Should return a graph.
+        ver_info_gr = Graph(identifier=nsc['fcres'][uid])
+        ver_info_gr += gr
         if strict:
-            self._check_rsrc_status(rsrc)
+            self._check_rsrc_status(ver_info_gr)
 
-        return rsrc
+        return ver_info_gr
 
 
     def get_inbound_rel(self, subj_uri, full_triple=True):
@@ -566,23 +565,23 @@ class RsrcCentricLayout:
 
     ## PROTECTED MEMBERS ##
 
-    def _check_rsrc_status(self, rsrc):
+    def _check_rsrc_status(self, gr):
         """
         Check if a resource is not existing or if it is a tombstone.
         """
-        uid = self.uri_to_uid(rsrc.identifier)
-        if not len(rsrc.graph):
+        uid = self.uri_to_uid(gr.identifier)
+        if not len(gr):
             raise ResourceNotExistsError(uid)
 
         # Check if resource is a tombstone.
-        if rsrc[RDF.type : nsc['fcsystem'].Tombstone]:
+        if gr[gr.identifier : RDF.type : nsc['fcsystem'].Tombstone]:
             raise TombstoneError(
-                    uid, rsrc.value(nsc['fcrepo'].created))
-        elif rsrc.value(nsc['fcsystem'].tombstone):
+                    uid, gr.value(gr.identifier, nsc['fcrepo'].created))
+        elif gr.value(gr.identifier, nsc['fcsystem'].tombstone):
             raise TombstoneError(
-                    self.uri_to_uid(
-                        rsrc.value(nsc['fcsystem'].tombstone).identifier),
-                        rsrc.value(nsc['fcrepo'].created))
+                self.uri_to_uid(
+                    gr.value(gr.identifier, nsc['fcsystem'].tombstone)),
+                gr.value(gr.identifier, nsc['fcrepo'].created))
 
 
     def _parse_construct(self, qry, init_bindings={}):

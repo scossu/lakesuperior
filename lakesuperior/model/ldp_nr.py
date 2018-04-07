@@ -45,7 +45,7 @@ class LdpNr(Ldpr):
 
         if not mimetype:
             self.mimetype = (
-                    self.metadata.value(nsc['ebucore'].hasMimeType)
+                    self.metadata.value(self.uri, nsc['ebucore'].hasMimeType)
                     if self.is_stored
                     else 'application/octet-stream')
         else:
@@ -56,13 +56,34 @@ class LdpNr(Ldpr):
 
     @property
     def filename(self):
-        return self.imr.value(nsc['ebucore'].filename)
+        """
+        File name of the original uploaded file.
+
+        :rtype: str
+        """
+        return self.imr.value(self.uri, nsc['ebucore'].filename)
+
+
+    @property
+    def content(self):
+        """
+        Binary content.
+
+        :return: File handle of the resource content.
+        :rtype: io.BufferedReader
+        """
+        return open(self.local_path, 'rb')
 
 
     @property
     def local_path(self):
-        cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
-        cksum = str(cksum_term.identifier.replace('urn:sha1:',''))
+        """
+        Path on disk of the binary content.
+
+        :rtype: str
+        """
+        cksum_term = self.imr.value(self.uri, nsc['premis'].hasMessageDigest)
+        cksum = str(cksum_term.replace('urn:sha1:',''))
         return nonrdfly.__class__.local_path(
                 nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
 
@@ -104,20 +125,23 @@ class LdpNr(Ldpr):
 
         # File size.
         logger.debug('Data stream size: {}'.format(self.size))
-        self.provided_imr.set(nsc['premis'].hasSize, Literal(self.size))
+        self.provided_imr.set((
+            self.uri, nsc['premis'].hasSize, Literal(self.size)))
 
         # Checksum.
         cksum_term = URIRef('urn:sha1:{}'.format(self.digest))
-        self.provided_imr.set(nsc['premis'].hasMessageDigest, cksum_term)
+        self.provided_imr.set((
+            self.uri, nsc['premis'].hasMessageDigest, cksum_term))
 
         # MIME type.
-        self.provided_imr.set(nsc['ebucore']['hasMimeType'], 
-                Literal(self.mimetype))
+        self.provided_imr.set((
+            self.uri, nsc['ebucore']['hasMimeType'], Literal(self.mimetype)))
 
         # File name.
         logger.debug('Disposition: {}'.format(self.disposition))
         try:
-            self.provided_imr.set(nsc['ebucore']['filename'], Literal(
-                    self.disposition['attachment']['parameters']['filename']))
+            self.provided_imr.set((
+                self.uri, nsc['ebucore']['filename'], Literal(
+                self.disposition['attachment']['parameters']['filename'])))
         except (KeyError, TypeError) as e:
             pass

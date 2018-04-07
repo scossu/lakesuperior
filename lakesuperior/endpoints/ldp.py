@@ -11,8 +11,7 @@ import arrow
 from flask import (
         Blueprint, g, make_response, render_template,
         request, send_file)
-from rdflib.namespace import XSD
-from rdflib.term import Literal
+from rdflib import Graph
 
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -281,14 +280,15 @@ def put_resource(uid):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
         local_rdf = g.tbox.localize_payload(global_rdf)
-        stream = BytesIO(local_rdf)
-        is_rdf = True
+        graph = Graph().parse(
+                data=local_rdf, format=mimetype, publicID=nsc['fcres'][uid])
+        stream = mimetype = None
     else:
-        is_rdf = False
+        graph = None
 
     try:
         evt = rsrc_api.create_or_replace(uid, stream=stream, mimetype=mimetype,
-                handling=handling, disposition=disposition)
+                graph=graph, handling=handling, disposition=disposition)
     except (InvalidResourceError, ResourceExistsError) as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
@@ -302,7 +302,7 @@ def put_resource(uid):
     if evt == RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = uri
-        if mimetype and not is_rdf:
+        if mimetype and not graph:
             rsp_headers['Link'] = (
                     '<{0}/fcr:metadata>; rel="describedby"'.format(uri))
     else:

@@ -6,3 +6,14 @@ install:
   - pip install -e .
 script:
   - python setup.py test
+
+deploy:
+    provider: pypi
+    user: "scossu"
+    password:
+        secure: "ANSqNv9T5AjDh2hkcWtikwxGu+MVmUC1K8s0QUZwGFfaLoNhwAe+Ol+a12It/oSQumZZQTPImpqvJ2dp6KaUXVvury9AI6La48lTinHNlZkRgLKhdqg0XV2ByxKkBxL0lmixtS+o0Ynv5CVX76iBxoaFTKU/eRMF9Pja6UvjNC7CZM+uh3C5/MUg82RdOS01R7m7SmM9uMTIoMzWb87837stTBmL8FiN3BkX25Weo4NDrLDamKl8QlFx2ozqkOj9SYJLO/HHhPv3HfSJeWNC6fsbNud9OAvKu+ZckPdVw1yNgjeTqpxhL7S/K0GuqZJ/efdwwPZLlsP+dSMSB3ftpUucpp3cBNOOjCvE+KHUWbHvIKJijwkMbVp/N/RWgfSzzwVlpy28JFzZirgvI0VGOovYI1NOW+kwe6aAffM0C00WA16bGZxxCDXeK2CeNDOpjXb0UhtwJTEayfpcRXEiginOaoUXISahPLnhVQoGLuyM+UG6oFg8RURAziXNOfaI6VgzcOF6EcfBhQlLs10RDVnfl9giP1kQ6twko/+n3bbRURDe1YXxk9HLwlzOszv8KGFU0G5UjRaX76RtMh5Y+a8wqni7g8ti74QiDmgG8a7aGZu9VUrLGnl1iRrM+xmoogYSuB7OxeUu+k+2mOJTHNz9qP+0+/FEeKazHoH8SmQ="
+    on:
+        tags: true
+        branch: master
+    distributions: "bdist_wheel"
+
