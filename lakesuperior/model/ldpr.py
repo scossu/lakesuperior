@@ -377,7 +377,7 @@ class Ldpr(metaclass=ABCMeta):
             set(self.provided_imr) |
             self._containment_rel(create))
 
-        self._modify_rsrc(ev_type, remove_trp, add_trp)
+        self.modify(ev_type, remove_trp, add_trp)
         new_gr = Graph(identifier=self.uri)
         for trp in add_trp:
             new_gr.add(trp)
@@ -414,7 +414,7 @@ class Ldpr(metaclass=ABCMeta):
                 (self.uri, nsc['fcrepo'].created, env.timestamp_term),
             }
 
-        self._modify_rsrc(RES_DELETED, remove_trp, add_trp)
+        self.modify(RES_DELETED, remove_trp, add_trp)
 
         if inbound:
             for ib_rsrc_uri in self.imr.subjects(None, self.uri):
@@ -422,7 +422,7 @@ class Ldpr(metaclass=ABCMeta):
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
                 ib_rsrc.create_rsrc_snapshot(uuid4())
-                ib_rsrc._modify_rsrc(RES_UPDATED, remove_trp)
+                ib_rsrc.modify(RES_UPDATED, remove_trp)
 
         return RES_DELETED
 
@@ -481,7 +481,7 @@ class Ldpr(metaclass=ABCMeta):
             (self.uri, nsc['fcrepo'].hasVersion, ver_uri),
             (self.uri, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
         }
-        self._modify_rsrc(RES_UPDATED, add_trp=rsrc_add_gr)
+        self.modify(RES_UPDATED, add_trp=rsrc_add_gr)
 
         return ver_uid
 
@@ -518,7 +518,7 @@ class Ldpr(metaclass=ABCMeta):
             laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Container))
 
         laz_set = set(laz_gr) | self._containment_rel()
-        self._modify_rsrc(RES_CREATED, tstone_trp, laz_set)
+        self.modify(RES_CREATED, tstone_trp, laz_set)
 
         return self.uri
 
@@ -566,6 +566,99 @@ class Ldpr(metaclass=ABCMeta):
         return self.create_or_replace(create_only=False)
 
 
+    def check_mgd_terms(self, trp):
+        """
+        Check whether server-managed terms are in a RDF payload.
+
+        :param rdflib.Graph trp: The graph to validate.
+        """
+        subjects = {t[0] for t in trp}
+        offending_subjects = subjects & srv_mgd_subjects
+        if offending_subjects:
+            if self.handling == 'strict':
+                raise ServerManagedTermError(offending_subjects, 's')
+            else:
+                for s in offending_subjects:
+                    logger.info('Removing offending subj: {}'.format(s))
+                    for t in trp:
+                        if t[0] == s:
+                            trp.remove(t)
+
+        predicates = {t[1] for t in trp}
+        offending_predicates = predicates & srv_mgd_predicates
+        # Allow some predicates if the resource is being created.
+        if offending_predicates:
+            if self.handling == 'strict':
+                raise ServerManagedTermError(offending_predicates, 'p')
+            else:
+                for p in offending_predicates:
+                    logger.info('Removing offending pred: {}'.format(p))
+                    for t in trp:
+                        if t[1] == p:
+                            trp.remove(t)
+
+        types = {t[2] for t in trp if t[1] == RDF.type}
+        offending_types = types & srv_mgd_types
+        if not self.is_stored:
+            offending_types -= self.smt_allow_on_create
+        if offending_types:
+            if self.handling == 'strict':
+                raise ServerManagedTermError(offending_types, 't')
+            else:
+                for to in offending_types:
+                    logger.info('Removing offending type: {}'.format(to))
+                    for t in trp:
+                        if t[1] == RDF.type and t[2] == to:
+                            trp.remove(t)
+
+        #logger.debug('Sanitized graph: {}'.format(trp.serialize(
+        #    format='turtle').decode('utf-8')))
+        return trp
+
+
+    def sparql_delta(self, q):
+        """
+        Calculate the delta obtained by a SPARQL Update operation.
+
+        This is a critical component of the SPARQL update prcess and does a
+        couple of things:
+
+        1. It ensures that no resources outside of the subject of the request
+        are modified (e.g. by variable subjects)
+        2. It verifies that none of the terms being modified is server managed.
+
+        This method extracts an in-memory copy of the resource and performs the
+        query on that once it has checked if any of the server managed terms is
+        in the delta. If it is, it raises an exception.
+
+        NOTE: This only checks if a server-managed term is effectively being
+        modified. If a server-managed term is present in the query but does not
+        cause any change in the updated resource, no error is raised.
+
+        :rtype: tuple(rdflib.Graph)
+        :return: Remove and add graphs. These can be used
+        with ``BaseStoreLayout.update_resource`` and/or recorded as separate
+        events in a provenance tracking system.
+        """
+        logger.debug('Provided SPARQL query: {}'.format(q))
+        pre_gr = self.imr
+
+        post_gr = pre_gr | Graph()
+        post_gr.update(q)
+
+        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+
+        #logger.debug('Removing: {}'.format(
+        #    remove_gr.serialize(format='turtle').decode('utf8')))
+        #logger.debug('Adding: {}'.format(
+        #    add_gr.serialize(format='turtle').decode('utf8')))
+
+        remove_trp = self.check_mgd_terms(set(remove_gr))
+        add_trp = self.check_mgd_terms(set(add_gr))
+
+        return remove_trp, add_trp
+
+
     ## PROTECTED METHODS ##
 
     def _is_trp_managed(self, t):
@@ -580,7 +673,7 @@ class Ldpr(metaclass=ABCMeta):
             t[1] == RDF.type and t[2] in srv_mgd_types)
 
 
-    def _modify_rsrc(
+    def modify(
             self, ev_type, remove_trp=set(), add_trp=set()):
         """
         Low-level method to modify a graph for a single resource.
@@ -655,47 +748,6 @@ class Ldpr(metaclass=ABCMeta):
                             'Removing link to non-existent repo resource: {}'
                             .format(obj_uid))
                         self.provided_imr.remove((None, None, o))
-
-
-    def _check_mgd_terms(self, gr):
-        """
-        Check whether server-managed terms are in a RDF payload.
-
-        :param rdflib.Graph gr: The graph to validate.
-        """
-        offending_subjects = set(gr.subjects()) & srv_mgd_subjects
-        if offending_subjects:
-            if self.handling == 'strict':
-                raise ServerManagedTermError(offending_subjects, 's')
-            else:
-                for s in offending_subjects:
-                    logger.info('Removing offending subj: {}'.format(s))
-                    gr.remove((s, None, None))
-
-        offending_predicates = set(gr.predicates()) & srv_mgd_predicates
-        # Allow some predicates if the resource is being created.
-        if offending_predicates:
-            if self.handling == 'strict':
-                raise ServerManagedTermError(offending_predicates, 'p')
-            else:
-                for p in offending_predicates:
-                    logger.info('Removing offending pred: {}'.format(p))
-                    gr.remove((None, p, None))
-
-        offending_types = set(gr.objects(predicate=RDF.type)) & srv_mgd_types
-        if not self.is_stored:
-            offending_types -= self.smt_allow_on_create
-        if offending_types:
-            if self.handling == 'strict':
-                raise ServerManagedTermError(offending_types, 't')
-            else:
-                for t in offending_types:
-                    logger.info('Removing offending type: {}'.format(t))
-                    gr.remove((None, RDF.type, t))
-
-        #logger.debug('Sanitized graph: {}'.format(gr.serialize(
-        #    format='turtle').decode('utf-8')))
-        return gr
 
 
     def _add_srv_mgd_triples(self, create=False):
@@ -784,7 +836,7 @@ class Ldpr(metaclass=ABCMeta):
             add_gr = Graph()
             add_gr.add(
                 (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
-            parent_rsrc._modify_rsrc(RES_UPDATED, add_trp=add_gr)
+            parent_rsrc.modify(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
         return self._add_ldp_dc_ic_rel(parent_rsrc)
@@ -842,62 +894,6 @@ class Ldpr(metaclass=ABCMeta):
                 logger.debug('Creating IC triples.')
 
             target_rsrc = LdpFactory.from_stored(rdfly.uri_to_uid(s))
-            target_rsrc._modify_rsrc(RES_UPDATED, add_trp={(s, p, o)})
+            target_rsrc.modify(RES_UPDATED, add_trp={(s, p, o)})
 
         return add_trp
-
-
-    def sparql_update(self, update_str):
-        """
-        Apply a SPARQL update to a resource.
-
-        :param str update_str: SPARQL-Update string. All URIs are local.
-        """
-        # FCREPO does that and Hyrax requires it.
-        self.handling = 'lenient'
-        delta = self._sparql_delta(update_str)
-
-        self._modify_rsrc(RES_UPDATED, *delta)
-
-
-    def _sparql_delta(self, q):
-        """
-        Calculate the delta obtained by a SPARQL Update operation.
-
-        This is a critical component of the SPARQL update prcess and does a
-        couple of things:
-
-        1. It ensures that no resources outside of the subject of the request
-        are modified (e.g. by variable subjects)
-        2. It verifies that none of the terms being modified is server managed.
-
-        This method extracts an in-memory copy of the resource and performs the
-        query on that once it has checked if any of the server managed terms is
-        in the delta. If it is, it raises an exception.
-
-        NOTE: This only checks if a server-managed term is effectively being
-        modified. If a server-managed term is present in the query but does not
-        cause any change in the updated resource, no error is raised.
-
-        :rtype: tuple(rdflib.Graph)
-        :return: Remove and add graphs. These can be used
-        with ``BaseStoreLayout.update_resource`` and/or recorded as separate
-        events in a provenance tracking system.
-        """
-        logger.debug('Provided SPARQL query: {}'.format(q))
-        pre_gr = self.imr
-
-        post_gr = pre_gr | Graph()
-        post_gr.update(q)
-
-        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
-
-        #logger.debug('Removing: {}'.format(
-        #    remove_gr.serialize(format='turtle').decode('utf8')))
-        #logger.debug('Adding: {}'.format(
-        #    add_gr.serialize(format='turtle').decode('utf8')))
-
-        remove_gr = self._check_mgd_terms(remove_gr)
-        add_gr = self._check_mgd_terms(add_gr)
-
-        return set(remove_gr), set(add_gr)

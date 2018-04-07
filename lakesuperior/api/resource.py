@@ -7,14 +7,14 @@ from threading import Lock, Thread
 
 import arrow
 
-from rdflib import Literal
+from rdflib import Graph, Literal, URIRef
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
 from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior.env import env
-from lakesuperior.globals import RES_DELETED
+from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
@@ -220,8 +220,6 @@ def create_or_replace(uid, **kwargs):
     Create or replace a resource with a specified UID.
 
     :param string uid: UID of the resource to be created or updated.
-    :param BytesIO stream: Content stream. If empty, an empty container is
-        created.
     :param \*\*kwargs: Other parameters are passed to the
         :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
         method.
@@ -229,9 +227,7 @@ def create_or_replace(uid, **kwargs):
     :rtype: str
     :return: Event type: whether the resource was created or updated.
     """
-    rsrc = LdpFactory.from_provided(uid, **kwargs)
-
-    return rsrc.create_or_replace()
+    return LdpFactory.from_provided(uid, **kwargs).create_or_replace()
 
 
 @transaction(True)
@@ -241,17 +237,41 @@ def update(uid, update_str, is_metadata=False):
 
     :param string uid: Resource UID.
     :param string update_str: SPARQL-Update statements.
-    :param bool is_metadata: Whether the resource metadata is being updated.
-        If False, and the resource being updated is a LDP-NR, an error is
-        raised.
-    """
-    rsrc = LdpFactory.from_stored(uid)
-    if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
-        raise InvalidResourceError(uid)
+    :param bool is_metadata: Whether the resource metadata are being updated.
 
-    rsrc.sparql_update(update_str)
+    :raise InvalidResourceError: If ``is_metadata`` is False and the resource
+        being updated is a LDP-NR.
+    """
+    # FCREPO is lenient here and Hyrax requires it.
+    rsrc = LdpFactory.from_stored(uid, handling='lenient')
+    if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
+        raise InvalidResourceError(
+                'Cannot use this method to update an LDP-NR content.')
+
+    delta = rsrc.sparql_delta(update_str)
+    rsrc.modify(RES_UPDATED, *delta)
 
     return rsrc
+
+
+@transaction(True)
+def update_delta(uid, remove_trp, add_trp):
+    """
+    Update a resource graph (LDP-RS or LDP-NR) with sets of add/remove triples.
+
+    A set of triples to add and/or a set of triples to remove may be provided.
+
+    :param string uid: Resource UID.
+    :param set(tuple(rdflib.term.Identifier)) remove_trp: Triples to
+        remove, as 3-tuples of RDFLib terms.
+    :param set(tuple(rdflib.term.Identifier)) add_trp: Triples to
+        add, as 3-tuples of RDFLib terms.
+    """
+    rsrc = LdpFactory.from_stored(uid)
+    remove_trp = rsrc.check_mgd_terms(remove_trp)
+    add_trp = rsrc.check_mgd_terms(add_trp)
+
+    return rsrc.modify(RES_UPDATED, remove_trp, add_trp)
 
 
 @transaction(True)

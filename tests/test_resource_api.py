@@ -160,3 +160,68 @@ class TestResourceApi:
             rsrc_api.create_or_replace(uid_nr)
 
 
+    def test_delta_update(self):
+        """
+        Update a resource with two sets of add and remove triples.
+        """
+        uid = '/test_delta_patch'
+        uri = nsc['fcres'][uid]
+        init_trp = {
+            (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Person),
+            (URIRef(uri), nsc['foaf'].name, Literal('Joe Bob')),
+        }
+        remove_trp = {
+            (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Person),
+        }
+        add_trp = {
+            (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Organization),
+        }
+
+        gr = Graph()
+        gr += init_trp
+        rsrc_api.create_or_replace(uid, graph=gr)
+        rsrc_api.update_delta(uid, remove_trp, add_trp)
+        rsrc = rsrc_api.get(uid)
+
+        assert rsrc.imr[
+                rsrc.uri : nsc['rdf'].type : nsc['foaf'].Organization]
+        assert rsrc.imr[rsrc.uri : nsc['foaf'].name : Literal('Joe Bob')]
+        assert not rsrc.imr[
+                rsrc.uri : nsc['rdf'].type : nsc['foaf'].Person]
+
+
+    def test_delta_update_wildcard(self):
+        """
+        Update a resource using wildcard modifiers.
+        """
+        uid = '/test_delta_patch_wc'
+        uri = nsc['fcres'][uid]
+        init_trp = {
+            (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Person),
+            (URIRef(uri), nsc['foaf'].name, Literal('Joe Bob')),
+            (URIRef(uri), nsc['foaf'].name, Literal('Joe Average Bob')),
+            (URIRef(uri), nsc['foaf'].name, Literal('Joe 12oz Bob')),
+        }
+        remove_trp = {
+            (URIRef(uri), nsc['foaf'].name, None),
+        }
+        add_trp = {
+            (URIRef(uri), nsc['foaf'].name, Literal('Joan Knob')),
+        }
+
+        gr = Graph()
+        gr += init_trp
+        rsrc_api.create_or_replace(uid, graph=gr)
+        rsrc_api.update_delta(uid, remove_trp, add_trp)
+        rsrc = rsrc_api.get(uid)
+
+        assert rsrc.imr[
+                rsrc.uri : nsc['rdf'].type : nsc['foaf'].Person]
+        assert rsrc.imr[rsrc.uri : nsc['foaf'].name : Literal('Joan Knob')]
+        assert not rsrc.imr[rsrc.uri : nsc['foaf'].name : Literal('Joe Bob')]
+        assert not rsrc.imr[
+            rsrc.uri : nsc['foaf'].name : Literal('Joe Average Bob')]
+        assert not rsrc.imr[
+            rsrc.uri : nsc['foaf'].name : Literal('Joe 12oz Bob')]
+
+

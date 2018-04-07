@@ -128,7 +128,7 @@ class LdpFactory:
                 raise IncompatibleLdpTypeError(uid, mimetype)
 
             if kwargs.get('handling', 'strict') != 'none':
-                inst._check_mgd_terms(inst.provided_imr)
+                inst.check_mgd_terms(inst.provided_imr)
 
         else:
             # Resource is a LDP-NR.
