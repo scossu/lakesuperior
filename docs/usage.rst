@@ -156,7 +156,7 @@ Create under a known parent, providing a slug (POST style)::
     >>> rsrc_api.create('/rsrc_from_stream', 'res1')
 
 
-Retrieve resources
+Retrieve Resources
 ~~~~~~~~~~~~~~~~~~
 
 Retrieve a resource::
@@ -179,3 +179,44 @@ Retrieve non-RDF content::
     b'Hello. This is some dummy content.'
 
 See the :doc:`API docs <api>` for more details on resource methods.
+
+Update Resources
+~~~~~~~~~~~~~~~~
+
+Using a SPARQL update string::
+
+    >>> uid = '/test_delta_patch_wc'
+    >>> uri = nsc['fcres'][uid]
+    >>> init_trp = {
+    ...     (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Person),
+    ...     (URIRef(uri), nsc['foaf'].name, Literal('Joe Bob')),
+    ...     (URIRef(uri), nsc['foaf'].name, Literal('Joe Average Bob')),
+    ... }
+
+    >>> update_str = '''
+    ... DELETE {}
+    ... INSERT { <> foaf:name "Joe Average 12oz Bob" . }
+    ... WHERE {}
+    ... '''
+
+Using add/remove triple sets::
+
+    >>> remove_trp = {
+    ...     (URIRef(uri), nsc['foaf'].name, None),
+    ... }
+    >>> add_trp = {
+    ...     (URIRef(uri), nsc['foaf'].name, Literal('Joan Knob')),
+    ... }
+
+    >>> gr = Graph()
+    >>> gr += init_trp
+    >>> rsrc_api.create_or_replace(uid, graph=gr)
+    >>> rsrc_api.update_delta(uid, remove_trp, add_trp)
+
+Note above that wildcards can be used, only in the remove triple set. Wherever
+``None`` is used, all matches will be removed (in this example, all values of
+``foaf:name``.
+
+Generally speaking, the delta approach providing a set of remove triples and/or
+a set of add triples is more convenient than SPARQL, which is a better fit for
+complex query/update scenarios.
