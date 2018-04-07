@@ -15,5 +15,6 @@ deploy:
     on:
         tags: true
         branch: master
+        python: "3.5"
     distributions: "bdist_wheel"
 
