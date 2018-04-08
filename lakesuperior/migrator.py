@@ -11,6 +11,7 @@ import yaml
 from rdflib import Graph, URIRef
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.exceptions import InvalidResourceError
 from lakesuperior.env import env
 from lakesuperior.globals import AppGlobals, ROOT_UID
 from lakesuperior.config_parser import parse_config
@@ -166,7 +167,10 @@ class Migrator:
                     for uri in fp:
                         uid = uri.strip().replace(self.src, '')
                         if uid != ROOT_UID:
-                            rsrc_api.create_or_replace(uid)
+                            try:
+                                rsrc_api.create_or_replace(uid)
+                            except InvalidResourceError:
+                                pass
                         self._crawl(uid)
         logger.info('Dumped {} resources.'.format(self._ct))
 
@@ -189,12 +193,17 @@ class Migrator:
         # Internal URI of destination.
         iuri = ibase + uid
 
-        rsp = requests.head(uri)
-        if not self.skip_errors:
-            rsp.raise_for_status()
-        elif rsp.status_code > 399:
-            print('Error retrieving resource {} headers: {} {}'.format(
-                uri, rsp.status_code, rsp.text))
+        try:
+            rsp = requests.head(uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(uri))
+            return
+        if rsp:
+            if not self.skip_errors:
+                rsp.raise_for_status()
+            elif rsp.status_code > 399:
+                print('Error retrieving resource {} headers: {} {}'.format(
+                    uri, rsp.status_code, rsp.text))
 
         # Determine LDP type.
         ldp_type = 'ldp_nr'
@@ -218,12 +227,17 @@ class Migrator:
         # links.
         get_uri = (
                 uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
-        get_rsp = requests.get(get_uri)
-        if not self.skip_errors:
-            get_rsp.raise_for_status()
-        elif get_rsp.status_code > 399:
-            print('Error retrieving resource {} body: {} {}'.format(
-                uri, get_rsp.status_code, get_rsp.text))
+        try:
+            get_rsp = requests.get(get_uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(get_uri))
+            return
+        if get_rsp:
+            if not self.skip_errors:
+                get_rsp.raise_for_status()
+            elif get_rsp.status_code > 399:
+                print('Error retrieving resource {} body: {} {}'.format(
+                    uri, get_rsp.status_code, get_rsp.text))
 
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
