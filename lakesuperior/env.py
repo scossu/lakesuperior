@@ -21,5 +21,8 @@ This is automated in non-test environments by importing
 class Env:
     pass
 
-env = Env()
-#env = threading.local()
+# NOTE: this can lead to race conditions in multi-thread operations competing
+# to set a timestamp.
+#env = Env()
+# NOTE: This should be thread-safe but is experimental.
+env = threading.local()
