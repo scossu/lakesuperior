@@ -81,6 +81,7 @@ setup(
         'HiYaPyCo',
         'PyYAML',
         'arrow',
+        'cchardet',
         'click',
         'click-log',
         'gevent',
