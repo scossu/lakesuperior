@@ -5,8 +5,8 @@ from os import environ, makedirs, path
 
 import gunicorn.app.base
 
-from lakesuperior.server import fcrepo
 from lakesuperior.config_parser import default_config_dir
+from lakesuperior.env import env
 
 
 config_file = '{}/gunicorn.yml'.format(default_config_dir)
@@ -47,6 +47,7 @@ options = {
     'accesslog': '{}/gunicorn-access.log'.format(log_dir),
     'errorlog': '{}/gunicorn-error.log'.format(log_dir),
 }
+env.wsgi_options = options
 
 class WsgiApp(gunicorn.app.base.BaseApplication):
 
@@ -64,6 +65,7 @@ class WsgiApp(gunicorn.app.base.BaseApplication):
 
 
 def run():
+    from lakesuperior.server import fcrepo
     WsgiApp(fcrepo, options).run()
 
 
