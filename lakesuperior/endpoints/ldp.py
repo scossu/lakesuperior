@@ -312,6 +312,8 @@ def put_resource(uid):
 
 
 @ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
+@ldp.route('/', defaults={'uid': '/'}, methods=['PATCH'],
+        strict_slashes=False)
 def patch_resource(uid, is_metadata=False):
     """
     https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
