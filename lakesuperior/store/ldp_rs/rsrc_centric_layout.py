@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict
 from itertools import chain
 from string import Template
+from urllib.parse import urldefrag
 
 import arrow
 
@@ -553,14 +554,19 @@ class RsrcCentricLayout:
         :rtype: set
         :return: Triples referencing a repository URI that is not a resource.
         """
-        for obj in self.store.all_terms('o'):
+        for i, obj in enumerate(self.store.all_terms('o'), start=1):
             if (
                     isinstance(obj, URIRef)
-                    and str(obj).startswith(nsc['fcres'])
-                    and not self.ask_rsrc_exists(self.uri_to_uid(obj))):
-                print('Object not found: {}'.format(obj))
+                    and obj.startswith(nsc['fcres'])
+                    and not obj.endswith('fcr:fixity')
+                    and not obj.endswith('fcr:versions')
+                    and not self.ask_rsrc_exists(self.uri_to_uid(
+                        urldefrag(obj).url))):
+                logger.warn('Object not found: {}'.format(obj))
                 for trp in self.store.triples((None, None, obj)):
                     yield trp
+            if i % 100 == 0:
+                logger.info('{} terms processed.'.format(i))
 
 
     ## PROTECTED MEMBERS ##
