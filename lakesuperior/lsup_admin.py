@@ -5,9 +5,9 @@ import logging
 import os
 import sys
 
+from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
-from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 logger = logging.getLogger(__name__)

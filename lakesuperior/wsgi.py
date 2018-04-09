@@ -5,8 +5,8 @@ from os import environ, makedirs, path
 
 import gunicorn.app.base
 
+from lakesuperior import env
 from lakesuperior.config_parser import default_config_dir
-from lakesuperior.env import env
 
 
 config_file = '{}/gunicorn.yml'.format(default_config_dir)

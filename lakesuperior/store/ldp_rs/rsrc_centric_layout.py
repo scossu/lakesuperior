@@ -13,13 +13,13 @@ from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.store import Store
 
+from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 

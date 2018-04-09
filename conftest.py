@@ -1,11 +1,8 @@
-import sys
-
 import pytest
 
-sys.path.append('.')
+from lakesuperior import env
 from lakesuperior.config_parser import test_config
 from lakesuperior.globals import AppGlobals
-from lakesuperior.env import env
 
 env.config = test_config
 env.app_globals = AppGlobals(test_config)

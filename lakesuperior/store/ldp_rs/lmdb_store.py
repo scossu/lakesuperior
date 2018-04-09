@@ -14,7 +14,7 @@ from rdflib import Graph, Namespace, URIRef, Variable
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.store import Store, VALID_STORE, NO_STORE
 
-from lakesuperior.env import env
+from lakesuperior import env
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,8 @@ import yaml
 
 from rdflib import Graph, URIRef
 
+from lakesuperior import env, basedir
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.env import env
 from lakesuperior.globals import AppGlobals, ROOT_UID
 from lakesuperior.config_parser import parse_config
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
@@ -28,8 +28,7 @@ class StoreWrapper(ContextDecorator):
         self.store = store
 
     def __enter__(self):
-        self.store.open(
-                env.config['application']['store']['ldp_rs'])
+        self.store.open(env.app_globals.rdfly.config)
 
     def __exit__(self, *exc):
         self.store.close()
@@ -95,7 +94,6 @@ class Migrator:
         """
         # Set up repo folder structure and copy default configuration to
         # destination file.
-        cur_dir = path.dirname(path.dirname(path.abspath(__file__)))
         self.dbpath = '{}/data/ldprs_store'.format(dest)
         self.fpath = '{}/data/ldpnr_store'.format(dest)
         self.config_dir = '{}/etc'.format(dest)

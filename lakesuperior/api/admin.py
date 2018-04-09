@@ -1,7 +1,7 @@
 import logging
 
+from lakesuperior import env
 from lakesuperior.config_parser import parse_config
-from lakesuperior.env import env
 from lakesuperior.globals import AppGlobals
 from lakesuperior.migrator import Migrator
 from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout
@@ -55,8 +55,7 @@ def integrity_check(config_dir=None):
     be added and triggered by different argument flags.
     """
     if config_dir:
-        env.config = parse_config(config_dir)[0]
-        env.app_globals = AppGlobals(env.config)
+        env.app_globals = AppGlobals(parse_config(config_dir)[0])
     else:
         import lakesuperior.env_setup
     with TxnManager(env.app_globals.rdfly.store):
