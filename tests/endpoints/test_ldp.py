@@ -298,6 +298,26 @@ class TestLdp:
         assert self.client.post('/ldp/post_409').status_code == 409
 
 
+    def test_patch_root(self):
+        '''
+        Test patching root node.
+        '''
+        path = '/ldp/'
+        self.client.get(path)
+        uri = g.webroot + '/'
+
+        with open('tests/data/sparql_update/simple_insert.sparql') as data:
+            resp = self.client.patch(path,
+                    data=data,
+                    headers={'content-type' : 'application/sparql-update'})
+
+        assert resp.status_code == 204
+
+        resp = self.client.get(path)
+        gr = Graph().parse(data=resp.data, format='text/turtle')
+        assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Hello') ]
+
+
     def test_patch(self):
         '''
         Test patching a resource.
