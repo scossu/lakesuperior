@@ -786,7 +786,7 @@ class Ldpr(metaclass=ABCMeta):
             self.uri, nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER))
 
 
-    def _containment_rel(self, create):
+    def _containment_rel(self, create, ignore_type=True):
         """Find the closest parent in the path indicated by the uid and
         establish a containment triple.
 
@@ -805,6 +805,11 @@ class Ldpr(metaclass=ABCMeta):
 
         :param bool create: Whether the resource is being created. If false,
         the parent container is not updated.
+        "param bool ignore_type: If False (the default), an exception is raised
+        if trying to create a resource under a non-container. This can be
+        overridden in special cases (e.g. when migrating a repository in which
+        a LDP-NR has "children" under ``fcr:versions``) by setting this to
+        True.
         """
         from lakesuperior.model.ldp_factory import LdpFactory
 
@@ -814,7 +819,9 @@ class Ldpr(metaclass=ABCMeta):
             cnd_parent_uid = '/' + '/'.join(path_components[:-1])
             if rdfly.ask_rsrc_exists(cnd_parent_uid):
                 parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
-                if nsc['ldp'].Container not in parent_rsrc.types:
+                if (
+                        not ignore_type
+                        and nsc['ldp'].Container not in parent_rsrc.types):
                     raise InvalidResourceError(
                         cnd_parent_uid, 'Parent {} is not a container.')
 
