@@ -68,7 +68,7 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, init=False, zero_binaries=False,
+            self, src, dest, clear=False, zero_binaries=False,
             compact_uris=False, skip_errors=False):
         """
         Set up base paths and clean up existing directories.
@@ -81,8 +81,10 @@ class Migrator:
             it must be a writable directory. It will be deleted and recreated.
             If it does not exist, it will be created along with its parents if
             missing.
-        :param str binary_handling: One of ``include``, ``truncate`` or
-            ``split``.
+        :param bool clear: Whether to clear any pre-existing data at the
+            locations indicated.
+        :param bool zero_binaries: Whether to create zero-byte binary files
+            rather than copy the sources.
         :param bool compact_uris: NOT IMPLEMENTED. Whether the process should
             attempt to compact URIs generated with broken up path segments. If
             the UID matches a pattern such as ``/12/34/56/123456...`` it is
@@ -98,28 +100,28 @@ class Migrator:
         self.fpath = '{}/data/ldpnr_store'.format(dest)
         self.config_dir = '{}/etc'.format(dest)
 
-        if init:
+        if clear:
             shutil.rmtree(dest, ignore_errors=True)
+        if not path.isdir(self.config_dir):
             shutil.copytree(
-                '{}/etc.defaults'.format(cur_dir), self.config_dir)
+                '{}/etc.defaults'.format(basedir), self.config_dir)
 
         # Modify and overwrite destination configuration.
         orig_config, _ = parse_config(self.config_dir)
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
 
-        if init:
+        if clear:
             with open('{}/application.yml'.format(self.config_dir), 'w') \
                     as config_file:
                 config_file.write(yaml.dump(orig_config['application']))
 
-        env.config = parse_config(self.config_dir)[0]
-        env.app_globals = AppGlobals(env.config)
+        env.app_globals = AppGlobals(parse_config(self.config_dir)[0])
 
         self.rdfly = env.app_globals.rdfly
         self.nonrdfly = env.app_globals.nonrdfly
 
-        if init:
+        if clear:
             with TxnManager(env.app_globals.rdf_store, write=True) as txn:
                 self.rdfly.bootstrap()
                 self.rdfly.store.close()
