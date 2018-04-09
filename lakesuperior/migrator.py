@@ -69,8 +69,8 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, zero_binaries=False, compact_uris=False,
-            skip_errors=False):
+            self, src, dest, init=False, zero_binaries=False,
+            compact_uris=False, skip_errors=False):
         """
         Set up base paths and clean up existing directories.
 
@@ -100,8 +100,9 @@ class Migrator:
         self.fpath = '{}/data/ldpnr_store'.format(dest)
         self.config_dir = '{}/etc'.format(dest)
 
-        shutil.rmtree(dest, ignore_errors=True)
-        shutil.copytree(
+        if init:
+            shutil.rmtree(dest, ignore_errors=True)
+            shutil.copytree(
                 '{}/etc.defaults'.format(cur_dir), self.config_dir)
 
         # Modify and overwrite destination configuration.
@@ -109,9 +110,10 @@ class Migrator:
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
 
-        with open('{}/application.yml'.format(self.config_dir), 'w') \
-                as config_file:
-            config_file.write(yaml.dump(orig_config['application']))
+        if init:
+            with open('{}/application.yml'.format(self.config_dir), 'w') \
+                    as config_file:
+                config_file.write(yaml.dump(orig_config['application']))
 
         env.config = parse_config(self.config_dir)[0]
         env.app_globals = AppGlobals(env.config)
@@ -119,10 +121,11 @@ class Migrator:
         self.rdfly = env.app_globals.rdfly
         self.nonrdfly = env.app_globals.nonrdfly
 
-        with TxnManager(env.app_globals.rdf_store, write=True) as txn:
-            self.rdfly.bootstrap()
-            self.rdfly.store.close()
-        env.app_globals.nonrdfly.bootstrap()
+        if init:
+            with TxnManager(env.app_globals.rdf_store, write=True) as txn:
+                self.rdfly.bootstrap()
+                self.rdfly.store.close()
+            env.app_globals.nonrdfly.bootstrap()
 
         self.src = src.rstrip('/')
         self.zero_binaries = zero_binaries
