@@ -13,6 +13,36 @@ rdfly = env.app_globals.rdfly
 rdf_store = env.app_globals.rdf_store
 
 
+def term_query(s=None, p=None, o=None):
+    """
+    Query store by matching triple patterns.
+
+    Any of the ``s``, ``p`` or ``o`` terms can be None to represent a wildcard.
+
+    This method is for triple matching only; it does not allow to query, nor
+    exposes to the caller, any context.
+
+    :param rdflib.term.Identifier s: Subject term.
+    :param rdflib.term.Identifier p: Predicate term.
+    :param rdflib.term.Identifier o: Object term.
+    """
+    with TxnManager(rdf_store) as txn:
+        # Strip contexts and de-duplicate.
+        qres = {match[0] for match in rdf_store.triples((s, p, o), None)}
+
+    return qres
+
+
+def lookup_literal(pattern):
+    """
+    Look up one literal term by partial match.
+
+    *TODO: reserved for future use. A Whoosh or similar full-text index is
+    necessary for this.*
+    """
+    pass
+
+
 def sparql_query(qry_str, fmt):
     """
     Send a SPARQL query to the triplestore.
