@@ -158,7 +158,7 @@ class Migrator:
                             'Starting point {} does not begin with a slash.'
                             .format(start))
 
-                    if start != ROOT_UID:
+                    if not rsrc_api.exists(start):
                         # Create the full hierarchy with link to the parents.
                         rsrc_api.create_or_replace(start)
                     # Then populate the new resource and crawl for more
@@ -168,7 +168,7 @@ class Migrator:
                 with open(list_file, 'r') as fp:
                     for uri in fp:
                         uid = uri.strip().replace(self.src, '')
-                        if uid != ROOT_UID:
+                        if not rsrc_api.exists(uid):
                             rsrc_api.create_or_replace(uid)
                         self._crawl(uid)
         logger.info('Dumped {} resources.'.format(self._ct))
