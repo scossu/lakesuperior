@@ -251,7 +251,7 @@ def post_resource(parent_uid):
     hdr = {'Location' : uri}
 
     if mimetype and not is_rdf:
-        hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="<{0}>"'\
+        hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
                 .format(uri)
 
     out_headers.update(hdr)
