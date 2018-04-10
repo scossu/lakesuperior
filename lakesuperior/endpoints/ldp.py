@@ -251,7 +251,7 @@ def post_resource(parent_uid):
     hdr = {'Location' : uri}
 
     if mimetype and not is_rdf:
-        hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="<{0}>"'\
+        hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
                 .format(uri)
 
     out_headers.update(hdr)
@@ -312,6 +312,8 @@ def put_resource(uid):
 
 
 @ldp.route('/<path:uid>', methods=['PATCH'], strict_slashes=False)
+@ldp.route('/', defaults={'uid': '/'}, methods=['PATCH'],
+        strict_slashes=False)
 def patch_resource(uid, is_metadata=False):
     """
     https://www.w3.org/TR/ldp/#ldpr-HTTP_PATCH
