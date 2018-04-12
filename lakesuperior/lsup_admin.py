@@ -23,13 +23,12 @@ for a list of tools and options.
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
 
-report = logging.getLogger('report')
-report_formatter = logging.Formatter('"%(asctime)s",%(message)s')
-report_fpath = '{}/lsup-report-{}'.format(
-        env.config['application']['data_dir'],
-        .format(arrow.utcnow().format('YYYY-MM-DDTHH:mm:ss.S'))
-report_handler = logging.FileHandler(report_fpath)
-
+#report = logging.getLogger('report')
+#report_formatter = logging.Formatter('"%(asctime)s",%(message)s')
+#report_fpath = '{}/lsup-report-{}'.format(
+#        env.config['application']['data_dir'],
+#        arrow.utcnow().format('YYYY-MM-DDTHH:mm:ss.S'))
+#report_handler = logging.FileHandler(report_fpath)
 
 @click.group()
 def admin():
