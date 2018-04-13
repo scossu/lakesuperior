@@ -637,8 +637,8 @@ class Ldpr(metaclass=ABCMeta):
 
         :rtype: tuple(rdflib.Graph)
         :return: Remove and add graphs. These can be used
-        with ``BaseStoreLayout.update_resource`` and/or recorded as separate
-        events in a provenance tracking system.
+            with ``BaseStoreLayout.update_resource`` and/or recorded as separate
+            events in a provenance tracking system.
         """
         logger.debug('Provided SPARQL query: {}'.format(q))
         pre_gr = self.imr
@@ -683,7 +683,7 @@ class Ldpr(metaclass=ABCMeta):
         method.
 
         :param ev_type: The type of event (create, update,
-        delete) or None. In the latter case, no notification is sent.
+            delete) or None. In the latter case, no notification is sent.
         :type ev_type: str or None
         :param set remove_trp: Triples to be removed.
         :param set add_trp: Triples to be added.
