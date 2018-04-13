@@ -2,6 +2,7 @@ import sys
 
 import pytest
 
+from os import path
 from shutil import rmtree
 from tempfile import gettempdir
 
