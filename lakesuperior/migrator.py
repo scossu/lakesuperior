@@ -10,8 +10,9 @@ import yaml
 
 from rdflib import Graph, URIRef
 
+from lakesuperior import env, basedir
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.env import env
+from lakesuperior.exceptions import InvalidResourceError
 from lakesuperior.globals import AppGlobals, ROOT_UID
 from lakesuperior.config_parser import parse_config
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
@@ -28,8 +29,7 @@ class StoreWrapper(ContextDecorator):
         self.store = store
 
     def __enter__(self):
-        self.store.open(
-                env.config['application']['store']['ldp_rs'])
+        self.store.open(env.app_globals.rdfly.config)
 
     def __exit__(self, *exc):
         self.store.close()
@@ -69,8 +69,8 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, zero_binaries=False, compact_uris=False,
-            skip_errors=False):
+            self, src, dest, clear=False, zero_binaries=False,
+            compact_uris=False, skip_errors=False):
         """
         Set up base paths and clean up existing directories.
 
@@ -82,8 +82,10 @@ class Migrator:
             it must be a writable directory. It will be deleted and recreated.
             If it does not exist, it will be created along with its parents if
             missing.
-        :param str binary_handling: One of ``include``, ``truncate`` or
-            ``split``.
+        :param bool clear: Whether to clear any pre-existing data at the
+            locations indicated.
+        :param bool zero_binaries: Whether to create zero-byte binary files
+            rather than copy the sources.
         :param bool compact_uris: NOT IMPLEMENTED. Whether the process should
             attempt to compact URIs generated with broken up path segments. If
             the UID matches a pattern such as ``/12/34/56/123456...`` it is
@@ -95,33 +97,36 @@ class Migrator:
         """
         # Set up repo folder structure and copy default configuration to
         # destination file.
-        cur_dir = path.dirname(path.dirname(path.abspath(__file__)))
         self.dbpath = '{}/data/ldprs_store'.format(dest)
         self.fpath = '{}/data/ldpnr_store'.format(dest)
         self.config_dir = '{}/etc'.format(dest)
 
-        shutil.rmtree(dest, ignore_errors=True)
-        shutil.copytree(
-                '{}/etc.defaults'.format(cur_dir), self.config_dir)
+        if clear:
+            shutil.rmtree(dest, ignore_errors=True)
+        if not path.isdir(self.config_dir):
+            shutil.copytree(
+                '{}/etc.defaults'.format(basedir), self.config_dir)
 
         # Modify and overwrite destination configuration.
         orig_config = parse_config(self.config_dir)
         orig_config['application']['store']['ldp_rs']['location'] = self.dbpath
         orig_config['application']['store']['ldp_nr']['path'] = self.fpath
 
-        with open('{}/application.yml'.format(self.config_dir), 'w') \
-                as config_file:
-            config_file.write(yaml.dump(orig_config['application']))
+        if clear:
+            with open('{}/application.yml'.format(self.config_dir), 'w') \
+                    as config_file:
+                config_file.write(yaml.dump(orig_config['application']))
 
         env.app_globals = AppGlobals(parse_config(self.config_dir))
 
         self.rdfly = env.app_globals.rdfly
         self.nonrdfly = env.app_globals.nonrdfly
 
-        with TxnManager(env.app_globals.rdf_store, write=True) as txn:
-            self.rdfly.bootstrap()
-            self.rdfly.store.close()
-        env.app_globals.nonrdfly.bootstrap()
+        if clear:
+            with TxnManager(env.app_globals.rdf_store, write=True) as txn:
+                self.rdfly.bootstrap()
+                self.rdfly.store.close()
+            env.app_globals.nonrdfly.bootstrap()
 
         self.src = src.rstrip('/')
         self.zero_binaries = zero_binaries
@@ -154,7 +159,7 @@ class Migrator:
                             'Starting point {} does not begin with a slash.'
                             .format(start))
 
-                    if start != ROOT_UID:
+                    if not rsrc_api.exists(start):
                         # Create the full hierarchy with link to the parents.
                         rsrc_api.create_or_replace(start)
                     # Then populate the new resource and crawl for more
@@ -164,8 +169,11 @@ class Migrator:
                 with open(list_file, 'r') as fp:
                     for uri in fp:
                         uid = uri.strip().replace(self.src, '')
-                        if uid != ROOT_UID:
-                            rsrc_api.create_or_replace(uid)
+                        if not rsrc_api.exists(uid):
+                            try:
+                                rsrc_api.create_or_replace(uid)
+                            except InvalidResourceError:
+                                pass
                         self._crawl(uid)
         logger.info('Dumped {} resources.'.format(self._ct))
 
@@ -188,12 +196,17 @@ class Migrator:
         # Internal URI of destination.
         iuri = ibase + uid
 
-        rsp = requests.head(uri)
-        if not self.skip_errors:
-            rsp.raise_for_status()
-        elif rsp.status_code > 399:
-            print('Error retrieving resource {} headers: {} {}'.format(
-                uri, rsp.status_code, rsp.text))
+        try:
+            rsp = requests.head(uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(uri))
+            return
+        if rsp:
+            if not self.skip_errors:
+                rsp.raise_for_status()
+            elif rsp.status_code > 399:
+                print('Error retrieving resource {} headers: {} {}'.format(
+                    uri, rsp.status_code, rsp.text))
 
         # Determine LDP type.
         ldp_type = 'ldp_nr'
@@ -217,12 +230,17 @@ class Migrator:
         # links.
         get_uri = (
                 uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
-        get_rsp = requests.get(get_uri)
-        if not self.skip_errors:
-            get_rsp.raise_for_status()
-        elif get_rsp.status_code > 399:
-            print('Error retrieving resource {} body: {} {}'.format(
-                uri, get_rsp.status_code, get_rsp.text))
+        try:
+            get_rsp = requests.get(get_uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(get_uri))
+            return
+        if get_rsp:
+            if not self.skip_errors:
+                get_rsp.raise_for_status()
+            elif get_rsp.status_code > 399:
+                print('Error retrieving resource {} body: {} {}'.format(
+                    uri, get_rsp.status_code, get_rsp.text))
 
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))

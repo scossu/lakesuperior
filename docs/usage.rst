@@ -123,11 +123,12 @@ Before using the API, either do::
 
 Or, to specify an alternative configuration::
 
+    >>> from lakesuperior import env
     >>> from lakesuperior.config_parser import parse_config
     >>> from lakesuperior.globals import AppGlobals
-    >>> env.config = parse_config('/my/custom/config_dir')
+    >>> config = parse_config('/my/custom/config_dir')
     Reading configuration at /my/custom/config_dir
-    >>> env.app_globals = AppGlobals(env.config)
+    >>> env.app_globals = AppGlobals(config)
 
 Create and replace resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

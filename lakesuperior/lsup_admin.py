@@ -5,14 +5,30 @@ import logging
 import os
 import sys
 
+from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
-from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+
+__doc__="""
+Utility to perform core maintenance tasks via console command-line.
+
+The command-line tool is self-documented. Type::
+
+    lsup-admin --help
+
+for a list of tools and options.
+"""
 
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
 
+#report = logging.getLogger('report')
+#report_formatter = logging.Formatter('"%(asctime)s",%(message)s')
+#report_fpath = '{}/lsup-report-{}'.format(
+#        env.config['application']['data_dir'],
+#        arrow.utcnow().format('YYYY-MM-DDTHH:mm:ss.S'))
+#report_handler = logging.FileHandler(report_fpath)
 
 @click.group()
 def admin():
@@ -88,8 +104,11 @@ def check_fixity(uid):
     '--config-folder', '-c', default=None, help='Alternative configuration '
     'folder to look up. If not set, the location set in the environment or '
     'the default configuration is used.')
+@click.option(
+    '--output', '-o', default=None, help='Output file. If not specified, a '
+    'timestamp-named file will be generated automatically.')
 @click.command()
-def check_refint(config_folder=None):
+def check_refint(config_folder=None, output=None):
     """
     Check referential integrity.
 

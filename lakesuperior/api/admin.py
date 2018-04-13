@@ -1,7 +1,7 @@
 import logging
 
+from lakesuperior import env
 from lakesuperior.config_parser import parse_config
-from lakesuperior.env import env
 from lakesuperior.globals import AppGlobals
 from lakesuperior.migrator import Migrator
 from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout

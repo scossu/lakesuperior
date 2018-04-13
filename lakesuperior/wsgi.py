@@ -7,7 +7,6 @@ import gunicorn.app.base
 
 from lakesuperior import env, env_setup
 from lakesuperior.config_parser import default_config_dir
-from lakesuperior.env import env
 
 
 config_file = path.join(default_config_dir, 'gunicorn.yml')

@@ -34,7 +34,7 @@ lakesuperior\.config\_parser module
 lakesuperior\.env module
 ------------------------
 
-.. automodule:: lakesuperior.env
+.. automodule:: lakesuperior
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 
 from os import path

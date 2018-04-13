@@ -5,9 +5,9 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 # Environment must be set before importing the app factory function.
 import lakesuperior.env_setup
 
+from lakesuperior import env
 from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
-from lakesuperior.env import env
 
 options = {
     'restrictions': [30],

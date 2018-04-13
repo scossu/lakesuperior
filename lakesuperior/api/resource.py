@@ -13,7 +13,7 @@ from rdflib.namespace import XSD
 from lakesuperior.config_parser import config
 from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
-from lakesuperior.env import env
+from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
@@ -72,15 +72,16 @@ def transaction(write=False):
         def _wrapper(*args, **kwargs):
             # Mark transaction begin timestamp. This is used for create and
             # update timestamps on resources.
-            env.timestamp = arrow.utcnow()
-            env.timestamp_term = Literal(env.timestamp, datatype=XSD.dateTime)
+            thread_env.timestamp = arrow.utcnow()
+            thread_env.timestamp_term = Literal(
+                    thread_env.timestamp, datatype=XSD.dateTime)
             with TxnManager(env.app_globals.rdf_store, write=write) as txn:
                 ret = fn(*args, **kwargs)
             if len(env.app_globals.changelog):
                 job = Thread(target=_process_queue)
                 job.start()
-            delattr(env, 'timestamp')
-            delattr(env, 'timestamp_term')
+            delattr(thread_env, 'timestamp')
+            delattr(thread_env, 'timestamp_term')
             return ret
         return _wrapper
     return _transaction_deco

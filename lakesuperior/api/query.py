@@ -2,9 +2,9 @@ import logging
 
 from io import BytesIO
 
+from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
 
 

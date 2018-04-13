@@ -27,7 +27,7 @@ class AppGlobals:
 
     The variables are set on initialization by passing a configuration dict.
     Usually this is done when starting an application. The instance with the
-    loaded variables is then assigned to the :data:`lakesuperior.env.env`
+    loaded variables is then assigned to the :data:`lakesuperior.env`
     global variable.
 
     You can either load the default configuration::
@@ -36,20 +36,19 @@ class AppGlobals:
 
     Or set up an environment with a custom configuration::
 
-        >>>from lakesuperior.env import env
-        >>>from lakesuperior.app_globals import AppGlobals
-        >>>my_config = {'name': 'value', '...': '...'}
-        >>>env.config = my_config
-        >>>env.app_globals = AppGlobals(my_config)
+        >>> from lakesuperior import env
+        >>> from lakesuperior.app_globals import AppGlobals
+        >>> my_config = {'name': 'value', '...': '...'}
+        >>> env.app_globals = AppGlobals(my_config)
 
     """
-    def __init__(self, conf):
+    def __init__(self, config):
         """
         Generate global variables from configuration.
         """
         from lakesuperior.messaging.messenger import Messenger
 
-        app_conf = conf['application']
+        app_conf = config['application']
 
         # Initialize RDF layout.
         rdfly_mod_name = app_conf['store']['ldp_rs']['layout']
@@ -69,10 +68,25 @@ class AppGlobals:
         self._messenger  = Messenger(app_conf['messaging'])
 
         # Exposed globals.
+        self._config = config
         self._rdfly = rdfly_cls(app_conf['store']['ldp_rs'])
         self._nonrdfly = nonrdfly_cls(app_conf['store']['ldp_nr'])
         self._changelog = deque()
 
+
+    @property
+    def config(self):
+        """
+        Global configuration.
+
+        This is a collection of all configuration options **except** for the
+        WSGI configuration which is initialized at a different time and is
+        stored under :data:`lakesuperior.env.wsgi_options`.
+
+        *TODO:* Update class reference when interface will be separated from
+        implementation.
+        """
+        return self._config
 
     @property
     def rdfly(self):
