@@ -2,6 +2,7 @@ import logging
 
 from collections import defaultdict
 from itertools import chain
+from os import path
 from string import Template
 from urllib.parse import urldefrag
 
@@ -13,6 +14,7 @@ from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.store import Store
 
+from lakesuperior import basedir, env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
@@ -180,8 +182,10 @@ class RsrcCentricLayout:
 
         logger.info('Initializing the graph store with system data.')
         store.open()
+        fname = path.join(
+                basedir, 'data', 'bootstrap', 'rsrc_centric_layout.sparql')
         with TxnManager(store, True):
-            with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
+            with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
 

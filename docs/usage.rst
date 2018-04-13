@@ -125,7 +125,7 @@ Or, to specify an alternative configuration::
 
     >>> from lakesuperior.config_parser import parse_config
     >>> from lakesuperior.globals import AppGlobals
-    >>> env.config, test_config = parse_config('/my/custom/config_dir')
+    >>> env.config = parse_config('/my/custom/config_dir')
     Reading configuration at /my/custom/config_dir
     >>> env.app_globals = AppGlobals(env.config)
 

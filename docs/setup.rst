@@ -79,9 +79,14 @@ Configuration
 
 The app should run for testing and evaluation purposes without any
 further configuration. All the application data are stored by default in
-the ``data`` directory.
+the ``data`` directory of the Python package.
 
-To change the default configuration you should:
+This setup is not recommended for anything more than a quick look at the
+application. If more complex interaction is needed, or upgrades to the package
+are foreseen, it is strongly advised to set up proper locations for
+configuration and data.
+
+To change the default configuration you need to:
 
 #. Copy the ``etc.default`` folder to a separate location
 #. Set the configuration folder location in the environment:
@@ -94,10 +99,13 @@ To change the default configuration you should:
 
 The configuration options are documented in the files.
 
-**Note:** ``test.yml`` must specify a different location for the graph
-and for the binary stores than the default one, otherwise running a test
-suite will destroy your main data store. The application will issue an
-error message and refuse to start if these locations overlap.
+One thing worth noting is that some locations can be specified as relative
+paths. These paths will be relative to the ``data_dir`` location specified in
+the ``application.yml`` file.
+
+If ``data_dir`` is empty, as it is in the default configuration, it defaults
+to the ``data`` directory inside the Python package. This is the option that
+one may want to change before anything else.
 
 Production deployment
 ---------------------

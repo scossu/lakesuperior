@@ -1,6 +1,6 @@
 import sys
 
-from os import path, environ
+from os import chdir, environ, getcwd, path
 
 import hiyapyco
 import yaml
@@ -8,8 +8,10 @@ import yaml
 import lakesuperior
 
 
-default_config_dir = environ.get('FCREPO_CONFIG_DIR', path.dirname(
-            path.abspath(lakesuperior.__file__)) + '/etc.defaults')
+default_config_dir = environ.get(
+        'FCREPO_CONFIG_DIR',
+        path.join(
+            path.dirname(path.abspath(lakesuperior.__file__)), 'etc.defaults'))
 """
 Default configuration directory.
 
@@ -53,38 +55,30 @@ def parse_config(config_dir=None):
     print('Reading configuration at {}'.format(config_dir))
 
     for cname in configs:
-        file = '{}/{}.yml'.format(config_dir , cname)
+        file = path.join(config_dir, '{}.yml'.format(cname))
         with open(file, 'r') as stream:
             _config[cname] = yaml.load(stream, yaml.SafeLoader)
 
-    error_msg = '''
-    **************
-    ** WARNING! **
-    **************
+    if not _config['application']['data_dir']:
+        _config['application']['data_dir'] = path.join(
+                lakesuperior.basedir, 'data')
 
-    Your test {} store location is set to be the same as the production
-    location. This means that if you run a test suite, your live data may be
-    wiped clean!
+    data_dir = _config['application']['data_dir']
+    _config['application']['store']['ldp_nr']['location'] = path.join(
+            data_dir, 'ldpnr_store')
+    _config['application']['store']['ldp_rs']['location'] = path.join(
+            data_dir, 'ldprs_store')
+    # If log handler file names are relative, they will be relative to the
+    # data dir.
+    oldwd = getcwd()
+    chdir(data_dir)
+    for handler in _config['logging']['handlers'].values():
+        if 'filename' in handler:
+            handler['filename'] = path.realpath(handler['filename'])
+    chdir(oldwd)
 
-    Please review your configuration before starting.
-    '''
-
-    # Merge default and test configurations.
-    _test_config = {'application': hiyapyco.load(
-            config_dir + '/application.yml',
-            config_dir + '/test.yml', method=hiyapyco.METHOD_MERGE)}
-
-    if _config['application']['store']['ldp_rs']['location'] \
-            == _test_config['application']['store']['ldp_rs']['location']:
-                raise RuntimeError(error_msg.format('RDF'))
-                sys.exit()
-
-    if _config['application']['store']['ldp_nr']['path'] \
-            == _test_config['application']['store']['ldp_nr']['path']:
-                raise RuntimeError(error_msg.format('binary'))
-                sys.exit()
-    return _config, _test_config
+    return _config
 
 
 # Load default configuration.
-config, test_config = parse_config()
+config = parse_config()

@@ -55,8 +55,7 @@ def integrity_check(config_dir=None):
     be added and triggered by different argument flags.
     """
     if config_dir:
-        env.config = parse_config(config_dir)[0]
-        env.app_globals = AppGlobals(env.config)
+        env.app_globals = AppGlobals(parse_config(config_dir))
     else:
         import lakesuperior.env_setup
     with TxnManager(env.app_globals.rdfly.store):

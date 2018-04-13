@@ -2,23 +2,30 @@ import sys
 
 import pytest
 
-sys.path.append('.')
-from lakesuperior.config_parser import test_config
-from lakesuperior.globals import AppGlobals
-from lakesuperior.env import env
+from shutil import rmtree
+from tempfile import gettempdir
 
-env.config = test_config
-env.app_globals = AppGlobals(test_config)
+from lakesuperior import env_setup, env
 from lakesuperior.app import create_app
 from lakesuperior.util.generators import random_image
 
-env.config = test_config
-
 @pytest.fixture(scope='module')
 def app():
+    # Override data directory locations.
+    data_dir = path.join(gettempdir(), 'lsup_test', 'data')
+    env.config['application']['data_dir'] = data_dir
+    env.config['application']['store']['ldp_nr']['location'] = path.join(
+            data_dir, 'ldpnr_store')
+    env.config['application']['store']['ldp_rs']['location'] = path.join(
+            data_dir, 'ldprs_store')
     app = create_app(env.config['application'])
 
     yield app
+
+    # TODO improve this by using tempfile.TemporaryDirectory as a context
+    # manager.
+    print('Removing fixture data directory.')
+    rmtree(data_dir)
 
 
 @pytest.fixture(scope='module')

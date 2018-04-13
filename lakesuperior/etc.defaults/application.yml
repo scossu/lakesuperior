@@ -4,6 +4,21 @@
 # settings. Individual items can be selectively overridden as long as the YAML
 # hierarchical structure is kept.
 
+# Set app_mode to either 'prod', 'test' or 'dev'.
+# 'prod' is normal running mode. 'test' is used for running test suites.
+# 'dev' is similar to normal mode but with reload and debug enabled.
+app_mode: 'prod'
+
+# Base data directory. This contains both volatile files such as PID files,
+# and persistent ones, such as resource data. LDP-NRs will be stored under
+# <basedir>/ldpnr_store and LDP-RSs under <basedir>/ldprs_store.
+#
+# If different data files need to be running on different storage hardware,
+# the individual subdirectories can be mounted on different file systems.
+#
+# If unset, it will default to <lakesuperior package root>/data.
+data_dir:
+
 # Configuration for binary path and fixity check generation. The hash is a
 # checksumn of the contents of the file.
 uuid:
@@ -18,9 +33,6 @@ store:
     # The semantic store used for persisting LDP-RS (RDF Source) resources.
     # MUST support SPARQL 1.1 query and update.
     ldp_rs:
-        # Directory where the RDF data files are stored.
-        location: data/ldprs_store
-
         # store layout. At the moment, only `rsrc_centric_layout`is supported.
         layout: rsrc_centric_layout
 
@@ -46,9 +58,6 @@ store:
     ldp_nr:
         # See store.ldp_rs.layout.
         layout: default_layout
-
-        # The filesystem path to the root of the binary store.
-        path: data/ldpnr_store
 
         # How to split the balanced pairtree to generate a path. The hash
         # string is defined by the uuid.algo parameter value.

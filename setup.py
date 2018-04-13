@@ -27,7 +27,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='lakesuperior',
-    version='1.0.0a12',
+    version='1.0.0a13',
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
@@ -106,9 +106,7 @@ setup(
     #extras_require={},
     #package_data={
     #},
-    data_files=[
-        ('data/bootstrap', glob('data/bootstrap/*')),
-    ],
+    #data_files=[],
 
     entry_points={
         'console_scripts': [

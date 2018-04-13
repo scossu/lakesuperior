@@ -104,5 +104,4 @@ venv.bak/
 .mypy_cache/
 
 # Default LAKEsuperior data directories
-data/ldpnr_store
-data/ldprs_store
+/data
