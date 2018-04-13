@@ -1,6 +1,6 @@
 import pytest
 
-from os import path
+from os import makedirs, path
 from shutil import rmtree
 from tempfile import gettempdir
 
@@ -12,12 +12,13 @@ from lakesuperior.util.generators import random_image
 def app():
     # Override data directory locations.
     data_dir = path.join(gettempdir(), 'lsup_test', 'data')
-    env.config['application']['data_dir'] = data_dir
-    env.config['application']['store']['ldp_nr']['location'] = path.join(
-            data_dir, 'ldpnr_store')
-    env.config['application']['store']['ldp_rs']['location'] = path.join(
-            data_dir, 'ldprs_store')
-    app = create_app(env.config['application'])
+    makedirs(data_dir, exist_ok=True)
+    env.app_globals.config['application']['data_dir'] = data_dir
+    env.app_globals.config['application']['store']['ldp_nr']['location'] = (
+            path.join(data_dir, 'ldpnr_store'))
+    env.app_globals.config['application']['store']['ldp_rs']['location'] = (
+            path.join(data_dir, 'ldprs_store'))
+    app = create_app(env.app_globals.config['application'])
 
     yield app
 
