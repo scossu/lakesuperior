@@ -557,6 +557,7 @@ class RsrcCentricLayout:
         :rtype: set
         :return: Triples referencing a repository URI that is not a resource.
         """
+        #import pdb; pdb.set_trace()
         for i, obj in enumerate(self.store.all_terms('o'), start=1):
             if (
                     isinstance(obj, URIRef)

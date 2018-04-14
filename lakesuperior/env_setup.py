@@ -7,7 +7,7 @@ Default configuration.
 
 Import this module to initialize the configuration for a production setup::
 
-    >>> from lakesuperior import env_setup
+    >>> import lakesuperior.env_setup
 
 Will load the default configuration.
 """
