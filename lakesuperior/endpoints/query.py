@@ -3,7 +3,7 @@ import logging
 from flask import Blueprint, current_app, request, render_template, send_file
 from rdflib.plugin import PluginException
 
-from lakesuperior.env import env
+from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.api import query as query_api
 

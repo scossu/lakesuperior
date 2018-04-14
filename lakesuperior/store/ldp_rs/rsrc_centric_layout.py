@@ -2,7 +2,9 @@ import logging
 
 from collections import defaultdict
 from itertools import chain
+from os import path
 from string import Template
+from urllib.parse import urldefrag
 
 import arrow
 
@@ -12,13 +14,13 @@ from rdflib.query import ResultException
 from rdflib.resource import Resource
 from rdflib.store import Store
 
+from lakesuperior import basedir, env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.env import env
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
@@ -179,8 +181,10 @@ class RsrcCentricLayout:
 
         logger.info('Initializing the graph store with system data.')
         store.open()
+        fname = path.join(
+                basedir, 'data', 'bootstrap', 'rsrc_centric_layout.sparql')
         with TxnManager(store, True):
-            with open('data/bootstrap/rsrc_centric_layout.sparql', 'r') as f:
+            with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
 
@@ -553,14 +557,20 @@ class RsrcCentricLayout:
         :rtype: set
         :return: Triples referencing a repository URI that is not a resource.
         """
-        for obj in self.store.all_terms('o'):
+        #import pdb; pdb.set_trace()
+        for i, obj in enumerate(self.store.all_terms('o'), start=1):
             if (
                     isinstance(obj, URIRef)
-                    and str(obj).startswith(nsc['fcres'])
-                    and not self.ask_rsrc_exists(self.uri_to_uid(obj))):
-                print('Object not found: {}'.format(obj))
+                    and obj.startswith(nsc['fcres'])
+                    and not obj.endswith('fcr:fixity')
+                    and not obj.endswith('fcr:versions')
+                    and not self.ask_rsrc_exists(self.uri_to_uid(
+                        urldefrag(obj).url))):
+                logger.warn('Object not found: {}'.format(obj))
                 for trp in self.store.triples((None, None, obj)):
                     yield trp
+            if i % 100 == 0:
+                logger.info('{} terms processed.'.format(i))
 
 
     ## PROTECTED MEMBERS ##

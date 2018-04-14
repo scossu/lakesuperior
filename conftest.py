@@ -1,22 +1,31 @@
-import sys
-
 import pytest
 
-sys.path.append('.')
-from lakesuperior.config_parser import test_config
-from lakesuperior.globals import AppGlobals
-from lakesuperior.env import env
+from os import makedirs, path
+from shutil import rmtree
+from tempfile import gettempdir
 
-env.config = test_config
-env.app_globals = AppGlobals(test_config)
-from lakesuperior.app import create_app
+from lakesuperior import env
+from lakesuperior.config_parser import parse_config
+from lakesuperior.globals import AppGlobals
 from lakesuperior.util.generators import random_image
 
-env.config = test_config
+
+# Override data directory locations.
+config = parse_config()
+data_dir = path.join(gettempdir(), 'lsup_test', 'data')
+config['application']['data_dir'] = data_dir
+config['application']['store']['ldp_nr']['location'] = (
+        path.join(data_dir, 'ldpnr_store'))
+config['application']['store']['ldp_rs']['location'] = (
+        path.join(data_dir, 'ldprs_store'))
+
+env.app_globals = AppGlobals(config)
+from lakesuperior.app import create_app
+
 
 @pytest.fixture(scope='module')
 def app():
-    app = create_app(env.config['application'])
+    app = create_app(env.app_globals.config['application'])
 
     yield app
 
@@ -26,14 +35,17 @@ def db(app):
     '''
     Set up and tear down test triplestore.
     '''
-    rdfly = env.app_globals.rdfly
-    rdfly.bootstrap()
+    makedirs(data_dir, exist_ok=True)
+    env.app_globals.rdfly.bootstrap()
     env.app_globals.nonrdfly.bootstrap()
+    print('Initialized data store.')
 
-    yield rdfly
+    yield env.app_globals.rdfly
 
-    print('Tearing down fixture graph store.')
-    rdfly.store.destroy(rdfly.store.path)
+    # TODO improve this by using tempfile.TemporaryDirectory as a context
+    # manager.
+    print('Removing fixture data directory.')
+    rmtree(data_dir)
 
 
 @pytest.fixture

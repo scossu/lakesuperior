@@ -13,8 +13,10 @@ formatters:
 handlers:
   logfile:
     class: logging.handlers.RotatingFileHandler
-    # Change this.
-    filename: /tmp/lakesuperior.log
+    # Relative paths are relative to the `data_dir` value in `application.yml`.
+    # You can change this value to an absolute path or leave it alone and
+    # symlink the location to a different directory.
+    filename: log/lakesuperior.log
     maxBytes: 10485760
     backupCount: 3
     formatter: default_fmt

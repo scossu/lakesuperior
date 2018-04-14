@@ -1,14 +1,29 @@
 import click
 import click_log
+import csv
 import json
 import logging
-import os
 import sys
 
+from os import getcwd, path
+
+import arrow
+
+from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
-from lakesuperior.env import env
+from lakesuperior.globals import AppGlobals
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+
+__doc__="""
+Utility to perform core maintenance tasks via console command-line.
+
+The command-line tool is self-documented. Type::
+
+    lsup-admin --help
+
+for a list of tools and options.
+"""
 
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
@@ -53,7 +68,8 @@ def bootstrap():
     click.echo('Initializing binary store at {}'.format(nonrdfly.root))
     nonrdfly.bootstrap()
     click.echo('Binary store initialized.')
-    click.echo('Repository successfully set up. Go to town.')
+    click.echo('\nRepository successfully set up. Go to town.')
+    click.echo('If the HTTP server is running, it must be restarted.')
 
 
 @click.command()
@@ -88,8 +104,11 @@ def check_fixity(uid):
     '--config-folder', '-c', default=None, help='Alternative configuration '
     'folder to look up. If not set, the location set in the environment or '
     'the default configuration is used.')
+@click.option(
+    '--output', '-o', default=None, help='Output file. If not specified, a '
+    'timestamp-named file will be generated automatically.')
 @click.command()
-def check_refint(config_folder=None):
+def check_refint(config_folder=None, output=None):
     """
     Check referential integrity.
 
@@ -98,19 +117,41 @@ def check_refint(config_folder=None):
     resources. For repositories set up with the `referential_integrity` option
     (the default), this is a pre-condition for a consistent data set.
 
-    Note: this check is run regardless of whether the repository enforces
+    If inconsistencies are found, a report is generated in CSV format with the
+    following columns: `s`, `p`, `o` (respectively the terms of the
+    triple containing the dangling relationship) and `missing` which
+    indicates which term is the missing URI (currently always set to `o`).
+
+    Note: this check can be run regardless of whether the repository enforces
     referential integrity.
     """
-    check_results = admin_api.integrity_check(config_folder)
+    if config_folder:
+        env.app_globals = AppGlobals(parse_config(config_dir))
+    else:
+        import lakesuperior.env_setup
+
+    check_results = admin_api.integrity_check()
+
     click.echo('Integrity check results:')
     if len(check_results):
         click.echo(click.style('Inconsistencies found!', fg='red', bold=True))
-        click.echo('Missing object in the following triples:')
-        for trp in check_results:
-            click.echo(' '.join([str(t) for t in trp[0]]))
+        if not output:
+            output = path.join(getcwd(), 'refint_report-{}.csv'.format(
+                arrow.utcnow().format('YYYY-MM-DDTHH:mm:ss.S')))
+        elif not output.endswith('.csv'):
+            output += '.csv'
+
+        with open(output, 'w', newline='') as fh:
+            writer = csv.writer(fh)
+            writer.writerow(('s', 'p', 'o', 'missing'))
+            for trp in check_results:
+                # ``o`` is always hardcoded for now.
+                writer.writerow([t.n3() for t in trp[0]] + ['o'])
+
+        click.echo('Report generated at {}'.format(output))
     else:
         click.echo(click.style('Clean. ', fg='green', bold=True)
-                + 'No inconsistency found.')
+                + 'No inconsistency found. No report generated.')
 
 
 @click.command()
