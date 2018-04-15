@@ -881,7 +881,7 @@ class Ldpr(metaclass=ABCMeta):
             from lakesuperior.model.ldp_factory import LdpFactory
 
             s = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_RSRC_URI)
-            p = cont_rsrc.metadata.value(cont_rsrc_uri, self.MBR_REL_URI)
+            p = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_REL_URI)
 
             if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
                 logger.info('Parent is a direct container.')
