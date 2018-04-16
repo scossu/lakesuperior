@@ -23,7 +23,7 @@ To set up the software for developing code, documentation, or tests::
     source bin/activate
     git clone https://github.com/scossu/lakesuperior.git app
     cd app
-    python setup.py develop
+    pip install -e .
 
 This will allow to alter the code without having to recompile it after changes.
 

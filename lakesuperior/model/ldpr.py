@@ -10,7 +10,7 @@ import arrow
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import RDF
 
-from lakesuperior.env import env
+from lakesuperior import env, thread_env
 from lakesuperior.globals import (
     RES_CREATED, RES_DELETED, RES_UPDATED, ROOT_UID)
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -411,7 +411,7 @@ class Ldpr(metaclass=ABCMeta):
         else:
             add_trp = {
                 (self.uri, RDF.type, nsc['fcsystem'].Tombstone),
-                (self.uri, nsc['fcrepo'].created, env.timestamp_term),
+                (self.uri, nsc['fcrepo'].created, thread_env.timestamp_term),
             }
 
         self.modify(RES_DELETED, remove_trp, add_trp)
@@ -432,7 +432,7 @@ class Ldpr(metaclass=ABCMeta):
         Remove all traces of a resource and versions.
         """
         logger.info('Purging resource {}'.format(self.uid))
-        refint = env.config['store']['ldp_rs']['referential_integrity']
+        refint = rdfly.config['referential_integrity']
         inbound = True if refint else inbound
         rdfly.forget_rsrc(self.uid, inbound)
 
@@ -637,8 +637,8 @@ class Ldpr(metaclass=ABCMeta):
 
         :rtype: tuple(rdflib.Graph)
         :return: Remove and add graphs. These can be used
-        with ``BaseStoreLayout.update_resource`` and/or recorded as separate
-        events in a provenance tracking system.
+            with ``BaseStoreLayout.update_resource`` and/or recorded as separate
+            events in a provenance tracking system.
         """
         logger.debug('Provided SPARQL query: {}'.format(q))
         pre_gr = self.imr
@@ -683,7 +683,7 @@ class Ldpr(metaclass=ABCMeta):
         method.
 
         :param ev_type: The type of event (create, update,
-        delete) or None. In the latter case, no notification is sent.
+            delete) or None. In the latter case, no notification is sent.
         :type ev_type: str or None
         :param set remove_trp: Triples to be removed.
         :param set add_trp: Triples to be added.
@@ -692,7 +692,7 @@ class Ldpr(metaclass=ABCMeta):
 
         if (
                 ev_type is not None and
-                env.config['application'].get('messaging')):
+                env.app_globals.config['application'].get('messaging')):
             logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
 
@@ -720,7 +720,7 @@ class Ldpr(metaclass=ABCMeta):
 
         env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
             'ev_type': ev_type,
-            'timestamp': env.timestamp.format(),
+            'timestamp': thread_env.timestamp.format(),
             'rsrc_type': rsrc_type,
             'actor': actor,
         }))
@@ -769,7 +769,7 @@ class Ldpr(metaclass=ABCMeta):
         # Create and modify timestamp.
         if create:
             self.provided_imr.set((
-                self.uri, nsc['fcrepo'].created, env.timestamp_term))
+                self.uri, nsc['fcrepo'].created, thread_env.timestamp_term))
             self.provided_imr.set((
                 self.uri, nsc['fcrepo'].createdBy, self.DEFAULT_USER))
         else:
@@ -781,12 +781,12 @@ class Ldpr(metaclass=ABCMeta):
                     self.uri, nsc['fcrepo'].createdBy)))
 
         self.provided_imr.set((
-            self.uri, nsc['fcrepo'].lastModified, env.timestamp_term))
+            self.uri, nsc['fcrepo'].lastModified, thread_env.timestamp_term))
         self.provided_imr.set((
             self.uri, nsc['fcrepo'].lastModifiedBy, self.DEFAULT_USER))
 
 
-    def _containment_rel(self, create):
+    def _containment_rel(self, create, ignore_type=True):
         """Find the closest parent in the path indicated by the uid and
         establish a containment triple.
 
@@ -805,6 +805,11 @@ class Ldpr(metaclass=ABCMeta):
 
         :param bool create: Whether the resource is being created. If false,
         the parent container is not updated.
+        "param bool ignore_type: If False (the default), an exception is raised
+        if trying to create a resource under a non-container. This can be
+        overridden in special cases (e.g. when migrating a repository in which
+        a LDP-NR has "children" under ``fcr:versions``) by setting this to
+        True.
         """
         from lakesuperior.model.ldp_factory import LdpFactory
 
@@ -814,7 +819,9 @@ class Ldpr(metaclass=ABCMeta):
             cnd_parent_uid = '/' + '/'.join(path_components[:-1])
             if rdfly.ask_rsrc_exists(cnd_parent_uid):
                 parent_rsrc = LdpFactory.from_stored(cnd_parent_uid)
-                if nsc['ldp'].Container not in parent_rsrc.types:
+                if (
+                        not ignore_type
+                        and nsc['ldp'].Container not in parent_rsrc.types):
                     raise InvalidResourceError(
                         cnd_parent_uid, 'Parent {} is not a container.')
 
@@ -874,18 +881,14 @@ class Ldpr(metaclass=ABCMeta):
             from lakesuperior.model.ldp_factory import LdpFactory
 
             s = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_RSRC_URI)
-            p = cont_rsrc.metadata.value(cont_rsrc_uri, self.MBR_REL_URI)
+            p = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_REL_URI)
 
-            if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
+            if nsc['ldp'].DirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is a direct container.')
-
                 logger.debug('Creating DC triples.')
                 o = self.uri
 
-            elif (
-                    cont_rsrc.metadata[
-                        RDF.type: nsc['ldp'].IndirectContainer] and
-                    self.INS_CNT_REL_URI in cont_p):
+            elif nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
                     cont_rsrc.uri, self.INS_CNT_REL_URI)

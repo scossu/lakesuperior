@@ -1,15 +1,15 @@
 import multiprocessing
 import yaml
 
-from os import environ, makedirs, path
+from os import chdir, environ, makedirs, getcwd, path
 
 import gunicorn.app.base
 
-from lakesuperior.server import fcrepo
+from lakesuperior import env, env_setup
 from lakesuperior.config_parser import default_config_dir
 
 
-config_file = '{}/gunicorn.yml'.format(default_config_dir)
+config_file = path.join(default_config_dir, 'gunicorn.yml')
 
 with open(config_file, 'r') as fh:
     config = yaml.load(fh, yaml.SafeLoader)
@@ -17,11 +17,14 @@ with open(config_file, 'r') as fh:
 listen_addr = config.get('listen_addr', '0.0.0.0')
 listen_port = config.get('listen_port', 8000)
 preload_app = config.get('preload_app', True)
-app_mode = config.get('app_mode', 'prod')
+app_mode = env.app_globals.config['application'].get('app_mode', 'prod')
 
+oldwd = getcwd()
+chdir(env.app_globals.config['application']['data_dir'])
 data_dir = path.realpath(config.get('data_dir'))
-run_dir = '{}/run'.format(data_dir)
-log_dir = '{}/log'.format(data_dir)
+chdir(oldwd)
+run_dir = path.join(data_dir, 'run')
+log_dir = path.join(data_dir, 'log')
 makedirs(log_dir, exist_ok=True)
 makedirs(run_dir, exist_ok=True)
 
@@ -43,10 +46,11 @@ options = {
     'daemon': app_mode=='prod',
     'reload': app_mode=='dev' and not preload_app,
 
-    'pidfile': '{}/fcrepo.pid'.format(run_dir),
-    'accesslog': '{}/gunicorn-access.log'.format(log_dir),
-    'errorlog': '{}/gunicorn-error.log'.format(log_dir),
+    'pidfile': path.join(run_dir, 'fcrepo.pid'),
+    'accesslog': path.join(log_dir, 'gunicorn-access.log'),
+    'errorlog': path.join(log_dir, 'gunicorn-error.log'),
 }
+env.wsgi_options = options
 
 class WsgiApp(gunicorn.app.base.BaseApplication):
 
@@ -64,6 +68,7 @@ class WsgiApp(gunicorn.app.base.BaseApplication):
 
 
 def run():
+    from lakesuperior.server import fcrepo
     WsgiApp(fcrepo, options).run()
 
 

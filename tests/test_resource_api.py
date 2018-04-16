@@ -19,6 +19,31 @@ from lakesuperior.model.ldpr import Ldpr
 def random_uuid():
     return str(uuid.uuid4())
 
+@pytest.fixture
+def dc_rdf():
+    return b'''
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+    PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+    <> dcterms:title "Direct Container" ;
+        ldp:membershipResource <info:fcres/member> ;
+        ldp:hasMemberRelation dcterms:relation .
+    '''
+
+
+@pytest.fixture
+def ic_rdf():
+    return b'''
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+    PREFIX ldp: <http://www.w3.org/ns/ldp#>
+    PREFIX ore: <http://www.openarchives.org/ore/terms/>
+
+    <> dcterms:title "Indirect Container" ;
+        ldp:membershipResource <info:fcres/top_container> ;
+        ldp:hasMemberRelation dcterms:relation ;
+        ldp:insertedContentRelation ore:proxyFor .
+    '''
+
 
 @pytest.mark.usefixtures('db')
 class TestResourceApi:
@@ -224,4 +249,79 @@ class TestResourceApi:
         assert not rsrc.imr[
             rsrc.uri : nsc['foaf'].name : Literal('Joe 12oz Bob')]
 
+
+    def test_create_ldp_dc_post(self, dc_rdf):
+        """
+        Create an LDP Direct Container via POST.
+        """
+        rsrc_api.create_or_replace('/member')
+        dc_uid = rsrc_api.create(
+                '/', 'test_dc_post', rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        dc_rsrc = rsrc_api.get(dc_uid)
+        member_rsrc = rsrc_api.get('/member')
+
+        assert nsc['ldp'].Container in dc_rsrc.ldp_types
+        assert nsc['ldp'].DirectContainer in dc_rsrc.ldp_types
+
+
+    def test_create_ldp_dc_put(self, dc_rdf):
+        """
+        Create an LDP Direct Container via PUT.
+        """
+        dc_uid = '/test_dc_put01'
+        rsrc_api.create_or_replace(
+                dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        dc_rsrc = rsrc_api.get(dc_uid)
+        member_rsrc = rsrc_api.get('/member')
+
+        assert nsc['ldp'].Container in dc_rsrc.ldp_types
+        assert nsc['ldp'].DirectContainer in dc_rsrc.ldp_types
+
+
+    def test_add_dc_member(self, dc_rdf):
+        """
+        Add members to a direct container and verify special properties.
+        """
+        dc_uid = '/test_dc_put02'
+        rsrc_api.create_or_replace(
+                dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        dc_rsrc = rsrc_api.get(dc_uid)
+        child_uid = rsrc_api.create(dc_uid, None)
+        member_rsrc = rsrc_api.get('/member')
+
+        assert member_rsrc.imr[
+            member_rsrc.uri: nsc['dcterms'].relation: nsc['fcres'][child_uid]]
+
+
+    def test_indirect_container(self, ic_rdf):
+        """
+        Create an indirect container verify special properties.
+        """
+        cont_uid = '/top_container'
+        ic_uid = '{}/test_ic'.format(cont_uid)
+        member_uid = '{}/ic_member'.format(ic_uid)
+        target_uid = '/ic_target'
+        ic_member_rdf = b'''
+        PREFIX ore: <http://www.openarchives.org/ore/terms/>
+        <> ore:proxyFor <info:fcres/ic_target> .'''
+
+        rsrc_api.create_or_replace(cont_uid)
+        rsrc_api.create_or_replace(target_uid)
+        rsrc_api.create_or_replace(ic_uid, rdf_data=ic_rdf, rdf_fmt='turtle')
+        rsrc_api.create_or_replace(
+                member_uid, rdf_data=ic_member_rdf, rdf_fmt='turtle')
+
+        ic_rsrc = rsrc_api.get(ic_uid)
+        assert nsc['ldp'].Container in ic_rsrc.ldp_types
+        assert nsc['ldp'].IndirectContainer in ic_rsrc.ldp_types
+        assert nsc['ldp'].DirectContainer not in ic_rsrc.ldp_types
+
+        member_rsrc = rsrc_api.get(member_uid)
+        top_cont_rsrc = rsrc_api.get(cont_uid)
+        assert top_cont_rsrc.imr[
+            top_cont_rsrc.uri: nsc['dcterms'].relation:
+            nsc['fcres'][target_uid]]
 

@@ -123,11 +123,12 @@ Before using the API, either do::
 
 Or, to specify an alternative configuration::
 
+    >>> from lakesuperior import env
     >>> from lakesuperior.config_parser import parse_config
     >>> from lakesuperior.globals import AppGlobals
-    >>> env.config, test_config = parse_config('/my/custom/config_dir')
+    >>> config = parse_config('/my/custom/config_dir')
     Reading configuration at /my/custom/config_dir
-    >>> env.app_globals = AppGlobals(env.config)
+    >>> env.app_globals = AppGlobals(config)
 
 Create and replace resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,10 +152,22 @@ Create an LDP-NR (non-RDF source)::
     ...     uid, stream=BytesIO(data), mimetype='text/plain')
     '_create_'
 
+Create or replace providing a serialized RDF byte stream::
+
+    >>> uid = '/rsrc_from_rdf'
+    >>> rdf = b'<#a1> a <http://ex.org/type#B> .'
+    >>> rsrc_api.create_or_replace(uid, rdf_data=rdf, rdf_fmt='turtle')
+
+Relative URIs such as ``<#a1>`` will be resolved relative to the resource URI.
+
 Create under a known parent, providing a slug (POST style)::
 
     >>> rsrc_api.create('/rsrc_from_stream', 'res1')
 
+This will create ``/rsrc_from_stream/res1`` if not existing; otherwise the
+resource URI will have a random UUID4 instead of ``res1``.
+
+To use a random UUID by default, use ``None`` for the second argument.
 
 Retrieve Resources
 ~~~~~~~~~~~~~~~~~~

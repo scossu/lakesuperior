@@ -7,11 +7,11 @@ from rdflib import Graph, parser, plugin, serializer
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
+from lakesuperior import env
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
 from lakesuperior.config_parser import config
-from lakesuperior.env import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
@@ -78,7 +78,9 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_provided(uid, mimetype=None, stream=None, graph=None, **kwargs):
+    def from_provided(
+            uid, mimetype=None, stream=None, graph=None, rdf_data=None,
+            rdf_fmt=None, **kwargs):
         r"""
         Create and LDPR instance from provided data.
 
@@ -92,12 +94,17 @@ class LdpFactory:
         :param IOStream stream: The provided data stream.
         :param rdflib.Graph graph: Initial graph to populate the
             resource with. This can be used for LDP-RS and LDP-NR types alike.
+        :param bytes rdf_data: Serialized RDF to build the initial graph.
+        :param str rdf_fmt: Serialization format of RDF data.
         :param \*\*kwargs: Arguments passed to the LDP class constructor.
 
         :raise ValueError: if ``mimetype`` is specified but no data stream is
             provided.
         """
         uri = nsc['fcres'][uid]
+        if rdf_data:
+            graph = Graph().parse(
+                data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid])
 
         provided_imr = Graph(identifier=uri)
         if graph:

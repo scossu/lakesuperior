@@ -20,7 +20,7 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
         Initialize the base non-RDF store layout.
         """
         self.config = config
-        self.root = config['path']
+        self.root = config['location']
 
 
     ## INTERFACE METHODS ##
