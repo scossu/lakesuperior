@@ -883,16 +883,12 @@ class Ldpr(metaclass=ABCMeta):
             s = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_RSRC_URI)
             p = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_REL_URI)
 
-            if cont_rsrc.metadata[RDF.type: nsc['ldp'].DirectContainer]:
+            if nsc['ldp'].DirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is a direct container.')
-
                 logger.debug('Creating DC triples.')
                 o = self.uri
 
-            elif (
-                    cont_rsrc.metadata[
-                        RDF.type: nsc['ldp'].IndirectContainer] and
-                    self.INS_CNT_REL_URI in cont_p):
+            elif nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(
                     cont_rsrc.uri, self.INS_CNT_REL_URI)
