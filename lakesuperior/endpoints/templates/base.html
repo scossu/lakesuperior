@@ -58,5 +58,6 @@
         <script src="{{url_for('ldp.static', filename='assets/js/jquery-3.2.1.min.js')}}"></script>
         <!-- Include all compiled plugins (below), or include individual files as needed -->
         <script src="{{url_for('ldp.static', filename='assets/js/bootstrap.min.js')}}"></script>
+        {% block tail_js %}{% endblock %}
     </body>
 </html>

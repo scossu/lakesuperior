@@ -1,0 +1,13 @@
+<div id="search-results">
+{% if qres %}
+    <h2>Search Results</h2>
+    <ol>
+    {% for uri in qres %}
+        <li><a href="{{gl(uri)}}">{{uri}}</a></li>
+    {% else %}
+        <p>No resources match the given criteria.</p>
+    {% endfor %}
+    </ol>
+{% endif %}
+</div>
+

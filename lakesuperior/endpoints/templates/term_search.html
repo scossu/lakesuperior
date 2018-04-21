@@ -1,6 +1,91 @@
 {% extends 'base.html' %}
 {% block title %}Term Search{% endblock %}
 {% block content %}
-    <p>Some bright day this page will be populated with a fantastic term search.</p>
+    <p>Enter terms to query.</p>
+    <form id="term-search-form" class="form-inline" method="POST" action="">
+        <div class="row">
+            <label for="logic">Logic</label>
+            <select class="form-control" name="logic">
+                <option value="and" selected>AND</option>
+                <option value="or">OR</option>
+            </select>
+        </div>
+        <div id="term-cont">
+            <div class="row term-block">
+                <div class="form-group">
+                    <label for="pred_ns[]">Prefix</label>
+                    <select class="form-control" name="pred_ns[]">
+                        <option selected value="">(none)</option>
+                    {% for ns in nsm.namespaces() | sort %}
+                        <option value="{{ns[0]}}">{{ns[0]}}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pred[]">Predicate</label>
+                    <input type="text" class="form-control" name="pred[]">
+                </div>
+                <div class="form-group">
+                    <label for="op[]">Operand</label>
+                    <select class="form-control" name="op[]">
+                    {% for op in operands %}
+                        <option value="{{op[0]}}">{{op[1]}}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="val[]">Value</label>
+                    <input type="text" class="form-control" name="val[]">
+                </div>
+                <div class="form-group">
+                    <a class="delete-row btn btn-danger" href="#">- Remove</a>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <a class="add-row btn btn-success" id="add-row" href="#">+ Add Row</a>
+        </div>
+        <div class="row">
+            <input type="submit" class="btn btn-primary btn-lg">
+        </div>
+    </form>
+    <div id="search-results-wrap"></div>
+    {% include 'namespaces.html' %}
+{% endblock %}
+{% block tail_js %}
+    <script>
+        $(function(){
+            $('.term-block').first().find('.delete-row').hide();
+            $('#add-row').on('click', function(){
+                var term = $('.term-block').last().clone(true, true);
+                term.find('input[type="text"]').val('');
+                term.find('select').val('');
+                term.find('.delete-row').show();
+                term.appendTo('#term-cont');
+            });
+            $('.delete-row').on('click', function(){
+                $(this).closest('.term-block').remove();
+            });
+
+            $('#term-search-form').submit(function(ev) {
+                $.ajax({
+                    type: 'POST',
+                    url: '',
+                    data: $(this).serialize(),
+                    encode: true
+                })
+                    .done(function(data) {
+                        //var cont = $('#search-results-wrap')
+                        $('#search-results-wrap').removeClass('bg-danger')
+                            .html(data);
+                    })
+                    .fail(function(data) {
+                        $('#search-results-wrap').addClass('bg-danger')
+                            .html(data.responseText);
+                    });
+                ev.preventDefault();
+            });
+        });
+    </script>
 {% endblock %}
 

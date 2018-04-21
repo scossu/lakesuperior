@@ -1,11 +1,14 @@
 import logging
 
 from flask import Blueprint, current_app, request, render_template, send_file
+from rdflib import URIRef
 from rdflib.plugin import PluginException
 
 from lakesuperior import env
-from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.api import query as query_api
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.toolbox import Toolbox
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple
@@ -18,24 +21,51 @@ rdfly = env.app_globals.rdfly
 query = Blueprint('query', __name__)
 
 
-@query.route('/term_search', methods=['GET'])
+@query.route('/term_search', methods=['GET', 'POST'])
 def term_search():
     """
     Search by entering a search term and optional property and comparison term.
     """
-    valid_operands = (
-        ('=', 'Equals'),
-        ('>', 'Greater Than'),
-        ('<', 'Less Than'),
-        ('<>', 'Not Equal'),
-        ('a', 'RDF Type'),
+    operands = (
+        ('_id', 'Has Type'),
+        ('_id', 'Matches Term'),
+        ('=', 'Is Equal To'),
+        ('!=', 'Is Not Equal To'),
+        ('<', 'Is Less Than'),
+        ('>', 'Is Greater Than'),
+        ('<=', 'Is Less Than Or Equal To'),
+        ('>=', 'Is Greater Than Or Equal To'),
     )
+    qres = term_list = []
 
-    term = request.args.get('term')
-    prop = request.args.get('prop', default=1)
-    cmp = request.args.get('cmp', default='=')
+    if request.method == 'POST':
+        # Some magic needed to associate pseudo-array field notation with
+        # an actual dict. Flask does not fully support this syntax as Rails
+        # or other frameworks do: https://stackoverflow.com/q/24808660
+        fnames = ('pred_ns', 'pred', 'op', 'val')
+        term_list = [
+                request.form.getlist('{}[]'.format(tn))
+                for tn in fnames]
+        # Transpose matrix.
+        txm = list(zip(*term_list))
+        logger.info('transposed matrix: {}'.format(txm))
+        terms = []
+        for row in txm:
+            fmt_row = list(row)
+            ns = fmt_row.pop(0)
+            fmt_row[0] = nsc[ns][fmt_row[0]] if ns else URIRef(fmt_row[0])
+            terms.append(fmt_row)
+        logger.info('Terms: {}'.format(terms))
 
-    return render_template('term_search.html')
+        or_logic = request.form.get('logic') == 'or'
+        qres = query_api.term_query(terms, or_logic)
+
+        def gl(uri):
+            return uri.replace(nsc['fcres'], '/ldp')
+        return render_template('term_search_results.html', qres=qres, gl=gl)
+    else:
+        return render_template(
+            'term_search.html', operands=operands, qres=qres, nsm=nsm)
 
 
 @query.route('/sparql', methods=['GET', 'POST'])
