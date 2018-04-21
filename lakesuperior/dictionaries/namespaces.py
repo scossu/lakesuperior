@@ -34,7 +34,8 @@ core_namespaces = {
 }
 
 ns_collection = core_namespaces.copy()
-ns_collection.update(config['namespaces'])
+custom_ns = {pfx: Namespace(ns) for pfx, ns in config['namespaces'].items()}
+ns_collection.update(custom_ns)
 
 ns_mgr = NamespaceManager(Graph())
 ns_pfx_sparql = {}
