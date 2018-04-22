@@ -91,7 +91,7 @@ def term_query(terms, or_logic=False):
         qry_term_ls.append(qry_term)
 
     if or_logic:
-        qry_terms = 'UNION {\n' + '\n} UNION {\n'.join(qry_term_ls) + '\n}'
+        qry_terms = '{\n' + '\n} UNION {\n'.join(qry_term_ls) + '\n}'
     else:
         qry_terms = '\n'.join(qry_term_ls)
     qry_str = '''
