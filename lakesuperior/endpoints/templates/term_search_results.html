@@ -5,7 +5,7 @@
     {% for uri in qres %}
         <li><a href="{{gl(uri)}}">{{uri}}</a></li>
     {% else %}
-        <p>No resources match the given criteria.</p>
+        <p class="bg-warning">No resources match the given criteria.</p>
     {% endfor %}
     </ol>
 {% endif %}

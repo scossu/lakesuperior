@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Term Search{% endblock %}
 {% block content %}
-    <p>Enter terms to query.</p>
-    <form id="term-search-form" class="form-inline" method="POST" action="">
-        <div class="row">
+    <p>Enter terms to query:</p>
+    <ul>
+        <li><strong>Logic:</strong> use "and" or "or" logic to concatenate multiple query criteria.</li>
+        <li><strong>Prefix:</strong> optionally select a namespace prefix from a list of pre-configured ones.</li>
+        <li><strong>Predicate:</strong> the fully qualified predicate URI if the prefix is empty, or the URI part following the namespace prefix (without the colon sign).</li>
+        <li><strong>Operand:</strong> Select an operand for the comparison. The "Matches Term" operand expects an RDF literal or URI, all others a string.</li>
+        <li><strong>Value:</strong> Value to compare against. If "Matches Term" is selected, an RDF URI literal as represented in SPARQL should be used, e.g. <pre>&lt;http://ex.org/ns/A&gt;</pre> or <pre>"title"^^xsd:string</pre>. For other operands, use a plain string without quotes.</li>
+    </ul>
+    <form id="term-search-form" method="POST" action="">
+        <div class="my-sm-3 mb-2">
             <label for="logic">Logic</label>
             <select class="form-control" name="logic">
                 <option value="and" selected>AND</option>
@@ -11,21 +18,21 @@
             </select>
         </div>
         <div id="term-cont">
-            <div class="row term-block">
-                <div class="form-group">
+            <div class="term-block form-row">
+                <div class="form-group col-md-1">
                     <label for="pred_ns[]">Prefix</label>
                     <select class="form-control" name="pred_ns[]">
-                        <option selected value="">(none)</option>
+                        <option selected value=""></option>
                     {% for ns in nsm.namespaces() | sort %}
                         <option value="{{ns[0]}}">{{ns[0]}}</option>
                     {% endfor %}
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group col-md-4">
                     <label for="pred[]">Predicate</label>
                     <input type="text" class="form-control" name="pred[]">
                 </div>
-                <div class="form-group">
+                <div class="form-group col-md-2">
                     <label for="op[]">Operand</label>
                     <select class="form-control" name="op[]">
                     {% for op in operands %}
@@ -33,19 +40,19 @@
                     {% endfor %}
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group col-md-4">
                     <label for="val[]">Value</label>
                     <input type="text" class="form-control" name="val[]">
                 </div>
-                <div class="form-group">
+                <div class="form-group col-md-1">
                     <a class="delete-row btn btn-danger" href="#">- Remove</a>
                 </div>
             </div>
         </div>
-        <div class="row">
+        <div class="form-row my-sm-3">
             <a class="add-row btn btn-success" id="add-row" href="#">+ Add Row</a>
         </div>
-        <div class="row">
+        <div class="form-row my-sm-3">
             <input type="submit" class="btn btn-primary btn-lg">
         </div>
     </form>
