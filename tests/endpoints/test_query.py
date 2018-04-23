@@ -36,7 +36,7 @@ class TestTermSearch:
         Query non-root resources.
         """
         put_resp = self.client.put('/ldp/test_term_search',
-            data=b'<> <http://www.w3.org/2004/02/skos/core#prefLabel> "Hello" .',
+            data=b'<> <http://purl.org/dc/terms/title> "Hello" .',
             content_type='text/turtle')
         assert put_resp.status_code == 201
         self.client.get('/ldp')
@@ -44,7 +44,7 @@ class TestTermSearch:
             '/query/term_search', data=json.dumps({
                 'logic': 'and',
                 'terms': [{
-                    'pred': 'skos:prefLabel',
+                    'pred': 'dcterms:title',
                     'op': '_id',
                     'val': '"Hello"',
                 }],
@@ -80,7 +80,7 @@ class TestTermSearch:
             '/query/term_search', data=json.dumps({
                 'logic': 'and',
                 'terms': [{
-                    'pred': 'skos:prefLabel',
+                    'pred': 'dcterms:title',
                     'op': '=',
                     'val': 'Hello',
                 }],
@@ -98,7 +98,7 @@ class TestTermSearch:
             '/query/term_search', data=json.dumps({
                 'logic': 'and',
                 'terms': [{
-                    'pred': 'skos:prefLabel',
+                    'pred': 'dcterms:title',
                     'op': '!=',
                     'val': 'Repository Root',
                 }],
@@ -140,7 +140,7 @@ class TestTermSearch:
                         'val': 'ldp:Container',
                     },
                     {
-                        'pred': 'skos:prefLabel',
+                        'pred': 'dcterms:title',
                         'op': '=',
                         'val': 'Hello',
                     },
@@ -165,7 +165,7 @@ class TestTermSearch:
                         'val': 'ldp:Container',
                     },
                     {
-                        'pred': 'skos:prefLabel',
+                        'pred': 'dcterms:title',
                         'op': '=',
                         'val': 'Hello',
                     },
