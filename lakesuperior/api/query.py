@@ -73,20 +73,15 @@ def term_query(terms, or_logic=False):
     """
     qry_term_ls = []
     for i, term in enumerate(terms):
-        pred_uri, comp, val = term
-        if comp not in operands:
-            raise ValueError('Not a valid operand: {}'.format(comp))
+        if term['op'] not in operands:
+            raise ValueError('Not a valid operand: {}'.format(term['op']))
 
-        oname = '?o_{}'.format(i)
-        if comp == '_id':
-            qry_term = '?s {} {} .'.format(pred_uri.n3(), val)
+        if term['op'] == '_id':
+            qry_term = '?s {} {} .'.format(term['pred'], term['val'])
         else:
-            if type(val) == str:
-                filter_stmt = 'str({}) {} "{}"'.format(oname, comp, val)
-            else:
-                filter_stmt = '{} {} {}'.format(oname, comp, val.n3())
-            qry_term = '?s {} {}\nFILTER ({}) .'.format(
-                    oname, pred_uri.n3(), filter_stmt)
+            oname = '?o_{}'.format(i)
+            qry_term = '?s {0} {1}\nFILTER (str({1}) {2} "{3}") .'.format(
+                    term['pred'], oname, term['op'], term['val'])
 
         qry_term_ls.append(qry_term)
 

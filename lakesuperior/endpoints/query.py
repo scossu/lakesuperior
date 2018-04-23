@@ -1,6 +1,8 @@
 import logging
 
-from flask import Blueprint, current_app, request, render_template, send_file
+from flask import (
+        Blueprint, current_app, jsonify, request, make_response,
+        render_template, send_file)
 from rdflib import URIRef
 from rdflib.plugin import PluginException
 
@@ -27,7 +29,6 @@ def term_search():
     Search by entering a search term and optional property and comparison term.
     """
     operands = (
-        ('_id', 'Has Type'),
         ('_id', 'Matches Term'),
         ('=', 'Is Equal To'),
         ('!=', 'Is Not Equal To'),
@@ -39,30 +40,17 @@ def term_search():
     qres = term_list = []
 
     if request.method == 'POST':
-        # Some magic needed to associate pseudo-array field notation with
-        # an actual dict. Flask does not fully support this syntax as Rails
-        # or other frameworks do: https://stackoverflow.com/q/24808660
-        fnames = ('pred_ns', 'pred', 'op', 'val')
-        term_list = [
-                request.form.getlist('{}[]'.format(tn))
-                for tn in fnames]
-        # Transpose matrix.
-        txm = list(zip(*term_list))
-        logger.info('transposed matrix: {}'.format(txm))
-        terms = []
-        for row in txm:
-            fmt_row = list(row)
-            ns = fmt_row.pop(0)
-            fmt_row[0] = nsc[ns][fmt_row[0]] if ns else URIRef(fmt_row[0])
-            terms.append(fmt_row)
+        terms = request.json.get('terms', {})
+        or_logic = request.json.get('logic', 'and') == 'or'
+        logger.info('Form: {}'.format(request.json))
         logger.info('Terms: {}'.format(terms))
-
-        or_logic = request.form.get('logic') == 'or'
+        logger.info('Logic: {}'.format(or_logic))
         qres = query_api.term_query(terms, or_logic)
 
-        def gl(uri):
-            return uri.replace(nsc['fcres'], '/ldp')
-        return render_template('term_search_results.html', qres=qres, gl=gl)
+        rsp = [
+            uri.replace(nsc['fcres'], request.host_url.rstrip('/') + '/ldp')
+            for uri in qres]
+        return jsonify(rsp), 200
     else:
         return render_template(
             'term_search.html', operands=operands, qres=qres, nsm=nsm)
