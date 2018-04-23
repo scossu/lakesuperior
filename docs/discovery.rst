@@ -66,7 +66,23 @@ or a native Python method if applicable.
 Term Search
 -----------
 
-This feature has not yet been implemented. It is meant to provide a discovery
-tool based on simple term match, and possibly comparison. It should be more
-efficient and predictable than SPARQL.
+.. figure:: assets/lsup_term_search.png
+   :alt: LAKEsuperior Term Search Window
+
+   LAKEsuperior Term Search Window
+
+This feature provides a discovery tool focused on resource subjects and based
+on individual term match and comparison. It tends to be more manageable than
+SPARQL but also uses some SPARQL syntax for the terms.
+
+Multiple search conditions can be entered and processed with AND or OR logic.
+
+The obtained results are resource URIs relative to the endpoint.
+
+Please consult the search page itself for detailed instructions on how to enter
+query terms.
+
+The term search is also available via REST API. E.g.::
+
+    curl -i -XPOST http://localhost:8000/query/term_search -d '{"terms": [{"pred": "rdf:type", "op": "_id", "val": "ldp:Container"}], "logic": "and"}' -H'Content-Type:application/json'
 
