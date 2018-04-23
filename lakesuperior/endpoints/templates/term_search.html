@@ -1,6 +1,131 @@
 {% extends 'base.html' %}
 {% block title %}Term Search{% endblock %}
 {% block content %}
-    <p>Some bright day this page will be populated with a fantastic term search.</p>
+    <p>Enter terms to query:</p>
+    <dl>
+        <dt>Logic</dt>
+        <dd>use "and" or "or" logic to concatenate multiple query criteria.</dd>
+        <dt>Predicate</dt>
+        <dd>a fully qualified or namespace-prefixed
+            predicate URI in SPARQL notation, e.g.
+            <code>&lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt;</code>
+            or
+            <code>skos:prefLabel</code>.
+            For a full list of namespace prefixes supported by this system,
+            see the collapsable namespace reference at the bottom of this page.
+        </dd>
+        <dt>Operand</dt>
+        <dd> Select an operand for the comparison. The "Matches Term" operand
+            expects an RDF literal or URI, all others a string.</dd>
+        <dt>Value</dt>
+        <dd>Value to compare against. If "Matches Term" is selected, an RDF URI
+            or literal in SPARQL notation should be used, e.g.
+            <code>&lt;http://ex.org/ns/A&gt;</code>
+            or
+            <code>"title"^^xsd:string</code>.
+            For other operands, use a plain string without quotes.</dd>
+        </dd>
+    </dl>
+    <form id="term-search-form" method="POST" action="">
+        <div class="my-sm-3 mb-2">
+            <label for="logic">Logic</label>
+            <select class="form-control" name="logic">
+                <option value="and" selected>AND</option>
+                <option value="or">OR</option>
+            </select>
+        </div>
+        <div id="term-cont">
+            <div class="term-block form-row">
+                <div class="form-group col-md-4">
+                    <label for="pred[]">Predicate</label>
+                    <input type="text" class="form-control" name="pred[]">
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="op[]">Operand</label>
+                    <select class="form-control" name="op[]">
+                    {% for op in operands %}
+                        <option value="{{op[0]}}">{{op[1]}}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-5">
+                    <label for="val[]">Value</label>
+                    <input type="text" class="form-control" name="val[]">
+                </div>
+                <div class="form-group col-md-1">
+                    <a class="delete-row btn btn-danger" href="#">- Remove</a>
+                </div>
+            </div>
+        </div>
+        <div class="form-row my-sm-3">
+            <a class="add-row btn btn-success" id="add-row" href="#">+ Add Row</a>
+        </div>
+        <div class="form-row my-sm-3">
+            <input type="submit" id="submit-query" class="btn btn-primary btn-lg">
+        </div>
+    </form>
+    <div id="search-results-wrap"></div>
+    {% include 'namespaces.html' %}
+{% endblock %}
+{% block tail_js %}
+    <script>
+        function format_fields() {
+            var conds = [];
+            var terms = ['pred', 'op', 'val'];
+            for (term of terms) {
+                $(":input[name='" + term + "[]']").each(function(i) {
+                    if (typeof conds[i] == 'undefined') {
+                        conds[i] = {};
+                    }
+                    conds[i][term] = $(this).val();
+                });
+            }
+            return conds
+        }
+
+        $(function(){
+            $('.term-block').first().find('.delete-row').hide();
+            $('#add-row').on('click', function(){
+                var term = $('.term-block').last().clone(true, true);
+                term.find('input[type="text"]').val('');
+                term.find('select').val('');
+                term.find('.delete-row').show();
+                term.appendTo('#term-cont');
+            });
+            $('.delete-row').on('click', function(){
+                $(this).closest('.term-block').remove();
+            });
+
+            $('#term-search-form').submit(function(ev) {
+                $.ajax({
+                    type: 'POST',
+                    url: '',
+                    data: JSON.stringify({
+                        terms: format_fields(),
+                        logic: $('select[name="logic"]').val(),
+                    }),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    encode: true
+                })
+                    .done(function(data) {
+                        //var cont = $('#search-results-wrap')
+                        $('#search-results-wrap').removeClass('bg-danger')
+                            .html('<h2>Search Results</h2>'
+                                + '<ul id="url-list"></ul>');
+                        for (url of data) {
+                            $('#url-list').append(
+                                '<li><a href="' + url + '">'
+                                + url + '</a></li>');
+                        }
+                    })
+                    .fail(function(data) {
+                        $('#search-results-wrap').addClass('bg-danger')
+                            .html(data.responseText);
+                    });
+                ev.preventDefault();
+            });
+        });
+    </script>
 {% endblock %}
 
