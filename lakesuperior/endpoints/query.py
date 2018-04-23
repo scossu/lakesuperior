@@ -1,11 +1,16 @@
 import logging
 
-from flask import Blueprint, current_app, request, render_template, send_file
+from flask import (
+        Blueprint, current_app, jsonify, request, make_response,
+        render_template, send_file)
+from rdflib import URIRef
 from rdflib.plugin import PluginException
 
 from lakesuperior import env
-from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.api import query as query_api
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
+from lakesuperior.toolbox import Toolbox
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple
@@ -18,24 +23,37 @@ rdfly = env.app_globals.rdfly
 query = Blueprint('query', __name__)
 
 
-@query.route('/term_search', methods=['GET'])
+@query.route('/term_search', methods=['GET', 'POST'])
 def term_search():
     """
     Search by entering a search term and optional property and comparison term.
     """
-    valid_operands = (
-        ('=', 'Equals'),
-        ('>', 'Greater Than'),
-        ('<', 'Less Than'),
-        ('<>', 'Not Equal'),
-        ('a', 'RDF Type'),
+    operands = (
+        ('_id', 'Matches Term'),
+        ('=', 'Is Equal To'),
+        ('!=', 'Is Not Equal To'),
+        ('<', 'Is Less Than'),
+        ('>', 'Is Greater Than'),
+        ('<=', 'Is Less Than Or Equal To'),
+        ('>=', 'Is Greater Than Or Equal To'),
     )
+    qres = term_list = []
 
-    term = request.args.get('term')
-    prop = request.args.get('prop', default=1)
-    cmp = request.args.get('cmp', default='=')
+    if request.method == 'POST':
+        terms = request.json.get('terms', {})
+        or_logic = request.json.get('logic', 'and') == 'or'
+        logger.info('Form: {}'.format(request.json))
+        logger.info('Terms: {}'.format(terms))
+        logger.info('Logic: {}'.format(or_logic))
+        qres = query_api.term_query(terms, or_logic)
 
-    return render_template('term_search.html')
+        rsp = [
+            uri.replace(nsc['fcres'], request.host_url.rstrip('/') + '/ldp')
+            for uri in qres]
+        return jsonify(rsp), 200
+    else:
+        return render_template(
+            'term_search.html', operands=operands, qres=qres, nsm=nsm)
 
 
 @query.route('/sparql', methods=['GET', 'POST'])

@@ -228,16 +228,17 @@ def post_resource(parent_uid):
     if LdpFactory.is_rdf_parsable(mimetype):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        local_rdf = g.tbox.localize_payload(global_rdf)
-        stream = BytesIO(local_rdf)
-        is_rdf = True
+        rdf_data = g.tbox.localize_payload(global_rdf)
+        rdf_fmt = mimetype
+        stream = mimetype = None
     else:
-        is_rdf = False
+        rdf_data = rdf_fmt = None
 
     try:
         uid = rsrc_api.create(
-                parent_uid, slug, stream=stream, mimetype=mimetype,
-                handling=handling, disposition=disposition)
+            parent_uid, slug, stream=stream, mimetype=mimetype,
+            rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
+            disposition=disposition)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -279,16 +280,17 @@ def put_resource(uid):
     if LdpFactory.is_rdf_parsable(mimetype):
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        local_rdf = g.tbox.localize_payload(global_rdf)
-        graph = Graph().parse(
-                data=local_rdf, format=mimetype, publicID=nsc['fcres'][uid])
+        rdf_data = g.tbox.localize_payload(global_rdf)
+        rdf_fmt = mimetype
         stream = mimetype = None
     else:
-        graph = None
+        rdf_data = rdf_fmt = None
 
     try:
-        evt = rsrc_api.create_or_replace(uid, stream=stream, mimetype=mimetype,
-                graph=graph, handling=handling, disposition=disposition)
+        evt = rsrc_api.create_or_replace(
+            uid, stream=stream, mimetype=mimetype,
+            rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
+            disposition=disposition)
     except (InvalidResourceError, ResourceExistsError) as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
@@ -302,7 +304,7 @@ def put_resource(uid):
     if evt == RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = uri
-        if mimetype and not graph:
+        if mimetype and not rdf_data:
             rsp_headers['Link'] = (
                     '<{0}/fcr:metadata>; rel="describedby"'.format(uri))
     else:

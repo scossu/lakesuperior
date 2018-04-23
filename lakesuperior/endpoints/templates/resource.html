@@ -40,7 +40,7 @@
 ({{updated_ts.humanize() }})</p>
 <p><strong>Types:</strong>
 {% for t in gr[gr.identifier : nsc['rdf'].type :] | sort %}
-    <span class="label label-primary">{{ t.n3(namespace_manager=nsm) }}</span>
+    <span class="badge badge-info">{{ t.n3(namespace_manager=nsm) }}</span>
 {% endfor %}
 </p>
 <h2>Properties</h2>
@@ -74,7 +74,7 @@
             {% if 'Literal' in t[2].__class__.__name__ %}
             "{{ t[2] }}"
             {% if t[2].datatype %}
-                <span class="label label-primary">
+                <span class="badge badge-info">
                     {{ t[2].datatype.n3(namespace_manager=nsm) }}
                 </span>
             {% endif %}
@@ -117,7 +117,7 @@
             {% if 'Literal' in t[2].__class__.__name__ %}
             "{{ t[2] }}"
             {% if t[2].datatype %}
-            <span class="label label-primary">{{ t[2].datatype.n3(namespace_manager=nsm) }}</span>
+            <span class="badge badge-info">{{ t[2].datatype.n3(namespace_manager=nsm) }}</span>
             {% endif %}
             {% else %}
                 <a href="{{ t[2] }}">
@@ -130,31 +130,5 @@
     {% endfor %}
     </tbody>
 </table>
-{% block namespaces %}
-            <h2>Namespaces</h2>
-             <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#nslist" aria-expanded="false" aria-controls="nsList">
-                Expand/Collapse
-            </button>
-            <div class="collapse" id="nslist">
-                <div class="card card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <td>Prefix</td>
-                                <td>URI</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for ns in nsm.namespaces() | sort %}
-                            <tr>
-                                <td>{{ ns[0] }}</td>
-                                <td>{{ ns[1] }}</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-{% endblock %}
+{% include 'namespaces.html' %}
 {% endblock %}
