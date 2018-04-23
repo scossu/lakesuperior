@@ -399,7 +399,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         logger.info('Burying resource {}'.format(self.uid))
         # Create a backup snapshot for resurrection purposes.
-        self.create_rsrc_snapshot(uuid4())
+        self.create_version()
 
         remove_trp = {
             trp for trp in self.imr
@@ -421,7 +421,7 @@ class Ldpr(metaclass=ABCMeta):
                 remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
-                ib_rsrc.create_rsrc_snapshot(uuid4())
+                ib_rsrc.create_version()
                 ib_rsrc.modify(RES_UPDATED, remove_trp)
 
         return RES_DELETED
@@ -438,52 +438,6 @@ class Ldpr(metaclass=ABCMeta):
 
         # @TODO This could be a different event type.
         return RES_DELETED
-
-
-    def create_rsrc_snapshot(self, ver_uid):
-        """
-        Perform version creation and return the version UID.
-        """
-        # Create version resource from copying the current state.
-        logger.info(
-            'Creating version snapshot {} for resource {}.'.format(
-                ver_uid, self.uid))
-        ver_add_gr = set()
-        vers_uid = '{}/{}'.format(self.uid, VERS_CONT_LABEL)
-        ver_uid = '{}/{}'.format(vers_uid, ver_uid)
-        ver_uri = nsc['fcres'][ver_uid]
-        ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
-        for t in self.imr:
-            if (
-                t[1] == RDF.type and t[2] in {
-                    nsc['fcrepo'].Binary,
-                    nsc['fcrepo'].Container,
-                    nsc['fcrepo'].Resource,
-                }
-            ) or (
-                t[1] in {
-                    nsc['fcrepo'].hasParent,
-                    nsc['fcrepo'].hasVersions,
-                    nsc['fcrepo'].hasVersion,
-                    nsc['premis'].hasMessageDigest,
-                }
-            ):
-                pass
-            else:
-                ver_add_gr.add((
-                    self.tbox.replace_term_domain(t[0], self.uri, ver_uri),
-                    t[1], t[2]))
-
-        rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
-
-        # Update resource admin data.
-        rsrc_add_gr = {
-            (self.uri, nsc['fcrepo'].hasVersion, ver_uri),
-            (self.uri, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
-        }
-        self.modify(RES_UPDATED, add_trp=rsrc_add_gr)
-
-        return ver_uid
 
 
     def resurrect_rsrc(self):
@@ -538,7 +492,48 @@ class Ldpr(metaclass=ABCMeta):
         if not ver_uid or ver_uid in self.version_uids:
             ver_uid = str(uuid4())
 
-        return self.create_rsrc_snapshot(ver_uid)
+        # Create version resource from copying the current state.
+        logger.info(
+            'Creating version snapshot {} for resource {}.'.format(
+                ver_uid, self.uid))
+        ver_add_gr = set()
+        vers_uid = '{}/{}'.format(self.uid, VERS_CONT_LABEL)
+        ver_uid = '{}/{}'.format(vers_uid, ver_uid)
+        ver_uri = nsc['fcres'][ver_uid]
+        ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
+        for t in self.imr:
+            if (
+                t[1] == RDF.type and t[2] in {
+                    nsc['fcrepo'].Binary,
+                    nsc['fcrepo'].Container,
+                    nsc['fcrepo'].Resource,
+                }
+            ) or (
+                t[1] in {
+                    nsc['fcrepo'].hasParent,
+                    nsc['fcrepo'].hasVersions,
+                    nsc['fcrepo'].hasVersion,
+                    nsc['premis'].hasMessageDigest,
+                }
+            ):
+                pass
+            else:
+                ver_add_gr.add((
+                    self.tbox.replace_term_domain(t[0], self.uri, ver_uri),
+                    t[1], t[2]))
+
+        rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)
+
+        # Update resource admin data.
+        rsrc_add_gr = {
+            (self.uri, nsc['fcrepo'].hasVersion, ver_uri),
+            (self.uri, nsc['fcrepo'].hasVersions, nsc['fcres'][vers_uid]),
+        }
+        self.modify(RES_UPDATED, add_trp=rsrc_add_gr)
+
+        return ver_uid
+
+
 
 
     def revert_to_version(self, ver_uid, backup=True):
