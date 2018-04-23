@@ -40,7 +40,7 @@
 ({{updated_ts.humanize() }})</p>
 <p><strong>Types:</strong>
 {% for t in gr[gr.identifier : nsc['rdf'].type :] | sort %}
-    <span class="label label-primary">{{ t.n3(namespace_manager=nsm) }}</span>
+    <span class="badge badge-info">{{ t.n3(namespace_manager=nsm) }}</span>
 {% endfor %}
 </p>
 <h2>Properties</h2>
@@ -74,7 +74,7 @@
             {% if 'Literal' in t[2].__class__.__name__ %}
             "{{ t[2] }}"
             {% if t[2].datatype %}
-                <span class="label label-primary">
+                <span class="badge badge-info">
                     {{ t[2].datatype.n3(namespace_manager=nsm) }}
                 </span>
             {% endif %}
@@ -117,7 +117,7 @@
             {% if 'Literal' in t[2].__class__.__name__ %}
             "{{ t[2] }}"
             {% if t[2].datatype %}
-            <span class="label label-primary">{{ t[2].datatype.n3(namespace_manager=nsm) }}</span>
+            <span class="badge badge-info">{{ t[2].datatype.n3(namespace_manager=nsm) }}</span>
             {% endif %}
             {% else %}
                 <a href="{{ t[2] }}">
