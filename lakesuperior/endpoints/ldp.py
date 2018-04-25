@@ -251,7 +251,7 @@ def post_resource(parent_uid):
     uri = g.tbox.uid_to_uri(uid)
     hdr = {'Location' : uri}
 
-    if mimetype and not is_rdf:
+    if mimetype and rdf_fmt is None:
         hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
                 .format(uri)
 
