@@ -347,4 +347,4 @@ def resurrect(uid):
 
     :param str uid: Resource UID.
     """
-    return LdpFactory.from_stored(uid).resurrect_rsrc()
+    return LdpFactory.from_stored(uid, strict=False).resurrect_rsrc()

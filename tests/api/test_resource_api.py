@@ -388,11 +388,17 @@ class TestResourceVersioning:
         assert (
             (current.uri, nsc['dcterms'].title, Literal('Title #2.'))
             in current.imr)
+        assert (
+            (current.uri, nsc['dcterms'].title, Literal('Original title.'))
+            not in current.imr)
 
         v1 = rsrc_api.get_version(uid, ver_uid)
         assert (
             (v1.identifier, nsc['dcterms'].title, Literal('Original title.'))
             in set(v1))
+        assert (
+            (v1.identifier, nsc['dcterms'].title, Literal('Title #2.'))
+            not in set(v1))
 
 
     def test_revert_to_version(self):
@@ -408,3 +414,41 @@ class TestResourceVersioning:
         assert (
             (rev.uri, nsc['dcterms'].title, Literal('Original title.'))
             in rev.imr)
+
+
+    def test_versioning_children(self):
+        """
+        Test that children are not affected by version restoring.
+
+        This test does the following:
+
+        1. create parent resource
+        2. Create child 1
+        3. Version parent
+        4. Create child 2
+        5. Restore parent to previous version
+        6. Verify that restored version still has 2 children
+        """
+        uid = '/test_version_children'
+        ver_uid = 'v1'
+        ch1_uid = '{}/kid_a'.format(uid)
+        ch2_uid = '{}/kid_b'.format(uid)
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.create_or_replace(ch1_uid)
+        ver_uid = rsrc_api.create_version(uid, ver_uid).split('fcr:versions/')[-1]
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch1_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+
+        rsrc_api.create_or_replace(ch2_uid)
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch2_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+
+        rsrc_api.revert_to_version(uid, ver_uid)
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch1_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+        assert nsc['fcres'][ch2_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+
