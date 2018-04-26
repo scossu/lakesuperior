@@ -250,6 +250,42 @@ class TestResourceApi:
             rsrc.uri : nsc['foaf'].name : Literal('Joe 12oz Bob')]
 
 
+    def test_sparql_update(self):
+        """
+        Update a resource using a SPARQL Update string.
+
+        Use a mix of relative and absolute URIs.
+        """
+        uid = '/test_sparql'
+        rdf_data = b'<> <http://purl.org/dc/terms/title> "Original title." .'
+        update_str = '''DELETE {
+        <> <http://purl.org/dc/terms/title> "Original title." .
+        } INSERT {
+        <> <http://purl.org/dc/terms/title> "Title #2." .
+        <info:fcres/test_sparql>
+          <http://purl.org/dc/terms/title> "Title #3." .
+        <#h1> <http://purl.org/dc/terms/title> "This is a hash." .
+        } WHERE {
+        }'''
+        rsrc_api.create_or_replace(uid, rdf_data=rdf_data, rdf_fmt='turtle')
+        ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
+
+        rsrc = rsrc_api.update(uid, update_str)
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Original title.'))
+            not in set(rsrc.imr))
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Title #2.'))
+            in set(rsrc.imr))
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Title #3.'))
+            in set(rsrc.imr))
+        assert ((
+                URIRef(str(rsrc.uri) + '#h1'),
+                nsc['dcterms'].title, Literal('This is a hash.'))
+            in set(rsrc.imr))
+
+
     def test_create_ldp_dc_post(self, dc_rdf):
         """
         Create an LDP Direct Container via POST.

@@ -414,10 +414,11 @@ class Ldpr(metaclass=ABCMeta):
                 (self.uri, nsc['fcrepo'].created, thread_env.timestamp_term),
             }
 
+        ib_rsrc_uris = self.imr.subjects(None, self.uri)
         self.modify(RES_DELETED, remove_trp, add_trp)
 
         if inbound:
-            for ib_rsrc_uri in self.imr.subjects(None, self.uri):
+            for ib_rsrc_uri in ib_rsrc_uris:
                 remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
@@ -611,7 +612,7 @@ class Ldpr(metaclass=ABCMeta):
         return trp
 
 
-    def sparql_delta(self, q):
+    def sparql_delta(self, qry_str):
         """
         Calculate the delta obtained by a SPARQL Update operation.
 
@@ -635,11 +636,18 @@ class Ldpr(metaclass=ABCMeta):
             with ``BaseStoreLayout.update_resource`` and/or recorded as separate
             events in a provenance tracking system.
         """
-        logger.debug('Provided SPARQL query: {}'.format(q))
-        pre_gr = self.imr
+        logger.debug('Provided SPARQL query: {}'.format(qry_str))
+        # Workaround for RDFLib bug. See
+        # https://github.com/RDFLib/rdflib/issues/824
+        qry_str = (
+                re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
+                .replace('<>', '<{}>'.format(self.uri)))
+        pre_gr = Graph(identifier=self.uri)
+        pre_gr += self.imr
+        post_gr = Graph(identifier=self.uri)
+        post_gr += self.imr
 
-        post_gr = pre_gr | Graph()
-        post_gr.update(q)
+        post_gr.update(qry_str)
 
         remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
 
@@ -684,6 +692,13 @@ class Ldpr(metaclass=ABCMeta):
         :param set add_trp: Triples to be added.
         """
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+        # Clear IMR buffer.
+        if hasattr(self, 'imr'):
+            delattr(self, '_imr')
+            try:
+                self.imr
+            except (ResourceNotExistsError, TombstoneError):
+                pass
 
         if (
                 ev_type is not None and
