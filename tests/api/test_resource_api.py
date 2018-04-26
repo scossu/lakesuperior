@@ -46,7 +46,7 @@ def ic_rdf():
 
 
 @pytest.mark.usefixtures('db')
-class TestResourceApi:
+class TestResourceCRUD:
     '''
     Test interaction with the Resource API.
     '''
@@ -361,3 +361,50 @@ class TestResourceApi:
             top_cont_rsrc.uri: nsc['dcterms'].relation:
             nsc['fcres'][target_uid]]
 
+
+
+@pytest.mark.usefixtures('db')
+class TestResourceVersioning:
+    '''
+    Test resource version lifecycle.
+    '''
+    def test_create_version(self):
+        """
+        Create a version snapshot.
+        """
+        uid = '/test_version1'
+        rdf_data = b'<> <http://purl.org/dc/terms/title> "Original title." .'
+        update_str = '''DELETE {
+        <> <http://purl.org/dc/terms/title> "Original title." .
+        } INSERT {
+        <> <http://purl.org/dc/terms/title> "Title #2." .
+        } WHERE {
+        }'''
+        rsrc_api.create_or_replace(uid, rdf_data=rdf_data, rdf_fmt='turtle')
+        ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
+
+        rsrc_api.update(uid, update_str)
+        current = rsrc_api.get(uid)
+        assert (
+            (current.uri, nsc['dcterms'].title, Literal('Title #2.'))
+            in current.imr)
+
+        v1 = rsrc_api.get_version(uid, ver_uid)
+        assert (
+            (v1.identifier, nsc['dcterms'].title, Literal('Original title.'))
+            in set(v1))
+
+
+    def test_revert_to_version(self):
+        """
+        Test reverting to a previous version.
+
+        Uses assets from previous test.
+        """
+        uid = '/test_version1'
+        ver_uid = 'v1'
+        rsrc_api.revert_to_version(uid, ver_uid)
+        rev = rsrc_api.get(uid)
+        assert (
+            (rev.uri, nsc['dcterms'].title, Literal('Original title.'))
+            in rev.imr)

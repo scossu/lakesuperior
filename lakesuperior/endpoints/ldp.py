@@ -446,7 +446,7 @@ def patch_version(uid, ver_uid):
     :param str ver_uid: Version UID.
     """
     try:
-        LdpFactory.from_stored(uid).revert_to_version(ver_uid)
+        rsrc_api.revert_to_version(uid, rsrc_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:

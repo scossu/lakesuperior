@@ -164,7 +164,7 @@ def get(uid, repr_options={}):
     - incl_children: include children URIs. Default: True.
     - embed_children: Embed full graph of all child resources. Default: False
     """
-    rsrc = LdpFactory.from_stored(uid, repr_options)
+    rsrc = LdpFactory.from_stored(uid, repr_opts=repr_options)
     # Load graph before leaving the transaction.
     rsrc.imr
 
@@ -327,6 +327,17 @@ def delete(uid, soft=True):
             ret = env.app_globals.rdfly.forget_rsrc(child_uid, inbound)
 
     return ret
+
+
+@transaction(True)
+def revert_to_version(uid, ver_uid):
+    """
+    Restore a resource to a previous version state.
+
+    :param str uid: Resource UID.
+    :param str ver_uid: Version UID.
+    """
+    return LdpFactory.from_stored(uid).revert_to_version(ver_uid)
 
 
 @transaction(True)

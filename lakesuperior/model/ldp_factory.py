@@ -42,7 +42,7 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_stored(uid, repr_opts={}, **kwargs):
+    def from_stored(uid, ver_label=None, repr_opts={}, strict=True, **kwargs):
         """
         Create an instance for retrieval purposes.
 
@@ -55,12 +55,10 @@ class LdpFactory:
         :param  uid: UID of the instance.
         """
         #logger.info('Retrieving stored resource: {}'.format(uid))
-        imr_urn = nsc['fcres'][uid]
-
-        rsrc_meta = rdfly.get_metadata(uid)
+        rsrc_meta = rdfly.get_metadata(uid, strict=strict)
         #logger.debug('Extracted metadata: {}'.format(
         #        pformat(set(rsrc_meta))))
-        rdf_types = set(rsrc_meta[imr_urn : RDF.type])
+        rdf_types = set(rsrc_meta[nsc['fcres'][uid] : RDF.type])
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')

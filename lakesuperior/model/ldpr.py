@@ -1,4 +1,5 @@
 import logging
+import re
 
 from abc import ABCMeta
 from collections import defaultdict
@@ -97,6 +98,30 @@ class Ldpr(metaclass=ABCMeta):
         nsc['premis'].hasMessageDigest,
     }
     """Predicates to remove when a resource is replaced."""
+
+    _ignore_version_preds = {
+        nsc['fcrepo'].hasParent,
+        nsc['fcrepo'].hasVersions,
+        nsc['fcrepo'].hasVersion,
+        nsc['premis'].hasMessageDigest,
+        nsc['ldp'].contains,
+    }
+    """Predicates that don't get versioned."""
+
+    _ignore_version_types = {
+        nsc['fcrepo'].Binary,
+        nsc['fcrepo'].Container,
+        nsc['fcrepo'].Pairtree,
+        nsc['fcrepo'].Resource,
+        nsc['fcrepo'].Version,
+        nsc['ldp'].BasicContainer,
+        nsc['ldp'].Container,
+        nsc['ldp'].DirectContainer,
+        nsc['ldp'].Resource,
+        nsc['ldp'].RDFSource,
+        nsc['ldp'].NonRDFSource,
+    }
+    """RDF types that don't get versioned."""
 
 
     ## MAGIC METHODS ##
@@ -504,19 +529,8 @@ class Ldpr(metaclass=ABCMeta):
         ver_add_gr.add((ver_uri, RDF.type, nsc['fcrepo'].Version))
         for t in self.imr:
             if (
-                t[1] == RDF.type and t[2] in {
-                    nsc['fcrepo'].Binary,
-                    nsc['fcrepo'].Container,
-                    nsc['fcrepo'].Resource,
-                }
-            ) or (
-                t[1] in {
-                    nsc['fcrepo'].hasParent,
-                    nsc['fcrepo'].hasVersions,
-                    nsc['fcrepo'].hasVersion,
-                    nsc['premis'].hasMessageDigest,
-                }
-            ):
+                t[1] == RDF.type and t[2] in self._ignore_version_types
+            ) or t[1] in self._ignore_version_preds:
                 pass
             else:
                 ver_add_gr.add((
