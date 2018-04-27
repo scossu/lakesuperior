@@ -1,7 +1,7 @@
 LAKEsuperior
 ============
 
-|build status| |docs|
+|build status| |docs| |pypi|
 
 LAKEsuperior is an alternative `Fedora
 Repository <http://fedorarepository.org>`__ implementation.
@@ -65,3 +65,7 @@ including installation instructions.
 .. |docs| image:: https://readthedocs.org/projects/lakesuperior/badge/
     :alt: Documentation Status
     :target: https://lakesuperior.readthedocs.io/en/latest/?badge=latest
+    
+.. |pypi| image:: https://badge.fury.io/py/lakesuperior.svg
+    :alt: PyPI Package
+    :target: https://badge.fury.io/py/lakesuperior
