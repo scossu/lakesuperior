@@ -263,6 +263,25 @@ class TestLdp:
         assert 'Location' in res.headers
 
 
+    def test_post_ldp_nr(self, rnd_img):
+        '''
+        POST a resource with binary payload and verify checksums.
+        '''
+        rnd_img['content'].seek(0)
+        resp = self.client.post('/ldp/', data=rnd_img['content'],
+                headers={
+                    'slug': 'ldpnr03',
+                    'Content-Type': 'image/png',
+                    'Content-Disposition' : 'attachment; filename={}'.format(
+                    rnd_img['filename'])})
+        assert resp.status_code == 201
+
+        resp = self.client.get(
+                '/ldp/ldpnr03', headers={'accept' : 'image/png'})
+        assert resp.status_code == 200
+        assert sha1(resp.data).hexdigest() == rnd_img['hash']
+
+
     def test_post_slug(self):
         '''
         Verify that a POST with slug results in the expected URI only if the

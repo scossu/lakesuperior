@@ -77,6 +77,7 @@ class RsrcCentricLayout:
                 nsc['ldp'].membershipResource,
                 nsc['ldp'].hasMemberRelation,
                 nsc['ldp'].insertedContentRelation,
+
                 nsc['iana'].describedBy,
                 nsc['premis'].hasMessageDigest,
                 nsc['premis'].hasSize,
@@ -88,6 +89,7 @@ class RsrcCentricLayout:
                 nsc['fcrepo'].Container,
                 nsc['fcrepo'].Pairtree,
                 nsc['fcrepo'].Resource,
+                nsc['fcrepo'].Version,
                 nsc['fcsystem'].Tombstone,
                 nsc['ldp'].BasicContainer,
                 nsc['ldp'].Container,
@@ -106,13 +108,35 @@ class RsrcCentricLayout:
             }
         },
     }
+    """
+    Human-manageable map of attribute routes.
 
-    # RDF types of graphs by prefix.
+    This serves as the source for :data:`attr_routes`.
+    """
+
     graph_ns_types = {
         nsc['fcadmin']: nsc['fcsystem'].AdminGraph,
         nsc['fcmain']: nsc['fcsystem'].UserProvidedGraph,
         nsc['fcstruct']: nsc['fcsystem'].StructureGraph,
     }
+    """
+    RDF types of graphs by prefix.
+    """
+
+    ignore_vmeta_preds = {
+        nsc['foaf'].primaryTopic,
+    }
+    """
+    Predicates of version metadata to be ignored in output.
+    """
+
+    ignore_vmeta_types = {
+        nsc['fcsystem'].AdminGraph,
+        nsc['fcsystem'].UserProvidedGraph,
+    }
+    """
+    RDF types of version metadata to be ignored in output.
+    """
 
 
     ## MAGIC METHODS ##
@@ -293,6 +317,7 @@ class RsrcCentricLayout:
         Get all the user-provided data.
 
         :param string uid: Resource UID.
+        :rtype: rdflib.Graph
         """
         # *TODO* This only works as long as there is only one user-provided
         # graph. If multiple user-provided graphs will be supported, this
@@ -303,43 +328,42 @@ class RsrcCentricLayout:
         return userdata_gr
 
 
-    def get_version_info(self, uid, strict=True):
+    def get_version_info(self, uid):
         """
         Get all metadata about a resource's versions.
+
+        :param string uid: Resource UID.
+        :rtype: rdflib.Graph
         """
-        # **Note:** This pretty much bends the ontology—it replaces the graph URI
-        # with the subject URI. But the concepts of data and metadata in Fedora
-        # are quite fluid anyways...
+        # **Note:** This pretty much bends the ontology—it replaces the graph
+        # URI with the subject URI. But the concepts of data and metadata in
+        # Fedora are quite fluid anyways...
 
-        # WIP—Is it worth to replace SPARQL here?
-        #versions = self.ds.graph(nsc['fcadmin'][uid]).triples(
-        #        (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
-        #for version in versions:
-        #    version_meta = self.ds.graph(HIST_GRAPH_URI).triples(
-        qry = """
-        CONSTRUCT {
-          ?s fcrepo:hasVersion ?v .
-          ?v ?p ?o .
-        } {
-          GRAPH ?ag {
-            ?s fcrepo:hasVersion ?v .
-          }
-          GRAPH ?hg {
-            ?vm foaf:primaryTopic ?v .
-            ?vm  ?p ?o .
-            FILTER (?o != ?v)
-          }
-        }"""
-        gr = self._parse_construct(qry, init_bindings={
-            'ag': nsc['fcadmin'][uid],
-            'hg': HIST_GR_URI,
-            's': nsc['fcres'][uid]})
-        ver_info_gr = Graph(identifier=nsc['fcres'][uid])
-        ver_info_gr += gr
-        if strict:
-            self._check_rsrc_status(ver_info_gr)
+        # Result graph.
+        vmeta_gr = Graph(identifier=nsc['fcres'][uid])
 
-        return ver_info_gr
+        # Get version meta graphs.
+        v_triples = self.ds.graph(nsc['fcadmin'][uid]).triples(
+                (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
+
+        #import pdb; pdb.set_trace()
+        #Get version graphs proper.
+        for vtrp in v_triples:
+            # While at it, add the hasVersion triple to the result graph.
+            vmeta_gr.add(vtrp)
+            vmeta_uris = self.ds.graph(HIST_GR_URI).subjects(
+                    nsc['foaf'].primaryTopic, vtrp[2])
+            # Get triples in the meta graph filtering out undesired triples.
+            for vmuri in vmeta_uris:
+                for trp in self.ds.graph(HIST_GR_URI).triples(
+                        (vmuri, None, None)):
+                    if (
+                            (trp[1] != nsc['rdf'].type
+                            or trp[2] not in self.ignore_vmeta_types)
+                            and (trp[1] not in self.ignore_vmeta_preds)):
+                        vmeta_gr.add((vtrp[2], trp[1], trp[2]))
+
+        return vmeta_gr
 
 
     def get_inbound_rel(self, subj_uri, full_triple=True):
@@ -392,6 +416,21 @@ class RsrcCentricLayout:
             _recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
             if recurse
             else ds.graph(ctx_uri)[subj_uri : nsc['ldp'].contains : ])
+
+
+    def get_last_version_uid(self, uid):
+        """
+        Get the UID of the last version of a resource.
+
+        This can be used for tombstones too.
+        """
+        ver_info = self.get_version_info(uid)
+        last_version_uri = sorted(
+            [trp for trp in ver_info if trp[1] == nsc['fcrepo'].created],
+            key=lambda trp:trp[2]
+        )[-1][0]
+
+        return str(last_version_uri).split(VERS_CONT_LABEL + '/')[-1]
 
 
     def patch_rsrc(self, uid, qry):
@@ -592,21 +631,6 @@ class RsrcCentricLayout:
                 self.uri_to_uid(
                     gr.value(gr.identifier, nsc['fcsystem'].tombstone)),
                 gr.value(gr.identifier, nsc['fcrepo'].created))
-
-
-    def _parse_construct(self, qry, init_bindings={}):
-        """
-        Parse a CONSTRUCT query.
-
-        :rtype: rdflib.Graph
-        """
-        try:
-            qres = self.ds.query(qry, initBindings=init_bindings)
-        except ResultException:
-            # RDFlib bug: https://github.com/RDFLib/rdflib/issues/775
-            return Graph()
-        else:
-            return qres.graph
 
 
     def _map_graph_uri(self, t, uid):

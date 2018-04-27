@@ -46,7 +46,7 @@ def ic_rdf():
 
 
 @pytest.mark.usefixtures('db')
-class TestResourceApi:
+class TestResourceCRUD:
     '''
     Test interaction with the Resource API.
     '''
@@ -250,6 +250,42 @@ class TestResourceApi:
             rsrc.uri : nsc['foaf'].name : Literal('Joe 12oz Bob')]
 
 
+    def test_sparql_update(self):
+        """
+        Update a resource using a SPARQL Update string.
+
+        Use a mix of relative and absolute URIs.
+        """
+        uid = '/test_sparql'
+        rdf_data = b'<> <http://purl.org/dc/terms/title> "Original title." .'
+        update_str = '''DELETE {
+        <> <http://purl.org/dc/terms/title> "Original title." .
+        } INSERT {
+        <> <http://purl.org/dc/terms/title> "Title #2." .
+        <info:fcres/test_sparql>
+          <http://purl.org/dc/terms/title> "Title #3." .
+        <#h1> <http://purl.org/dc/terms/title> "This is a hash." .
+        } WHERE {
+        }'''
+        rsrc_api.create_or_replace(uid, rdf_data=rdf_data, rdf_fmt='turtle')
+        ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
+
+        rsrc = rsrc_api.update(uid, update_str)
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Original title.'))
+            not in set(rsrc.imr))
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Title #2.'))
+            in set(rsrc.imr))
+        assert (
+            (rsrc.uri, nsc['dcterms'].title, Literal('Title #3.'))
+            in set(rsrc.imr))
+        assert ((
+                URIRef(str(rsrc.uri) + '#h1'),
+                nsc['dcterms'].title, Literal('This is a hash.'))
+            in set(rsrc.imr))
+
+
     def test_create_ldp_dc_post(self, dc_rdf):
         """
         Create an LDP Direct Container via POST.
@@ -324,4 +360,189 @@ class TestResourceApi:
         assert top_cont_rsrc.imr[
             top_cont_rsrc.uri: nsc['dcterms'].relation:
             nsc['fcres'][target_uid]]
+
+
+    def test_soft_delete(self):
+        """
+        Soft-delete (bury) a resource.
+        """
+        uid = '/test_soft_delete01'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid)
+        with pytest.raises(TombstoneError):
+            rsrc_api.get(uid)
+
+
+    def test_resurrect(self):
+        """
+        Restore (resurrect) a soft-deleted resource.
+        """
+        uid = '/test_soft_delete02'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid)
+        rsrc_api.resurrect(uid)
+
+        rsrc = rsrc_api.get(uid)
+        assert nsc['ldp'].Resource in rsrc.ldp_types
+
+
+    def test_hard_delete(self):
+        """
+        Hard-delete (forget) a resource.
+        """
+        uid = '/test_hard_delete01'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid, False)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.get(uid)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.resurrect(uid)
+
+
+    def test_delete_children(self):
+        """
+        Soft-delete a resource with children.
+        """
+        uid = '/test_soft_delete_children01'
+        rsrc_api.create_or_replace(uid)
+        for i in range(3):
+            rsrc_api.create_or_replace('{}/child{}'.format(uid, i))
+        rsrc_api.delete(uid)
+        with pytest.raises(TombstoneError):
+            rsrc_api.get(uid)
+        for i in range(3):
+            with pytest.raises(TombstoneError):
+                rsrc_api.get('{}/child{}'.format(uid, i))
+            # Cannot resurrect children of a tombstone.
+            with pytest.raises(TombstoneError):
+                rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+
+    def test_resurrect_children(self):
+        """
+        Resurrect a resource with its children.
+
+        This uses fixtures from the previous test.
+        """
+        uid = '/test_soft_delete_children01'
+        rsrc_api.resurrect(uid)
+        parent_rsrc = rsrc_api.get(uid)
+        assert nsc['ldp'].Resource in parent_rsrc.ldp_types
+        for i in range(3):
+            child_rsrc = rsrc_api.get('{}/child{}'.format(uid, i))
+            assert nsc['ldp'].Resource in child_rsrc.ldp_types
+
+
+    def test_hard_delete_children(self):
+        """
+        Hard-delete (forget) a resource with its children.
+
+        This uses fixtures from the previous test.
+        """
+        uid = '/test_hard_delete_children01'
+        rsrc_api.create_or_replace(uid)
+        for i in range(3):
+            rsrc_api.create_or_replace('{}/child{}'.format(uid, i))
+        rsrc_api.delete(uid, False)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.get(uid)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.resurrect(uid)
+
+        for i in range(3):
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.get('{}/child{}'.format(uid, i))
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+
+
+@pytest.mark.usefixtures('db')
+class TestResourceVersioning:
+    '''
+    Test resource version lifecycle.
+    '''
+    def test_create_version(self):
+        """
+        Create a version snapshot.
+        """
+        uid = '/test_version1'
+        rdf_data = b'<> <http://purl.org/dc/terms/title> "Original title." .'
+        update_str = '''DELETE {
+        <> <http://purl.org/dc/terms/title> "Original title." .
+        } INSERT {
+        <> <http://purl.org/dc/terms/title> "Title #2." .
+        } WHERE {
+        }'''
+        rsrc_api.create_or_replace(uid, rdf_data=rdf_data, rdf_fmt='turtle')
+        ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
+
+        rsrc_api.update(uid, update_str)
+        current = rsrc_api.get(uid)
+        assert (
+            (current.uri, nsc['dcterms'].title, Literal('Title #2.'))
+            in current.imr)
+        assert (
+            (current.uri, nsc['dcterms'].title, Literal('Original title.'))
+            not in current.imr)
+
+        v1 = rsrc_api.get_version(uid, ver_uid)
+        assert (
+            (v1.identifier, nsc['dcterms'].title, Literal('Original title.'))
+            in set(v1))
+        assert (
+            (v1.identifier, nsc['dcterms'].title, Literal('Title #2.'))
+            not in set(v1))
+
+
+    def test_revert_to_version(self):
+        """
+        Test reverting to a previous version.
+
+        Uses assets from previous test.
+        """
+        uid = '/test_version1'
+        ver_uid = 'v1'
+        rsrc_api.revert_to_version(uid, ver_uid)
+        rev = rsrc_api.get(uid)
+        assert (
+            (rev.uri, nsc['dcterms'].title, Literal('Original title.'))
+            in rev.imr)
+
+
+    def test_versioning_children(self):
+        """
+        Test that children are not affected by version restoring.
+
+        This test does the following:
+
+        1. create parent resource
+        2. Create child 1
+        3. Version parent
+        4. Create child 2
+        5. Restore parent to previous version
+        6. Verify that restored version still has 2 children
+        """
+        uid = '/test_version_children'
+        ver_uid = 'v1'
+        ch1_uid = '{}/kid_a'.format(uid)
+        ch2_uid = '{}/kid_b'.format(uid)
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.create_or_replace(ch1_uid)
+        ver_uid = rsrc_api.create_version(uid, ver_uid).split('fcr:versions/')[-1]
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch1_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+
+        rsrc_api.create_or_replace(ch2_uid)
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch2_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+
+        rsrc_api.revert_to_version(uid, ver_uid)
+        rsrc = rsrc_api.get(uid)
+        assert nsc['fcres'][ch1_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
+        assert nsc['fcres'][ch2_uid] in rsrc.imr.objects(
+                rsrc.uri, nsc['ldp'].contains)
 
