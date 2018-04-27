@@ -475,7 +475,7 @@ class Ldpr(metaclass=ABCMeta):
         inbound = True if refint else inbound
 
         for desc_uri in rdfly.get_descendants(self.uid):
-            rdfly.forget_rsrc(rdfly.uri_to_uuid(desc_uri), inbound)
+            rdfly.forget_rsrc(rdfly.uri_to_uid(desc_uri), inbound)
 
         rdfly.forget_rsrc(self.uid, inbound)
 

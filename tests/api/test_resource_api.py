@@ -433,6 +433,29 @@ class TestResourceCRUD:
             assert nsc['ldp'].Resource in child_rsrc.ldp_types
 
 
+    def test_hard_delete_children(self):
+        """
+        Hard-delete (forget) a resource with its children.
+
+        This uses fixtures from the previous test.
+        """
+        uid = '/test_hard_delete_children01'
+        rsrc_api.create_or_replace(uid)
+        for i in range(3):
+            rsrc_api.create_or_replace('{}/child{}'.format(uid, i))
+        rsrc_api.delete(uid, False)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.get(uid)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.resurrect(uid)
+
+        for i in range(3):
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.get('{}/child{}'.format(uid, i))
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+
 
 @pytest.mark.usefixtures('db')
 class TestResourceVersioning:

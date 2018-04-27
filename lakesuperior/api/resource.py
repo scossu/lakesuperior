@@ -306,7 +306,7 @@ def delete(uid, soft=True, inbound=True):
     inbound = True if refint else inbound
     repr_opts = {'incl_inbound' : True} if refint else {}
 
-    rsrc = LdpFactory.from_stored(uid, repr_opts)
+    rsrc = LdpFactory.from_stored(uid, repr_opts, strict=soft)
     if soft:
         return rsrc.bury(inbound)
     else:
@@ -339,4 +339,5 @@ def resurrect(uid):
         else:
             return LdpFactory.from_stored(uid, strict=False).resurrect()
     else:
-        raise InvalidResourceError('Resource {} is not dead.'.format(uid))
+        raise InvalidResourceError(
+                uid, msg='Resource {} is not dead.'.format(uid))
