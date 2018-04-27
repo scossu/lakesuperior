@@ -416,7 +416,11 @@ class Ldpr(metaclass=ABCMeta):
         """
         Delete a single resource and create a tombstone.
 
-        :param boolean inbound: Whether to delete the inbound relationships.
+        :param bool inbound: Whether inbound relationships are
+            removed. If ``False``, resources will keep referring
+            to the deleted resource; their link will point to a tombstone
+            (which will raise a ``TombstoneError`` in the Python API or a
+            ``410 Gone`` in the LDP API).
         :param rdflib.URIRef tstone_pointer: If set to a URI, this creates a
             pointer to the tombstone of the resource that used to contain the
             deleted resource. Otherwise the deleted resource becomes a
@@ -437,16 +441,27 @@ class Ldpr(metaclass=ABCMeta):
                 (self.uri, nsc['fcsystem'].buried, thread_env.timestamp_term),
             }
 
-        ib_rsrc_uris = self.imr.subjects(None, self.uri)
-        self.modify(RES_DELETED, remove_trp, add_trp)
+        # Bury descendants.
+        from lakesuperior.model.ldp_factory import LdpFactory
+        for desc_uri in rdfly.get_descendants(self.uid):
+            try:
+                desc_rsrc = LdpFactory.from_stored(
+                    env.app_globals.rdfly.uri_to_uid(desc_uri),
+                    repr_opts={'incl_children' : False})
+            except (TombstoneError, ResourceNotExistsError):
+                continue
+            desc_rsrc.bury(inbound, tstone_pointer=self.uri)
 
+        # Cut inbound relationships
         if inbound:
-            for ib_rsrc_uri in ib_rsrc_uris:
+            for ib_rsrc_uri in self.imr.subjects(None, self.uri):
                 remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
                 ib_rsrc.create_version()
                 ib_rsrc.modify(RES_UPDATED, remove_trp)
+
+        self.modify(RES_DELETED, remove_trp, add_trp)
 
         return RES_DELETED
 
@@ -458,9 +473,12 @@ class Ldpr(metaclass=ABCMeta):
         logger.info('Purging resource {}'.format(self.uid))
         refint = rdfly.config['referential_integrity']
         inbound = True if refint else inbound
+
+        for desc_uri in rdfly.get_descendants(self.uid):
+            rdfly.forget_rsrc(rdfly.uri_to_uuid(desc_uri), inbound)
+
         rdfly.forget_rsrc(self.uid, inbound)
 
-        # @TODO This could be a different event type.
         return RES_DELETED
 
 
@@ -478,6 +496,13 @@ class Ldpr(metaclass=ABCMeta):
         }
 
         self.modify(RES_CREATED, remove_trp, add_trp)
+
+        # Resurrect descendants.
+        from lakesuperior.model.ldp_factory import LdpFactory
+        descendants = env.app_globals.rdfly.get_descendants(self.uid)
+        for desc_uri in descendants:
+            LdpFactory.from_stored(
+                    rdfly.uri_to_uid(desc_uri), strict=False).resurrect()
 
         return self.uri
 

@@ -292,7 +292,7 @@ def create_version(uid, ver_uid):
 
 
 @transaction(True)
-def delete(uid, soft=True):
+def delete(uid, soft=True, inbound=True):
     """
     Delete a resource.
 
@@ -306,27 +306,11 @@ def delete(uid, soft=True):
     inbound = True if refint else inbound
     repr_opts = {'incl_inbound' : True} if refint else {}
 
-    children = env.app_globals.rdfly.get_descendants(uid)
-
+    rsrc = LdpFactory.from_stored(uid, repr_opts)
     if soft:
-        rsrc = LdpFactory.from_stored(uid, repr_opts)
-        ret = rsrc.bury(inbound)
-
-        for child_uri in children:
-            try:
-                child_rsrc = LdpFactory.from_stored(
-                    env.app_globals.rdfly.uri_to_uid(child_uri),
-                    repr_opts={'incl_children' : False})
-            except (TombstoneError, ResourceNotExistsError):
-                continue
-            child_rsrc.bury(inbound, tstone_pointer=rsrc.uri)
+        return rsrc.bury(inbound)
     else:
-        ret = env.app_globals.rdfly.forget_rsrc(uid, inbound)
-        for child_uri in children:
-            child_uid = env.app_globals.rdfly.uri_to_uid(child_uri)
-            ret = env.app_globals.rdfly.forget_rsrc(child_uid, inbound)
-
-    return ret
+        return rsrc.forget(inbound)
 
 
 @transaction(True)

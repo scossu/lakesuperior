@@ -364,7 +364,7 @@ class TestResourceCRUD:
 
     def test_soft_delete(self):
         """
-        Soft-delete a resource.
+        Soft-delete (bury) a resource.
         """
         uid = '/test_soft_delete01'
         rsrc_api.create_or_replace(uid)
@@ -375,7 +375,7 @@ class TestResourceCRUD:
 
     def test_resurrect(self):
         """
-        Resurrect a soft-deleted resource.
+        Restore (resurrect) a soft-deleted resource.
         """
         uid = '/test_soft_delete02'
         rsrc_api.create_or_replace(uid)
@@ -384,6 +384,54 @@ class TestResourceCRUD:
 
         rsrc = rsrc_api.get(uid)
         assert nsc['ldp'].Resource in rsrc.ldp_types
+
+
+    def test_hard_delete(self):
+        """
+        Hard-delete (forget) a resource.
+        """
+        uid = '/test_hard_delete01'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid, False)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.get(uid)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.resurrect(uid)
+
+
+    def test_delete_children(self):
+        """
+        Soft-delete a resource with children.
+        """
+        uid = '/test_soft_delete_children01'
+        rsrc_api.create_or_replace(uid)
+        for i in range(3):
+            rsrc_api.create_or_replace('{}/child{}'.format(uid, i))
+        rsrc_api.delete(uid)
+        with pytest.raises(TombstoneError):
+            rsrc_api.get(uid)
+        for i in range(3):
+            with pytest.raises(TombstoneError):
+                rsrc_api.get('{}/child{}'.format(uid, i))
+            # Cannot resurrect children of a tombstone.
+            with pytest.raises(TombstoneError):
+                rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+
+    def test_resurrect_children(self):
+        """
+        Resurrect a resource with its children.
+
+        This uses fixtures from the previous test.
+        """
+        uid = '/test_soft_delete_children01'
+        rsrc_api.resurrect(uid)
+        parent_rsrc = rsrc_api.get(uid)
+        assert nsc['ldp'].Resource in parent_rsrc.ldp_types
+        for i in range(3):
+            child_rsrc = rsrc_api.get('{}/child{}'.format(uid, i))
+            assert nsc['ldp'].Resource in child_rsrc.ldp_types
+
 
 
 @pytest.mark.usefixtures('db')

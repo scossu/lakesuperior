@@ -418,6 +418,21 @@ class RsrcCentricLayout:
             else ds.graph(ctx_uri)[subj_uri : nsc['ldp'].contains : ])
 
 
+    def get_last_version_uid(self, uid):
+        """
+        Get the UID of the last version of a resource.
+
+        This can be used for tombstones too.
+        """
+        ver_info = self.get_version_info(uid)
+        last_version_uri = sorted(
+            [trp for trp in ver_info if trp[1] == nsc['fcrepo'].created],
+            key=lambda trp:trp[2]
+        )[-1][0]
+
+        return str(last_version_uri).split(VERS_CONT_LABEL + '/')[-1]
+
+
     def patch_rsrc(self, uid, qry):
         """
         Patch a resource with SPARQL-Update statements.
