@@ -328,7 +328,7 @@ class RsrcCentricLayout:
         return userdata_gr
 
 
-    def get_version_info(self, uid, strict=True):
+    def get_version_info(self, uid):
         """
         Get all metadata about a resource's versions.
 

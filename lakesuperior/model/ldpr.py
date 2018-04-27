@@ -412,23 +412,21 @@ class Ldpr(metaclass=ABCMeta):
         return ev_type
 
 
-    def bury_rsrc(self, inbound, tstone_pointer=None):
+    def bury(self, inbound, tstone_pointer=None):
         """
         Delete a single resource and create a tombstone.
 
         :param boolean inbound: Whether to delete the inbound relationships.
-        :param rdflib.URIRef tstone_pointer: If set to a URN, this creates a
+        :param rdflib.URIRef tstone_pointer: If set to a URI, this creates a
             pointer to the tombstone of the resource that used to contain the
             deleted resource. Otherwise the deleted resource becomes a
             tombstone.
         """
         logger.info('Burying resource {}'.format(self.uid))
-        # Create a backup snapshot for resurrection purposes.
-        self.create_version()
-
+        # ldp:Resource is also used in rdfly.ask_rsrc_exists.
         remove_trp = {
-            trp for trp in self.imr
-            if trp[1] != nsc['fcrepo'].hasVersion}
+            (nsc['fcrepo'].uid, nsc['rdf'].type, nsc['ldp'].Resource)
+        }
 
         if tstone_pointer:
             add_trp = {
@@ -436,7 +434,7 @@ class Ldpr(metaclass=ABCMeta):
         else:
             add_trp = {
                 (self.uri, RDF.type, nsc['fcsystem'].Tombstone),
-                (self.uri, nsc['fcrepo'].created, thread_env.timestamp_term),
+                (self.uri, nsc['fcsystem'].buried, thread_env.timestamp_term),
             }
 
         ib_rsrc_uris = self.imr.subjects(None, self.uri)
@@ -453,7 +451,7 @@ class Ldpr(metaclass=ABCMeta):
         return RES_DELETED
 
 
-    def forget_rsrc(self, inbound=True):
+    def forget(self, inbound=True):
         """
         Remove all traces of a resource and versions.
         """
@@ -466,42 +464,22 @@ class Ldpr(metaclass=ABCMeta):
         return RES_DELETED
 
 
-    def resurrect_rsrc(self):
+    def resurrect(self):
         """
         Resurrect a resource from a tombstone.
-
-        @EXPERIMENTAL
         """
-        tstone_trp = set(rdfly.get_imr(self.uid, strict=False))
-
-        ver_rsp = self.version_info.query('''
-        SELECT ?uid {
-          ?latest fcrepo:hasVersionLabel ?uid ;
-            fcrepo:created ?ts .
+        remove_trp = {
+            (self.uri, nsc['rdf'].type, nsc['fcsystem'].Tombstone),
+            (self.uri, nsc['fcsystem'].tombstone, None),
+            (self.uri, nsc['fcsystem'].buried, None),
         }
-        ORDER BY DESC(?ts)
-        LIMIT 1
-        ''')
-        ver_uid = str(ver_rsp.bindings[0]['uid'])
-        ver_trp = set(rdfly.get_metadata(self.uid, ver_uid))
+        add_trp = {
+            (self.uri, nsc['rdf'].type, nsc['ldp'].Resource),
+        }
 
-        laz_gr = Graph()
-        for t in ver_trp:
-            if t[1] != RDF.type or t[2] not in {
-                nsc['fcrepo'].Version,
-            }:
-                laz_gr.add((self.uri, t[1], t[2]))
-        laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Resource))
-        if nsc['ldp'].NonRdfSource in laz_gr[:RDF.type:]:
-            laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Binary))
-        elif nsc['ldp'].Container in laz_gr[:RDF.type:]:
-            laz_gr.add((self.uri, RDF.type, nsc['fcrepo'].Container))
-
-        laz_set = set(laz_gr) | self._containment_rel()
-        self.modify(RES_CREATED, tstone_trp, laz_set)
+        self.modify(RES_CREATED, remove_trp, add_trp)
 
         return self.uri
-
 
 
     def create_version(self, ver_uid=None):
@@ -707,7 +685,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
         # Clear IMR buffer.
-        if hasattr(self, 'imr'):
+        if hasattr(self, '_imr'):
             delattr(self, '_imr')
             try:
                 self.imr

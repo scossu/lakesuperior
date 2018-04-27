@@ -52,12 +52,10 @@ class LdpFactory:
 
         N.B. The resource must exist.
 
-        :param  uid: UID of the instance.
+        :param str uid: UID of the instance.
         """
-        #logger.info('Retrieving stored resource: {}'.format(uid))
+        # This will blow up if strict is True and the resource is a tombstone.
         rsrc_meta = rdfly.get_metadata(uid, strict=strict)
-        #logger.debug('Extracted metadata: {}'.format(
-        #        pformat(set(rsrc_meta))))
         rdf_types = set(rsrc_meta[nsc['fcres'][uid] : RDF.type])
 
         if LDP_NR_TYPE in rdf_types:

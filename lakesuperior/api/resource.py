@@ -310,7 +310,7 @@ def delete(uid, soft=True):
 
     if soft:
         rsrc = LdpFactory.from_stored(uid, repr_opts)
-        ret = rsrc.bury_rsrc(inbound)
+        ret = rsrc.bury(inbound)
 
         for child_uri in children:
             try:
@@ -319,7 +319,7 @@ def delete(uid, soft=True):
                     repr_opts={'incl_children' : False})
             except (TombstoneError, ResourceNotExistsError):
                 continue
-            child_rsrc.bury_rsrc(inbound, tstone_pointer=rsrc.uri)
+            child_rsrc.bury(inbound, tstone_pointer=rsrc.uri)
     else:
         ret = env.app_globals.rdfly.forget_rsrc(uid, inbound)
         for child_uri in children:
@@ -347,4 +347,12 @@ def resurrect(uid):
 
     :param str uid: Resource UID.
     """
-    return LdpFactory.from_stored(uid, strict=False).resurrect_rsrc()
+    try:
+        rsrc = LdpFactory.from_stored(uid)
+    except TombstoneError as e:
+        if e.uid != uid:
+            raise
+        else:
+            return LdpFactory.from_stored(uid, strict=False).resurrect()
+    else:
+        raise InvalidResourceError('Resource {} is not dead.'.format(uid))

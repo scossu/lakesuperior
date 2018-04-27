@@ -362,6 +362,29 @@ class TestResourceCRUD:
             nsc['fcres'][target_uid]]
 
 
+    def test_soft_delete(self):
+        """
+        Soft-delete a resource.
+        """
+        uid = '/test_soft_delete01'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid)
+        with pytest.raises(TombstoneError):
+            rsrc_api.get(uid)
+
+
+    def test_resurrect(self):
+        """
+        Resurrect a soft-deleted resource.
+        """
+        uid = '/test_soft_delete02'
+        rsrc_api.create_or_replace(uid)
+        rsrc_api.delete(uid)
+        rsrc_api.resurrect(uid)
+
+        rsrc = rsrc_api.get(uid)
+        assert nsc['ldp'].Resource in rsrc.ldp_types
+
 
 @pytest.mark.usefixtures('db')
 class TestResourceVersioning:
