@@ -164,7 +164,7 @@ def get(uid, repr_options={}):
     - incl_children: include children URIs. Default: True.
     - embed_children: Embed full graph of all child resources. Default: False
     """
-    rsrc = LdpFactory.from_stored(uid, repr_options)
+    rsrc = LdpFactory.from_stored(uid, repr_opts=repr_options)
     # Load graph before leaving the transaction.
     rsrc.imr
 
@@ -292,7 +292,7 @@ def create_version(uid, ver_uid):
 
 
 @transaction(True)
-def delete(uid, soft=True):
+def delete(uid, soft=True, inbound=True):
     """
     Delete a resource.
 
@@ -306,27 +306,22 @@ def delete(uid, soft=True):
     inbound = True if refint else inbound
     repr_opts = {'incl_inbound' : True} if refint else {}
 
-    children = env.app_globals.rdfly.get_descendants(uid)
-
+    rsrc = LdpFactory.from_stored(uid, repr_opts, strict=soft)
     if soft:
-        rsrc = LdpFactory.from_stored(uid, repr_opts)
-        ret = rsrc.bury_rsrc(inbound)
-
-        for child_uri in children:
-            try:
-                child_rsrc = LdpFactory.from_stored(
-                    env.app_globals.rdfly.uri_to_uid(child_uri),
-                    repr_opts={'incl_children' : False})
-            except (TombstoneError, ResourceNotExistsError):
-                continue
-            child_rsrc.bury_rsrc(inbound, tstone_pointer=rsrc.uri)
+        return rsrc.bury(inbound)
     else:
-        ret = env.app_globals.rdfly.forget_rsrc(uid, inbound)
-        for child_uri in children:
-            child_uid = env.app_globals.rdfly.uri_to_uid(child_uri)
-            ret = env.app_globals.rdfly.forget_rsrc(child_uid, inbound)
+        return rsrc.forget(inbound)
 
-    return ret
+
+@transaction(True)
+def revert_to_version(uid, ver_uid):
+    """
+    Restore a resource to a previous version state.
+
+    :param str uid: Resource UID.
+    :param str ver_uid: Version UID.
+    """
+    return LdpFactory.from_stored(uid).revert_to_version(ver_uid)
 
 
 @transaction(True)
@@ -336,4 +331,13 @@ def resurrect(uid):
 
     :param str uid: Resource UID.
     """
-    return LdpFactory.from_stored(uid).resurrect_rsrc()
+    try:
+        rsrc = LdpFactory.from_stored(uid)
+    except TombstoneError as e:
+        if e.uid != uid:
+            raise
+        else:
+            return LdpFactory.from_stored(uid, strict=False).resurrect()
+    else:
+        raise InvalidResourceError(
+                uid, msg='Resource {} is not dead.'.format(uid))
