@@ -93,6 +93,7 @@ setup(
         'gunicorn',
         'lmdb',
         'rdflib',
+        'rdflib-jsonld',
         'requests',
         'requests-toolbelt',
         'sphinx-rtd-theme',

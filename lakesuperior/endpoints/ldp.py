@@ -43,6 +43,7 @@ rdf_parsable_mimetypes = {
 rdf_serializable_mimetypes = {
     #mt.name for mt in plugin.plugins()
     #if mt.kind is serializer.Serializer and '/' in mt.name
+    'application/ld+json',
     'application/n-triples',
     'application/rdf+xml',
     'text/turtle',

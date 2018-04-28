@@ -595,6 +595,9 @@ class TestMimeType:
                 'application/rdf+xml;q=0.5,application/bogus;q=0.7',
                 'application/rdf+xml'),
             ('application/rdf+xml;q=0.5,text/n3;q=0.7', 'text/n3'),
+            (
+                'application/rdf+xml;q=0.5,application/ld+json;q=0.7',
+                'application/ld+json'),
         }
         for mimetype, fmt in accept_list:
             rsp = self.client.get('/ldp', headers={'Accept': mimetype})
@@ -619,6 +622,7 @@ class TestMimeType:
             'application/rdf+xml',
             'text/n3',
             'text/turtle',
+            'application/ld+json',
         }
         for mimetype in test_list:
             rdf_data = gr.serialize(format=mimetype)
