@@ -3,7 +3,7 @@ import logging
 from pprint import pformat
 from uuid import uuid4
 
-from rdflib import Graph, parser, plugin, serializer
+from rdflib import Graph, parser
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
@@ -149,36 +149,6 @@ class LdpFactory:
                 inst.__class__.__name__))
 
         return inst
-
-
-    @staticmethod
-    def is_rdf_parsable(mimetype):
-        """
-        Checks whether a MIME type support RDF parsing by a RDFLib plugin.
-
-        :param str mimetype: MIME type to check.
-        """
-        try:
-            plugin.get(mimetype, parser.Parser)
-        except plugin.PluginException:
-            return False
-        else:
-            return True
-
-
-    @staticmethod
-    def is_rdf_serializable(mimetype):
-        """
-        Checks whether a MIME type support RDF serialization by a RDFLib plugin
-
-        :param str mimetype: MIME type to check.
-        """
-        try:
-            plugin.get(mimetype, serializer.Serializer)
-        except plugin.PluginException:
-            return False
-        else:
-            return True
 
 
     @staticmethod

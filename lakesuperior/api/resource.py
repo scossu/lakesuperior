@@ -298,7 +298,7 @@ def delete(uid, soft=True, inbound=True):
 
     :param string uid: Resource UID.
     :param bool soft: Whether to perform a soft-delete and leave a
-      tombstone resource, or wipe any memory of the resource.
+        tombstone resource, or wipe any memory of the resource.
     """
     # If referential integrity is enforced, grab all inbound relationships
     # to break them.

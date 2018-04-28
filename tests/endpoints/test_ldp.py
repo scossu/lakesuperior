@@ -22,15 +22,15 @@ def random_uuid():
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')
 class TestLdp:
-    '''
+    """
     Test HTTP interaction with LDP endpoint.
-    '''
+    """
     def test_get_root_node(self):
-        '''
+        """
         Get the root node from two different endpoints.
 
         The test triplestore must be initialized, hence the `db` fixture.
-        '''
+        """
         ldp_resp = self.client.get('/ldp')
         rest_resp = self.client.get('/rest')
 
@@ -39,9 +39,9 @@ class TestLdp:
 
 
     def test_put_empty_resource(self, random_uuid):
-        '''
+        """
         Check response headers for a PUT operation with empty payload.
-        '''
+        """
         resp = self.client.put('/ldp/new_resource')
         assert resp.status_code == 201
         assert resp.data == bytes(
@@ -49,10 +49,10 @@ class TestLdp:
 
 
     def test_put_existing_resource(self, random_uuid):
-        '''
+        """
         Trying to PUT an existing resource should return a 204 if the payload
         is empty.
-        '''
+        """
         path = '/ldp/nonidempotent01'
         put1_resp = self.client.put(path)
         assert put1_resp.status_code == 201
@@ -70,12 +70,12 @@ class TestLdp:
 
 
     def test_put_tree(self, client):
-        '''
+        """
         PUT a resource with several path segments.
 
         The test should create intermediate path segments that are LDPCs,
         accessible to PUT or POST.
-        '''
+        """
         path = '/ldp/test_tree/a/b/c/d/e/f/g'
         self.client.put(path)
 
@@ -91,13 +91,13 @@ class TestLdp:
 
 
     def test_put_nested_tree(self, client):
-        '''
+        """
         Verify that containment is set correctly in nested hierarchies.
 
         First put a new hierarchy and verify that the root node is its
         container; then put another hierarchy under it and verify that the
         first hierarchy is the container of the second one.
-        '''
+        """
         uuid1 = 'test_nested_tree/a/b/c/d'
         uuid2 = uuid1 + '/e/f/g'
         path1 = '/ldp/' + uuid1
@@ -120,9 +120,9 @@ class TestLdp:
 
 
     def test_put_ldp_rs(self, client):
-        '''
+        """
         PUT a resource with RDF payload and verify.
-        '''
+        """
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
             self.client.put('/ldp/ldprs01', data=f, content_type='text/turtle')
 
@@ -136,9 +136,9 @@ class TestLdp:
 
 
     def test_put_ldp_nr(self, rnd_img):
-        '''
+        """
         PUT a resource with binary payload and verify checksums.
-        '''
+        """
         rnd_img['content'].seek(0)
         resp = self.client.put('/ldp/ldpnr01', data=rnd_img['content'],
                 headers={
@@ -154,9 +154,9 @@ class TestLdp:
 
 
     def test_put_ldp_nr_multipart(self, rnd_img):
-        '''
+        """
         PUT a resource with a multipart/form-data payload.
-        '''
+        """
         rnd_img['content'].seek(0)
         resp = self.client.put(
             '/ldp/ldpnr02',
@@ -176,11 +176,11 @@ class TestLdp:
 
 
     def test_put_mismatched_ldp_rs(self, rnd_img):
-        '''
+        """
         Verify MIME type / LDP mismatch.
         PUT a LDP-RS, then PUT a LDP-NR on the same location and verify it
         fails.
-        '''
+        """
         path = '/ldp/' + str(uuid.uuid4())
 
         rnd_img['content'].seek(0)
@@ -199,11 +199,11 @@ class TestLdp:
 
 
     def test_put_mismatched_ldp_nr(self, rnd_img):
-        '''
+        """
         Verify MIME type / LDP mismatch.
         PUT a LDP-NR, then PUT a LDP-RS on the same location and verify it
         fails.
-        '''
+        """
         path = '/ldp/' + str(uuid.uuid4())
 
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
@@ -222,10 +222,10 @@ class TestLdp:
 
 
     def test_missing_reference(self, client):
-        '''
+        """
         PUT a resource with RDF payload referencing a non-existing in-repo
         resource.
-        '''
+        """
         self.client.get('/ldp')
         data = '''
         PREFIX ns: <http://example.org#>
@@ -255,18 +255,18 @@ class TestLdp:
 
 
     def test_post_resource(self, client):
-        '''
+        """
         Check response headers for a POST operation with empty payload.
-        '''
+        """
         res = self.client.post('/ldp/')
         assert res.status_code == 201
         assert 'Location' in res.headers
 
 
     def test_post_ldp_nr(self, rnd_img):
-        '''
+        """
         POST a resource with binary payload and verify checksums.
-        '''
+        """
         rnd_img['content'].seek(0)
         resp = self.client.post('/ldp/', data=rnd_img['content'],
                 headers={
@@ -283,10 +283,10 @@ class TestLdp:
 
 
     def test_post_slug(self):
-        '''
+        """
         Verify that a POST with slug results in the expected URI only if the
         resource does not exist already.
-        '''
+        """
         slug01_resp = self.client.post('/ldp', headers={'slug' : 'slug01'})
         assert slug01_resp.status_code == 201
         assert slug01_resp.headers['location'] == \
@@ -299,17 +299,17 @@ class TestLdp:
 
 
     def test_post_404(self):
-        '''
+        """
         Verify that a POST to a non-existing parent results in a 404.
-        '''
+        """
         assert self.client.post('/ldp/{}'.format(uuid.uuid4()))\
                 .status_code == 404
 
 
     def test_post_409(self, rnd_img):
-        '''
+        """
         Verify that you cannot POST to a binary resource.
-        '''
+        """
         rnd_img['content'].seek(0)
         self.client.put('/ldp/post_409', data=rnd_img['content'], headers={
                 'Content-Disposition' : 'attachment; filename={}'.format(
@@ -318,9 +318,9 @@ class TestLdp:
 
 
     def test_patch_root(self):
-        '''
+        """
         Test patching root node.
-        '''
+        """
         path = '/ldp/'
         self.client.get(path)
         uri = g.webroot + '/'
@@ -338,9 +338,9 @@ class TestLdp:
 
 
     def test_patch(self):
-        '''
+        """
         Test patching a resource.
-        '''
+        """
         path = '/ldp/test_patch01'
         self.client.put(path)
 
@@ -367,9 +367,9 @@ class TestLdp:
 
 
     def test_patch_ssr(self):
-        '''
+        """
         Test patching a resource violating the single-subject rule.
-        '''
+        """
         path = '/ldp/test_patch_ssr'
         self.client.put(path)
 
@@ -398,9 +398,9 @@ class TestLdp:
 
 
     def test_patch_ldp_nr_metadata(self):
-        '''
+        """
         Test patching a LDP-NR metadata resource from the fcr:metadata URI.
-        '''
+        """
         path = '/ldp/ldpnr01'
 
         with open('tests/data/sparql_update/simple_insert.sparql') as data:
@@ -430,9 +430,9 @@ class TestLdp:
 
 
     def test_patch_ldpnr(self):
-        '''
+        """
         Verify that a direct PATCH to a LDP-NR results in a 415.
-        '''
+        """
         with open(
                 'tests/data/sparql_update/delete+insert+where.sparql') as data:
             patch_resp = self.client.patch('/ldp/ldpnr01',
@@ -442,10 +442,10 @@ class TestLdp:
 
 
     def test_patch_invalid_mimetype(self, rnd_img):
-        '''
+        """
         Verify that a PATCH using anything other than an
         `application/sparql-update` MIME type results in an error.
-        '''
+        """
         self.client.put('/ldp/test_patch_invalid_mimetype')
         rnd_img['content'].seek(0)
         ldpnr_resp = self.client.patch('/ldp/ldpnr01/fcr:metadata',
@@ -460,9 +460,9 @@ class TestLdp:
 
 
     def test_delete(self):
-        '''
+        """
         Test delete response codes.
-        '''
+        """
         self.client.put('/ldp/test_delete01')
         delete_resp = self.client.delete('/ldp/test_delete01')
         assert delete_resp.status_code == 204
@@ -472,11 +472,11 @@ class TestLdp:
 
 
     def test_tombstone(self):
-        '''
+        """
         Test tombstone behaviors.
 
         For POST on a tombstone, check `test_resurrection`.
-        '''
+        """
         tstone_resp = self.client.get('/ldp/test_delete01')
         assert tstone_resp.status_code == 410
         assert tstone_resp.headers['Link'] == \
@@ -492,10 +492,10 @@ class TestLdp:
 
 
     def test_delete_recursive(self):
-        '''
+        """
         Test response codes for resources deleted recursively and their
         tombstones.
-        '''
+        """
         child_suffixes = ('a', 'a/b', 'a/b/c', 'a1', 'a1/b1')
         self.client.put('/ldp/test_delete_recursive01')
         for cs in child_suffixes:
@@ -518,9 +518,9 @@ class TestLdp:
 
 
     def test_put_fragments(self):
-        '''
+        """
         Test the correct handling of fragment URIs on PUT and GET.
-        '''
+        """
         with open('tests/data/fragments.ttl', 'rb') as f:
             self.client.put(
                 '/ldp/test_fragment01',
@@ -538,9 +538,9 @@ class TestLdp:
 
 
     def test_patch_fragments(self):
-        '''
+        """
         Test the correct handling of fragment URIs on PATCH.
-        '''
+        """
         self.client.put('/ldp/test_fragment_patch')
 
         with open('tests/data/fragments_insert.sparql', 'rb') as f:
@@ -574,15 +574,78 @@ class TestLdp:
 
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')
+class TestMimeType:
+    """
+    Test ``Accept`` headers and input & output formats.
+    """
+    def test_accept(self):
+        """
+        Verify the default serialization method.
+        """
+        accept_list = {
+            ('', 'text/turtle'),
+            ('text/turtle', 'text/turtle'),
+            ('application/rdf+xml', 'application/rdf+xml'),
+            ('application/n-triples', 'application/n-triples'),
+            ('application/bogus', 'text/turtle'),
+            (
+                'application/rdf+xml;q=0.5,application/n-triples;q=0.7',
+                'application/n-triples'),
+            (
+                'application/rdf+xml;q=0.5,application/bogus;q=0.7',
+                'application/rdf+xml'),
+            ('application/rdf+xml;q=0.5,text/n3;q=0.7', 'text/n3'),
+        }
+        for mimetype, fmt in accept_list:
+            rsp = self.client.get('/ldp', headers={'Accept': mimetype})
+            assert rsp.mimetype == fmt
+            gr = Graph(identifier=g.webroot + '/').parse(
+                    data=rsp.data, format=fmt)
+
+            assert nsc['fcrepo'].RepositoryRoot in set(gr.objects())
+
+
+    def test_provided_rdf(self):
+        """
+        Test several input RDF serialiation formats.
+        """
+        self.client.get('/ldp')
+        gr = Graph()
+        gr.add((
+            URIRef(g.webroot + '/test_mimetype'), 
+            nsc['dcterms'].title, Literal('Test MIME type.')))
+        test_list = {
+            'application/n-triples',
+            'application/rdf+xml',
+            'text/n3',
+            'text/turtle',
+        }
+        for mimetype in test_list:
+            rdf_data = gr.serialize(format=mimetype)
+            self.client.put('/ldp/test_mimetype', data=rdf_data, headers={
+                'content-type': mimetype})
+
+            rsp = self.client.get('/ldp/test_mimetype')
+            rsp_gr = Graph(identifier=g.webroot + '/test_mimetype').parse(
+                    data=rsp.data, format='text/turtle')
+
+            assert (
+                    URIRef(g.webroot + '/test_mimetype'),
+                    nsc['dcterms'].title, Literal('Test MIME type.')) in rsp_gr
+
+
+
+@pytest.mark.usefixtures('client_class')
+@pytest.mark.usefixtures('db')
 class TestPrefHeader:
-    '''
+    """
     Test various combinations of `Prefer` header.
-    '''
+    """
     @pytest.fixture(scope='class')
     def cont_structure(self):
-        '''
+        """
         Create a container structure to be used for subsequent requests.
-        '''
+        """
         parent_path = '/ldp/test_parent'
         self.client.put(parent_path)
         self.client.put(parent_path + '/child1')
@@ -597,7 +660,7 @@ class TestPrefHeader:
 
 
     def test_put_prefer_handling(self, random_uuid):
-        '''
+        """
         Trying to PUT an existing resource should:
 
         - Return a 204 if the payload is empty
@@ -606,7 +669,7 @@ class TestPrefHeader:
         - Return a 412 (ServerManagedTermError) if the payload is RDF,
           server-managed triples are included and handling is set to 'strict',
           or not set.
-        '''
+        """
         path = '/ldp/put_pref_header01'
         assert self.client.put(path).status_code == 201
         assert self.client.get(path).status_code == 200
@@ -648,9 +711,9 @@ class TestPrefHeader:
 
     # @HOLD Embed children is debated.
     def _disabled_test_embed_children(self, cont_structure):
-        '''
+        """
         verify the "embed children" prefer header.
-        '''
+        """
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
         cont_subject = cont_structure['subject']
@@ -686,9 +749,9 @@ class TestPrefHeader:
 
 
     def test_return_children(self, cont_structure):
-        '''
+        """
         verify the "return children" prefer header.
-        '''
+        """
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
         cont_subject = cont_structure['subject']
@@ -714,9 +777,9 @@ class TestPrefHeader:
 
 
     def test_inbound_rel(self, cont_structure):
-        '''
+        """
         verify the "inbound relationships" prefer header.
-        '''
+        """
         self.client.put('/ldp/test_target')
         data = '<> <http://ex.org/ns#shoots> <{}> .'.format(
                 g.webroot + '/test_target')
@@ -747,9 +810,9 @@ class TestPrefHeader:
 
 
     def test_srv_mgd_triples(self, cont_structure):
-        '''
+        """
         verify the "server managed triples" prefer header.
-        '''
+        """
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
         cont_subject = cont_structure['subject']
@@ -790,9 +853,9 @@ class TestPrefHeader:
 
 
     def test_delete_no_tstone(self):
-        '''
+        """
         Test the `no-tombstone` Prefer option.
-        '''
+        """
         self.client.put('/ldp/test_delete_no_tstone01')
         self.client.put('/ldp/test_delete_no_tstone01/a')
 
@@ -810,14 +873,14 @@ class TestPrefHeader:
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')
 class TestVersion:
-    '''
+    """
     Test version creation, retrieval and deletion.
-    '''
+    """
     def test_create_versions(self):
-        '''
+        """
         Test that POSTing multiple times to fcr:versions creates the
         'hasVersions' triple and yields multiple version snapshots.
-        '''
+        """
         self.client.put('/ldp/test_version')
         create_rsp = self.client.post('/ldp/test_version/fcr:versions')
 
@@ -840,9 +903,9 @@ class TestVersion:
 
 
     def test_version_with_slug(self):
-        '''
+        """
         Test a version with a slug.
-        '''
+        """
         self.client.put('/ldp/test_version_slug')
         create_rsp = self.client.post('/ldp/test_version_slug/fcr:versions',
             headers={'slug' : 'v1'})
@@ -858,10 +921,10 @@ class TestVersion:
 
 
     def test_dupl_version(self):
-        '''
+        """
         Make sure that two POSTs with the same slug result in two different
         versions.
-        '''
+        """
         path = '/ldp/test_duplicate_slug'
         self.client.put(path)
         v1_rsp = self.client.post(path + '/fcr:versions',
@@ -877,10 +940,10 @@ class TestVersion:
 
     # @TODO Reverting from version and resurrecting is not fully functional.
     def _disabled_test_revert_version(self):
-        '''
+        """
         Take a version snapshot, update a resource, and then revert to the
         previous vresion.
-        '''
+        """
         rsrc_path = '/ldp/test_revert_version'
         payload1 = '<> <urn:demo:p1> <urn:demo:o1> .'
         payload2 = '<> <urn:demo:p1> <urn:demo:o2> .'
@@ -920,34 +983,34 @@ class TestVersion:
         ]
 
 
-    #def test_resurrection(self):
-    #    '''
-    #    Delete and then resurrect a resource.
+    def test_resurrection(self):
+        """
+        Delete and then resurrect a resource.
 
-    #    Make sure that the resource is resurrected to the latest version.
-    #    '''
-    #    path = '/ldp/test_lazarus'
-    #    self.client.put(path)
+        Make sure that the resource is resurrected to the latest version.
+        """
+        path = '/ldp/test_lazarus'
+        self.client.put(path)
 
-    #    self.client.post(path + '/fcr:versions', headers={'slug': 'v1'})
-    #    self.client.put(
-    #        path, headers={'content-type': 'text/turtle'},
-    #        data=b'<> <urn:demo:p1> <urn:demo:o1> .')
-    #    self.client.post(path + '/fcr:versions', headers={'slug': 'v2'})
-    #    self.client.put(
-    #        path, headers={'content-type': 'text/turtle'},
-    #        data=b'<> <urn:demo:p1> <urn:demo:o2> .')
+        self.client.post(path + '/fcr:versions', headers={'slug': 'v1'})
+        self.client.put(
+            path, headers={'content-type': 'text/turtle'},
+            data=b'<> <urn:demo:p1> <urn:demo:o1> .')
+        self.client.post(path + '/fcr:versions', headers={'slug': 'v2'})
+        self.client.put(
+            path, headers={'content-type': 'text/turtle'},
+            data=b'<> <urn:demo:p1> <urn:demo:o2> .')
 
-    #    self.client.delete(path)
+        self.client.delete(path)
 
-    #    assert self.client.get(path).status_code == 410
+        assert self.client.get(path).status_code == 410
 
-    #    self.client.post(path + '/fcr:tombstone')
+        self.client.post(path + '/fcr:tombstone')
 
-    #    laz_data = self.client.get(path).data
-    #    laz_gr = Graph().parse(data=laz_data, format='turtle')
-    #    assert laz_gr[
-    #        URIRef(g.webroot + '/test_lazarus')
-    #        : URIRef('urn:demo:p1')
-    #        : URIRef('urn:demo:o2')
-    #    ]
+        laz_data = self.client.get(path).data
+        laz_gr = Graph().parse(data=laz_data, format='turtle')
+        assert laz_gr[
+            URIRef(g.webroot + '/test_lazarus')
+            : URIRef('urn:demo:p1')
+            : URIRef('urn:demo:o2')
+        ]
