@@ -9,9 +9,9 @@ from uuid import uuid4
 import arrow
 
 from flask import (
-        Blueprint, g, make_response, render_template,
+        Blueprint, Response, g, make_response, render_template,
         request, send_file)
-from rdflib import Graph
+from rdflib import Graph, plugin, parser#, serializer
 
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
@@ -28,37 +28,41 @@ from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from lakesuperior.toolbox import Toolbox
 
 
+DEFAULT_RDF_MIMETYPE = 'text/turtle'
+"""
+Fallback serialization format used when no acceptable formats are specified.
+"""
+
 logger = logging.getLogger(__name__)
+rdf_parsable_mimetypes = {
+    mt.name for mt in plugin.plugins()
+    if mt.kind is parser.Parser and '/' in mt.name
+}
+"""MIMEtypes that can be parsed into RDF."""
 
-# Blueprint for LDP REST API. This is what is usually found under `/rest/` in
-# standard fcrepo4. Here, it is under `/ldp` but initially `/rest` can be kept
-# for backward compatibility.
+rdf_serializable_mimetypes = {
+    #mt.name for mt in plugin.plugins()
+    #if mt.kind is serializer.Serializer and '/' in mt.name
+    'application/ld+json',
+    'application/n-triples',
+    'application/rdf+xml',
+    'text/turtle',
+    'text/n3',
+}
+"""
+MIMEtypes that RDF can be serialized into.
 
-ldp = Blueprint(
-        'ldp', __name__, template_folder='templates',
-        static_url_path='/static', static_folder='templates/static')
+These are not automatically derived from RDFLib because only triple
+(not quad) serializations are applicable.
+"""
 
 accept_patch = (
     'application/sparql-update',
 )
-accept_rdf = (
-    'application/ld+json',
-    'application/n-triples',
-    'application/rdf+xml',
-    #'application/x-turtle',
-    #'application/xhtml+xml',
-    #'application/xml',
-    #'text/html',
-    'text/n3',
-    #'text/plain',
-    'text/rdf+n3',
-    'text/turtle',
-)
 
 std_headers = {
     'Accept-Patch' : ','.join(accept_patch),
-    'Accept-Post' : ','.join(accept_rdf),
-    #'Allow' : ','.join(allow),
+    'Accept-Post' : ','.join(rdf_parsable_mimetypes),
 }
 
 """Predicates excluded by view."""
@@ -66,6 +70,16 @@ vw_blacklist = {
 }
 
 
+ldp = Blueprint(
+        'ldp', __name__, template_folder='templates',
+        static_url_path='/static', static_folder='templates/static')
+"""
+Blueprint for LDP REST API. This is what is usually found under ``/rest/`` in
+standard fcrepo4. Here, it is under ``/ldp`` but initially ``/rest`` will be
+kept for backward compatibility.
+"""
+
+## ROUTE PRE- & POST-PROCESSING ##
 
 @ldp.url_defaults
 def bp_url_defaults(endpoint, values):
@@ -140,16 +154,20 @@ def get_resource(uid, out_fmt=None):
         return _tombstone_response(e, uid)
     else:
         if out_fmt is None:
+            rdf_mimetype = _best_rdf_mimetype()
             out_fmt = (
                     'rdf'
-                    if isinstance(rsrc, LdpRs) or is_accept_hdr_rdf_parsable()
+                    if isinstance(rsrc, LdpRs) or rdf_mimetype is not None
                     else 'non_rdf')
         out_headers.update(_headers_from_metadata(rsrc))
         uri = g.tbox.uid_to_uri(uid)
         if out_fmt == 'rdf':
+            if locals().get('rdf_mimetype', None) is None:
+                rdf_mimetype = DEFAULT_RDF_MIMETYPE
             ggr = g.tbox.globalize_graph(rsrc.out_graph)
             ggr.namespace_manager = nsm
-            return _negotiate_content(ggr, out_headers, uid=uid, uri=uri)
+            return _negotiate_content(
+                    ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
         else:
             if not getattr(rsrc, 'local_path', False):
                 return ('{} has no binary content.'.format(rsrc.uid), 404)
@@ -174,6 +192,7 @@ def get_version_info(uid):
 
     :param str uid: UID of resource to retrieve versions for.
     """
+    rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
         gr = rsrc_api.get_version_info(uid)
     except ResourceNotExistsError as e:
@@ -183,7 +202,7 @@ def get_version_info(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_graph(gr))
+        return _negotiate_content(g.tbox.globalize_graph(gr), rdf_mimetype)
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
@@ -194,6 +213,7 @@ def get_version(uid, ver_uid):
     :param str uid: Resource UID.
     :param str ver_uid: Version UID.
     """
+    rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
         gr = rsrc_api.get_version(uid, ver_uid)
     except ResourceNotExistsError as e:
@@ -203,7 +223,7 @@ def get_version(uid, ver_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_graph(gr))
+        return _negotiate_content(g.tbox.globalize_graph(gr), rdf_mimetype)
 
 
 @ldp.route('/<path:parent_uid>', methods=['POST'], strict_slashes=False)
@@ -225,7 +245,7 @@ def post_resource(parent_uid):
     handling, disposition = set_post_put_params()
     stream, mimetype = _bistream_from_req()
 
-    if LdpFactory.is_rdf_parsable(mimetype):
+    if mimetype in rdf_parsable_mimetypes:
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
         rdf_data = g.tbox.localize_payload(global_rdf)
@@ -277,7 +297,7 @@ def put_resource(uid):
     handling, disposition = set_post_put_params()
     stream, mimetype = _bistream_from_req()
 
-    if LdpFactory.is_rdf_parsable(mimetype):
+    if mimetype in rdf_parsable_mimetypes:
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
         rdf_data = g.tbox.localize_payload(global_rdf)
@@ -459,7 +479,19 @@ def patch_version(uid, ver_uid):
 
 ## PRIVATE METHODS ##
 
-def _negotiate_content(gr, headers=None, **vw_kwargs):
+def _best_rdf_mimetype():
+    """
+    Check if any of the 'Accept' header values provided is a RDF parsable
+    format.
+    """
+    for accept in request.accept_mimetypes:
+        mimetype = accept[0]
+        if mimetype in rdf_parsable_mimetypes:
+            return mimetype
+    return None
+
+
+def _negotiate_content(gr, rdf_mimetype, headers=None, **vw_kwargs):
     """
     Return HTML or serialized RDF depending on accept headers.
     """
@@ -470,7 +502,9 @@ def _negotiate_content(gr, headers=None, **vw_kwargs):
     else:
         for p in vw_blacklist:
             gr.remove((None, p, None))
-        return (gr.serialize(format='turtle'), headers)
+        return Response(
+                gr.serialize(format=rdf_mimetype), 200, headers,
+                mimetype=rdf_mimetype)
 
 
 def _bistream_from_req():
@@ -532,17 +566,6 @@ def set_post_put_params():
         disposition = None
 
     return handling, disposition
-
-
-def is_accept_hdr_rdf_parsable():
-    """
-    Check if any of the 'Accept' header values provided is a RDF parsable
-    format.
-    """
-    for mimetype in request.accept_mimetypes.values():
-        if LdpFactory.is_rdf_parsable(mimetype):
-            return True
-    return False
 
 
 def parse_repr_options(retr_opts):
