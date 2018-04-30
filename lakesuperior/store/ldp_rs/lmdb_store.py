@@ -930,8 +930,8 @@ class LmdbStore(Store):
 
         If more than one term is provided, the keys are concatenated.
 
-        :rtype: memoryview
-        :return: Keys stored for the term(s)
+        :rtype: memoryview or None
+        :return: Keys stored for the term(s) or None if not found.
         """
         if not isinstance(obj, list) and not isinstance(obj, tuple):
             obj = (obj,)
@@ -1000,7 +1000,7 @@ class LmdbStore(Store):
                 if o is not None:
                     with self.cur('spo:c') as cur:
                         tkey = self._to_key(triple_pattern)
-                        if cur.set_key(tkey):
+                        if tkey:
                             yield tkey
                             return
                         else:
