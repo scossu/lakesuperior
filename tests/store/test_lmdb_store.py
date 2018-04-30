@@ -138,9 +138,21 @@ class TestBasicOps:
             assert _clean(res3) == _clean(res2)
 
 
-    def test_triple_no_match(self, store):
+    def test_triple_match_3bound(self, store):
         '''
-        Test various mismatches.
+        Test triple patterns matching 3 bound terms (exact match).
+        '''
+        with TxnManager(store) as txn:
+            pattern = (
+                URIRef('urn:test:s'), URIRef('urn:test:p'),
+                URIRef('urn:test:o'))
+            res1 = set(store.triples(pattern))
+            assert _clean(res1) == {pattern}
+
+
+    def test_triple_no_match_1bound(self, store):
+        '''
+        Test empty matches with 1 bound term.
         '''
         with TxnManager(store, True) as txn:
             store.add((
@@ -152,6 +164,19 @@ class TestBasicOps:
             res1 = set(store.triples((None, None, None)))
             assert len(res1) == 3
 
+            res1 = set(store.triples((URIRef('urn:test:s2'), None, None)))
+            res2 = set(store.triples((None, URIRef('urn:test:p4'), None)))
+            res3 = set(store.triples((None, None, URIRef('urn:test:o4'))))
+
+            assert len(res1) == len(res2) == len(res3) == 0
+
+
+
+    def test_triple_no_match_2bound(self, store):
+        '''
+        Test empty matches with 2 bound terms.
+        '''
+        with TxnManager(store, True) as txn:
             res1 = set(store.triples(
                 (URIRef('urn:test:s2'), URIRef('urn:test:p'), None)))
             res2 = set(store.triples(
@@ -160,6 +185,18 @@ class TestBasicOps:
                 (None, URIRef('urn:test:p3'), URIRef('urn:test:o2'))))
 
             assert len(res1) == len(res2) == len(res3) == 0
+
+
+    def test_triple_no_match_3bound(self, store):
+        '''
+        Test empty matches with 3 bound terms.
+        '''
+        with TxnManager(store, True) as txn:
+            res1 = set(store.triples((
+                URIRef('urn:test:s2'), URIRef('urn:test:p3'),
+                URIRef('urn:test:o2'))))
+
+            assert len(res1) == 0
 
 
     def test_remove(self, store):
