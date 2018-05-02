@@ -787,12 +787,6 @@ class Ldpr(metaclass=ABCMeta):
         for t in self.base_types:
             self.provided_imr.add((self.uri, RDF.type, t))
 
-        # Message digest.
-        cksum = self.tbox.rdf_cksum(self.provided_imr)
-        self.provided_imr.set((
-            self.uri, nsc['premis'].hasMessageDigest,
-            URIRef('urn:sha1:{}'.format(cksum))))
-
         # Create and modify timestamp.
         if create:
             self.provided_imr.set((

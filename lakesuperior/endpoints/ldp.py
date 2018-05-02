@@ -1,6 +1,7 @@
 import logging
 import pdb
 
+from base64 import b64encode
 from collections import defaultdict
 from io import BytesIO
 from pprint import pformat
@@ -159,7 +160,7 @@ def get_resource(uid, out_fmt=None):
                     'rdf'
                     if isinstance(rsrc, LdpRs) or rdf_mimetype is not None
                     else 'non_rdf')
-        out_headers.update(_headers_from_metadata(rsrc))
+        out_headers.update(_headers_from_metadata(rsrc, out_fmt))
         uri = g.tbox.uid_to_uri(uid)
         if out_fmt == 'rdf':
             if locals().get('rdf_mimetype', None) is None:
@@ -176,12 +177,9 @@ def get_resource(uid, out_fmt=None):
             rsp = make_response(send_file(
                     rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename,
-                    mimetype=rsrc.mimetype))
-            logger.debug('Out headers: {}'.format(out_headers))
+                    mimetype=rsrc.mimetype), 200, out_headers)
             rsp.headers.add('Link',
                     '<{}/fcr:metadata>; rel="describedby"'.format(uri))
-            for link in out_headers['Link']:
-                rsp.headers.add('Link', link)
             return rsp
 
 
@@ -620,7 +618,7 @@ def parse_repr_options(retr_opts):
     return imr_options
 
 
-def _headers_from_metadata(rsrc):
+def _headers_from_metadata(rsrc, out_fmt):
     """
     Create a dict of headers from a metadata graph.
 
@@ -629,14 +627,20 @@ def _headers_from_metadata(rsrc):
     """
     out_headers = defaultdict(list)
 
-    digest = rsrc.metadata.value(nsc['premis'].hasMessageDigest)
-    if digest:
-        etag = digest.identifier.split(':')[-1]
+    digest = rsrc.metadata.value(rsrc.uri, nsc['premis'].hasMessageDigest)
+    # Only add ETag and digest if output is not RDF.
+    if digest and out_fmt == 'non_rdf':
+        digest_components = digest.split(':')
+        cksum_hex = digest_components[-1]
+        cksum = bytearray.fromhex(cksum_hex)
+        digest_algo = digest_components[-2]
         etag_str = (
-                'W/"{}"'.format(etag)
+                'W/"{}"'.format(cksum_hex)
                 if nsc['ldp'].RDFSource in rsrc.ldp_types
-                else etag)
+                else cksum_hex)
         out_headers['ETag'] = etag_str,
+        out_headers['Digest'] = '{}={}'.format(
+                digest_algo.upper(), b64encode(cksum).decode('ascii'))
 
     last_updated_term = rsrc.metadata.value(nsc['fcrepo'].lastModified)
     if last_updated_term:
@@ -644,8 +648,7 @@ def _headers_from_metadata(rsrc):
             .format('ddd, D MMM YYYY HH:mm:ss Z')
 
     for t in rsrc.ldp_types:
-        out_headers['Link'].append(
-                '{};rel="type"'.format(t.n3()))
+        out_headers['Link'].append('{};rel="type"'.format(t.n3()))
 
     mimetype = rsrc.metadata.value(nsc['ebucore'].hasMimeType)
     if mimetype:
