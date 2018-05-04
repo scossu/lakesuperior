@@ -13,7 +13,7 @@ from codecs import open
 from glob import glob
 from os import path
 
-here = path.abspath(path.dirname(__file__))
+import lakesuperior
 
 # ``pytest_runner`` is referenced in ``setup_requires``.
 # See https://github.com/pytest-dev/pytest-runner#conditional-requirement
@@ -22,17 +22,14 @@ pytest_runner = ['pytest-runner'] if needs_pytest else []
 
 
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+readme_fpath = path.join(path.dirname(lakesuperior.basedir), 'README.rst')
+with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
-
-# Read release number.
-with open(path.realpath(path.join(here, 'VERSION'))) as fh:
-    version = fh.readlines()[0]
 
 
 setup(
     name='lakesuperior',
-    version=version,
+    version=lakesuperior.release,
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
