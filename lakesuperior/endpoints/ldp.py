@@ -618,7 +618,7 @@ def parse_repr_options(retr_opts):
     return imr_options
 
 
-def _headers_from_metadata(rsrc, out_fmt):
+def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
     """
     Create a dict of headers from a metadata graph.
 
