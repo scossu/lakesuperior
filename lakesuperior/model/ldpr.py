@@ -3,12 +3,14 @@ import re
 
 from abc import ABCMeta
 from collections import defaultdict
+from threading import Thread
 from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
 
 from rdflib import Graph, URIRef, Literal
+from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
 from lakesuperior import env, thread_env
@@ -273,6 +275,42 @@ class Ldpr(metaclass=ABCMeta):
                 out_gr.add(t)
 
         return out_gr
+
+
+    @property
+    def canonical_graph(self):
+        """
+        "Canonical" representation of a resource.
+
+        TODO: There is no agreement yet on what a "canonical" representation
+        of an LDP resource should be. This is a PoC method that assumes such
+        representation to include all triples that would be retrieved with a
+        GET request to the resource, including the ones with a different
+        subject than the resource URI.
+
+        :rtype: rdflib.compare.IsomorphicGraph
+        """
+        # First verify that the instance IMR options correspond to the
+        # "canonical" representation.
+        if (
+                self.imr_options.get('incl_srv_mgd')
+                and not self.imr_options.get('incl_inbound')
+                and imr_options.get('incl_children')):
+            gr = self.imr
+        else:
+            gr = rdfly.get_imr(
+                    self.uid, incl_inbound=False, incl_children=True)
+        return to_isomorphic(gr)
+
+
+    @property
+    def digest(self):
+        """
+        Cryptographic digest of a resource.
+
+        :rtype: str
+        """
+        return self.canonical_graph.graph_digest()
 
 
     @property
@@ -706,9 +744,14 @@ class Ldpr(metaclass=ABCMeta):
             delete) or None. In the latter case, no notification is sent.
         :type ev_type: str or None
         :param set remove_trp: Triples to be removed.
+            # Add metadata.
         :param set add_trp: Triples to be added.
         """
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+
+        # Calculate checksum (asynchronously).
+        Thread(target=self._update_checksum).run()
+
         # Clear IMR buffer.
         if hasattr(self, '_imr'):
             delattr(self, '_imr')
@@ -722,6 +765,14 @@ class Ldpr(metaclass=ABCMeta):
                 env.app_globals.config['application'].get('messaging')):
             logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
+
+
+    def _update_checksum(self):
+        """
+        Save the resource checksum in a dedicated metadata store.
+        """
+        pass
+
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):

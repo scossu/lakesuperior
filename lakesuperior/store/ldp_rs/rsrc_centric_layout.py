@@ -251,7 +251,7 @@ class RsrcCentricLayout:
 
     def get_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
-                incl_children=True, embed_children=False, **kwargs):
+                incl_children=True, **kwargs):
         """
         See base_rdf_layout.get_imr.
         """
