@@ -1,12 +1,11 @@
-import hashlib
+from os import path
 
-import lmdb
+from lakesuperior.store.base_lmdb_store import BaseLmdbStore
 
 from lakesuperior import env
 
 
-
-class MetadataStore:
+class MetadataStore(BaseLmdbStore):
     """
     LMDB store for RDF metadata.
 
@@ -16,34 +15,13 @@ class MetadataStore:
     resource URIs.
     """
 
-    db_labels = (
-        'checksums',
-    )
+    db_labels = ('checksums',)
     """
     At the moment only ``checksums`` is implemented. It is a registry of
     LDP resource graphs, indicated in the key by their UID, and their
     cryptographic hashes.
     """
 
-    def __init__(self, create=True):
-        """
-        Initialize DBs.
-        """
-        path = env.app_globals.config['ldp_rs']['location']
-        if not exists(path) and create is True:
-            makedirs(path)
-
-        if getattr(env, 'wsgi_options', False):
-            self._workers = env.wsgi_options['workers']
-        else:
-            self._workers = 1
-        logger.info('Max LMDB readers: {}'.format(self._workers))
-
-        self.data_env = lmdb.open(
-                path + '/metadata', subdir=False, create=create,
-                map_size=1024 ** 3 * 10, max_dbs=len(self.dbs),
-                max_spare_txns=self._workers)
-
-        self.dbs = {
-                label: self.env.open_db(label.encode('ascii'), create=create)
-                for label in db_labels}
+    path = path.join(
+        env.app_globals.config['application']['store']['ldp_rs']['location'],
+        'metadata')

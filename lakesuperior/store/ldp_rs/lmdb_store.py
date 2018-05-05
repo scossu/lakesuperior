@@ -37,14 +37,15 @@ class TxnManager(ContextDecorator):
     """
     Handle ACID transactions with an LmdbStore.
 
-    Wrap this within a ``with`` statement:
+    Wrap this within a ``with`` statement::
 
-    >>> with TxnManager(store, True):
-    ...     # Do something with the database
-    >>>
+        >>> with TxnManager(store, True):
+        ...     # Do something with the database
+        >>>
 
     The transaction will be opened and handled automatically.
     """
+
     def __init__(self, store, write=False):
         """
         Begin and close a transaction in a store.
