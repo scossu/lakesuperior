@@ -26,6 +26,7 @@ from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.model.ldpr import Ldpr
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 from lakesuperior.toolbox import Toolbox
 
 
@@ -328,6 +329,9 @@ def put_resource(uid):
     else:
         rsp_code = 204
         rsp_body = ''
+    rsp_headers['Digest'] = 'SHA256={}'.format(
+            MetadataStore().get_checksum(nsc['fcres'][uid]).decode())
+
     return rsp_body, rsp_code, rsp_headers
 
 
@@ -359,6 +363,8 @@ def patch_resource(uid, is_metadata=False):
         return str(e), 415
     else:
         rsp_headers.update(_headers_from_metadata(rsrc))
+        rsp_headers['Digest'] = 'SHA256={}'.format(
+                MetadataStore().get_checksum(rsrc.uid).decode())
         return '', 204, rsp_headers
 
 
