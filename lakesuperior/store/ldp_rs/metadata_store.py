@@ -25,3 +25,38 @@ class MetadataStore(BaseLmdbStore):
     path = path.join(
         env.app_globals.config['application']['store']['ldp_rs']['location'],
         'metadata')
+
+
+    def get_checksum(self, uri):
+        """
+        Get the checksum of a resource.
+
+        :param str uri: Resource URI (``info:fcres...``).
+        :rtype: bytes
+        """
+        with self.cur(index='checksums') as cur:
+            cksum = cur.get(uri.encode('utf-8'))
+
+        return cksum
+
+
+    def update_checksum(self, uri, cksum):
+        """
+        Update the stored checksum of a resource.
+
+        :param str uri: Resource URI (``info:fcres...``).
+        :param bytes cksum: Checksum bytestring.
+        """
+        with self.cur(index='checksums', write=True) as cur:
+            cur.put(uri.encode('utf-8'), cksum)
+
+
+    def delete_checksum(self, uri):
+        """
+        Delete the stored checksum of a resource.
+
+        :param str uri: Resource URI (``info:fcres...``).
+        """
+        with self.cur(index='checksums', write=True) as cur:
+            if cur.set_key(uri.encode('utf-8')):
+                cur.delete()

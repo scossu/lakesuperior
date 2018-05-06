@@ -123,6 +123,8 @@ class BaseLmdbStore(metaclass=ABCMeta):
         Transaction context manager.
 
         :param bool write: Whether a write transaction is to be opened.
+
+        :rtype: lmdb.Transaction
         """
         try:
             txn = self.dbenv.begin(write=write)
@@ -152,12 +154,18 @@ class BaseLmdbStore(metaclass=ABCMeta):
 
         :rtype: lmdb.Cursor
         """
-        if txn is None:
-            txn = self.txn(write=write)
         db = None if index is None else self.dbs[index]
-        with txn as _txn:
-            try:
+
+        if txn is None:
+            with self.txn(write=write) as _txn:
                 cur = _txn.cursor(db)
                 yield cur
-            finally:
                 cur.close()
+        else:
+            try:
+                cur = txn.cursor(db)
+                yield cur
+            finally:
+                if cur:
+                    cur.close()
+                    cur = None

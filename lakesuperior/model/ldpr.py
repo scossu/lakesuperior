@@ -23,6 +23,7 @@ from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
+from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 from lakesuperior.toolbox import Toolbox
 
 
@@ -293,9 +294,10 @@ class Ldpr(metaclass=ABCMeta):
         # First verify that the instance IMR options correspond to the
         # "canonical" representation.
         if (
-                self.imr_options.get('incl_srv_mgd')
-                and not self.imr_options.get('incl_inbound')
-                and imr_options.get('incl_children')):
+                hasattr(self, '_imr_options')
+                and self._imr_options.get('incl_srv_mgd')
+                and not self._imr_options.get('incl_inbound')
+                and self._imr_options.get('incl_children')):
             gr = self.imr
         else:
             gr = rdfly.get_imr(
@@ -304,13 +306,21 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @property
-    def digest(self):
+    def rsrc_digest(self):
         """
         Cryptographic digest of a resource.
 
         :rtype: str
         """
-        return self.canonical_graph.graph_digest()
+        # This RDFLib function seems to be based on an in-depth study of the
+        # topic of graph checksums; however the output is puzzling because it
+        # returns **65** hexadecimal characters, which are one too many to be
+        # a SHA256 and an odd number that cannot be converted to bytes.
+        # Therefore the string version is being converted to bytes for
+        # storage. See https://github.com/RDFLib/rdflib/issues/825
+        digest = self.canonical_graph.graph_digest()
+
+        return format(digest, 'x').encode('ascii')
 
 
     @property
@@ -750,7 +760,10 @@ class Ldpr(metaclass=ABCMeta):
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
         # Calculate checksum (asynchronously).
-        Thread(target=self._update_checksum).run()
+        cksum_action = (
+                self._delete_checksum if ev_type == RES_DELETED
+                else self._update_checksum)
+        Thread(target=cksum_action).run()
 
         # Clear IMR buffer.
         if hasattr(self, '_imr'):
@@ -771,8 +784,14 @@ class Ldpr(metaclass=ABCMeta):
         """
         Save the resource checksum in a dedicated metadata store.
         """
-        pass
+        MetadataStore().update_checksum(self.uri, self.rsrc_digest)
 
+
+    def _delete_checksum(self):
+        """
+        Delete the resource checksum from the metadata store.
+        """
+        MetadataStore().delete_checksum(self.uri)
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):

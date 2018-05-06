@@ -13,6 +13,7 @@ from lakesuperior.exceptions import (
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 
 
 @pytest.fixture(scope='module')
@@ -454,6 +455,39 @@ class TestResourceCRUD:
                 rsrc_api.get('{}/child{}'.format(uid, i))
             with pytest.raises(ResourceNotExistsError):
                 rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+
+    def test_checksum(self):
+        """
+        Verify that a checksum is created and updated appropriately.
+        """
+        mds = MetadataStore()
+        root_cksum1 = mds.get_checksum(nsc['fcres']['/'])
+        uid = '/test_checksum'
+        rsrc_api.create_or_replace(uid)
+
+        mds = MetadataStore()
+        root_cksum2 = mds.get_checksum(nsc['fcres']['/'])
+        cksum1 = mds.get_checksum(nsc['fcres'][uid])
+
+        assert len(cksum1)
+        assert root_cksum1 != root_cksum2
+
+        rsrc_api.update(
+                uid,
+                'DELETE {} INSERT {<> a <http://ex.org/ns#Hello> .} WHERE {}')
+
+        mds = MetadataStore()
+        cksum2 = mds.get_checksum(nsc['fcres'][uid])
+
+        assert cksum1 != cksum2
+
+        rsrc_api.delete(uid)
+
+        mds = MetadataStore()
+        cksum3 = mds.get_checksum(nsc['fcres'][uid])
+
+        assert cksum3 is None
 
 
 
