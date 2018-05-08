@@ -911,7 +911,6 @@ class TestDigest:
         resp_get = self.client.get('/ldp/test_digest_put')
         assert 'Digest' in resp_get.headers
         assert 'ETag' in resp_get.headers
-        import pdb; pdb.set_trace()
         assert (
                 b64encode(bytes.fromhex(
                     resp_get.headers['ETag'].replace('W/', '')
