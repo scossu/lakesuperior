@@ -3,12 +3,15 @@ import re
 
 from abc import ABCMeta
 from collections import defaultdict
+from hashlib import sha256
+from threading import Thread
 from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
 
 from rdflib import Graph, URIRef, Literal
+from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
 from lakesuperior import env, thread_env
@@ -21,6 +24,7 @@ from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
+from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 from lakesuperior.toolbox import Toolbox
 
 
@@ -273,6 +277,50 @@ class Ldpr(metaclass=ABCMeta):
                 out_gr.add(t)
 
         return out_gr
+
+
+    @property
+    def canonical_graph(self):
+        """
+        "Canonical" representation of a resource.
+
+        TODO: There is no agreement yet on what a "canonical" representation
+        of an LDP resource should be. This is a PoC method that assumes such
+        representation to include all triples that would be retrieved with a
+        GET request to the resource, including the ones with a different
+        subject than the resource URI.
+
+        :rtype: rdflib.compare.IsomorphicGraph
+        """
+        # First verify that the instance IMR options correspond to the
+        # "canonical" representation.
+        if (
+                hasattr(self, '_imr_options')
+                and self._imr_options.get('incl_srv_mgd')
+                and not self._imr_options.get('incl_inbound')
+                and self._imr_options.get('incl_children')):
+            gr = self.imr
+        else:
+            gr = rdfly.get_imr(
+                    self.uid, incl_inbound=False, incl_children=True)
+        return to_isomorphic(gr)
+
+
+    @property
+    def rsrc_digest(self):
+        """
+        Cryptographic digest (SHA256) of a resource.
+
+        :rtype: bytes
+        """
+        # This RDFLib function seems to be based on an in-depth study of the
+        # topic of graph checksums; however the output is odd because it
+        # returns an arbitrarily long int that cannot be converted to bytes.
+        # The output is being converted to a proper # SHA256 checksum. This is
+        # a temporary fix. See https://github.com/RDFLib/rdflib/issues/825
+        checksum = self.canonical_graph.graph_digest()
+
+        return sha256(str(checksum).encode('ascii')).digest()
 
 
     @property
@@ -706,9 +754,17 @@ class Ldpr(metaclass=ABCMeta):
             delete) or None. In the latter case, no notification is sent.
         :type ev_type: str or None
         :param set remove_trp: Triples to be removed.
+            # Add metadata.
         :param set add_trp: Triples to be added.
         """
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
+
+        # Calculate checksum (asynchronously).
+        cksum_action = (
+                self._delete_checksum if ev_type == RES_DELETED
+                else self._update_checksum)
+        Thread(target=cksum_action).run()
+
         # Clear IMR buffer.
         if hasattr(self, '_imr'):
             delattr(self, '_imr')
@@ -722,6 +778,20 @@ class Ldpr(metaclass=ABCMeta):
                 env.app_globals.config['application'].get('messaging')):
             logger.debug('Enqueuing message for {}'.format(self.uid))
             self._enqueue_msg(ev_type, remove_trp, add_trp)
+
+
+    def _update_checksum(self):
+        """
+        Save the resource checksum in a dedicated metadata store.
+        """
+        MetadataStore().update_checksum(self.uri, self.rsrc_digest)
+
+
+    def _delete_checksum(self):
+        """
+        Delete the resource checksum from the metadata store.
+        """
+        MetadataStore().delete_checksum(self.uri)
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):

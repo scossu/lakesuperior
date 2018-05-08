@@ -1,6 +1,7 @@
 import logging
 
 from collections import defaultdict
+from hashlib import sha256
 from itertools import chain
 from os import path
 from string import Template
@@ -9,6 +10,7 @@ from urllib.parse import urldefrag
 import arrow
 
 from rdflib import Dataset, Graph, Literal, URIRef, plugin
+from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
 from rdflib.resource import Resource
@@ -19,6 +21,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
         srv_mgd_predicates, srv_mgd_types
+from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
 from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
@@ -197,6 +200,8 @@ class RsrcCentricLayout:
         """
         Delete all graphs and insert the basic triples.
         """
+        from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
+
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
@@ -211,6 +216,11 @@ class RsrcCentricLayout:
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
+            gr = self.get_imr('/', incl_inbound=False, incl_children=True)
+
+        checksum = to_isomorphic(gr).graph_digest()
+        digest = sha256(str(checksum).encode('ascii')).digest()
+        MetadataStore().update_checksum(ROOT_RSRC_URI, digest)
 
 
     def get_raw(self, uri, ctx=None):
@@ -251,7 +261,7 @@ class RsrcCentricLayout:
 
     def get_imr(
                 self, uid, ver_uid=None, strict=True, incl_inbound=False,
-                incl_children=True, embed_children=False, **kwargs):
+                incl_children=True, **kwargs):
         """
         See base_rdf_layout.get_imr.
         """
