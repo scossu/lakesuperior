@@ -234,7 +234,7 @@ def post_resource(parent_uid):
 
     Add a new resource in a new URI.
     """
-    out_headers = std_headers
+    rsp_headers = std_headers
     try:
         slug = request.headers['Slug']
         logger.debug('Slug: {}'.format(slug))
@@ -274,9 +274,10 @@ def post_resource(parent_uid):
         hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
                 .format(uri)
 
-    out_headers.update(hdr)
+    rsp_headers.update(hdr)
+    rsp_headers.update(_digest_headers(nsc['fcres'][uid]))
 
-    return uri, 201, out_headers
+    return uri, 201, rsp_headers
 
 
 @ldp.route('/<path:uid>', methods=['PUT'], strict_slashes=False)
@@ -329,8 +330,7 @@ def put_resource(uid):
     else:
         rsp_code = 204
         rsp_body = ''
-    rsp_headers['Digest'] = 'SHA256={}'.format(
-            MetadataStore().get_checksum(nsc['fcres'][uid]).decode())
+    rsp_headers.update(_digest_headers(nsc['fcres'][uid]))
 
     return rsp_body, rsp_code, rsp_headers
 
@@ -363,8 +363,6 @@ def patch_resource(uid, is_metadata=False):
         return str(e), 415
     else:
         rsp_headers.update(_headers_from_metadata(rsrc))
-        rsp_headers['Digest'] = 'SHA256={}'.format(
-                MetadataStore().get_checksum(rsrc.uid).decode())
         return '', 204, rsp_headers
 
 
@@ -631,7 +629,7 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
     :param lakesuperior.model.ldpr.Ldpr rsrc: Resource to extract metadata
         from.
     """
-    out_headers = defaultdict(list)
+    rsp_headers = defaultdict(list)
 
     digest = rsrc.metadata.value(rsrc.uri, nsc['premis'].hasMessageDigest)
     # Only add ETag and digest if output is not RDF.
@@ -644,21 +642,38 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
                 'W/"{}"'.format(cksum_hex)
                 if nsc['ldp'].RDFSource in rsrc.ldp_types
                 else cksum_hex)
-        out_headers['ETag'] = etag_str,
-        out_headers['Digest'] = '{}={}'.format(
+        rsp_headers['ETag'] = etag_str,
+        rsp_headers['Digest'] = '{}={}'.format(
                 digest_algo.upper(), b64encode(cksum).decode('ascii'))
+    else:
+        rsp_headers.update(_digest_headers(rsrc.uri))
+
 
     last_updated_term = rsrc.metadata.value(nsc['fcrepo'].lastModified)
     if last_updated_term:
-        out_headers['Last-Modified'] = arrow.get(last_updated_term)\
+        rsp_headers['Last-Modified'] = arrow.get(last_updated_term)\
             .format('ddd, D MMM YYYY HH:mm:ss Z')
 
     for t in rsrc.ldp_types:
-        out_headers['Link'].append('{};rel="type"'.format(t.n3()))
+        rsp_headers['Link'].append('{};rel="type"'.format(t.n3()))
 
     mimetype = rsrc.metadata.value(nsc['ebucore'].hasMimeType)
     if mimetype:
-        out_headers['Content-Type'] = mimetype
+        rsp_headers['Content-Type'] = mimetype
 
-    return out_headers
+    return rsp_headers
+
+
+def _digest_headers(uri):
+    """
+    Get an LDP-RS resource digest and create header tags.
+
+    The ``Digest`` and ``ETag`` headers are created.
+    """
+    headers = {}
+    digest = MetadataStore().get_checksum(uri).hex()
+    headers['Digest'] = 'SHA256={}'.format(digest)
+    headers['ETag'] = 'W/{}'.format(digest)
+
+    return headers
 

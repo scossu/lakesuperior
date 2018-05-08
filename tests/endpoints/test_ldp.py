@@ -876,6 +876,61 @@ class TestPrefHeader:
 
 @pytest.mark.usefixtures('client_class')
 @pytest.mark.usefixtures('db')
+class TestDigest:
+    """
+    Test digest and ETag handling.
+    """
+    def test_digest_post(self):
+        """
+        Test ``Digest`` and ``ETag`` headers on resource POST.
+        """
+        resp = self.client.post('/ldp/')
+        assert 'Digest' in resp.headers
+        assert 'ETag' in resp.headers
+        assert (
+                resp.headers['ETag'].replace('W/', '') ==
+                resp.headers['Digest'].replace('SHA256=', ''))
+
+
+    def test_digest_put(self):
+        """
+        Test ``Digest`` and ``ETag`` headers on resource PUT.
+        """
+        resp_put = self.client.put('/ldp/test_digest_put')
+        assert 'Digest' in resp_put.headers
+        assert 'ETag' in resp_put.headers
+        assert (
+                resp_put.headers['ETag'].replace('W/', '') ==
+                resp_put.headers['Digest'].replace('SHA256=', ''))
+
+        resp_get = self.client.get('/ldp/test_digest_put')
+        assert 'Digest' in resp_get.headers
+        assert 'ETag' in resp_get.headers
+        assert (
+                resp_get.headers['ETag'].replace('W/', '') ==
+                resp_get.headers['Digest'].replace('SHA256=', ''))
+
+
+    def test_digest_patch(self):
+        """
+        Verify that the digest and ETag change on resource change.
+        """
+        path = '/ldp/test_digest_patch'
+        self.client.put(path)
+        rsp1 = self.client.get(path)
+
+        self.client.patch(
+                path, data=b'DELETE {} INSERT {<> a <http://ex.org/Test> .} '
+                b'WHERE {}',
+                headers={'Content-Type': 'application/sparql-update'})
+        rsp2 = self.client.get(path)
+
+        assert rsp1.headers['ETag'] != rsp2.headers['ETag']
+        assert rsp1.headers['Digest'] != rsp2.headers['Digest']
+
+
+@pytest.mark.usefixtures('client_class')
+@pytest.mark.usefixtures('db')
 class TestVersion:
     """
     Test version creation, retrieval and deletion.

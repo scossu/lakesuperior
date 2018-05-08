@@ -20,6 +20,19 @@ class BaseLmdbStore(metaclass=ABCMeta):
     This interface can be subclassed for specific storage back ends. It is
     *not* used for :py:class:`~lakesuperior.store.ldp_rs.lmdb_store.LmdbStore`
     which has a more complex lifecycle and setup.
+
+    Example usage::
+
+        >>> class MyStore(BaseLmdbStore):
+        ...     path = '/base/store/path'
+        ...     db_labels = ('db1', 'db2')
+        ...
+        >>> ms = MyStore()
+        >>> # "with" wraps the operation in a transaction.
+        >>> with ms.cur(index='db1', write=True):
+        ...     cur.put(b'key1', b'val1')
+        True
+
     """
 
     path = None

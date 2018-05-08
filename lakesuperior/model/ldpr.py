@@ -3,6 +3,7 @@ import re
 
 from abc import ABCMeta
 from collections import defaultdict
+from hashlib import sha256
 from threading import Thread
 from urllib.parse import urldefrag
 from uuid import uuid4
@@ -308,19 +309,18 @@ class Ldpr(metaclass=ABCMeta):
     @property
     def rsrc_digest(self):
         """
-        Cryptographic digest of a resource.
+        Cryptographic digest (SHA256) of a resource.
 
-        :rtype: str
+        :rtype: bytes
         """
         # This RDFLib function seems to be based on an in-depth study of the
-        # topic of graph checksums; however the output is puzzling because it
-        # returns **65** hexadecimal characters, which are one too many to be
-        # a SHA256 and an odd number that cannot be converted to bytes.
-        # Therefore the string version is being converted to bytes for
-        # storage. See https://github.com/RDFLib/rdflib/issues/825
-        digest = self.canonical_graph.graph_digest()
+        # topic of graph checksums; however the output is odd because it
+        # returns an arbitrarily long int that cannot be converted to bytes.
+        # The output is being converted to a proper # SHA256 checksum. This is
+        # a temporary fix. See https://github.com/RDFLib/rdflib/issues/825
+        checksum = self.canonical_graph.graph_digest()
 
-        return format(digest, 'x').encode('ascii')
+        return sha256(str(checksum).encode('ascii')).digest()
 
 
     @property
