@@ -2,6 +2,7 @@ import pdb
 import pytest
 import uuid
 
+from base64 import b64encode
 from hashlib import sha1
 
 from flask import g
@@ -888,7 +889,9 @@ class TestDigest:
         assert 'Digest' in resp.headers
         assert 'ETag' in resp.headers
         assert (
-                resp.headers['ETag'].replace('W/', '') ==
+                b64encode(bytes.fromhex(
+                    resp.headers['ETag'].replace('W/', '')
+                    )).decode('ascii') ==
                 resp.headers['Digest'].replace('SHA256=', ''))
 
 
@@ -900,14 +903,19 @@ class TestDigest:
         assert 'Digest' in resp_put.headers
         assert 'ETag' in resp_put.headers
         assert (
-                resp_put.headers['ETag'].replace('W/', '') ==
+                b64encode(bytes.fromhex(
+                    resp_put.headers['ETag'].replace('W/', '')
+                    )).decode('ascii') ==
                 resp_put.headers['Digest'].replace('SHA256=', ''))
 
         resp_get = self.client.get('/ldp/test_digest_put')
         assert 'Digest' in resp_get.headers
         assert 'ETag' in resp_get.headers
+        import pdb; pdb.set_trace()
         assert (
-                resp_get.headers['ETag'].replace('W/', '') ==
+                b64encode(bytes.fromhex(
+                    resp_get.headers['ETag'].replace('W/', '')
+                    )).decode('ascii') ==
                 resp_get.headers['Digest'].replace('SHA256=', ''))
 
 

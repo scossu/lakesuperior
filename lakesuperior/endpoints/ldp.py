@@ -671,9 +671,9 @@ def _digest_headers(uri):
     The ``Digest`` and ``ETag`` headers are created.
     """
     headers = {}
-    digest = MetadataStore().get_checksum(uri).hex()
-    headers['Digest'] = 'SHA256={}'.format(digest)
-    headers['ETag'] = 'W/{}'.format(digest)
+    digest = MetadataStore().get_checksum(uri)
+    headers['Digest'] = 'SHA256={}'.format(b64encode(digest).decode('ascii'))
+    headers['ETag'] = 'W/{}'.format(digest.hex())
 
     return headers
 
