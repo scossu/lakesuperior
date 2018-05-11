@@ -2,6 +2,10 @@ import threading
 
 from os import path
 
+
+version = '1.0 alpha'
+release = '1.0.0a17'
+
 basedir = path.dirname(path.realpath(__file__))
 """
 Base directory for the module.

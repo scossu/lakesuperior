@@ -4,7 +4,7 @@ from os import path
 
 from flask import Blueprint, render_template
 
-from lakesuperior import basedir
+from lakesuperior import release
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,7 @@ main = Blueprint('main', __name__, template_folder='templates',
 @main.route('/', methods=['GET'])
 def index():
     """Homepage."""
-    version_fname = path.abspath(
-            path.join(path.dirname(basedir), 'VERSION'))
-    with open(version_fname) as fh:
-        version = fh.readlines()[0]
-    return render_template('index.html', version=version)
+    return render_template('index.html', release=release)
 
 
 @main.route('/debug', methods=['GET'])
