@@ -20,6 +20,13 @@ from libc cimport errno
 logger = logging.getLogger(__name__)
 
 
+# Global cdefs.
+
+cdef:
+    int rc
+    size_t i
+
+
 class LmdbError(Exception):
     pass
 
@@ -53,6 +60,7 @@ cdef class BaseLmdbStore:
     cdef:
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
+        unsigned int readers
 
     path = None
     """
@@ -73,13 +81,19 @@ cdef class BaseLmdbStore:
     :rtype: tuple(str)
     """
 
+    flags = 0
+    """
+    LMDB environment flags.
+
+    These are used with ``mdb_env_open``.
+    """
 
     options = {}
     """
     LMDB environment option overrides. Setting this is not required.
 
     See `LMDB documentation
-    <http://lmdb.readthedocs.io/en/release/#environment-class`_ for details
+    <http://lmdb.readthedocs.io/en/release/#environment-class`>_ for details
     on available options.
 
     Default values are available for the following options:
@@ -105,26 +119,56 @@ cdef class BaseLmdbStore:
                     'Could not create the database at {}. Error: {}'.format(
                         self.path, e))
 
-        options = self.options
-
-        if not options.get('max_dbs'):
-            options['max_dbs'] = len(self.db_labels)
-
-        if options.get('max_spare_txns', False):
-            options['max_spare_txns'] = (
-                    env.wsgi_options['workers']
-                    if getattr(env, 'wsgi_options', False)
-                    else 1)
-            logger.info('Max LMDB readers: {}'.format(
-                    options['max_spare_txns']))
-
-        #self._dbenv = lmdb.open(self.path, **options)
+        self._open_env()
 
         if self.db_labels is not None:
             self._dbs = {
                 label: self._dbenv.open_db(
                     label.encode('ascii'), create=create)
                 for label in self.db_labels}
+
+
+    def _open_env(self):
+        """
+        Open database environment.
+        """
+        max_dbs = self.options.get('max_dbs', len(self.db_labels))
+
+        rc = lmdb.mdb_env_create(&self.dbenv)
+        assert (
+                rc == lmdb.MDB_SUCCESS,
+                'Unknown error code creating DB environment: {}'.format(rc))
+
+        rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
+                'map_size', 1024 ** 2))
+
+        rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
+
+        self.readers = self.options.get('max_spare_txns', False)
+        if &self.readers is NULL:
+            self.readers = (
+                    env.wsgi_options['workers']
+                    if getattr(env, 'wsgi_options', False)
+                    else 1)
+            logger.info('Max LMDB readers: {}'.format(self.readers))
+        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
+
+        rc = lmdb.mdb_env_open(self.dbenv, self.path, self.flags, 0o644)
+        if rc == lmdb.MDB_VERSION_MISMATCH:
+            raise LmdbError('LMDB version mismatch.')
+        elif rc == lmdb.MDB_INVALID:
+            raise LmdbError('Environment file headers are corrupted.')
+        elif rc == errno.ENOENT:
+            raise LmdbError('No directory under this path.')
+        elif rc == errno.EACCES:
+            raise LmdbError(
+                    'Insufficient permissions to open the database file.')
+        elif rc == errno.EAGAIN:
+            raise LmdbError('The database has been locked by another process.')
+        elif rc != lmdb.MDB_SUCCESS:
+            raise LmdbError(
+                'Unknown error code opening the database: {}.'.format(rc))
+
 
 
     @property
