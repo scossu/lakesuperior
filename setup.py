@@ -7,11 +7,13 @@ Proudly ripped from https://github.com/pypa/sampleproject/blob/master/setup.py
 import sys
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import Extension, setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from glob import glob
 from os import path
+
+from Cython.Build import cythonize
 
 import lakesuperior
 
@@ -25,6 +27,21 @@ pytest_runner = ['pytest-runner'] if needs_pytest else []
 readme_fpath = path.join(path.dirname(lakesuperior.basedir), 'README.rst')
 with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
+
+extensions = [
+    Extension(
+        'base_lmdb_store',
+        [path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx')],
+        include_dirs = [
+            path.join(lakesuperior.basedir, 'include'),
+            path.join(lakesuperior.basedir, 'lib'),
+        ],
+        libraries = ['lmdb'],
+        library_dirs = [
+            path.join(lakesuperior.basedir, 'lib'),
+        ]
+    ),
+]
 
 
 setup(
@@ -40,6 +57,8 @@ setup(
     author='Stefano Cossu <@scossu>',
     #author_email='',  # Optional
     license='Apache License Version 2.0',
+
+    ext_modules = cythonize(extensions),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
