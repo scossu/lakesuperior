@@ -33,8 +33,7 @@ extensions = [
         'base_lmdb_store',
         [path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx')],
         include_dirs = [
-            path.join(lakesuperior.basedir, 'include'),
-            path.join(lakesuperior.basedir, 'lib'),
+            path.join(lakesuperior.basedir, 'cy_include'),
         ],
         libraries = ['lmdb'],
         library_dirs = [

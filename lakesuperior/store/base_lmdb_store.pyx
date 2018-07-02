@@ -1,5 +1,3 @@
-# distutils: include_dirs = ../include
-# distutils: library_dirs = ../lib, ../include
 # cython: language_level = 3
 
 import hashlib
@@ -11,7 +9,7 @@ from os import makedirs, path
 
 from lakesuperior import env
 
-cimport lmdb
+from lakesuperior.cy_include cimport cylmdb as lmdb
 
 from cpython.ref cimport PyObject
 from libc cimport errno
