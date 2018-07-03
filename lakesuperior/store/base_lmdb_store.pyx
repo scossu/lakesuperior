@@ -3,6 +3,7 @@
 import logging
 
 #from abc import ABCMeta, abstractmethod
+from collections import OrderedDdict
 from contextlib import contextmanager
 from os import makedirs, path
 
@@ -11,6 +12,7 @@ from lakesuperior import env
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
 from libc cimport errno
+from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 
 
 logger = logging.getLogger(__name__)
@@ -53,15 +55,16 @@ cdef class BaseLmdbStore:
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
         unsigned int readers
+        lmdb.MDB_dbi **dbis
 
     db_config = None
     """
     Configuration of databases in the environment.
 
-    This is a dict whose keys are the database labels and whose values are
-    LMDB flags for creating and opening the databases as per
-    <http://www.lmdb.tech/doc/group__mdb.html#gac08cad5b096925642ca359a6d6f0562a>_
-    . 
+    This is an OderedDict whose keys are the database labels and whose values
+    are LMDB flags for creating and opening the databases as per
+    `http://www.lmdb.tech/doc/group__mdb.html#gac08cad5b096925642ca359a6d6f0562a`_
+    .
 
     If the environment has only one database, do not override this value (i.e.
     leave it to ``None``).
@@ -112,11 +115,11 @@ cdef class BaseLmdbStore:
         self._open_env()
 
         if self.db_labels is not None:
+            self._init_dbis()
 
-            self._dbs = {
-                label: self._dbenv.open_db(
-                    label.encode('ascii'), create=create)
-                for label in self.db_labels}
+
+    def __dealloc__(self):
+        PyMem_Free(self.dbis)
 
 
     def _open_env(self):
@@ -144,7 +147,7 @@ cdef class BaseLmdbStore:
             logger.info('Max LMDB readers: {}'.format(self.readers))
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
 
-        rc = lmdb.mdb_env_open(self.dbenv, self.path, self.flags, 0o644)
+        rc = lmdb.mdb_env_open(self.dbenv, self.path, self.flags, 0o640)
         if rc == lmdb.MDB_VERSION_MISMATCH:
             raise LmdbError('LMDB version mismatch.')
         elif rc == lmdb.MDB_INVALID:
@@ -161,17 +164,27 @@ cdef class BaseLmdbStore:
                 'Unknown error code opening the database: {}.'.format(rc))
 
 
-
-    @property
-    def dbs(self):
+    cdef _init_dbis(self, create=False):
         """
-        List of databases in the environment, as LMDB handles.
-
-        These handles can be used to begin transactions.
-
-        :rtype: tuple
+        Initialize databases.
         """
-        return self._dbs
+        cdef lmdb.MDB_txn *txn
+
+        self.dbis = <lmdb.MDB_dbi **>PyMem_Malloc(
+                len(self.dbi_config) * sizeof(lmdb.MDB_dbi *))
+
+        create_flag = lmdb.MDB_CREATE if create else 0
+        txn_flags = 0 if create else lmdb.MDB_RDONLY
+        lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
+        try:
+            for dbname, dbflags in self.dbi_config.items():
+                lmdb.mdb_dbi_open(
+                        txn, dbname, dbflags | create_flag,
+                        self.dbis[self.dbi_config.index(dbname)])
+            lmdb.mdb_txn_commit(txn)
+        except:
+            lmdb.mdb_txn_abort(txn)
+            raise
 
 
     @contextmanager
@@ -212,8 +225,9 @@ cdef class BaseLmdbStore:
         cdef:
             lmdb.MDB_cursor *cur
             lmdb.MDB_txn *tmp_txn
+            void *dbi
 
-        db = None if index is None else self.dbs[index]
+        dbi = NULL if index is None else self.dbis[self.dbconfig.index(index)]
 
         if self.txn is NULL:
             _txn_is_tmp = True
@@ -222,7 +236,7 @@ cdef class BaseLmdbStore:
             _txn_is_tmp = False
 
         try:
-            cur = self._cur_open(<lmdb.MDB_txn *>txn, db)
+            cur = self._cur_open(<lmdb.MDB_txn *>txn, dbi)
             yield <object>cur
             self._cur_close(cur)
             if _txn_is_tmp:
