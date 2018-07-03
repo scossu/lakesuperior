@@ -1,9 +1,8 @@
 # cython: language_level = 3
 
-import hashlib
 import logging
 
-from abc import ABCMeta, abstractmethod
+#from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from os import makedirs, path
 
@@ -11,7 +10,6 @@ from lakesuperior import env
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
-from cpython.ref cimport PyObject
 from libc cimport errno
 
 
@@ -37,10 +35,6 @@ cdef class BaseLmdbStore:
     purpose and provides some convenience methods to wrap cursors and
     transactions into contexts.
 
-    This interface can be subclassed for specific storage back ends. It is
-    *not* used for :py:class:`~lakesuperior.store.ldp_rs.lmdb_store.LmdbStore`
-    which has a more complex lifecycle and setup.
-
     Example usage::
 
         >>> class MyStore(BaseLmdbStore):
@@ -60,23 +54,19 @@ cdef class BaseLmdbStore:
         lmdb.MDB_txn *txn
         unsigned int readers
 
-    path = None
+    db_config = None
     """
-    Filesystem path where the database environment is stored.
+    Configuration of databases in the environment.
 
-    This is a mandatory value for implementations.
-
-    :rtype: str
-    """
-
-    db_labels = None
-    """
-    List of databases in the DB environment by label.
+    This is a dict whose keys are the database labels and whose values are
+    LMDB flags for creating and opening the databases as per
+    <http://www.lmdb.tech/doc/group__mdb.html#gac08cad5b096925642ca359a6d6f0562a>_
+    . 
 
     If the environment has only one database, do not override this value (i.e.
     leave it to ``None``).
 
-    :rtype: tuple(str)
+    :rtype: dict or None
     """
 
     flags = 0
@@ -105,21 +95,24 @@ cdef class BaseLmdbStore:
     :rtype: dict
     """
 
-    def __init__(self, create=True):
+    def __init__(self, path, create=True):
         """
         Initialize DB environment and databases.
         """
-        if not path.exists(self.path) and create is True:
+        self.path = path
+
+        if not path.exists(path) and create is True:
             try:
-                makedirs(self.path)
+                makedirs(path, mode=0o750, exist_ok=True)
             except Exception as e:
                 raise IOError(
                     'Could not create the database at {}. Error: {}'.format(
-                        self.path, e))
+                        path, e))
 
         self._open_env()
 
         if self.db_labels is not None:
+
             self._dbs = {
                 label: self._dbenv.open_db(
                     label.encode('ascii'), create=create)
@@ -128,7 +121,7 @@ cdef class BaseLmdbStore:
 
     def _open_env(self):
         """
-        Open database environment.
+        Create and open database environment.
         """
         max_dbs = self.options.get('max_dbs', len(self.db_labels))
 
@@ -138,7 +131,7 @@ cdef class BaseLmdbStore:
                 'Unknown error code creating DB environment: {}'.format(rc))
 
         rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
-                'map_size', 1024 ** 2))
+                'map_size', 1024 ** 3))
 
         rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
 

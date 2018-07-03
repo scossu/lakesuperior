@@ -30,7 +30,7 @@ with open(readme_fpath, encoding='utf-8') as f:
 
 extensions = [
     Extension(
-        'base_lmdb_store',
+        'lakesuperior.store.base_lmdb_store',
         [path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx')],
         include_dirs = [
             path.join(lakesuperior.basedir, 'cy_include'),
