@@ -3,15 +3,16 @@
 import hashlib
 import logging
 
-from collections import OrderedDdict
+from collections import OrderedDict
 
-from lakesuperior.store.base_lmdb_store import BaseLmdbStore, LmdbError
+from lakesuperior.store.base_lmdb_store import LmdbError
 
 from libc cimport errno
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
+from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 
-logger = loggin.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 cdef class LexicalSequence:

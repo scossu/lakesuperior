@@ -40,6 +40,18 @@ extensions = [
             path.join(lakesuperior.basedir, 'lib'),
         ]
     ),
+    Extension(
+        'lakesuperior.store.ldp_rs.lmdb_triplestore',
+        [path.join(
+            lakesuperior.basedir, 'store', 'ldp_rs', 'lmdb_triplestore.pyx')],
+        include_dirs = [
+            path.join(lakesuperior.basedir, 'cy_include'),
+        ],
+        libraries = ['lmdb'],
+        library_dirs = [
+            path.join(lakesuperior.basedir, 'lib'),
+        ]
+    ),
 ]
 
 
@@ -57,7 +69,7 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions),
+    ext_modules = cythonize(extensions, annotate=True),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

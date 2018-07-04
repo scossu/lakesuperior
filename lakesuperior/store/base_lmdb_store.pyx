@@ -3,7 +3,7 @@
 import logging
 
 #from abc import ABCMeta, abstractmethod
-from collections import OrderedDdict
+from collections import OrderedDict
 from contextlib import contextmanager
 from os import makedirs, path
 
@@ -164,7 +164,7 @@ cdef class BaseLmdbStore:
                 'Unknown error code opening the database: {}.'.format(rc))
 
 
-    cdef _init_dbis(self, create=False):
+    cdef void _init_dbis(self, create=False):
         """
         Initialize databases.
         """
@@ -178,13 +178,32 @@ cdef class BaseLmdbStore:
         lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
         try:
             for dbname, dbflags in self.dbi_config.items():
-                lmdb.mdb_dbi_open(
+                rc = lmdb.mdb_dbi_open(
                         txn, dbname, dbflags | create_flag,
                         self.dbis[self.dbi_config.index(dbname)])
+                if rc == lmdb.MDB_NOTFOUND:
+                    raise LmdbError('No database found with label "{}"'.format(dbname))
+                elif rc == lmdb.MDB_DBS_FULL:
+                    raise LmdbError('Max. database limit reached.'.format(dbname))
+                assert rc == lmdb.MDB_SUCCESS, 'Error opening database: {}'.format(rc)
+
             lmdb.mdb_txn_commit(txn)
         except:
             lmdb.mdb_txn_abort(txn)
             raise
+
+
+    cdef lmdb.MDB_dbi *get_dbi(self, str dbname):
+        """
+        Return a DBI pointer by database name.
+        """
+        cdef lmdb.MDB_dbi *dbi
+
+        dbi = (
+                NULL if dbname is None
+                else self.dbis[self.dbconfig.index(dbname)])
+
+        return dbi
 
 
     @contextmanager
@@ -206,7 +225,7 @@ cdef class BaseLmdbStore:
 
 
     @contextmanager
-    def cur_ctx(self, index=None, txn=None, write=False):
+    def cur_ctx(self, dbname=None, txn=None, write=False):
         """
         Handle a cursor on a database by its index as a context manager.
 
@@ -224,10 +243,6 @@ cdef class BaseLmdbStore:
         """
         cdef:
             lmdb.MDB_cursor *cur
-            lmdb.MDB_txn *tmp_txn
-            void *dbi
-
-        dbi = NULL if index is None else self.dbis[self.dbconfig.index(index)]
 
         if self.txn is NULL:
             _txn_is_tmp = True
@@ -236,32 +251,25 @@ cdef class BaseLmdbStore:
             _txn_is_tmp = False
 
         try:
-            cur = self._cur_open(<lmdb.MDB_txn *>txn, dbi)
+            cur = self._cur_open(<lmdb.MDB_txn *>txn, dbname)
             yield <object>cur
             self._cur_close(cur)
-            if _txn_is_tmp:
+            if _txn_is_tmp is True:
                 self._txn_commit()
         except:
-            if _txn_is_tmp:
+            if _txn_is_tmp is True:
                 self._txn_abort()
             raise
+        finally:
+            if _txn_is_tmp is True:
+                self.txn = NULL
 
 
-    cdef lmdb.MDB_cursor *_cur_open(
-            self, lmdb.MDB_txn *txn, str dbname, unsigned int flags=0):
+    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=None):
         cdef:
             lmdb.MDB_cursor *cur
-            lmdb.MDB_dbi dbi
 
-        dbi = self.dbis[dbname]
-        rc = lmdb.mdb_dbi_open(txn, dbname, flags, &dbi)
-        if rc == lmdb.MDB_NOTFOUND:
-            raise LmdbError('No database found with label "{}"'.format(dbname))
-        elif rc == lmdb.MDB_DBS_FULL:
-            raise LmdbError('Max. database limit reached.'.format(dbname))
-        assert rc == lmdb.MDB_SUCCESS, 'Error opening database: {}'.format(rc)
-
-        rc = lmdb.mdb_cursor_open(txn, dbi, &cur)
+        rc = lmdb.mdb_cursor_open(txn, self.get_dbi(dbname)[0], &cur)
         if rc == errno.EINVAL:
             raise ValueError('Invalid parameter used to open cursor.')
         assert (
