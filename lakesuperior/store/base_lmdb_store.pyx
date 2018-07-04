@@ -51,12 +51,6 @@ cdef class BaseLmdbStore:
 
     """
 
-    cdef:
-        lmdb.MDB_env *dbenv
-        lmdb.MDB_txn *txn
-        unsigned int readers
-        lmdb.MDB_dbi **dbis
-
     db_config = None
     """
     Configuration of databases in the environment.
@@ -98,19 +92,19 @@ cdef class BaseLmdbStore:
     :rtype: dict
     """
 
-    def __init__(self, path, create=True):
+    def __init__(self, dbpath, create=True):
         """
         Initialize DB environment and databases.
         """
-        self.path = path
+        self.path = dbpath
 
-        if not path.exists(path) and create is True:
+        if not path.exists(dbpath) and create is True:
             try:
-                makedirs(path, mode=0o750, exist_ok=True)
+                makedirs(dbpath, mode=0o750, exist_ok=True)
             except Exception as e:
                 raise IOError(
                     'Could not create the database at {}. Error: {}'.format(
-                        path, e))
+                        dbpath, e))
 
         self._open_env()
 
@@ -193,7 +187,7 @@ cdef class BaseLmdbStore:
             raise
 
 
-    cdef lmdb.MDB_dbi *get_dbi(self, str dbname):
+    cdef lmdb.MDB_dbi *get_dbi(self, char *dbname):
         """
         Return a DBI pointer by database name.
         """
@@ -265,7 +259,7 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
-    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=None):
+    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=NULL):
         cdef:
             lmdb.MDB_cursor *cur
 

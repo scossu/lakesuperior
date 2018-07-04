@@ -8,6 +8,9 @@ from posix.types cimport mode_t
 cdef extern from '<sys/types.h>':
     pass
 
+cdef extern from 'midl.h':
+    pass
+
 cdef extern from 'lmdb.h':
     ctypedef mode_t mdb_mode_t
     ctypedef int mdb_filehandle_t

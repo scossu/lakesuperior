@@ -31,11 +31,16 @@ with open(readme_fpath, encoding='utf-8') as f:
 extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
-        [path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx')],
+        [
+            path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx'),
+            path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
+            path.join(lakesuperior.basedir, 'lib', 'midl.c'),
+        ],
         include_dirs = [
             path.join(lakesuperior.basedir, 'cy_include'),
+            path.join(lakesuperior.basedir, 'include'),
+            path.join(lakesuperior.basedir, 'lib'),
         ],
-        libraries = ['lmdb'],
         library_dirs = [
             path.join(lakesuperior.basedir, 'lib'),
         ]
@@ -45,11 +50,8 @@ extensions = [
         [path.join(
             lakesuperior.basedir, 'store', 'ldp_rs', 'lmdb_triplestore.pyx')],
         include_dirs = [
-            path.join(lakesuperior.basedir, 'cy_include'),
-        ],
-        libraries = ['lmdb'],
-        library_dirs = [
-            path.join(lakesuperior.basedir, 'lib'),
+            path.join(lakesuperior.basedir, 'include'),
+            path.join(lakesuperior.basedir, 'store'),
         ]
     ),
 ]
