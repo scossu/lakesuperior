@@ -3,8 +3,6 @@
 import hashlib
 import logging
 
-from collections import OrderedDict
-
 from lakesuperior.store.base_lmdb_store import LmdbError
 
 from libc cimport errno
@@ -86,28 +84,35 @@ cdef class LexicalSequence:
 
 cdef class LmdbTriplestore(BaseLmdbStore):
 
-    db_config = OrderedDict((
+    dbi_labels = [
         # Main data
         # Term key to serialized term content
-        ('t:st', 0),
+        't:st',
         # Joined triple keys to context key
-        ('spo:c', 0),
+        'spo:c',
         # This has empty values and is used to keep track of empty contexts.
-        ('c:', 0),
+        'c:',
         # Prefix to namespace
-        ('pfx:ns', 0),
+        'pfx:ns',
 
         # Indices
         # Namespace to prefix
-        ('ns:pfx', 0),
+        'ns:pfx',
         # Term hash to triple key
-        ('th:t', 0),
+        'th:t',
         # Lookups
-        ('s:po', lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED),
-        ('p:so', lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED),
-        ('o:sp', lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED),
-        ('c:spo', lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED),
-    ))
+        's:po',
+        'p:so',
+        'o:sp',
+        'c:spo',
+    ]
+
+    dbi_flags = {
+        's:po': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'p:so': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'o:sp': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'c:spo': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+    }
 
     flags = lmdb.MDB_NOSUBDIR | lmdb.MDB_NORDAHEAD
 

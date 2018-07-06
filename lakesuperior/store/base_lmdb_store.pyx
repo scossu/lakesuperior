@@ -2,8 +2,6 @@
 
 import logging
 
-#from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
 from contextlib import contextmanager
 from os import makedirs, path
 
@@ -19,11 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 # Global cdefs.
-
-cdef:
-    int rc
-    size_t i
-
 
 class LmdbError(Exception):
     pass
@@ -41,7 +34,7 @@ cdef class BaseLmdbStore:
 
         >>> class MyStore(BaseLmdbStore):
         ...     path = '/base/store/path'
-        ...     db_labels = ('db1', 'db2')
+        ...     dbi_flags = ('db1', 'db2')
         ...
         >>> ms = MyStore()
         >>> # "with" wraps the operation in a transaction.
@@ -51,7 +44,8 @@ cdef class BaseLmdbStore:
 
     """
 
-    db_config = None
+    dbi_labels = None
+    dbi_flags = None
     """
     Configuration of databases in the environment.
 
@@ -85,22 +79,29 @@ cdef class BaseLmdbStore:
 
     - ``map_size``: 1 Gib
     - ``max_dbs``: dependent on the number of DBs defined in
-      :py:meth:``db_labels``. Only override if necessary.
+      :py:meth:``dbi_flags``. Only override if necessary.
     - ``max_spare_txns``: dependent on the number of threads, if accessed via
       WSGI, or ``1`` otherwise. Only override if necessary.
 
     :rtype: dict
     """
 
-    def __init__(self, dbpath, create=True):
+    def __cinit__(self, dbpath, create=True):
         """
         Initialize DB environment and databases.
         """
-        self.path = dbpath
+        self.dbpath = dbpath.encode()
+        logger.info('Init DB with path: {}'.format(self.dbpath.decode()))
 
-        if not path.exists(dbpath) and create is True:
+        parent_path = (
+                path.dirname(dbpath) if lmdb.MDB_NOSUBDIR & self.flags
+                else dbpath)
+
+        if not path.exists(parent_path) and True:
+            logger.info(
+                    'Creating database directory at {}'.format(parent_path))
             try:
-                makedirs(dbpath, mode=0o750, exist_ok=True)
+                makedirs(parent_path, mode=0o750, exist_ok=True)
             except Exception as e:
                 raise IOError(
                     'Could not create the database at {}. Error: {}'.format(
@@ -108,8 +109,7 @@ cdef class BaseLmdbStore:
 
         self._open_env()
 
-        if self.db_labels is not None:
-            self._init_dbis()
+        self._init_dbis(create)
 
 
     def __dealloc__(self):
@@ -120,17 +120,25 @@ cdef class BaseLmdbStore:
         """
         Create and open database environment.
         """
-        max_dbs = self.options.get('max_dbs', len(self.db_labels))
-
+        # Create environment handle.
         rc = lmdb.mdb_env_create(&self.dbenv)
         assert (
                 rc == lmdb.MDB_SUCCESS,
                 'Unknown error code creating DB environment: {}'.format(rc))
 
+        # Set map size.
         rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
                 'map_size', 1024 ** 3))
+        assert (
+                rc == lmdb.MDB_SUCCESS,
+                'Unknown error code setting DB map size: {}'.format(rc))
 
+        # Set max databases.
+        max_dbs = self.options.get('max_dbs', len(self.dbi_labels))
         rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
+        assert (
+                rc == lmdb.MDB_SUCCESS,
+                'Unknown error code setting max databases: {}'.format(rc))
 
         self.readers = self.options.get('max_spare_txns', False)
         if &self.readers is NULL:
@@ -140,8 +148,12 @@ cdef class BaseLmdbStore:
                     else 1)
             logger.info('Max LMDB readers: {}'.format(self.readers))
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
+        assert (
+                rc == lmdb.MDB_SUCCESS,
+                'Unknown error code setting DB max readers: {}'.format(rc))
 
-        rc = lmdb.mdb_env_open(self.dbenv, self.path, self.flags, 0o640)
+        rc = lmdb.mdb_env_open(
+                self.dbenv, <const char *>self.dbpath, self.flags, 0o640)
         if rc == lmdb.MDB_VERSION_MISMATCH:
             raise LmdbError('LMDB version mismatch.')
         elif rc == lmdb.MDB_INVALID:
@@ -164,22 +176,28 @@ cdef class BaseLmdbStore:
         """
         cdef lmdb.MDB_txn *txn
 
-        self.dbis = <lmdb.MDB_dbi **>PyMem_Malloc(
-                len(self.dbi_config) * sizeof(lmdb.MDB_dbi *))
+        self.dbis = <lmdb.MDB_dbi *>PyMem_Malloc(
+                len(self.dbi_labels) * sizeof(lmdb.MDB_dbi))
 
-        create_flag = lmdb.MDB_CREATE if create else 0
+        create_flag = lmdb.MDB_CREATE if create is True else 0
         txn_flags = 0 if create else lmdb.MDB_RDONLY
-        lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
+        rc = lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
         try:
-            for dbname, dbflags in self.dbi_config.items():
+            for dbidx, dbname in enumerate(self.dbi_labels):
+                dbbytename = dbname.encode()
+                flags = self.dbi_flags.get(dbname, 0) | create_flag
+                logger.debug(
+                    'Creating DB {} at index {} and with flags: {}'.format(
+                    dbname, dbidx, flags))
                 rc = lmdb.mdb_dbi_open(
-                        txn, dbname, dbflags | create_flag,
-                        self.dbis[self.dbi_config.index(dbname)])
-                if rc == lmdb.MDB_NOTFOUND:
-                    raise LmdbError('No database found with label "{}"'.format(dbname))
-                elif rc == lmdb.MDB_DBS_FULL:
-                    raise LmdbError('Max. database limit reached.'.format(dbname))
-                assert rc == lmdb.MDB_SUCCESS, 'Error opening database: {}'.format(rc)
+                        txn, dbbytename,
+                        flags,
+                        &self.dbis[dbidx])
+                logger.debug('Created DB: {}: {}'.format(dbname, rc))
+                assert (
+                        rc == lmdb.MDB_SUCCESS,
+                        'Error opening database: {}'.format(
+                            rc))
 
             lmdb.mdb_txn_commit(txn)
         except:
@@ -195,7 +213,7 @@ cdef class BaseLmdbStore:
 
         dbi = (
                 NULL if dbname is None
-                else self.dbis[self.dbconfig.index(dbname)])
+                else &self.dbis[self.dbconfig.index(dbname)])
 
         return dbi
 
