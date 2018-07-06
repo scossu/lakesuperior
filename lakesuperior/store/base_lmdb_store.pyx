@@ -122,52 +122,44 @@ cdef class BaseLmdbStore:
         """
         # Create environment handle.
         rc = lmdb.mdb_env_create(&self.dbenv)
-        assert (
-                rc == lmdb.MDB_SUCCESS,
-                'Unknown error code creating DB environment: {}'.format(rc))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError('Error creating DB environment: {}'.format(
+                    lmdb.mdb_strerror(rc)))
 
         # Set map size.
         rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
                 'map_size', 1024 ** 3))
-        assert (
-                rc == lmdb.MDB_SUCCESS,
-                'Unknown error code setting DB map size: {}'.format(rc))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError('Error setting DB map size: {}'.format(
+                lmdb.mdb_strerror(rc)))
 
         # Set max databases.
         max_dbs = self.options.get('max_dbs', len(self.dbi_labels))
         rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
-        assert (
-                rc == lmdb.MDB_SUCCESS,
-                'Unknown error code setting max databases: {}'.format(rc))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError('Error setting max databases: {}'.format(
+                lmdb.mdb_strerror(rc)))
 
+        # Set max readers.
         self.readers = self.options.get('max_spare_txns', False)
-        if &self.readers is NULL:
+        if not self.readers:
             self.readers = (
                     env.wsgi_options['workers']
                     if getattr(env, 'wsgi_options', False)
                     else 1)
             logger.info('Max LMDB readers: {}'.format(self.readers))
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
-        assert (
-                rc == lmdb.MDB_SUCCESS,
-                'Unknown error code setting DB max readers: {}'.format(rc))
+        logger.debug('Max. readers: {}'.format(self.readers))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError('Error setting max readers: {}'.format(
+                lmdb.mdb_strerror(rc)))
 
+        # Open DB environment.
         rc = lmdb.mdb_env_open(
-                self.dbenv, <const char *>self.dbpath, self.flags, 0o640)
-        if rc == lmdb.MDB_VERSION_MISMATCH:
-            raise LmdbError('LMDB version mismatch.')
-        elif rc == lmdb.MDB_INVALID:
-            raise LmdbError('Environment file headers are corrupted.')
-        elif rc == errno.ENOENT:
-            raise LmdbError('No directory under this path.')
-        elif rc == errno.EACCES:
-            raise LmdbError(
-                    'Insufficient permissions to open the database file.')
-        elif rc == errno.EAGAIN:
-            raise LmdbError('The database has been locked by another process.')
-        elif rc != lmdb.MDB_SUCCESS:
-            raise LmdbError(
-                'Unknown error code opening the database: {}.'.format(rc))
+                self.dbenv, self.dbpath, self.flags, 0o640)
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError('Error opening the database: {}.'.format(
+                lmdb.mdb_strerror(rc)))
 
 
     cdef void _init_dbis(self, create=False):
@@ -194,10 +186,9 @@ cdef class BaseLmdbStore:
                         flags,
                         &self.dbis[dbidx])
                 logger.debug('Created DB: {}: {}'.format(dbname, rc))
-                assert (
-                        rc == lmdb.MDB_SUCCESS,
-                        'Error opening database: {}'.format(
-                            rc))
+                if rc != lmdb.MDB_SUCCESS:
+                    raise LmdbError('Error opening database: {}'.format(
+                        lmdb.mdb_strerror(rc)))
 
             lmdb.mdb_txn_commit(txn)
         except:
@@ -282,11 +273,9 @@ cdef class BaseLmdbStore:
             lmdb.MDB_cursor *cur
 
         rc = lmdb.mdb_cursor_open(txn, self.get_dbi(dbname)[0], &cur)
-        if rc == errno.EINVAL:
-            raise ValueError('Invalid parameter used to open cursor.')
-        assert (
-            rc == lmdb.MDB_SUCCESS,
-            'Unknown error code opening cursor: {}'.format(rc))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError(
+                    'Error opening cursor: {}'.format(lmdb.mdb_strerror(rc)))
 
         return cur
 
@@ -303,16 +292,9 @@ cdef class BaseLmdbStore:
         flags = 0 if write else lmdb.MDB_RDONLY
 
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, 0, &txn)
-        if rc == lmdb.MDB_PANIC:
-            raise LmdbError('Fatal error opening transaction.')
-        elif rc == lmdb.MDB_MAP_RESIZED:
-            raise LmdbError('Size boundary of memory map exceeded.')
-        elif rc == lmdb.MDB_READERS_FULL:
-            raise LmdbError('Max readers limit reached.')
-        elif rc == errno.ENOMEM:
-            raise LmdbError('Max readers limit reached.')
-        assert (
-            rc == lmdb.MDB_SUCCESS,
-            'Unknown error code opening transaction: {}'.format(rc))
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError(
+                'Unknown error code opening transaction: {}'.format(
+                    lmdb.mdb_strerror(rc)))
 
         return txn

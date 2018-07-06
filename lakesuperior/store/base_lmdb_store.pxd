@@ -9,15 +9,15 @@ cdef:
 
 cdef class BaseLmdbStore:
     cdef:
+        unsigned int readers
+        bytes dbpath
+        lmdb.MDB_dbi *dbis
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
-        unsigned int readers
-        lmdb.MDB_dbi *dbis
-        bytes dbpath
 
-        void _init_dbis(self, create=*)
-        lmdb.MDB_dbi *get_dbi(self, char *dbname)
-        lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=*)
         void _cur_close(self, lmdb.MDB_cursor *cur)
+        void _init_dbis(self, create=*)
+        lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=*)
+        lmdb.MDB_dbi *get_dbi(self, char *dbname)
         lmdb.MDB_txn *_txn_begin(self, write=*, lmdb.MDB_txn *parent=*)
 
