@@ -86,6 +86,8 @@ cdef class BaseLmdbStore:
     :rtype: dict
     """
 
+    ### INIT & TEARDOWN ###
+
     def __cinit__(self, dbpath, create=True):
         """
         Initialize DB environment and databases.
@@ -110,10 +112,6 @@ cdef class BaseLmdbStore:
         self._open_env()
 
         self._init_dbis(create)
-
-
-    def __dealloc__(self):
-        PyMem_Free(self.dbis)
 
 
     def _open_env(self):
@@ -196,18 +194,12 @@ cdef class BaseLmdbStore:
             raise
 
 
-    cdef lmdb.MDB_dbi *get_dbi(self, char *dbname):
-        """
-        Return a DBI pointer by database name.
-        """
-        cdef lmdb.MDB_dbi *dbi
+    def __dealloc__(self):
+        PyMem_Free(self.dbis)
+        lmdb.mdb_env_close(self.dbenv)
 
-        dbi = (
-                NULL if dbname is None
-                else &self.dbis[self.dbconfig.index(dbname)])
 
-        return dbi
-
+    ### PYTHON-ACCESSIBLE METHODS ###
 
     @contextmanager
     def txn_ctx(self, write=False):
@@ -219,9 +211,11 @@ cdef class BaseLmdbStore:
         :rtype: lmdb.Transaction
         """
         try:
-            self.txn = self._txn_begin(write=write)
+            self._txn_begin(write=write)
             yield <object>self.txn
+            print('after yield')
             self._txn_commit()
+            print('after _txn_commit')
         except:
             self._txn_abort()
             raise
@@ -249,7 +243,7 @@ cdef class BaseLmdbStore:
 
         if self.txn is NULL:
             _txn_is_tmp = True
-            self.txn = self._txn_begin(write=write)
+            self._txn_begin(write=write)
         else:
             _txn_is_tmp = False
 
@@ -268,6 +262,42 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
+    def get_value(self, key, dbi=None):
+        """
+        Get a single value (non-dup) for a key.
+        """
+        with self.txn_ctx() as txn:
+            print('hello')
+
+
+    def get_dup_values(self, key, dbi=None):
+        """
+        Get all duplicate values for a key.
+        """
+        pass
+
+
+    def get_all_pairs(self, dbi=None):
+        """
+        Get all the non-duplicate key-value pairs in a database.
+        """
+
+
+    ### CYTHON METHODS ###
+
+    cdef lmdb.MDB_dbi *get_dbi(self, char *dbname):
+        """
+        Return a DBI pointer by database name.
+        """
+        cdef lmdb.MDB_dbi *dbi
+
+        dbi = (
+                NULL if dbname is None
+                else &self.dbis[self.dbconfig.index(dbname)])
+
+        return dbi
+
+
     cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=NULL):
         cdef:
             lmdb.MDB_cursor *cur
@@ -284,17 +314,27 @@ cdef class BaseLmdbStore:
         pass
 
 
-    cdef lmdb.MDB_txn *_txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL):
+    cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL):
         cdef:
-            lmdb.MDB_txn *txn
             unsigned int flags
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        rc = lmdb.mdb_txn_begin(self.dbenv, parent, 0, &txn)
+        rc = lmdb.mdb_txn_begin(self.dbenv, parent, 0, &self.txn)
         if rc != lmdb.MDB_SUCCESS:
             raise LmdbError(
-                'Unknown error code opening transaction: {}'.format(
-                    lmdb.mdb_strerror(rc)))
+                'Error opening transaction: {}'.format(lmdb.mdb_strerror(rc)))
 
-        return txn
+
+    cdef void _txn_commit(self):
+        print('before committing')
+        rc = lmdb.mdb_txn_commit(self.txn)
+        print('after committing')
+        if rc != lmdb.MDB_SUCCESS:
+            raise LmdbError(
+                'Error opening transaction: {}'.format(lmdb.mdb_strerror(rc)))
+
+
+    cdef void _txn_abort(self):
+        lmdb.mdb_txn_abort(self.txn)
+
