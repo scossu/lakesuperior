@@ -6,6 +6,8 @@ cdef:
     int rc
     size_t i
 
+    _check(int rc, str message)
+
 
 cdef class BaseLmdbStore:
     cdef:
@@ -19,7 +21,10 @@ cdef class BaseLmdbStore:
         void _init_dbis(self, create=*)
         void _txn_commit(self)
         void _txn_abort(self)
-        lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=*)
-        lmdb.MDB_dbi *get_dbi(self, char *dbname)
+        lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
+        lmdb.MDB_dbi *get_dbi(self, str dbname=*)
         void _txn_begin(self, write=*, lmdb.MDB_txn *parent=*)
 
+    cpdef get_value(self, key, db=*)
+    cpdef get_dup_values(self, key, db=*)
+    cpdef get_all_pairs(self, db=*)

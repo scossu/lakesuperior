@@ -16,7 +16,13 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 logger = logging.getLogger(__name__)
 
 
-# Global cdefs.
+cdef _check(int rc, str message):
+    """
+    Check return code.
+    """
+    if rc != lmdb.MDB_SUCCESS:
+        raise LmdbError(message.format(lmdb.mdb_strerror(rc)))
+
 
 class LmdbError(Exception):
     pass
@@ -120,23 +126,17 @@ cdef class BaseLmdbStore:
         """
         # Create environment handle.
         rc = lmdb.mdb_env_create(&self.dbenv)
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError('Error creating DB environment: {}'.format(
-                    lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error creating DB environment handle: {}')
 
         # Set map size.
         rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
                 'map_size', 1024 ** 3))
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError('Error setting DB map size: {}'.format(
-                lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error setting map size: {}')
 
         # Set max databases.
         max_dbs = self.options.get('max_dbs', len(self.dbi_labels))
         rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError('Error setting max databases: {}'.format(
-                lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error setting max. databases: {}')
 
         # Set max readers.
         self.readers = self.options.get('max_spare_txns', False)
@@ -148,16 +148,12 @@ cdef class BaseLmdbStore:
             logger.info('Max LMDB readers: {}'.format(self.readers))
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
         logger.debug('Max. readers: {}'.format(self.readers))
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError('Error setting max readers: {}'.format(
-                lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error setting max. readers: {}')
 
         # Open DB environment.
         rc = lmdb.mdb_env_open(
                 self.dbenv, self.dbpath, self.flags, 0o640)
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError('Error opening the database: {}.'.format(
-                lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error opening the database environment: {}')
 
 
     cdef void _init_dbis(self, create=False):
@@ -173,21 +169,20 @@ cdef class BaseLmdbStore:
         txn_flags = 0 if create else lmdb.MDB_RDONLY
         rc = lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
         try:
-            for dbidx, dbname in enumerate(self.dbi_labels):
-                dbbytename = dbname.encode()
-                flags = self.dbi_flags.get(dbname, 0) | create_flag
-                logger.debug(
-                    'Creating DB {} at index {} and with flags: {}'.format(
-                    dbname, dbidx, flags))
-                rc = lmdb.mdb_dbi_open(
-                        txn, dbbytename,
-                        flags,
-                        &self.dbis[dbidx])
-                logger.debug('Created DB: {}: {}'.format(dbname, rc))
-                if rc != lmdb.MDB_SUCCESS:
-                    raise LmdbError('Error opening database: {}'.format(
-                        lmdb.mdb_strerror(rc)))
+            if len(self.dbi_labels):
+                for dbidx, dbname in enumerate(self.dbi_labels):
+                    dbbytename = dbname.encode()
+                    flags = self.dbi_flags.get(dbname, 0) | create_flag
+                    logger.debug(
+                        'Creating DB {} at index {} and with flags: {}'.format(
+                        dbname, dbidx, flags))
+                    rc = lmdb.mdb_dbi_open(
+                            txn, dbbytename, flags, &self.dbis[dbidx])
+                    logger.debug('Created DB: {}: {}'.format(dbname, rc))
+            else:
+                rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
+            _check(rc, 'Error opening database: {}')
             lmdb.mdb_txn_commit(txn)
         except:
             lmdb.mdb_txn_abort(txn)
@@ -251,33 +246,52 @@ cdef class BaseLmdbStore:
             cur = self._cur_open(<lmdb.MDB_txn *>txn, dbname)
             yield <object>cur
             self._cur_close(cur)
-            if _txn_is_tmp is True:
+            if _txn_is_tmp:
                 self._txn_commit()
         except:
-            if _txn_is_tmp is True:
+            if _txn_is_tmp:
                 self._txn_abort()
             raise
         finally:
-            if _txn_is_tmp is True:
+            if _txn_is_tmp:
                 self.txn = NULL
 
 
-    def get_value(self, key, dbi=None):
+    cpdef get_value(self, key, db=None):
         """
         Get a single value (non-dup) for a key.
         """
-        with self.txn_ctx() as txn:
-            print('hello')
+        cdef:
+            lmdb.MDB_val key_v, data_v
+            lmdb.MDB_dbi dbi
+
+        if self.txn is NULL:
+            self._txn_begin()
+            txn_tmp = True
+        else:
+            txn_tmp = False
+
+        key_v.mv_data = <const char *>key
+        key_v.mv_size = len(key)
+
+        dbi = self.get_dbi(db)[0]
+
+        try:
+            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+            _check(rc, 'Error getting value: {}')
+        finally:
+            if txn_tmp:
+                self._txn_abort()
 
 
-    def get_dup_values(self, key, dbi=None):
+    cpdef get_dup_values(self, key, db=None):
         """
         Get all duplicate values for a key.
         """
         pass
 
 
-    def get_all_pairs(self, dbi=None):
+    cpdef get_all_pairs(self, db=None):
         """
         Get all the non-duplicate key-value pairs in a database.
         """
@@ -285,27 +299,24 @@ cdef class BaseLmdbStore:
 
     ### CYTHON METHODS ###
 
-    cdef lmdb.MDB_dbi *get_dbi(self, char *dbname):
+    cdef lmdb.MDB_dbi *get_dbi(self, str dbname=None):
         """
         Return a DBI pointer by database name.
         """
-        cdef lmdb.MDB_dbi *dbi
+        cdef size_t dbidx
 
-        dbi = (
-                NULL if dbname is None
-                else &self.dbis[self.dbconfig.index(dbname)])
+        dbidx = 0 if dbname is None else self.dbi_labels.index(dbname)
+        print('dbidx: {}'.format(dbidx))
 
-        return dbi
+        return &self.dbis[dbidx]
 
 
-    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, char *dbname=NULL):
+    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=None):
         cdef:
             lmdb.MDB_cursor *cur
 
         rc = lmdb.mdb_cursor_open(txn, self.get_dbi(dbname)[0], &cur)
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError(
-                    'Error opening cursor: {}'.format(lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error opening cursor: {}')
 
         return cur
 
@@ -320,19 +331,16 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        rc = lmdb.mdb_txn_begin(self.dbenv, parent, 0, &self.txn)
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError(
-                'Error opening transaction: {}'.format(lmdb.mdb_strerror(rc)))
+        rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
+        print('After opening txn: {0:x}'.format(<unsigned int>self.txn))
+        _check(rc, 'Error opening transaction: {}')
 
 
     cdef void _txn_commit(self):
-        print('before committing')
+        if self.txn == NULL:
+            print('txn is NULL!')
         rc = lmdb.mdb_txn_commit(self.txn)
-        print('after committing')
-        if rc != lmdb.MDB_SUCCESS:
-            raise LmdbError(
-                'Error opening transaction: {}'.format(lmdb.mdb_strerror(rc)))
+        _check(rc, 'Error committing transaction: {}')
 
 
     cdef void _txn_abort(self):
