@@ -16,12 +16,12 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 logger = logging.getLogger(__name__)
 
 
-cdef _check(int rc, str message):
+cdef void _check(int rc, str message) except *:
     """
     Check return code.
     """
     if rc != lmdb.MDB_SUCCESS:
-        raise LmdbError(message.format(lmdb.mdb_strerror(rc)))
+        raise LmdbError(message.format(lmdb.mdb_strerror(rc).decode()))
 
 
 class LmdbError(Exception):
@@ -156,7 +156,7 @@ cdef class BaseLmdbStore:
         _check(rc, 'Error opening the database environment: {}')
 
 
-    cdef void _init_dbis(self, create=False):
+    cdef void _init_dbis(self, create=False) except *:
         """
         Initialize databases.
         """
@@ -257,13 +257,39 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
-    cpdef get_value(self, key, db=None):
+    cpdef put(self, unsigned char *key, unsigned char *data, db=None, flags=0):
+        """
+        Put one key/value pair.
+        """
+        if self.txn is NULL:
+            self._txn_begin()
+            txn_tmp = True
+        else:
+            txn_tmp = False
+
+        key_v.mv_data = <unsigned char *>key
+        key_v.mv_size = len(key)
+        data_v.mv_data = <unsigned char *>data
+        data_v.mv_size = len(data)
+
+        dbi = self.get_dbi(db)[0]
+
+        try:
+            rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
+            _check(rc, 'Error putting data: {}')
+            if txn_tmp:
+                self._txn_commit()
+        finally:
+            if txn_tmp:
+                self._txn_abort()
+
+
+    cpdef get_data(self, unsigned char *key, db=None):
         """
         Get a single value (non-dup) for a key.
         """
-        cdef:
-            lmdb.MDB_val key_v, data_v
-            lmdb.MDB_dbi dbi
+        #cdef unsigned char *key_data = <unsigned char *>key
+        cdef lmdb.MDB_val ret_data
 
         if self.txn is NULL:
             self._txn_begin()
@@ -271,20 +297,25 @@ cdef class BaseLmdbStore:
         else:
             txn_tmp = False
 
-        key_v.mv_data = <const char *>key
+        key_v.mv_data = &key
         key_v.mv_size = len(key)
 
         dbi = self.get_dbi(db)[0]
 
+        if self.txn is NULL:
+            raise LmdbError('Txn is NULL!')
         try:
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-            _check(rc, 'Error getting value: {}')
+            _check(
+                lmdb.mdb_get(self.txn, dbi, &key_v, &ret_data),
+                'Error getting data for key \'{}\': {{}}'.format(key.decode()))
+
+            return <bytes>ret_data.mv_data
         finally:
             if txn_tmp:
                 self._txn_abort()
 
 
-    cpdef get_dup_values(self, key, db=None):
+    cpdef get_dup_data(self, unsigned char *key, db=None):
         """
         Get all duplicate values for a key.
         """
@@ -321,11 +352,11 @@ cdef class BaseLmdbStore:
         return cur
 
 
-    cdef void _cur_close(self, lmdb.MDB_cursor *cur):
+    cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:
         pass
 
 
-    cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL):
+    cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL) except *:
         cdef:
             unsigned int flags
 
@@ -336,13 +367,13 @@ cdef class BaseLmdbStore:
         _check(rc, 'Error opening transaction: {}')
 
 
-    cdef void _txn_commit(self):
+    cdef void _txn_commit(self) except *:
         if self.txn == NULL:
             print('txn is NULL!')
         rc = lmdb.mdb_txn_commit(self.txn)
         _check(rc, 'Error committing transaction: {}')
 
 
-    cdef void _txn_abort(self):
+    cdef void _txn_abort(self) except *:
         lmdb.mdb_txn_abort(self.txn)
 
