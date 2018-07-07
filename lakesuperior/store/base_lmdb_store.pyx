@@ -207,10 +207,11 @@ cdef class BaseLmdbStore:
         """
         try:
             self._txn_begin(write=write)
-            yield <object>self.txn
-            print('after yield')
+            logger.debug('before yield')
+            yield
+            logger.debug('after yield')
             self._txn_commit()
-            print('after _txn_commit')
+            logger.debug('after _txn_commit')
         except:
             self._txn_abort()
             raise
@@ -244,7 +245,7 @@ cdef class BaseLmdbStore:
 
         try:
             cur = self._cur_open(<lmdb.MDB_txn *>txn, dbname)
-            yield <object>cur
+            yield
             self._cur_close(cur)
             if _txn_is_tmp:
                 self._txn_commit()
@@ -261,12 +262,6 @@ cdef class BaseLmdbStore:
         """
         Put one key/value pair.
         """
-        if self.txn is NULL:
-            self._txn_begin()
-            txn_tmp = True
-        else:
-            txn_tmp = False
-
         key_v.mv_data = key
         key_v.mv_size = len(key)
         data_v.mv_data = data
@@ -274,15 +269,9 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(db)[0]
 
-        try:
+        with self.txn_ctx(True):
             rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
             _check(rc, 'Error putting data: {}')
-            if txn_tmp:
-                self._txn_commit()
-        except:
-            if txn_tmp:
-                self._txn_abort()
-            raise
 
 
     cpdef get_data(self, unsigned char *key, db=None):
@@ -292,27 +281,17 @@ cdef class BaseLmdbStore:
         cdef:
             unsigned char *ret
 
-        if self.txn is NULL:
-            self._txn_begin()
-            txn_tmp = True
-        else:
-            txn_tmp = False
-
         key_v.mv_data = key
         key_v.mv_size = len(key)
 
         dbi = self.get_dbi(db)[0]
-
-        try:
+        with self.txn_ctx():
             _check(
                 lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
                 'Error getting data for key \'{}\': {{}}'.format(key.decode()))
 
             ret = <unsigned char *>data_v.mv_data
             return ret[:data_v.mv_size]
-        finally:
-            if txn_tmp:
-                self._txn_abort()
 
 
     cpdef get_dup_data(self, unsigned char *key, db=None):
@@ -367,7 +346,7 @@ cdef class BaseLmdbStore:
 
     cdef void _txn_commit(self) except *:
         if self.txn == NULL:
-            print('txn is NULL!')
+            logger.warning('txn is NULL!')
         rc = lmdb.mdb_txn_commit(self.txn)
         _check(rc, 'Error committing transaction: {}')
         self.txn = NULL
