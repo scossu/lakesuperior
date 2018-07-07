@@ -267,9 +267,9 @@ cdef class BaseLmdbStore:
         else:
             txn_tmp = False
 
-        key_v.mv_data = <unsigned char *>key
+        key_v.mv_data = key
         key_v.mv_size = len(key)
-        data_v.mv_data = <unsigned char *>data
+        data_v.mv_data = data
         data_v.mv_size = len(data)
 
         dbi = self.get_dbi(db)[0]
@@ -279,17 +279,18 @@ cdef class BaseLmdbStore:
             _check(rc, 'Error putting data: {}')
             if txn_tmp:
                 self._txn_commit()
-        finally:
+        except:
             if txn_tmp:
                 self._txn_abort()
+            raise
 
 
     cpdef get_data(self, unsigned char *key, db=None):
         """
         Get a single value (non-dup) for a key.
         """
-        #cdef unsigned char *key_data = <unsigned char *>key
-        cdef lmdb.MDB_val ret_data
+        cdef:
+            unsigned char *ret
 
         if self.txn is NULL:
             self._txn_begin()
@@ -297,19 +298,18 @@ cdef class BaseLmdbStore:
         else:
             txn_tmp = False
 
-        key_v.mv_data = &key
+        key_v.mv_data = key
         key_v.mv_size = len(key)
 
         dbi = self.get_dbi(db)[0]
 
-        if self.txn is NULL:
-            raise LmdbError('Txn is NULL!')
         try:
             _check(
-                lmdb.mdb_get(self.txn, dbi, &key_v, &ret_data),
+                lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
                 'Error getting data for key \'{}\': {{}}'.format(key.decode()))
 
-            return <bytes>ret_data.mv_data
+            ret = <unsigned char *>data_v.mv_data
+            return ret[:data_v.mv_size]
         finally:
             if txn_tmp:
                 self._txn_abort()
@@ -337,7 +337,6 @@ cdef class BaseLmdbStore:
         cdef size_t dbidx
 
         dbidx = 0 if dbname is None else self.dbi_labels.index(dbname)
-        print('dbidx: {}'.format(dbidx))
 
         return &self.dbis[dbidx]
 
@@ -363,7 +362,6 @@ cdef class BaseLmdbStore:
         flags = 0 if write else lmdb.MDB_RDONLY
 
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
-        print('After opening txn: {0:x}'.format(<unsigned int>self.txn))
         _check(rc, 'Error opening transaction: {}')
 
 
@@ -372,8 +370,10 @@ cdef class BaseLmdbStore:
             print('txn is NULL!')
         rc = lmdb.mdb_txn_commit(self.txn)
         _check(rc, 'Error committing transaction: {}')
+        self.txn = NULL
 
 
     cdef void _txn_abort(self) except *:
         lmdb.mdb_txn_abort(self.txn)
+        self.txn = NULL
 
