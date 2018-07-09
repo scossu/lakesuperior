@@ -25,6 +25,7 @@ cdef class BaseLmdbStore:
         void _txn_abort(self) except *
         void _txn_begin(self, write=*, lmdb.MDB_txn *parent=*) except *
         void _txn_commit(self) except *
+        size_t _txn_id(self) except -1
         lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
 

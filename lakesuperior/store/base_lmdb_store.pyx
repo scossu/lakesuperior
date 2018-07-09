@@ -115,12 +115,16 @@ cdef class BaseLmdbStore:
                     'Could not create the database at {}. Error: {}'.format(
                         dbpath, e))
 
-        self._open_env()
 
-        self._init_dbis(create)
+    def __init__(self, dbpath, create=True):
+        self.open_env(create)
 
 
-    def _open_env(self):
+    def __dealloc__(self):
+        self.close_env()
+
+
+    def open_env(self, create):
         """
         Create and open database environment.
         """
@@ -155,8 +159,10 @@ cdef class BaseLmdbStore:
                 self.dbenv, self.dbpath, self.flags, 0o640)
         _check(rc, 'Error opening the database environment: {}')
 
+        self._init_dbis(create)
 
-    cdef void _init_dbis(self, create=False) except *:
+
+    cdef void _init_dbis(self, create=True) except *:
         """
         Initialize databases.
         """
@@ -189,12 +195,18 @@ cdef class BaseLmdbStore:
             raise
 
 
-    def __dealloc__(self):
+    def close_env(self):
         PyMem_Free(self.dbis)
         lmdb.mdb_env_close(self.dbenv)
 
 
     ### PYTHON-ACCESSIBLE METHODS ###
+
+    @property
+    def is_txn_open(self):
+        """Whether the main transaction is open."""
+        return self._txn_id() > 0
+
 
     @contextmanager
     def txn_ctx(self, write=False):
@@ -309,6 +321,34 @@ cdef class BaseLmdbStore:
 
     ### CYTHON METHODS ###
 
+    cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL) except *:
+        cdef:
+            unsigned int flags
+
+        flags = 0 if write else lmdb.MDB_RDONLY
+
+        rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
+        _check(rc, 'Error opening transaction: {}')
+        logger.debug('txn ID: {}'.format(self._txn_id()))
+
+
+    cdef void _txn_commit(self) except *:
+        if self.txn == NULL:
+            logger.warning('txn is NULL!')
+        rc = lmdb.mdb_txn_commit(self.txn)
+        _check(rc, 'Error committing transaction: {}')
+        self.txn = NULL
+
+
+    cdef void _txn_abort(self) except *:
+        lmdb.mdb_txn_abort(self.txn)
+        self.txn = NULL
+
+
+    cdef size_t _txn_id(self) except -1:
+        return lmdb.mdb_txn_id(self.txn)
+
+
     cdef lmdb.MDB_dbi *get_dbi(self, str dbname=None):
         """
         Return a DBI pointer by database name.
@@ -332,27 +372,4 @@ cdef class BaseLmdbStore:
 
     cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:
         pass
-
-
-    cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL) except *:
-        cdef:
-            unsigned int flags
-
-        flags = 0 if write else lmdb.MDB_RDONLY
-
-        rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
-        _check(rc, 'Error opening transaction: {}')
-
-
-    cdef void _txn_commit(self) except *:
-        if self.txn == NULL:
-            logger.warning('txn is NULL!')
-        rc = lmdb.mdb_txn_commit(self.txn)
-        _check(rc, 'Error committing transaction: {}')
-        self.txn = NULL
-
-
-    cdef void _txn_abort(self) except *:
-        lmdb.mdb_txn_abort(self.txn)
-        self.txn = NULL
 
