@@ -33,3 +33,4 @@ cdef class BaseLmdbStore:
     cpdef get_dup_data(self, unsigned char *key, db=*)
     cpdef get_all_pairs(self, db=*)
     cpdef put(self, unsigned char *key, unsigned char *data, db=*, flags=*)
+    cpdef stats(self)

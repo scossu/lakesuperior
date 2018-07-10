@@ -1,6 +1,7 @@
 # cython: language_level = 3
 
 import logging
+import os
 
 from contextlib import contextmanager
 from os import makedirs, path
@@ -317,6 +318,34 @@ cdef class BaseLmdbStore:
         """
         Get all the non-duplicate key-value pairs in a database.
         """
+
+
+    cpdef stats(self):
+        """Gather statistics about the database."""
+        cdef:
+            lmdb.MDB_stat stat
+            lmdb.mdb_size_t entries
+
+        lmdb.mdb_env_stat(self.dbenv, &stat)
+        env_stats = <dict>stat
+
+        db_stats = {}
+        with self.txn_ctx():
+            for i, dbl in enumerate(self.dbi_labels):
+                _check(
+                    lmdb.mdb_stat(self.txn, self.dbis[i], &stat),
+                    'Error getting datbase stats: {}')
+                entries = stat.ms_entries
+                db_stats[dbl] = <dict>stat
+
+            return {
+                'env_stats': env_stats,
+                'env_size': os.stat(self.dbpath).st_size,
+                'db_stats': {
+                    db_label: db_stats[db_label]
+                    for db_label in self.dbi_labels
+                },
+            }
 
 
     ### CYTHON METHODS ###

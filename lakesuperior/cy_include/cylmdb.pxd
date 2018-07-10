@@ -1,6 +1,7 @@
-# distutils: include_dirs = ../lib
 # distutils: library_dirs = ../lib
 # distutils: libraries = lmdb
+
+from libc.stdint cimport uint64_t
 #from posix.types cimport (blkcnt_t, blksize_t, dev_t, gid_t, ino_t, mode_t,
 #                          nlink_t, off_t, time_t, uid_t)
 from posix.types cimport mode_t
@@ -15,6 +16,7 @@ cdef extern from 'lmdb.h':
     ctypedef mode_t mdb_mode_t
     ctypedef int mdb_filehandle_t
     ctypedef unsigned int MDB_dbi
+    ctypedef uint64_t mdb_size_t
 
     ctypedef enum MDB_cursor_op:
         MDB_FIRST,
@@ -119,10 +121,10 @@ cdef extern from 'lmdb.h':
     struct MDB_stat:
         unsigned int ms_psize
         unsigned int ms_depth
-        size_t ms_branch_pages
-        size_t ms_leaf_pages
-        size_t ms_overflow_pages
-        size_t ms_entries
+        mdb_size_t ms_branch_pages
+        mdb_size_t ms_leaf_pages
+        mdb_size_t ms_overflow_pages
+        mdb_size_t ms_entries
 
     struct MDB_envinfo:
         void *me_mapaddr
