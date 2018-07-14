@@ -299,8 +299,10 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(db)[0]
         with self.txn_ctx():
-            _check(
-                lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
+            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+            if rc == lmdb.MDB_NOTFOUND:
+                return None
+            _check(rc,
                 'Error getting data for key \'{}\': {{}}'.format(key.decode()))
 
             ret = <unsigned char *>data_v.mv_data

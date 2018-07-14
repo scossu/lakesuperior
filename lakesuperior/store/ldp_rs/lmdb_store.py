@@ -15,6 +15,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.store import Store, VALID_STORE, NO_STORE
 
 from lakesuperior import env
+from lakesuperior.store.ldp_rs.lmdb_triplestore import LmdbTriplestore
 
 logger = logging.getLogger(__name__)
 
@@ -70,76 +71,7 @@ class TxnManager(ContextDecorator):
 
 
 
-class LexicalSequence:
-    """
-    Fixed-length lexicographically ordered byte sequence.
-
-    Useful to generate optimized sequences of keys in LMDB.
-    """
-    def __init__(self, start=1, max_len=5):
-        """
-        Create a new lexical sequence.
-
-        :param bytes start: Starting byte value. Bytes below this value are
-            never found in this sequence. This is useful to allot special bytes
-            to be used e.g. as separators.
-        :param int max_len: Maximum number of bytes that a byte string can
-            contain. This should be chosen carefully since the number of all
-            possible key combinations is determined by this value and the
-            ``start`` value. The default args provide 255**5 (~1 Tn) unique
-            combinations.
-        """
-        self.start = start
-        self.length = max_len
-
-
-    def first(self):
-        """First possible combination."""
-        return bytearray([self.start] * self.length)
-
-
-    def next(self, n):
-        """
-        Calculate the next closest byte sequence in lexicographical order.
-
-        This is used to fill the next available slot after the last one in
-        LMDB. Keys are byte strings, which is a convenient way to keep key
-        lengths as small as possible when they are referenced in several
-        indices.
-
-        This function assumes that all the keys are padded with the `start`
-        value up to the `max_len` length.
-
-        :param bytes n: Current byte sequence to add to.
-        """
-        if not n:
-            n = self.first()
-        elif isinstance(n, bytes) or isinstance(n, memoryview):
-            n = bytearray(n)
-        elif not isinstance(n, bytearray):
-            raise ValueError('Input sequence must be bytes or a bytearray.')
-
-        if not len(n) == self.length:
-            raise ValueError('Incorrect sequence length.')
-
-        for i, b in list(enumerate(n))[::-1]:
-            try:
-                n[i] += 1
-            # If the value exceeds 255, i.e. the current value is the last one
-            except ValueError:
-                if i == 0:
-                    raise RuntimeError('BAD DAY: Sequence exhausted. No more '
-                            'combinations are possible.')
-                # Move one position up and try to increment that.
-                else:
-                    n[i] = self.start
-                    continue
-            else:
-                return bytes(n)
-
-
-
-class LmdbStore(Store):
+class LmdbStore(LmdbTripleStore, Store):
     """
     LMDB-backed store.
 
@@ -185,87 +117,6 @@ class LmdbStore(Store):
     graph_aware = True
     transaction_aware = True
 
-    MAP_SIZE = 1024 ** 4 # 1Tb
-    """
-    LMDB map size. See http://lmdb.readthedocs.io/en/release/#environment-class
-    """
-
-    TERM_HASH_ALGO = 'sha1'
-    """
-    Term hashing algorithm. SHA1 is the default.
-    """
-
-    KEY_LENGTH = 5
-    """
-    Fixed length for term keys.
-
-    4 or 5 is a safe range. 4 allows for ~4 billion (256 ** 4) unique terms
-    in the store. 5 allows ~1 trillion terms. While these numbers may seem
-    huge (the total number of Internet pages indexed by Google as of 2018 is 45
-    billions), it must be reminded that the keys cannot be reused, so a
-    repository that deletes a lot of triples may burn through a lot of terms.
-
-    If a repository runs ot of keys it can no longer store new terms and must
-    be migrated to a new database, which will regenerate and compact the keys.
-
-    For smaller repositories it should be safe to set this value to 4, which
-    could improve performance since keys make up the vast majority of record
-    exchange between the store and the application. However it is sensible not
-    to expose this value as a configuration option.
-    """
-
-    KEY_START = 1
-    """
-    Lexical sequence start. ``\\x01`` is fine since no special characters are
-    used, but it's good to leave a spare for potential future use.
-    """
-
-    data_keys = (
-        # Term key to serialized term content: 1:1
-        't:st',
-        # Joined triple keys to context key: 1:m, fixed-length values
-        'spo:c',
-        # This has empty values and is used to keep track of empty contexts.
-        'c:',
-        # Prefix to namespace: 1:1
-        'pfx:ns',
-    )
-    idx_keys = (
-        # Namespace to prefix: 1:1
-        'ns:pfx',
-        # Term hash to triple key: 1:1
-        'th:t',
-        # Lookups: 1:m, fixed-length values
-        's:po', 'p:so', 'o:sp', 'c:spo',
-    )
-
-    _lookup_rank = ('s', 'o', 'p')
-    """
-    Order in which keys are looked up if two terms are bound.
-    The indices with the smallest average number of values per key should be
-    looked up first.
-
-    If we want to get fancy, this can be rebalanced from time to time by
-    looking up the number of keys in (s:po, p:so, o:sp).
-    """
-
-    _lookup_ordering = {
-        's:po': (0, 1, 2),
-        'p:so': (1, 0, 2),
-        'o:sp': (2, 0, 1),
-    }
-    """
-    Order of terms in the lookup indices. Used to rebuild a triple from lookup.
-    """
-
-    data_env = None
-    idx_env = None
-    db = None
-    dbs = {}
-    data_txn = None
-    idx_txn = None
-    is_txn_rw = None
-
 
     def __init__(self, path, identifier=None):
         self.path = path
@@ -294,15 +145,7 @@ class LmdbStore(Store):
         """
         context = self._normalize_context(context)
 
-        if context is not None:
-            #dataset = self.triples((None, None, None), context)
-            with self.cur('c:spo') as cur:
-                if cur.set_key(self._to_key(context)):
-                    return sum(1 for _ in cur.iternext_dup())
-                else:
-                    return 0
-        else:
-            return self.data_txn.stat(self.dbs['spo:c'])['entries']
+        return self._len(context)
 
 
     @property
@@ -310,25 +153,48 @@ class LmdbStore(Store):
         return self.__open
 
 
+    # RDFLib DB management API
+
     def open(self, configuration=None, create=True):
         """
         Open the database.
-
-        The database is best left open for the lifespan of the server. Read
-        transactions can be opened as needed. Write transaction should be
-        opened and closed within a single HTTP request to ensure atomicity of
-        the request.
-
-        This method is called outside of the main transaction. All cursors
-        are created separately within the transaction.
         """
-        self._init_db_environments(create)
-        if self.data_env == NO_STORE:
+        try:
+            self.open_env(create)
+        except:
             return NO_STORE
         self.__open = True
 
         return VALID_STORE
 
+
+    def close(self, commit_pending_transaction=False):
+        """
+        Close the database connection.
+
+        Do this at server shutdown.
+        """
+        self.__open = False
+        if self.is_txn_open:
+            if commit_pending_transaction:
+                self._txn_commit()
+            else:
+                self._txn_abort()
+
+
+    def destroy(self, path):
+        """
+        Destroy the store.
+
+        https://www.youtube.com/watch?v=lIVq7FJnPwg
+
+        :param str path: Path of the folder containing the database(s).
+        """
+        if exists(path):
+            rmtree(path)
+
+
+    # Non-RDFLib database management methods.
 
     def begin(self, write=False):
         """
@@ -339,43 +205,7 @@ class LmdbStore(Store):
         logger.debug('Beginning a {} transaction.'.format(
             'read/write' if write else 'read-only'))
 
-        self.data_txn = self.data_env.begin(buffers=True, write=write)
-        self.idx_txn = self.idx_env.begin(buffers=True, write=write)
-
-        self.is_txn_rw = write
-
-
-    def stats(self):
-        """Gather statistics about the database."""
-        stats = {
-            'data_db_stats': {
-                db_label: self.data_txn.stat(self.dbs[db_label])
-                for db_label in self.data_keys},
-
-            'idx_db_stats': {
-                db_label: self.idx_txn.stat(self.dbs[db_label])
-                for db_label in self.idx_keys},
-
-            'data_db_size': os.stat(self.data_env.path()).st_size,
-            'idx_db_size': os.stat(self.idx_env.path()).st_size,
-            'num_triples': len(self),
-        }
-
-        return stats
-
-
-    @property
-    def is_txn_open(self):
-        """Whether the main transaction is open."""
-        try:
-            self.data_txn.id()
-            self.idx_txn.id()
-        except (lmdb.Error, AttributeError) as e:
-            #logger.info('Main transaction does not exist or is closed.')
-            return False
-        else:
-            #logger.info('Main transaction is open.')
-            return True
+        self._txn_begin(write=write)
 
 
     def cur(self, index):
@@ -422,35 +252,6 @@ class LmdbStore(Store):
             for key in self.idx_keys}
 
 
-    def close(self, commit_pending_transaction=False):
-        """
-        Close the database connection.
-
-        Do this at server shutdown.
-        """
-        self.__open = False
-        if self.is_txn_open:
-            if commit_pending_transaction:
-                self.commit()
-            else:
-                self.rollback()
-
-        self.data_env.close()
-        self.idx_env.close()
-
-
-    def destroy(self, path):
-        """
-        Destroy the store.
-
-        https://www.youtube.com/watch?v=lIVq7FJnPwg
-
-        :param str path: Path of the folder containing the database(s).
-        """
-        if exists(path):
-            rmtree(path)
-
-
     def add(self, triple, context=None, quoted=False):
         """
         Add a triple and start indexing.
@@ -474,36 +275,37 @@ class LmdbStore(Store):
         #logger.debug('Adding quad: {} {}'.format(triple, context))
         pk_c = self._pickle(context)
 
-        # Add new individual terms or gather keys for existing ones.
-        keys = [None] * 4
-        with self.cur('th:t') as icur:
-            for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
-                thash = self._hash(pk_t)
-                if icur.set_key(thash):
-                    keys[i] = bytes(icur.value())
-                else:
-                    # Put new term.
-                    with self.cur('t:st') as dcur:
-                        keys[i] = self._append(dcur, (pk_t,))[0]
-                    # Index.
-                    icur.put(thash, keys[i])
+        self._add(pk_s, pk_p, pk_o, pk_c)
+        ## Add new individual terms or gather keys for existing ones.
+        #keys = [None] * 4
+        #with self.cur('th:t') as icur:
+        #    for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
+        #        thash = self._hash(pk_t)
+        #        if icur.set_key(thash):
+        #            keys[i] = bytes(icur.value())
+        #        else:
+        #            # Put new term.
+        #            with self.cur('t:st') as dcur:
+        #                keys[i] = self._append(dcur, (pk_t,))[0]
+        #            # Index.
+        #            icur.put(thash, keys[i])
 
-        # Add context in context DB.
-        ck = keys[3]
-        with self.cur('c:') as cur:
-            if not cur.set_key(ck):
-                cur.put(ck, b'')
+        ## Add context in context DB.
+        #ck = keys[3]
+        #with self.cur('c:') as cur:
+        #    if not cur.set_key(ck):
+        #        cur.put(ck, b'')
 
-        # Add triple:context association.
-        spok = b''.join(keys[:3])
-        with self.cur('spo:c') as dcur:
-            if not dcur.set_key_dup(spok, ck):
-                dcur.put(spok, ck)
-        # Index spo:c association.
-        with self.cur('c:spo') as icur:
-            icur.put(ck, spok)
+        ## Add triple:context association.
+        #spok = b''.join(keys[:3])
+        #with self.cur('spo:c') as dcur:
+        #    if not dcur.set_key_dup(spok, ck):
+        #        dcur.put(spok, ck)
+        ## Index spo:c association.
+        #with self.cur('c:spo') as icur:
+        #    icur.put(ck, spok)
 
-        self._index_triple('add', spok)
+        #self._index_triple('add', spok)
 
 
     def remove(self, triple_pattern, context=None):
@@ -918,41 +720,6 @@ class LmdbStore(Store):
                    for k in self._split_key(key))
 
 
-    def _to_key(self, obj):
-        """
-        Convert a triple, quad or term into a key.
-
-        The key is the checksum of the pickled object, therefore unique for
-        that object. The hashing algorithm is specified in `TERM_HASH_ALGO`.
-
-        :param Object obj: Anything that can be reduced to terms stored in the
-        database. Pairs of terms, as well as triples and quads, are expressed
-        as tuples.
-
-        If more than one term is provided, the keys are concatenated.
-
-        :rtype: memoryview or None
-        :return: Keys stored for the term(s) or None if not found.
-        """
-        if not isinstance(obj, list) and not isinstance(obj, tuple):
-            obj = (obj,)
-        key = []
-        with self.cur('th:t') as cur:
-            for term in obj:
-                tk = cur.get(self._hash(self._pickle(term)))
-                if not tk:
-                    # If any of the terms is not found, return None immediately
-                    return None
-                key.append(tk)
-
-        return b''.join(key)
-
-
-    def _hash(self, s):
-        """Get the hash value of a serialized object."""
-        return hashlib.new(self.TERM_HASH_ALGO, s).digest()
-
-
     def _split_key(self, keys):
         """
         Split a compound key into individual keys.
@@ -1124,29 +891,6 @@ class LmdbStore(Store):
                         out[term_order[2-fpos]] = r_subkey
 
                         yield b''.join(out)
-
-
-    def _append(self, cur, values, **kwargs):
-        """
-        Append one or more values to the end of a database.
-
-        :param lmdb.Cursor cur: The write cursor to act on.
-        :param list(bytes) values: Value(s) to append.
-
-        :rtype: list(memoryview)
-        :return: Last key(s) inserted.
-        """
-        if not isinstance(values, list) and not isinstance(values, tuple):
-            raise ValueError('Input must be a list or tuple.')
-        data = []
-        lastkey = cur.key() if cur.last() else None
-        for v in values:
-            lastkey = self._key_seq.next(lastkey)
-            data.append((lastkey, v))
-
-        cur.putmulti(data, **kwargs)
-
-        return [d[0] for d in data]
 
 
     def _index_triple(self, action, spok):
