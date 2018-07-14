@@ -246,6 +246,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
+    cdef _from_key(self, Key key):
+        """
+        Convert a key into one term.
+
+        :param Key key: The key to be converted.
+        """
+        thash = <Hash>self._get_data(key, 't:st')
+        return self._unpickle(thash)
+
+
     cdef void _to_key(self, term, Key *key) except *:
         """
         Convert a triple, quad or term into a key.
