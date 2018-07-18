@@ -8,6 +8,7 @@ import pickle
 from lakesuperior.store.base_lmdb_store import LmdbError
 from lakesuperior.store.base_lmdb_store cimport _check
 
+from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 from libc cimport errno
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
@@ -53,16 +54,6 @@ used, but it's good to leave a spare for potential future use.
 DEF FIRST_KEY = KEY_START * KLEN
 """First key of a sequence."""
 
-DEF LOOKUP_RANK = 'sop'
-"""
-Order in which keys are looked up if two terms are bound.
-The indices with the smallest average number of values per key should be
-looked up first.
-
-If we want to get fancy, this can be rebalanced from time to time by
-looking up the number of keys in (s:po, p:so, o:sp).
-"""
-
 
 ctypedef unsigned char Key[KLEN]
 ctypedef unsigned char DoubleKey[DBL_KLEN]
@@ -71,11 +62,26 @@ ctypedef unsigned char QuadKey[QUAD_KLEN]
 ctypedef unsigned char Hash[HLEN]
 
 
+cdef unsigned char lookup_rank[3]
+lookup_rank = [0, 2, 1]
+"""
+Order in which keys are looked up if two terms are bound.
+The indices with the smallest average number of values per key should be
+looked up first.
+
+0 = s:po
+1 = p:so
+2 = o:sp
+
+If we want to get fancy, this can be rebalanced from time to time by
+looking up the number of keys in (s:po, p:so, o:sp).
+"""
+
 cdef unsigned char lookup_ordering[3][3]
 lookup_ordering = [
-    [0, 1, 2],
-    [1, 0, 2],
-    [2, 0, 1],
+    [0, 1, 2], # spo
+    [1, 0, 2], # pso
+    [2, 0, 1], # osp
 ]
 
 
@@ -90,6 +96,34 @@ logger = logging.getLogger(__name__)
 
 def TstoreKeyNotFoundError(LmdbError):
     pass
+
+
+cdef class ResultSet:
+    """
+    Pre-allocated result set.
+    """
+    cdef:
+        unsigned char **data
+        size_t size, itemsize
+
+    def __cinit__(self, size_t size, size_t itemsize):
+        self.data = <unsigned char **>PyMem_Malloc(size * itemsize)
+        if not self.data:
+            raise MemoryError()
+        self.size = size
+        self.itemsize = itemsize
+
+    def resize(self, size_t size):
+        cdef unsigned char **mem
+        mem = <unsigned char **>PyMem_Realloc(self.data, size * self.itemsize)
+        if not mem:
+            raise MemoryError()
+        self.data = mem
+        self.size = size
+
+    def __dealloc__(self):
+        PyMem_Free(self.data)
+
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):
@@ -118,6 +152,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         'p:so',
         'o:sp',
         'c:spo',
+    ]
+
+    lookup_indices = [
+        's:po',
+        'p:so',
+        'o:sp',
     ]
 
     dbi_flags = {
@@ -242,6 +282,262 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self.put(ck, spok, 'c:spo', lmdb.MDB_NOOVERWRITE)
 
         self._index_triple('add', spok)
+
+
+    #cdef void _delete(triple_pattern, ck):
+    #    dcur = self._cur_open('spo:c')
+    #    icur = self._cur_open('c:spo')
+
+    #    self._cur_close(dcur)
+    #    self._cur_close(icur)
+    #    match_set = self._triple_keys(triple_pattern, ck)
+
+    #    # # #
+    #    with self.cur('spo:c') as dcur:
+    #        with self.cur('c:spo') as icur:
+    #            match_set = {bytes(k) for k in self._triple_keys(
+    #                    triple_pattern, context)}
+    #            # Delete context association.
+    #            if ck:
+    #                for spok in match_set:
+    #                    if dcur.set_key_dup(spok, ck):
+    #                        dcur.delete()
+    #                        if icur.set_key_dup(ck, spok):
+    #                            icur.delete()
+    #                        self._index_triple('remove', spok)
+    #            # If no context is specified, remove all associations.
+    #            else:
+    #                for spok in match_set:
+    #                    if dcur.set_key(spok):
+    #                        for cck in (bytes(k) for k in dcur.iternext_dup()):
+    #                            # Delete index first while we have the
+    #                            # context reference.
+    #                            if icur.set_key_dup(cck, spok):
+    #                                icur.delete()
+    #                        # Then delete the main entry.
+    #                        dcur.set_key(spok)
+    #                        dcur.delete(dupdata=True)
+    #                        self._index_triple('remove', spok)
+
+
+    # Lookup methods.
+
+    cdef ResultSet _lookup(self, triple_pattern):
+        """
+        Look up triples in the indices based on a triple pattern.
+
+        :rtype: Iterator
+        :return: Matching triple keys.
+        """
+        cdef:
+            TripleKey tkey
+        s, p, o = triple_pattern
+
+        if s is not None:
+            if p is not None:
+                # s p o
+                if o is not None:
+                    self._to_key(triple_pattern, &tkey)
+                    if tkey is not NULL:
+                        matches = ResultSet(1, TRP_KLEN)
+                        matches.data = [tkey]
+                        return matches
+                    else:
+                        matches = ResultSet(0, TRP_KLEN)
+                # s p ?
+                else:
+                    return self._lookup_2bound(0, s, 1, p)
+            else:
+                # s ? o
+                if o is not None:
+                    return self._lookup_2bound(0, s, 2, o)
+                # s ? ?
+                else:
+                    return self._lookup_1bound(0, s)
+        else:
+            if p is not None:
+                # ? p o
+                if o is not None:
+                    return self._lookup_2bound(1, p, 2, o)
+                # ? p ?
+                else:
+                    return self._lookup_1bound(1, p)
+            else:
+                # ? ? o
+                if o is not None:
+                    return self._lookup_1bound(2, o)
+                # ? ? ?
+                else:
+                    # Get all triples in the database.
+                    pass
+                    # TODO
+                    #with self.cur('spo:c') as cur:
+                    #    yield from cur.iternext_nodup()
+
+
+    cdef ResultSet _lookup_1bound(self, unsigned char idx, term):
+        """
+        Lookup triples for a pattern with one bound term.
+
+        :param str idx_name: The index to look up as one of the keys of
+            ``_lookup_ordering``.
+        :param rdflib.URIRef term: Bound term to search for.
+
+        :rtype: Iterator(bytes)
+        :return: SPO keys matching the pattern.
+        """
+        cdef:
+            unsigned char k[KLEN]
+            size_t ct, i = 0
+            unsigned char match[DBL_KLEN]
+            unsigned char subkey1[KLEN]
+            unsigned char subkey2[KLEN]
+            unsigned int asm_rng[3][2]
+            unsigned char _asm_key[TRP_KLEN]
+
+        self._to_key(term, &k)
+        if k is NULL:
+            return ResultSet(0, TRP_KLEN)
+
+        term_order = self._lookup_ordering[idx]
+        icur = self._cur_open(self.txn, self.lookup_indices[idx])
+        key_v.mv_data = k
+        key_v.mv_size = KLEN
+        _check(
+                lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET),
+                'Error getting resource count key: {}.')
+        _check(
+                lmdb.mdb_cursor_count(icur, &ct),
+                'Error getting resource count: {}.')
+
+        # Allocate memory for results.
+        matches = ResultSet(ct, TRP_KLEN)
+        if ct > 0:
+            # Arrange results according to lookup order.
+            asm_rng = [
+                [KLEN * term_order[0], KLEN * (term_order[0] + 1)],
+                [KLEN * term_order[1], KLEN * (term_order[1] + 1)],
+                [KLEN * term_order[2], KLEN * (term_order[2] + 1)],
+            ]
+
+            while lmdb.mdb_cursor_get(
+                icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
+            ) == lmdb.MDB_SUCCESS:
+                match = <unsigned char *>data_v.mv_data
+                subkey1 = match[:KLEN]
+                subkey2 = match[KLEN: DBL_KLEN]
+                _asm_key[asm_rng[0][0]: asm_rng[0][1]] = k
+                _asm_key[asm_rng[1][0]: asm_rng[1][1]] = subkey1
+                _asm_key[asm_rng[2][0]: asm_rng[2][1]] = subkey2
+                matches.data[i] = _asm_key
+                i += 1
+        return matches
+
+
+    cdef ResultSet _lookup_2bound(
+            self, unsigned char idx1, term1, unsigned char idx2, term2):
+        """
+        Look up triples for a pattern with two bound terms.
+
+        :param  bound: terms (dict) Triple labels and terms to search for,
+        in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
+        URIRef('urn:o:1')}
+
+        :rtype: iterator(bytes)
+        :return: SPO keys matching the pattern.
+        """
+        cdef:
+            unsigned char fkp, ftl
+            unsigned char subkey_range[2]
+            unsigned char asm_rng[3][2]
+            unsigned char luk[KLEN]
+            unsigned char fk[KLEN]
+            unsigned char rk[KLEN]
+            unsigned char match[DBL_KLEN]
+            size_t ct
+            Py_ssize_t i = 0
+            #Key luk, fk, rk
+
+        # First we need to get:
+        # - ludbl: The lookup DB label (s:po, p:so, o:sp)
+        # - luk: The KLEN-byte lookup key
+        # - ftl: The filter term label (s, p, o)
+        # - fk: The KLEN-byte filter key
+        # - fkp: The position of filter key in a (s, p, o) term (0÷2)
+        # These have to be selected in the order given by lookup_rank.
+        ludbl = None # Lookup DB label: s:po, p:so, or o:sp
+        for lui in lookup_rank: # Lookup index: s, p, or o
+            if lui == idx1 or lui == idx2:
+                lut = term1 if lui == idx1 else term2
+                luti = 'spo'.index(lui) # Lookup term index: 0÷2
+                # First match is used to find the lookup DB.
+                if ludbl is None:
+                    #v_label = self.lookup_indices[luti]
+                    # Lookup database key (cursor) name
+                    ludbl = self.lookup_indices[luti]
+                    term_order = lookup_ordering[luti]
+                    # Term to look up (lookup key)
+                    self._to_key(lut, &luk)
+                    if luk is NULL:
+                        return ResultSet(0, TRP_KLEN)
+                # Second match is the filter.
+                else:
+                    # Filter key (position of sub-key in lookup results)
+                    fkp = ludbl.split(':')[1].index(lui)
+                    # Fliter term
+                    self._to_key(lut, &fk)
+                    if fk is NULL:
+                        return ResultSet(0, TRP_KLEN)
+                    break
+            # The index that does not match idx1 or idx2 is the unbound one.
+
+        # Precompute the array slices that are used in the loop.
+        flt_subkey_rng = [KLEN * fkp, KLEN * (fkp + 1)]
+        r_subkey_rng = [KLEN * (1 - fkp), KLEN * (2 - fkp)]
+        asm_rng = [
+            [KLEN * term_order[0], KLEN * (term_order[0] + 1)],
+            [KLEN * (fkp + 1), KLEN * (fkp + 2)],
+            [KLEN * (2 - fkp), KLEN * (1 - fkp)],
+        ]
+
+        # Now Look up in index.
+        icur = self._cur_open(self.txn, ludbl)
+        key_v.mv_data = luk
+        key_v.mv_size = KLEN
+        rc = lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET)
+
+        if rc == lmdb.MDB_NOTFOUND:
+            return ResultSet(0, TRP_KLEN)
+
+        _check(rc, 'Error getting 2bound lookup key.')
+        _check(
+                lmdb.mdb_cursor_count(icur, &ct),
+                'Error getting 2bound term count.')
+        # Initially allocate memory for the maximum possible matches,
+        # it will be resized later.
+        matches = ResultSet(ct, TRP_KLEN)
+        # Iterate over matches and filter by second term.
+        while (
+                lmdb.mdb_cursor_get(
+                    icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
+                == lmdb.MDB_SUCCESS):
+            match = <DoubleKey>data_v.mv_data
+
+            if match[flt_subkey_rng[0]: flt_subkey_rng[1]] == fk:
+                # Remainder (not filter) key to complete the triple.
+                rk = match[r_subkey_rng[0]: r_subkey_rng[1]]
+
+                # Assemble result.
+                matches.data[i][asm_rng[0][0]: asm_rng[0][1]] = luk
+                matches.data[i][asm_rng[1][0]: asm_rng[1][1]] = fk
+                matches.data[i][asm_rng[2][0]: asm_rng[2][1]] = rk
+            i += 1
+
+        # Shrink the array to the actual number of matches.
+        matches.resize(i)
+        self._cur_close(icur)
+
+        return matches
 
 
     # Key conversion methods.
