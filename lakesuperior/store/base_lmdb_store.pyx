@@ -22,7 +22,9 @@ cdef void _check(int rc, str message) except *:
     Check return code.
     """
     if rc != lmdb.MDB_SUCCESS:
-        raise LmdbError(message.format(lmdb.mdb_strerror(rc).decode()))
+        out_msg = '{}\nInternal error: {}'.format(
+                message, lmdb.mdb_strerror(rc).decode())
+        raise LmdbError(out_msg)
 
 
 class LmdbError(Exception):

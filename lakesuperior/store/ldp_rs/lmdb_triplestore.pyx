@@ -206,11 +206,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     if rc == lmdb.MDB_NOTFOUND:
                         return 0
                     _check(
-                        rc, 'Error setting key on context {}: {{}}'.format(
+                        rc, 'Error setting key on context {}.'.format(
                             context))
                     _check(
                         lmdb.mdb_cursor_count(cur, &ct),
-                        'Error counting dup values for key {}: {{}}'.format(
+                        'Error counting dup values for key {}.'.format(
                             key_v.mv_data[0]))
                 finally:
                     self._cur_close(cur)
@@ -267,7 +267,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = tkey
                 _check(
                     lmdb.mdb_cursor_put(dcur, &key_v, &data_v, 0),
-                    'Error setting key {}: {{}}'.format(thash))
+                    'Error setting key {}.'.format(thash))
         self._cur_close(dcur)
         self._cur_close(icur)
 
@@ -405,10 +405,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         _check(
                 lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET),
-                'Error getting resource count key: {}.')
+                'Error getting resource count key.')
         _check(
                 lmdb.mdb_cursor_count(icur, &ct),
-                'Error getting resource count: {}.')
+                'Error getting resource count.')
 
         # Allocate memory for results.
         matches = ResultSet(ct, TRP_KLEN)
@@ -563,8 +563,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         database. Pairs of terms, as well as triples and quads, are expressed
         as tuples.
 
-        If more than one term is provided, the keys are concatenated.
-
         :rtype: memoryview or None
         :return: Keys stored for the term(s) or None if not found.
         """
@@ -579,7 +577,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             if rc == lmdb.MDB_NOTFOUND:
                 raise TstoreKeyNotFoundError()
             _check(rc,
-                'Error getting data for key \'{}\': {{}}'.format(key[0]))
+                'Error getting data for key \'{}\'.'.format(key[0]))
 
             key = <Key *>data_v.mv_data
 
@@ -600,7 +598,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             if rc == lmdb.MDB_NOTFOUND:
                 raise TstoreKeyNotFoundError()
             _check(rc,
-                'Error getting data for key \'{}\': {{}}'.format(key))
+                'Error getting data for key \'{}\'.'.format(key))
 
             return data_v.mv_data
 
@@ -625,7 +623,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         if rc == lmdb.MDB_NOTFOUND:
             lastkey[0] = FIRST_KEY
         else:
-            _check(rc, 'Error retrieving last key for DB {}: {{}}'.format(dbi))
+            _check(rc, 'Error retrieving last key for DB {}.'.format(dbi))
             lastkey = <Key *>key_v.mv_data
         key_v.mv_size = KLEN
         self._next_key(lastkey, &nkey)
