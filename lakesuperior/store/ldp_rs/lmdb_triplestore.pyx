@@ -322,6 +322,104 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
+    cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
+        """
+        Generator over matching triple keys.
+
+        This method is used by `triples` which returns native Python tuples,
+        as well as by other methods that need to iterate and filter triple
+        keys without incurring in the overhead of converting them to triples.
+
+        :param tuple triple_pattern: 3 RDFLib terms
+        :param context: Context graph or URI, or None.
+        :type context: rdflib.term.Identifier or None
+        """
+        cdef:
+            unsigned char tk[KLEN]
+            unsigned char ck[KLEN]
+            unsigned char spok[TRP_KLEN]
+            size_t ct, flt_ct
+            Py_ssize_t i = 0
+            lmdb.MDB_cursor *icur
+
+        if context is not None:
+            pk_c = self._pickle(context)
+            self._to_key(context, &ck)
+
+            # Shortcuts
+            if ck is NULL:
+                # Context not found.
+                return ResultSet(0, TRP_KLEN)
+
+            icur = self._cur_open(self.txn, 'c:spo')
+            key_v.mv_data = ck
+            key_v.mv_size = KLEN
+
+            # s p o c
+            if all(triple_pattern):
+                for i, term in enumerate(triple_pattern):
+                    self._to_key(term, &tk)
+                    spok[KLEN * i: KLEN * (i + 1)] = tk
+                    if tk is NULL:
+                        # A term in the triple is not found.
+                        self._cur_close(icur)
+                        return ResultSet(0, TRP_KLEN)
+                data_v.mv_data = spok
+                data_v.mv_size = TRP_KLEN
+                rc = lmdb.mdb_cursor_get(
+                        icur, &key_v, &data_v, lmdb.MDB_GET_BOTH)
+                if rc == lmdb.MDB_NOTFOUND:
+                    # Triple not found.
+                    self._cur_close(icur)
+                    return ResultSet(0, TRP_KLEN)
+                _check(rc, 'Error getting key + data pair.')
+                ret = ResultSet(1, TRP_KLEN)
+                ret.data[0] = spok
+                self._cur_close(icur)
+                return ret
+
+            # ? ? ? c
+            elif not any(triple_pattern):
+                # Get all triples from the context
+                rc = lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET)
+                if rc == lmdb.MDB_NOTFOUND:
+                    # Triple not found.
+                    self._cur_close(icur)
+                    return ResultSet(0, TRP_KLEN)
+
+                _check(lmdb.mdb_cursor_count(icur, &ct),
+                        'Error counting values.')
+                ret = ResultSet(ct, TRP_KLEN)
+                while (lmdb.mdb_cursor_get(
+                    icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
+                ) == lmdb.MDB_SUCCESS):
+                    ret.data[i] = <TripleKey>data_v.mv_data
+                    i += 1
+                    self._cur_close(icur)
+
+                    return ret
+
+            # Regular lookup. Filter _lookup() results by context.
+            else:
+                res = self._lookup(triple_pattern)
+                if res.size == 0:
+                    return res
+
+                flt_res = ResultSet(res.size, res.itemsize)
+                while flt_ct < res.size:
+                    data_v.mv_data = res.data[flt_ct]
+                    rc = lmdb.mdb_cursor_get(
+                            icur, &key_v, &data_v, lmdb.MDB_GET_BOTH)
+                    if rc == lmdb.MDB_SUCCESS:
+                        flt_res.data[flt_ct] = res.data[flt_ct]
+                    flt_ct += 1
+
+                flt_res.resize(flt_ct)
+        # Unfiltered lookup. No context checked.
+        else:
+            return self._lookup(triple_pattern)
+
+
     cdef ResultSet _lookup(self, triple_pattern):
         """
         Look up triples in the indices based on a triple pattern.

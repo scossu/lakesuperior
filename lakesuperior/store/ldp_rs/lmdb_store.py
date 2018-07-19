@@ -586,62 +586,6 @@ class LmdbStore(LmdbTripleStore, Store):
 
     ## PRIVATE METHODS ##
 
-    def _triple_keys(self, triple_pattern, context=None):
-        """
-        Generator over matching triple keys.
-
-        This method is used by `triples` which returns native Python tuples,
-        as well as by other methods that need to iterate and filter triple
-        keys without incurring in the overhead of converting them to triples.
-
-        :param tuple triple_pattern: 3 RDFLib terms
-        :param context: Context graph or URI, or None.
-        :type context: rdflib.term.Identifier or None
-        """
-        if context == self:
-            context = None
-
-        if context is not None:
-            pk_c = self._pickle(context)
-            ck = self._to_key(context)
-
-            # Shortcuts
-            if not ck:
-                # Context not found.
-                return iter(())
-
-            with self.cur('c:spo') as cur:
-                # s p o c
-                if all(triple_pattern):
-                    spok = self._to_key(triple_pattern)
-                    if not spok:
-                        # A term in the triple is not found.
-                        return iter(())
-                    if cur.set_key_dup(ck, spok):
-                        yield spok
-                        return
-                    else:
-                        # Triple not found.
-                        return iter(())
-
-                # ? ? ? c
-                elif not any(triple_pattern):
-                    # Get all triples from the context
-                    if cur.set_key(ck):
-                        for spok in cur.iternext_dup():
-                            yield spok
-                    else:
-                        return iter(())
-
-                # Regular lookup.
-                else:
-                    yield from (
-                            spok for spok in self._lookup(triple_pattern)
-                            if cur.set_key_dup(ck, spok))
-        else:
-            yield from self._lookup(triple_pattern)
-
-
     def _init_db_environments(self, create=True):
         """
         Initialize the DB environment.
