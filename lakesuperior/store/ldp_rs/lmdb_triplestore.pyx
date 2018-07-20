@@ -113,7 +113,10 @@ cdef class ResultSet:
         self.size = size
         self.itemsize = itemsize
 
-    def resize(self, size_t size):
+    def __dealloc__(self):
+        PyMem_Free(self.data)
+
+    cdef void resize(self, size_t size) except *:
         cdef unsigned char **mem
         mem = <unsigned char **>PyMem_Realloc(self.data, size * self.itemsize)
         if not mem:
@@ -121,8 +124,11 @@ cdef class ResultSet:
         self.data = mem
         self.size = size
 
-    def __dealloc__(self):
-        PyMem_Free(self.data)
+    cdef tuple to_tuple(self):
+        """
+        Return the data set as a tuple.
+        """
+        return tuple(x for x in self.data[:self.size])
 
 
 
@@ -322,9 +328,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
+    cpdef tuple _triple_keys(self, tuple triple_pattern, context=None):
         """
-        Generator over matching triple keys.
+        Top-level (for this class) lookup method.
 
         This method is used by `triples` which returns native Python tuples,
         as well as by other methods that need to iterate and filter triple
@@ -349,7 +355,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Shortcuts
             if ck is NULL:
                 # Context not found.
-                return ResultSet(0, TRP_KLEN)
+                return tuple()
 
             icur = self._cur_open(self.txn, 'c:spo')
             key_v.mv_data = ck
@@ -363,7 +369,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     if tk is NULL:
                         # A term in the triple is not found.
                         self._cur_close(icur)
-                        return ResultSet(0, TRP_KLEN)
+                        return tuple()
                 data_v.mv_data = spok
                 data_v.mv_size = TRP_KLEN
                 rc = lmdb.mdb_cursor_get(
@@ -371,12 +377,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if rc == lmdb.MDB_NOTFOUND:
                     # Triple not found.
                     self._cur_close(icur)
-                    return ResultSet(0, TRP_KLEN)
+                    return tuple()
                 _check(rc, 'Error getting key + data pair.')
-                ret = ResultSet(1, TRP_KLEN)
-                ret.data[0] = spok
                 self._cur_close(icur)
-                return ret
+                return (spok,)
 
             # ? ? ? c
             elif not any(triple_pattern):
@@ -385,7 +389,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if rc == lmdb.MDB_NOTFOUND:
                     # Triple not found.
                     self._cur_close(icur)
-                    return ResultSet(0, TRP_KLEN)
+                    return tuple()
 
                 _check(lmdb.mdb_cursor_count(icur, &ct),
                         'Error counting values.')
@@ -397,13 +401,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     i += 1
                     self._cur_close(icur)
 
-                    return ret
+                    return ret.to_tuple()
 
             # Regular lookup. Filter _lookup() results by context.
             else:
                 res = self._lookup(triple_pattern)
                 if res.size == 0:
-                    return res
+                    return tuple()
 
                 flt_res = ResultSet(res.size, res.itemsize)
                 while flt_ct < res.size:
@@ -417,7 +421,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 flt_res.resize(flt_ct)
         # Unfiltered lookup. No context checked.
         else:
-            return self._lookup(triple_pattern)
+            return self._lookup(triple_pattern).to_tuple()
 
 
     cdef ResultSet _lookup(self, triple_pattern):
