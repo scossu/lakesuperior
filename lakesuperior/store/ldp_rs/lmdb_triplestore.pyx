@@ -429,6 +429,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             TripleKey spok
+            lmdb.MDB_stat db_stat
+            size_t ct = 0
+            Py_ssize_t i = 0
         s, p, o = triple_pattern
 
         if s is not None:
@@ -467,10 +470,20 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # ? ? ?
                 else:
                     # Get all triples in the database.
-                    pass
-                    # TODO
-                    #with self.cur('spo:c') as cur:
-                    #    yield from cur.iternext_nodup()
+                    dcur = self._cur_open(self.txn, 'spo:c')
+                    _check(lmdb.mdb_stat(
+                            self.txn, self._get_dbi('spo:c'), &db_stat),
+                        'Error gathering DB stats.')
+                    ct = db_stat.ms_entries
+                    res = ResultSet(<int>ct, TRP_KLEN)
+                    while lmdb.mdb_cursor_get(
+                        dcur, NULL, &data_v, lmdb.MDB_NEXT
+                    ) == lmdb.MDB_SUCCESS:
+                        res.data[i] = <Key>data_v.mv_data
+                        i += 1
+                    self._cur_close(dcur)
+
+                    return res
 
 
     cdef ResultSet _lookup_1bound(self, unsigned char idx, term):
