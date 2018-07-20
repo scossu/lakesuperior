@@ -338,7 +338,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char tk[KLEN]
             unsigned char ck[KLEN]
             unsigned char spok[TRP_KLEN]
-            size_t ct, flt_ct
+            size_t ct = 0, flt_ct = 0
             Py_ssize_t i = 0
             lmdb.MDB_cursor *icur
 
@@ -428,17 +428,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: Matching triple keys.
         """
         cdef:
-            TripleKey tkey
+            TripleKey spok
         s, p, o = triple_pattern
 
         if s is not None:
             if p is not None:
                 # s p o
                 if o is not None:
-                    self._to_key(triple_pattern, &tkey)
-                    if tkey is not NULL:
+                    self._to_triple_key(triple_pattern, &spok)
+                    if spok is not NULL:
                         matches = ResultSet(1, TRP_KLEN)
-                        matches.data = [tkey]
+                        matches.data = [spok]
                         return matches
                     else:
                         matches = ResultSet(0, TRP_KLEN)
@@ -640,7 +640,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cdef _from_key(self, Key key):
+    cdef object _from_key(self, Key key):
         """
         Convert a key into one term.
 
@@ -650,7 +650,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return self._unpickle(thash)
 
 
-    cdef void _to_key(self, term, Key *key) except *:
+    cdef inline void _to_key(self, term, Key *key) except *:
         """
         Convert a triple, quad or term into a key.
 
@@ -680,6 +680,24 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key = <Key *>data_v.mv_data
 
 
+    cdef inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *:
+        """
+        Convert a tuple of 3 terms into a triple key.
+        """
+        cdef:
+            char i = 0
+            Key key
+
+        while  i < 3:
+            self._to_key(terms[i], &key)
+            tkey[0][KLEN * i: KLEN * (i + 1)] = key
+            if key is NULL:
+                # A term in the triple is not found.
+                tkey = NULL
+                return
+            i += 1
+
+
     cdef void *_get_data(self, Key key, str db):
         """
         Get a single value (non-dup) for a key.
@@ -702,7 +720,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef void _append(
-            self, str dbi, const unsigned char *value, Key *lastkey,
+            self, str dbi, unsigned char *value, Key *lastkey,
             unsigned int flags=0) except *:
         """
         Append one or more keys and values to the end of a database.
