@@ -100,30 +100,20 @@ cdef class BaseLmdbStore:
 
     ### INIT & TEARDOWN ###
 
-    def __cinit__(self, dbpath, create=True):
+    def __init__(self, dbpath, open_env=False, create=False):
         """
         Initialize DB environment and databases.
+
+        :param str dbpath: The file path of the store.
+        :param bool open: Whether to open the store immediately. If ``False``
+            the store can be manually opened with :py:meth:`opn_env`.
+        :param bool create: Whether the file and directory structure should
+            be created if the store is opened immediately.
         """
         self.dbpath = dbpath.encode()
+        if open_env:
+            self.open_env(create)
         logger.info('Init DB with path: {}'.format(self.dbpath.decode()))
-
-        parent_path = (
-                path.dirname(dbpath) if lmdb.MDB_NOSUBDIR & self.flags
-                else dbpath)
-
-        if not path.exists(parent_path) and True:
-            logger.info(
-                    'Creating database directory at {}'.format(parent_path))
-            try:
-                makedirs(parent_path, mode=0o750, exist_ok=True)
-            except Exception as e:
-                raise IOError(
-                    'Could not create the database at {}. Error: {}'.format(
-                        dbpath, e))
-
-
-    def __init__(self, dbpath, create=True):
-        self.open_env(create)
 
 
     def __dealloc__(self):
@@ -132,8 +122,23 @@ cdef class BaseLmdbStore:
 
     def open_env(self, create):
         """
-        Create and open database environment.
+        Open, and optionally create, store environment.
         """
+        if create:
+            parent_path = (
+                    path.dirname(self.dbpath) if lmdb.MDB_NOSUBDIR & self.flags
+                    else self.dbpath)
+
+            if not path.exists(parent_path):
+                logger.info(
+                        'Creating store directory at {}'.format(parent_path))
+                try:
+                    makedirs(parent_path, mode=0o750, exist_ok=True)
+                except Exception as e:
+                    raise IOError(
+                        'Could not create store at {}. Error: {}'.format(
+                            self.dbpath, e))
+
         # Create environment handle.
         rc = lmdb.mdb_env_create(&self.dbenv)
         _check(rc, 'Error creating DB environment handle: {}')
@@ -201,15 +206,20 @@ cdef class BaseLmdbStore:
             raise
 
 
+    cpdef void close_env(self, bint commit_pending_transaction=False) except *:
+        if self.is_txn_open:
+            if commit_pending_transaction:
+                self._txn_commit()
+            else:
+                self._txn_abort()
+        PyMem_Free(self.dbis)
+        lmdb.mdb_env_close(self.dbenv)
+
+
     cpdef void _destroy(self) except *:
         """Remove the store directory from the filesystem."""
         if exists(self.dbpath):
             rmtree(self.dbpath)
-
-
-    def close_env(self):
-        PyMem_Free(self.dbis)
-        lmdb.mdb_env_close(self.dbenv)
 
 
     ### PYTHON-ACCESSIBLE METHODS ###
@@ -283,6 +293,21 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
+    cpdef void begin(self, write=False) except *:
+        """
+        Begin a transaction manually if not already in a txn context.
+
+        The :py:meth:`txn_ctx` context manager should be used whenever
+            possible rather than this method.
+        """
+        if not self.is_open:
+            raise RuntimeError('Store must be opened first.')
+        logger.debug('Beginning a {} transaction.'.format(
+            'read/write' if write else 'read-only'))
+
+        self._txn_begin(write=write)
+
+
     cpdef bint key_exists(self, unsigned char *key, db=None) except -1:
         """
         Return whether a key exists in a database.
@@ -297,7 +322,9 @@ cdef class BaseLmdbStore:
             return rc == lmdb.MDB_SUCCESS
 
 
-    cpdef put(self, unsigned char *key, unsigned char *data, db=None, flags=0):
+    cpdef void put(
+            self, unsigned char *key, unsigned char *data, db=None, flags=0
+    ) except *:
         """
         Put one key/value pair.
         """
@@ -342,11 +369,11 @@ cdef class BaseLmdbStore:
         pass
 
 
-    cpdef get_all_pairs(self, db=None):
-        """
-        Get all the non-duplicate key-value pairs in a database.
-        """
-        pass
+    #cpdef get_all_pairs(self, db=None):
+    #    """
+    #    Get all the non-duplicate key-value pairs in a database.
+    #    """
+    #    pass
 
 
     cpdef stats(self):
@@ -393,9 +420,10 @@ cdef class BaseLmdbStore:
     cdef void _txn_commit(self) except *:
         if self.txn == NULL:
             logger.warning('txn is NULL!')
-        rc = lmdb.mdb_txn_commit(self.txn)
-        _check(rc, 'Error committing transaction: {}')
-        self.txn = NULL
+        else:
+            rc = lmdb.mdb_txn_commit(self.txn)
+            _check(rc, 'Error committing transaction: {}')
+            self.txn = NULL
         self.is_txn_rw = None
 
 
@@ -431,5 +459,6 @@ cdef class BaseLmdbStore:
 
 
     cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:
-        pass
+        """Close a cursor."""
+        lmdb.mdb_cursor_close(cur)
 

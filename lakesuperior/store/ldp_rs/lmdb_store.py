@@ -71,12 +71,10 @@ class LmdbStore(LmdbTripleStore, Store):
         self.__open = False
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
-        super().__init__(path)
+        super().__init__(path, open_env=False)
 
         self._pickle = self.node_pickler.dumps
         self._unpickle = self.node_pickler.loads
-
-        self._key_seq = LexicalSequence(self.KEY_START, self.KEY_LENGTH)
 
 
     def __del__(self):
@@ -123,11 +121,7 @@ class LmdbStore(LmdbTripleStore, Store):
         Do this at server shutdown.
         """
         self.__open = False
-        if self.is_txn_open:
-            if commit_pending_transaction:
-                self._txn_commit()
-            else:
-                self._txn_abort()
+        self.close_env(commit_pending_transaction)
 
 
     def destroy(self, path=''):
@@ -141,19 +135,7 @@ class LmdbStore(LmdbTripleStore, Store):
         return self._destroy()
 
 
-    # Non-RDFLib database management methods.
-
-    def begin(self, write=False):
-        """
-        Begin the main write transaction and create cursors.
-        """
-        if not self.is_open:
-            raise RuntimeError('Store must be opened first.')
-        logger.debug('Beginning a {} transaction.'.format(
-            'read/write' if write else 'read-only'))
-
-        self._txn_begin(write=write)
-
+    # RDFLib triple methods.
 
     def add(self, triple, context=None, quoted=False):
         """
@@ -359,11 +341,7 @@ class LmdbStore(LmdbTripleStore, Store):
         """Commit main transaction."""
         logger.debug('Committing transaction.')
         try:
-            self.data_txn.commit()
-        except (AttributeError, lmdb.Error):
-            pass
-        try:
-            self.idx_txn.commit()
+            self.txn.commit()
         except (AttributeError, lmdb.Error):
             pass
         self.is_txn_rw = None
@@ -373,11 +351,7 @@ class LmdbStore(LmdbTripleStore, Store):
         """Roll back main transaction."""
         logger.debug('Rolling back transaction.')
         try:
-            self.data_txn.abort()
-        except (AttributeError, lmdb.Error):
-            pass
-        try:
-            self.idx_txn.abort()
+            self.txn.abort()
         except (AttributeError, lmdb.Error):
             pass
         self.is_txn_rw = None

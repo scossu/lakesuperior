@@ -29,10 +29,14 @@ cdef class BaseLmdbStore:
         lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
 
+    cpdef void begin(self, write=*) except *
+    cpdef void close_env(self, bint commit_pending_transaction=*) except *
     cpdef void _destroy(self) except *
     cpdef bint key_exists(self, unsigned char *key, db=*) except -1
     cpdef get_data(self, unsigned char *key, db=*)
     cpdef get_dup_data(self, unsigned char *key, db=*)
-    cpdef get_all_pairs(self, db=*)
-    cpdef put(self, unsigned char *key, unsigned char *data, db=*, flags=*)
+    #cpdef get_all_pairs(self, db=*)
+    cpdef void put(
+            self, unsigned char *key, unsigned char *data, db=*, flags=*
+    ) except *
     cpdef stats(self)
