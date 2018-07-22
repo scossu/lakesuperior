@@ -340,9 +340,9 @@ class LmdbStore(LmdbTripleStore, Store):
         Get the namespace for a prefix.
         :param str prefix: Namespace prefix.
         """
-        with self.cur('pfx:ns') as cur:
-            ns = cur.get(s2b(prefix))
-            return Namespace(b2s(ns)) if ns is not None else None
+        ns = self.get_data(prefix, 'pfx:ns')
+
+        return Namespace(ns.decode()) if ns is not None else None
 
 
     def prefix(self, namespace):
@@ -356,9 +356,9 @@ class LmdbStore(LmdbTripleStore, Store):
 
         :rtype: str or None
         """
-        with self.cur('ns:pfx') as cur:
-            prefix = cur.get(s2b(namespace))
-            return b2s(prefix) if prefix is not None else None
+        prefix = self.get_data(namespace, 'ns:pfx')
+
+        return prefix.decode() if prefix is not None else None
 
 
     def namespaces(self):
@@ -366,9 +366,8 @@ class LmdbStore(LmdbTripleStore, Store):
 
         :rtype: Iterator(tuple(str, rdflib.Namespace))
         """
-        with self.cur('pfx:ns') as cur:
-            for pfx, ns in iter(cur):
-                yield (b2s(pfx), Namespace(b2s(ns)))
+        for pfx, ns in self.all_namespaces():
+            yield (pfx, Namespace(ns))
 
 
     def contexts(self, triple=None):
@@ -377,17 +376,8 @@ class LmdbStore(LmdbTripleStore, Store):
 
         :rtype: Iterator(rdflib.Graph)
         """
-        if triple and any(triple):
-            with self.cur('spo:c') as cur:
-                if cur.set_key(self._to_key(triple)):
-                    for ctx_uri in cur.iternext_dup():
-                        yield Graph(
-                            identifier=self._from_key(ctx_uri)[0], store=self)
-        else:
-            with self.cur('c:') as cur:
-                for ctx_uri in cur.iternext(values=False):
-                    yield Graph(
-                            identifier=self._from_key(ctx_uri)[0], store=self)
+        for ctx_uri in self.all_contexts(triple):
+            yield Graph(identifier=ctx_uri, store=self)
 
 
     def add_graph(self, graph):

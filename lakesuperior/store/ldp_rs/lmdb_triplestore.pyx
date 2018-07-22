@@ -768,9 +768,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         icur = self._cur_open(self.txn, idx_label)
         res = ResultSet(stat.ms_entries, KLEN)
-        while (
-                lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP)
-        == lmdb.MDB_SUCCESS):
+        while lmdb.mdb_cursor_get(
+                icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP) == lmdb.MDB_SUCCESS:
             res.data[i] = <unsigned char *>key_v.mv_data
 
         self._cur_close(icur)
@@ -782,6 +781,60 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         for key in self._all_term_keys(term_type):
             yield self._from_key(key)[0]
+
+
+    def all_namespaces(self):
+        """
+        Return all registered namespaces.
+        """
+        res = []
+        dcur = self._cur_open(self.txn, 'pfx:ns')
+        try:
+            while lmdb.mdb_cursor_get(
+                    dcur, &key_v, &data_v, lmdb.MDB_NEXT) == lmdb.MDB_SUCCESS:
+                res.append((<str>key_v.mv_data, <str>data_v.mv_data))
+        finally:
+            self._cur_close(dcur)
+
+
+    cpdef tuple all_contexts(self, triple=None):
+        """
+        Get a list of all contexts.
+
+        :rtype: Iterator(rdflib.Graph)
+        """
+        cdef:
+            lmdb.MDB_stat stat
+            size_t ct, i = 0
+            TripleKey spok
+
+        if triple and all(triple):
+            dbi = self.get_dbi('spo:c')
+            _check(lmdb.mdb_stat(self.txn, dbi[0], &stat))
+            ct = stat.ms_entries
+            res = ResultSet(ct, KLEN)
+
+            dcur = self._cur_open(self.txn, 'spo:c')
+            self._to_triple_key(triple, &spok)
+            key_v.mv_data = spok
+            key_v.mv_size = TRP_KLEN
+            while lmdb.mdb_cursor_get(
+                    dcur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
+            ) == lmdb.MDB_SUCCESS:
+                res.data[i] = <Key>data_v.mv_data
+        else:
+            dbi = self.get_dbi('c:')
+            _check(lmdb.mdb_stat(self.txn, dbi[0], &stat))
+            ct = stat.ms_entries
+            res = ResultSet(ct, KLEN)
+
+            dcur = self._cur_open(self.txn, 'c:')
+            while lmdb.mdb_cursor_get(
+                    dcur, &key_v, NULL, lmdb.MDB_NEXT
+            ) == lmdb.MDB_SUCCESS:
+                res.data[i] = <Key>key_v.mv_data
+
+        return res.to_tuple()
 
 
     # Key conversion methods.
