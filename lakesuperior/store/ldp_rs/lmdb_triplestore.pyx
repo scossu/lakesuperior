@@ -367,7 +367,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._cur_close(icur)
 
 
-    cdef void _index_triple(self, op, TripleKey spok) except *:
+    cdef void _index_triple(self, str op, TripleKey spok) except *:
         """
         Update index for a triple and context (add or remove).
 
@@ -497,9 +497,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 ) == lmdb.MDB_SUCCESS):
                     ret.data[i] = <TripleKey>data_v.mv_data
                     i += 1
-                    self._cur_close(icur)
+                self._cur_close(icur)
 
-                    return ret
+                return ret
 
             # Regular lookup. Filter _lookup() results by context.
             else:
@@ -519,7 +519,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 flt_res.resize(flt_ct)
         # Unfiltered lookup. No context checked.
         else:
-            return self._lookup(triple_pattern).to_tuple()
+            return self._lookup(triple_pattern)
 
 
     cdef ResultSet _lookup(self, triple_pattern):

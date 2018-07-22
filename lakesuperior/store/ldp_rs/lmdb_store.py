@@ -4,8 +4,7 @@ import os
 
 from contextlib import ContextDecorator, ExitStack
 from os import makedirs
-from os.path import exists, abspath
-from shutil import rmtree
+from os.path import abspath
 from urllib.request import pathname2url
 
 import lmdb
@@ -182,16 +181,15 @@ class LmdbStore(LmdbTripleStore, Store):
                 self._txn_abort()
 
 
-    def destroy(self, path):
+    def destroy(self, path=''):
         """
         Destroy the store.
 
         https://www.youtube.com/watch?v=lIVq7FJnPwg
 
-        :param str path: Path of the folder containing the database(s).
+        :param str path: unused.
         """
-        if exists(path):
-            rmtree(path)
+        return self._destroy()
 
 
     # Non-RDFLib database management methods.

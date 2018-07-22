@@ -4,7 +4,8 @@ import logging
 import os
 
 from contextlib import contextmanager
-from os import makedirs, path
+from os import exists, makedirs, path
+from shutil import rmtree
 
 from lakesuperior import env
 
@@ -200,6 +201,12 @@ cdef class BaseLmdbStore:
             raise
 
 
+    cpdef void _destroy(self) except *:
+        """Remove the store directory from the filesystem."""
+        if exists(self.dbpath):
+            rmtree(self.dbpath)
+
+
     def close_env(self):
         PyMem_Free(self.dbis)
         lmdb.mdb_env_close(self.dbenv)
@@ -224,6 +231,7 @@ cdef class BaseLmdbStore:
         """
         try:
             self._txn_begin(write=write)
+            self.is_txn_rw = write
             logger.debug('before yield')
             yield
             logger.debug('after yield')
