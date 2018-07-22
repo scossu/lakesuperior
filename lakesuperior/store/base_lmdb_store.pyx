@@ -17,13 +17,15 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 logger = logging.getLogger(__name__)
 
 
-cdef void _check(int rc, str message) except *:
+cdef void _check(int rc, str message='') except *:
     """
     Check return code.
     """
     if rc != lmdb.MDB_SUCCESS:
-        out_msg = '{}\nInternal error: {}'.format(
-                message, lmdb.mdb_strerror(rc).decode())
+        out_msg = (
+                message + '\nInternal error: '
+                if len(message) else 'LMDB Error: ')
+        out_msg += lmdb.mdb_strerror(rc).decode()
         raise LmdbError(out_msg)
 
 

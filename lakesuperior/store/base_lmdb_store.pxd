@@ -9,7 +9,7 @@ cdef:
     lmdb.MDB_val key_v, data_v
     lmdb.MDB_dbi dbi
 
-    void _check(int rc, str message) except *
+    void _check(int rc, str message=*) except *
 
 
 cdef class BaseLmdbStore:
