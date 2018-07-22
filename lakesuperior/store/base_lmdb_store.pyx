@@ -388,11 +388,13 @@ cdef class BaseLmdbStore:
         rc = lmdb.mdb_txn_commit(self.txn)
         _check(rc, 'Error committing transaction: {}')
         self.txn = NULL
+        self.is_txn_rw = None
 
 
     cdef void _txn_abort(self) except *:
         lmdb.mdb_txn_abort(self.txn)
         self.txn = NULL
+        self.is_txn_rw = None
 
 
     cdef size_t _txn_id(self) except -1:
