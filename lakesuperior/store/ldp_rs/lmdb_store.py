@@ -19,57 +19,6 @@ from lakesuperior.store.ldp_rs.lmdb_triplestore import LmdbTriplestore
 logger = logging.getLogger(__name__)
 
 
-def s2b(u, enc='UTF-8'):
-    """
-    Convert a string into a bytes object.
-    """
-    return u.encode(enc)
-
-
-def b2s(u, enc='UTF-8'):
-    """
-    Convert a bytes or memoryview object into a string.
-    """
-    return bytes(u).decode(enc)
-
-
-class TxnManager(ContextDecorator):
-    """
-    Handle ACID transactions with an LmdbStore.
-
-    Wrap this within a ``with`` statement::
-
-        >>> with TxnManager(store, True):
-        ...     # Do something with the database
-        >>>
-
-    The transaction will be opened and handled automatically.
-    """
-
-    def __init__(self, store, write=False):
-        """
-        Begin and close a transaction in a store.
-
-        :param LmdbStore store: The store to open a transaction on.
-        :param bool write: Whether the transaction is read-write. Default is
-            ``False`` (read-only transaction).
-        """
-        self.store = store
-        self.write = write
-
-    def __enter__(self):
-        # Only open a R/W transaction if one is not already open.
-        if not self.write or not self.store.is_txn_rw:
-            self.store.begin(write=self.write)
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type:
-            self.store.rollback()
-        else:
-            self.store.commit()
-
-
-
 class LmdbStore(LmdbTripleStore, Store):
     """
     LMDB-backed store.
@@ -292,8 +241,8 @@ class LmdbStore(LmdbTripleStore, Store):
         :param str prefix: Namespace prefix.
         :param rdflib.URIRef namespace: Fully qualified URI of namespace.
         """
-        prefix = s2b(prefix)
-        namespace = s2b(namespace)
+        prefix = prefix.encode()
+        namespace = namespace.encode()
         if self.is_txn_rw:
             self.put(prefix, namespace, 'pfx:ns')
             self.put(namespace, prefix, 'ns:pfx')
