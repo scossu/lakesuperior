@@ -6,7 +6,7 @@ from rdflib import Namespace, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
-from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore, TxnManager
+from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
 
 
 @pytest.fixture(scope='class')
@@ -53,12 +53,12 @@ class TestStoreInit:
         '''
         Test enclosing a transaction in a context.
         '''
-        with TxnManager(store) as txn:
+        with store.txn_ctx() as txn:
             pass
         assert not store.is_txn_open
 
         try:
-            with TxnManager(store) as txn:
+            with store.txn_ctx() as txn:
                 raise RuntimeError
         except RuntimeError:
             assert not store.is_txn_open
@@ -69,7 +69,7 @@ class TestStoreInit:
         Test rolling back a transaction.
         '''
         try:
-            with TxnManager(store, True) as txn:
+            with store.txn_ctx(True) as txn:
                 store.add((
                     URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
                     URIRef('urn:nogo:o')))
@@ -77,7 +77,7 @@ class TestStoreInit:
         except RuntimeError:
             pass
 
-        with TxnManager(store) as txn:
+        with store.txn_ctx() as txn:
             res = set(store.triples((None, None, None)))
         assert len(res) == 0
 
@@ -93,7 +93,7 @@ class TestBasicOps:
         '''
         trp = (
             URIRef('urn:test:s'), URIRef('urn:test:p'), URIRef('urn:test:o'))
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.add(trp)
 
             res1 = set(store.triples((None, None, None)))
@@ -109,7 +109,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching one bound term.
         '''
-        with TxnManager(store) as txn:
+        with store.txn_ctx() as txn:
             res1 = set(store.triples((URIRef('urn:test:s'), None, None)))
             res2 = set(store.triples((None, URIRef('urn:test:p'), None)))
             res3 = set(store.triples((None, None, URIRef('urn:test:o'))))
@@ -124,7 +124,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching two bound terms.
         '''
-        with TxnManager(store) as txn:
+        with store.txn_ctx() as txn:
             res1 = set(store.triples(
                 (URIRef('urn:test:s'), URIRef('urn:test:p'), None)))
             res2 = set(store.triples(
@@ -142,7 +142,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching 3 bound terms (exact match).
         '''
-        with TxnManager(store) as txn:
+        with store.txn_ctx() as txn:
             pattern = (
                 URIRef('urn:test:s'), URIRef('urn:test:p'),
                 URIRef('urn:test:o'))
@@ -154,7 +154,7 @@ class TestBasicOps:
         '''
         Test empty matches with 1 bound term.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.add((
                 URIRef('urn:test:s'),
                 URIRef('urn:test:p2'), URIRef('urn:test:o2')))
@@ -176,7 +176,7 @@ class TestBasicOps:
         '''
         Test empty matches with 2 bound terms.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             res1 = set(store.triples(
                 (URIRef('urn:test:s2'), URIRef('urn:test:p'), None)))
             res2 = set(store.triples(
@@ -191,7 +191,7 @@ class TestBasicOps:
         '''
         Test empty matches with 3 bound terms.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             res1 = set(store.triples((
                 URIRef('urn:test:s2'), URIRef('urn:test:p3'),
                 URIRef('urn:test:o2'))))
@@ -203,7 +203,7 @@ class TestBasicOps:
         '''
         Test removing one or more triples.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:test:s3'),
                     URIRef('urn:test:p3'), URIRef('urn:test:o3')))
 
@@ -234,7 +234,7 @@ class TestBindings:
         '''
         Test namespace bindings.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             for b in bindings:
                 store.bind(*b)
 
@@ -249,7 +249,7 @@ class TestBindings:
         '''
         Test namespace to prefix conversion.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             for b in bindings:
                 pfx, ns = b
                 assert store.namespace(pfx) == ns
@@ -259,7 +259,7 @@ class TestBindings:
         '''
         Test namespace to prefix conversion.
         '''
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             for b in bindings:
                 pfx, ns = b
                 assert store.prefix(ns) == pfx
@@ -276,7 +276,7 @@ class TestContext:
         '''
         gr_uri = URIRef('urn:bogus:graph#a')
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
 
@@ -287,7 +287,7 @@ class TestContext:
         '''
         gr_uri = URIRef('urn:bogus:empty#a')
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
             store.remove_graph(gr_uri)
@@ -305,7 +305,7 @@ class TestContext:
         trp3 = (URIRef('urn:s:3'), URIRef('urn:p:3'), URIRef('urn:o:3'))
         trp4 = (URIRef('urn:s:4'), URIRef('urn:p:4'), URIRef('urn:o:4'))
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.add(trp1, gr_uri)
             store.add(trp2, gr_uri)
             store.add(trp2, gr_uri) # Duplicate; dropped.
@@ -338,22 +338,22 @@ class TestContext:
         gr_uri = URIRef('urn:bogus:graph#a')
         gr2_uri = URIRef('urn:bogus:graph#b')
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.remove((None, None, None), gr2_uri)
             assert len(set(store.triples((None, None, None), gr2_uri))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:s:1'), None, None))
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None)))) == 3
 
-        with TxnManager(store, True) as txn:
+        with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:s:4'), None, None),
                     RDFLIB_DEFAULT_GRAPH_URI)
             assert len(set(store.triples((None, None, None)))) == 2
 
-        with TxnManager(store,True) as txn:
+        with store.txn_ctx(True) as txn:
             store.remove((None, None, None))
             assert len(set(store.triples((None, None, None)))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 0
@@ -388,7 +388,7 @@ class TestTransactions:
 #        ''', format='n3')
 #
 #    def _test_basic(self, sample_gr):
-#        with TxnManager as txn:
+#        with store.txn_ctx() as txn:
 #            implies = URIRef("http://www.w3.org/2000/10/swap/log#implies")
 #            a = URIRef('http://test/a')
 #            b = URIRef('http://test/b')
