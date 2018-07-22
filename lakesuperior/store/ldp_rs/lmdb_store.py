@@ -208,20 +208,6 @@ class LmdbStore(LmdbTripleStore, Store):
         self._txn_begin(write=write)
 
 
-    def cur(self, index):
-        """Return a new cursor by its index."""
-        if index in self.idx_keys:
-            txn = self.idx_txn
-            src = self.idx_keys
-        elif index in self.data_keys:
-            txn = self.data_txn
-            src = self.data_keys
-        else:
-            return ValueError('Cursor key not found.')
-
-        return txn.cursor(self.dbs[index])
-
-
     def get_data_cursors(self, txn):
         """
         Build the main data cursors for a transaction.
@@ -276,36 +262,6 @@ class LmdbStore(LmdbTripleStore, Store):
         pk_c = self._pickle(context)
 
         self._add(pk_s, pk_p, pk_o, pk_c)
-        ## Add new individual terms or gather keys for existing ones.
-        #keys = [None] * 4
-        #with self.cur('th:t') as icur:
-        #    for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
-        #        thash = self._hash(pk_t)
-        #        if icur.set_key(thash):
-        #            keys[i] = bytes(icur.value())
-        #        else:
-        #            # Put new term.
-        #            with self.cur('t:st') as dcur:
-        #                keys[i] = self._append(dcur, (pk_t,))[0]
-        #            # Index.
-        #            icur.put(thash, keys[i])
-
-        ## Add context in context DB.
-        #ck = keys[3]
-        #with self.cur('c:') as cur:
-        #    if not cur.set_key(ck):
-        #        cur.put(ck, b'')
-
-        ## Add triple:context association.
-        #spok = b''.join(keys[:3])
-        #with self.cur('spo:c') as dcur:
-        #    if not dcur.set_key_dup(spok, ck):
-        #        dcur.put(spok, ck)
-        ## Index spo:c association.
-        #with self.cur('c:spo') as icur:
-        #    icur.put(ck, spok)
-
-        #self._index_triple('add', spok)
 
 
     def remove(self, triple_pattern, context=None):
@@ -322,40 +278,8 @@ class LmdbStore(LmdbTripleStore, Store):
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
         #    triple_pattern, context))
         context = self._normalize_context(context)
-        if context is not None:
-            ck = self._to_key(context)
-            # If context is specified but not found, return to avoid deleting
-            # the wrong triples.
-            if not ck:
-                return
-        else:
-            ck = None
 
-        with self.cur('spo:c') as dcur:
-            with self.cur('c:spo') as icur:
-                match_set = {bytes(k) for k in self._triple_keys(
-                        triple_pattern, context)}
-                # Delete context association.
-                if ck:
-                    for spok in match_set:
-                        if dcur.set_key_dup(spok, ck):
-                            dcur.delete()
-                            if icur.set_key_dup(ck, spok):
-                                icur.delete()
-                            self._index_triple('remove', spok)
-                # If no context is specified, remove all associations.
-                else:
-                    for spok in match_set:
-                        if dcur.set_key(spok):
-                            for cck in (bytes(k) for k in dcur.iternext_dup()):
-                                # Delete index first while we have the
-                                # context reference.
-                                if icur.set_key_dup(cck, spok):
-                                    icur.delete()
-                            # Then delete the main entry.
-                            dcur.set_key(spok)
-                            dcur.delete(dupdata=True)
-                            self._index_triple('remove', spok)
+        self._remove(triple_pattern, ck)
 
 
     def triples(self, triple_pattern, context=None):
@@ -381,43 +305,16 @@ class LmdbStore(LmdbTripleStore, Store):
         # but anyway...
         context = self._normalize_context(context)
 
-        with self.cur('spo:c') as cur:
-            for spok in self._triple_keys(triple_pattern, context):
-                if context is not None:
-                    contexts = (Graph(identifier=context),)
-                else:
-                    if cur.set_key(spok):
-                        contexts = tuple(
-                            Graph(identifier=self._from_key(ck)[0], store=self)
-                            for ck in cur.iternext_dup())
+        for spok in self.triple_keys(triple_pattern, context):
+            if context is not None:
+                contexts = (Graph(identifier=context),)
+            else:
+                if self.key_exists(spok, 'spo:c'):
+                    contexts = tuple(
+                        Graph(identifier=self.from_key(ck), store=self)
+                        for ck in cur.iternext_dup())
 
-                #print('Found triples: {} In contexts: {}'.format(
-                #    self._from_key(spok), contexts))
-                yield self._from_key(spok), contexts
-
-
-    def all_terms(self, term_type):
-        """
-        Return all terms of a type (``s``, ``p``, or ``o``) in the store.
-
-        :param str term_type: one of ``s``, ``p`` or ``o``.
-
-        :rtype: Iterator(rdflib.term.Identifier)
-        :return: Iterator of all terms.
-        :raise ValueError: if the term type is not one of the expected values.
-        """
-        if term_type == 's':
-            idx_label = 's:po'
-        elif term_type == 'p':
-            idx_label = 'p:so'
-        elif term_type == 'o':
-            idx_label = 'o:sp'
-        else:
-            raise ValueError('Term type must be \'s\', \'p\' or \'o\'.')
-
-        with self.cur(idx_label) as cur:
-            for key in cur.iternext_nodup():
-                yield self._from_key(key)[0]
+            yield self.from_key(spok), contexts
 
 
     def bind(self, prefix, namespace):
@@ -524,7 +421,7 @@ class LmdbStore(LmdbTripleStore, Store):
             if self.is_txn_rw:
                 # Use existing R/W transaction.
                 with self.cur('t:st') as cur:
-                    ck = self._append(cur, (pk_c,))[0]
+                    ck = self._append(cur, pk_c)
                 with self.cur('th:t') as cur:
                     cur.put(c_hash, ck)
                 with self.cur('c:') as cur:
@@ -533,7 +430,7 @@ class LmdbStore(LmdbTripleStore, Store):
                 # Open new R/W transactions.
                 with self.data_env.begin(write=True) as wtxn:
                     with wtxn.cursor(self.dbs['t:st']) as cur:
-                        ck = self._append(cur, (pk_c,))[0]
+                        ck = self._append(cur, pk_c)
                     with wtxn.cursor(self.dbs['c:']) as cur:
                         cur.put(ck, b'')
                 with self.idx_env.begin(write=True) as wtxn:
@@ -646,40 +543,6 @@ class LmdbStore(LmdbTripleStore, Store):
                         dupsort=True, dupfixed=True, create=create)
 
 
-    def _from_key(self, key):
-        """
-        Convert a key into one or more terms.
-
-        :param key: The key to be converted. It can be a
-        :type key: bytes or memoryview
-        compound one in which case the function will return multiple terms.
-
-        :rtype: tuple(rdflib.term.Identifier)
-        :return: The term(s) associated with the key(s). The result is always
-        a tuple even for single results.
-        """
-        with self.cur('t:st') as cur:
-            return tuple(
-                   self._unpickle(cur.get(k))
-                   for k in self._split_key(key))
-
-
-    def _split_key(self, keys):
-        """
-        Split a compound key into individual keys.
-
-        This method relies on the fixed length of all term keys.
-
-        :param keys: Concatenated keys.
-        :type keys: bytes or memoryview
-
-        :rtype: tuple(memoryview)
-        """
-        return tuple(
-                keys[i:i+self.KEY_LENGTH]
-                for i in range(0, len(keys), self.KEY_LENGTH))
-
-
     def _normalize_context(self, context):
         """
         Normalize a context parameter to conform to the model expectations.
@@ -695,181 +558,6 @@ class LmdbStore(LmdbTripleStore, Store):
                 #logger.debug('Converted graph into URI: {}'.format(context))
 
         return context
-
-
-    def _lookup(self, triple_pattern):
-        """
-        Look up triples in the indices based on a triple pattern.
-
-        :rtype: Iterator
-        :return: Matching triple keys.
-        """
-        s, p, o = triple_pattern
-
-        if s is not None:
-            if p is not None:
-                # s p o
-                if o is not None:
-                    with self.cur('spo:c') as cur:
-                        tkey = self._to_key(triple_pattern)
-                        if tkey:
-                            yield tkey
-                            return
-                        else:
-                            return iter(())
-                # s p ?
-                else:
-                    yield from self._lookup_2bound({'s': s, 'p': p})
-            else:
-                # s ? o
-                if o is not None:
-                    yield from self._lookup_2bound({'s': s, 'o': o})
-                # s ? ?
-                else:
-                    yield from self._lookup_1bound('s:po', s)
-        else:
-            if p is not None:
-                # ? p o
-                if o is not None:
-                    yield from self._lookup_2bound({'p': p, 'o': o})
-                # ? p ?
-                else:
-                    yield from self._lookup_1bound('p:so', p)
-            else:
-                # ? ? o
-                if o is not None:
-                    yield from self._lookup_1bound('o:sp', o)
-                # ? ? ?
-                else:
-                    # Get all triples in the database.
-                    with self.cur('spo:c') as cur:
-                        yield from cur.iternext_nodup()
-
-
-    def _lookup_1bound(self, idx_name, term):
-        """
-        Lookup triples for a pattern with one bound term.
-
-        :param str idx_name: The index to look up as one of the keys of
-            ``_lookup_ordering``.
-        :param rdflib.URIRef term: Bound term to search for.
-
-        :rtype: Iterator(bytes)
-        :return: SPO keys matching the pattern.
-        """
-        k = self._to_key(term)
-        if not k:
-            return iter(())
-        term_order = self._lookup_ordering[idx_name]
-        with self.cur(idx_name) as cur:
-            if cur.set_key(k):
-                for match in cur.iternext_dup():
-                    subkeys = self._split_key(match)
-
-                    # Compose result.
-                    out = [None] * 3
-                    out[term_order[0]] = k
-                    out[term_order[1]] = subkeys[0]
-                    out[term_order[2]] = subkeys[1]
-
-                    yield b''.join(out)
-
-
-    def _lookup_2bound(self, bound_terms):
-        """
-        Look up triples for a pattern with two bound terms.
-
-        :param  bound: terms (dict) Triple labels and terms to search for,
-        in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
-        URIRef('urn:o:1')}
-
-        :rtype: iterator(bytes)
-        :return: SPO keys matching the pattern.
-        """
-        if len(bound_terms) != 2:
-            raise ValueError(
-                    'Exactly 2 terms need to be bound. Got {}'.format(
-                        len(bound_terms)))
-
-        # Establish lookup ranking.
-        luc = None
-        for k_label in self._lookup_rank:
-            if k_label in bound_terms.keys():
-                # First match is lookup term.
-                if not luc:
-                    v_label = 'spo'.replace(k_label, '')
-                    # Lookup database key (cursor) name
-                    luc = k_label + ':' + v_label
-                    term_order = self._lookup_ordering[luc]
-                    # Term to look up
-                    luk = self._to_key(bound_terms[k_label])
-                    if not luk:
-                        return iter(())
-                    # Position of key in final triple.
-                # Second match is the filter.
-                else:
-                    # Filter key (position of sub-key in lookup results)
-                    fpos = v_label.index(k_label)
-                    # Fliter term
-                    ft = self._to_key(bound_terms[k_label])
-                    if not ft:
-                        return iter(())
-                    break
-
-        # Look up in index.
-        with self.cur(luc) as cur:
-            if cur.set_key(luk):
-                # Iterate over matches and filter by second term.
-                for match in cur.iternext_dup():
-                    subkeys = self._split_key(match)
-                    flt_subkey = subkeys[fpos]
-                    if flt_subkey == ft:
-                        # Remainder (not filter) key used to complete the
-                        # triple.
-                        r_subkey = subkeys[1-fpos]
-
-                        # Compose result.
-                        out = [None, None, None]
-                        out[term_order[0]] = luk
-                        out[term_order[fpos+1]] = flt_subkey
-                        out[term_order[2-fpos]] = r_subkey
-
-                        yield b''.join(out)
-
-
-    def _index_triple(self, action, spok):
-        """
-        Update index for a triple and context (add or remove).
-
-        :param str action: 'add' or 'remove'.
-        :param bytes spok: Triple key.
-        """
-        # Split and rearrange-join keys for association and indices.
-        triple = self._split_key(spok)
-        sk, pk, ok = triple
-        spk = b''.join(triple[:2])
-        spk = b''.join(triple[:2])
-        sok = b''.join((triple[0], triple[2]))
-        pok = b''.join(triple[1:3])
-
-        # Associate cursor labels with k/v pairs.
-        curs = {
-            's:po': (sk, pok),
-            'p:so': (pk, sok),
-            'o:sp': (ok, spk),
-        }
-
-        # Add or remove triple lookups.
-        for clabel, terms in curs.items():
-            with self.cur(clabel) as icur:
-                if action == 'remove':
-                    if icur.set_key_dup(*terms):
-                        icur.delete()
-                elif action == 'add':
-                    icur.put(*terms)
-                else:
-                    raise ValueError(
-                        'Index action \'{}\' is not supported.'.format(action))
 
 
     ## Convenience methods—not necessary for functioning but useful for
