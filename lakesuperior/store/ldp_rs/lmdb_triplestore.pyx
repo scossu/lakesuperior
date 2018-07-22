@@ -54,6 +54,9 @@ used, but it's good to leave a spare for potential future use.
 DEF FIRST_KEY = KEY_START * KLEN
 """First key of a sequence."""
 
+DEF IDX_OP_ADD = '_idx_add'
+DEF IDX_OP_REMOVE = '_idx_remove'
+
 
 ctypedef unsigned char Key[KLEN]
 ctypedef unsigned char DoubleKey[DBL_KLEN]
@@ -287,7 +290,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Index triple:context association.
         self.put(ck, spok, 'c:spo', lmdb.MDB_NOOVERWRITE)
 
-        self._index_triple('add', spok)
+        self._index_triple(IDX_OP_ADD, spok)
 
 
     cpdef void _remove(self, tuple triple_pattern, context=None):
@@ -331,7 +334,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         _check(
                             lmdb.mdb_cursor_del(icur, 0),
                             'Error deleting index entry.')
-                    self._index_triple('remove', spok)
+                    self._index_triple(IDX_OP_REMOVE, spok)
                 i += 1
 
         # If no context is specified, remove all associations.
@@ -356,12 +359,61 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         dcur, &spok_v, NULL, lmdb.MDB_SET
                 ) == lmdb.MDB_SUCCESS:
                     lmdb.mdb_cursor_del(icur, lmdb.MDB_NODUPDATA)
-                    self._index_triple('remove', spok)
+                    self._index_triple(IDX_OP_REMOVE, spok)
                 i += 1
 
         # FIXME Add try...finally clause, or this will leak.
         self._cur_close(dcur)
         self._cur_close(icur)
+
+
+    cdef void _index_triple(self, op, TripleKey spok) except *:
+        """
+        Update index for a triple and context (add or remove).
+
+        :param str op: 'add' or 'remove'.
+        :param TripleKey spok: Triple key.
+        """
+        cdef:
+            unsigned char keys[3][KLEN]
+            unsigned char data[3][DBL_KLEN]
+            Py_ssize_t i = 0
+
+        keys = [
+            spok[: KLEN],
+            spok[KLEN: DBL_KLEN],
+            spok[DBL_KLEN: TRP_KLEN],
+        ]
+        data = [
+            spok[: DBL_KLEN],
+            keys[0] + keys[2],
+            spok[KLEN: TRP_KLEN],
+        ]
+
+        key_v.mv_size = KLEN
+        data_v.mv_size = DBL_KLEN
+        while i < 3:
+            icur = self._cur_open(self.txn, self.lookup_indices[i])
+            try:
+                key_v.mv_data = keys[i]
+                data_v.mv_data = data[i]
+
+                if op == IDX_OP_REMOVE:
+                    if lmdb.mdb_cursor_get(
+                            icur, &key_v, &data_v, lmdb.MDB_GET_BOTH
+                    ) == lmdb.MDB_SUCCESS:
+                        _check(lmdb.mdb_cursor_del(icur, 0))
+                elif op == IDX_OP_ADD:
+                    rc = lmdb.mdb_cursor_put(
+                            icur, &key_v, &data_v, lmdb.MDB_NODUPDATA)
+                    # Do not raise on MDB_KEYEXIST error code.
+                    if rc != lmdb.MDB_KEYEXIST:
+                        _check(rc)
+                else:
+                    raise ValueError(
+                        'Index operation \'{}\' is not supported.'.format(op))
+            finally:
+                self._cur_close(icur)
 
 
     # Lookup methods.
@@ -724,7 +776,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._cur_close(icur)
 
 
-    def _all_terms(self, term_type):
+    def all_terms(self, term_type):
         """
         Return all terms of a type (``s``, ``p``, or ``o``) in the store.
         """
