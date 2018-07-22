@@ -228,7 +228,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Triple and graph methods.
 
-    cdef void _add(
+    cpdef void _add(
             self, const unsigned char[:] pk_s,
             const unsigned char[:] pk_p,
             const unsigned char[:] pk_o,
@@ -290,47 +290,92 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._index_triple('add', spok)
 
 
-    #cdef void _delete(triple_pattern, ck):
-    #    dcur = self._cur_open('spo:c')
-    #    icur = self._cur_open('c:spo')
+    cpdef void _remove(self, tuple triple_pattern, context=None):
+        cdef:
+            unsigned char spok[TRP_KLEN]
+            Py_ssize_t i = 0
+            Key ck
+            lmdb.MDB_val spok_v, ck_v
 
-    #    self._cur_close(dcur)
-    #    self._cur_close(icur)
-    #    match_set = self._triple_keys(triple_pattern, ck)
+        if context is not None:
+            try:
+                self._to_key(context, &ck)
+            except TstoreKeyNotFoundError:
+                # If context is specified but not found, return to avoid
+                # deleting the wrong triples.
+                return
 
-    #    # # #
-    #    with self.cur('spo:c') as dcur:
-    #        with self.cur('c:spo') as icur:
-    #            match_set = {bytes(k) for k in self._triple_keys(
-    #                    triple_pattern, context)}
-    #            # Delete context association.
-    #            if ck:
-    #                for spok in match_set:
-    #                    if dcur.set_key_dup(spok, ck):
-    #                        dcur.delete()
-    #                        if icur.set_key_dup(ck, spok):
-    #                            icur.delete()
-    #                        self._index_triple('remove', spok)
-    #            # If no context is specified, remove all associations.
-    #            else:
-    #                for spok in match_set:
-    #                    if dcur.set_key(spok):
-    #                        for cck in (bytes(k) for k in dcur.iternext_dup()):
-    #                            # Delete index first while we have the
-    #                            # context reference.
-    #                            if icur.set_key_dup(cck, spok):
-    #                                icur.delete()
-    #                        # Then delete the main entry.
-    #                        dcur.set_key(spok)
-    #                        dcur.delete(dupdata=True)
-    #                        self._index_triple('remove', spok)
+        # Get the matching pattern.
+        match_set = self._triple_keys(triple_pattern, context)
+
+        dcur = self._cur_open(self.txn, 'spo:c')
+        icur = self._cur_open(self.txn, 'c:spo')
+
+        # If context was specified, remove only associations with that context.
+        if context is not None:
+            ck_v.mv_data = ck
+            ck_v.mv_size = KLEN
+            spok_v.mv_size = TRP_KLEN
+            while i < match_set.size:
+                spok = match_set.data[i]
+                spok_v.mv_data = &spok
+                if lmdb.mdb_cursor_get(
+                        dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH
+                ) == lmdb.MDB_SUCCESS:
+                    _check(
+                        lmdb.mdb_cursor_del(dcur, 0),
+                        'Error deleting main entry.')
+                    if lmdb.mdb_cursor_get(
+                            icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
+                    ) == lmdb.MDB_SUCCESS:
+                        _check(
+                            lmdb.mdb_cursor_del(icur, 0),
+                            'Error deleting index entry.')
+                    self._index_triple('remove', spok)
+                i += 1
+
+        # If no context is specified, remove all associations.
+        else:
+            spok_v.mv_size = TRP_KLEN
+            # Loop over all SPO matching the triple pattern.
+            while i < match_set.size:
+                spok = match_set.data[i]
+                spok_v.mv_data = &spok
+                # Loop over all context associations for this SPO.
+                while lmdb.mdb_cursor_get(
+                        dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP
+                ) == lmdb.MDB_SUCCESS:
+                    if lmdb.mdb_cursor_get(
+                            icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
+                    ) == lmdb.MDB_SUCCESS:
+                        # Delete index first while we have the
+                        # context reference.
+                        lmdb.mdb_cursor_del(icur, 0)
+                # Then delete the main entry.
+                if lmdb.mdb_cursor_get(
+                        dcur, &spok_v, NULL, lmdb.MDB_SET
+                ) == lmdb.MDB_SUCCESS:
+                    lmdb.mdb_cursor_del(icur, lmdb.MDB_NODUPDATA)
+                    self._index_triple('remove', spok)
+                i += 1
+
+        # FIXME Add try...finally clause, or this will leak.
+        self._cur_close(dcur)
+        self._cur_close(icur)
 
 
     # Lookup methods.
 
-    cpdef tuple _triple_keys(self, tuple triple_pattern, context=None):
+    def triple_keys(self, triple_pattern, context=None):
         """
-        Top-level (for this class) lookup method.
+        Python-facing method that returns results as a tuple.
+        """
+        return self._triple_keys(triple_pattern, context).to_tuple()
+
+
+    cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
+        """
+        Top-level Cython-facing lookup method.
 
         This method is used by `triples` which returns native Python tuples,
         as well as by other methods that need to iterate and filter triple
@@ -350,12 +395,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         if context is not None:
             pk_c = self._pickle(context)
-            self._to_key(context, &ck)
-
-            # Shortcuts
-            if ck is NULL:
+            try:
+                self._to_key(context, &ck)
+            except TstoreKeyNotFoundError:
                 # Context not found.
-                return tuple()
+                return ResultSet(0, TRP_KLEN)
 
             icur = self._cur_open(self.txn, 'c:spo')
             key_v.mv_data = ck
@@ -369,7 +413,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     if tk is NULL:
                         # A term in the triple is not found.
                         self._cur_close(icur)
-                        return tuple()
+                        return ResultSet(0, TRP_KLEN)
                 data_v.mv_data = spok
                 data_v.mv_size = TRP_KLEN
                 rc = lmdb.mdb_cursor_get(
@@ -377,10 +421,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if rc == lmdb.MDB_NOTFOUND:
                     # Triple not found.
                     self._cur_close(icur)
-                    return tuple()
+                    return ResultSet(0, TRP_KLEN)
                 _check(rc, 'Error getting key + data pair.')
                 self._cur_close(icur)
-                return (spok,)
+                ret = ResultSet(1, TRP_KLEN)
+                ret.data = [spok]
+                return ret
 
             # ? ? ? c
             elif not any(triple_pattern):
@@ -389,7 +435,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if rc == lmdb.MDB_NOTFOUND:
                     # Triple not found.
                     self._cur_close(icur)
-                    return tuple()
+                    return ResultSet(0, TRP_KLEN)
 
                 _check(lmdb.mdb_cursor_count(icur, &ct),
                         'Error counting values.')
@@ -401,13 +447,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     i += 1
                     self._cur_close(icur)
 
-                    return ret.to_tuple()
+                    return ret
 
             # Regular lookup. Filter _lookup() results by context.
             else:
                 res = self._lookup(triple_pattern)
                 if res.size == 0:
-                    return tuple()
+                    return ResultSet(0, TRP_KLEN)
 
                 flt_res = ResultSet(res.size, res.itemsize)
                 while flt_ct < res.size:
@@ -657,14 +703,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cdef object _from_key(self, Key key):
+    cpdef list _from_key(self, unsigned char *key):
         """
-        Convert a key into one term.
+        Convert a single or multiple key into one or more terms.
 
         :param Key key: The key to be converted.
         """
-        thash = <Hash>self._get_data(key, 't:st')
-        return self._unpickle(thash)
+        cdef Py_ssize_t i
+
+        ret = []
+        for i in range(0, len(key), KLEN):
+            thash = <Hash>self._get_data(key[i: i + KLEN], 't:st')
+            ret.append(self._unpickle(thash))
 
 
     cdef inline void _to_key(self, term, Key *key) except *:
