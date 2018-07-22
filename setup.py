@@ -76,7 +76,7 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions, annotate=True, force=True),
+    ext_modules = cythonize(extensions, annotate=True),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
