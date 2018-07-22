@@ -24,7 +24,6 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -212,7 +211,7 @@ class RsrcCentricLayout:
         store.open()
         fname = path.join(
                 basedir, 'data', 'bootstrap', 'rsrc_centric_layout.sparql')
-        with TxnManager(store, True):
+        with store.txn_ctx(True):
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
@@ -243,7 +242,7 @@ class RsrcCentricLayout:
         Return a count of first-class resources, subdivided in "live" and
         historic snapshots.
         """
-        with TxnManager(self.ds.store) as txn:
+        with self.ds.store.txn_ctx() as txn:
             main = set(
                     self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
             hist = set(

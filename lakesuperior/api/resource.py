@@ -16,7 +16,6 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
 logger = logging.getLogger(__name__)
@@ -75,7 +74,7 @@ def transaction(write=False):
             thread_env.timestamp = arrow.utcnow()
             thread_env.timestamp_term = Literal(
                     thread_env.timestamp, datatype=XSD.dateTime)
-            with TxnManager(env.app_globals.rdf_store, write=write) as txn:
+            with env.app_globals.rdf_store.txn_mgr(write) as txn:
                 ret = fn(*args, **kwargs)
             if len(env.app_globals.changelog):
                 job = Thread(target=_process_queue)

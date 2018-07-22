@@ -13,7 +13,6 @@ from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 __doc__="""
 Utility to perform core maintenance tasks via console command-line.
@@ -60,7 +59,7 @@ def bootstrap():
         sys.exit(1)
 
     click.echo('Initializing graph store at {}'.format(rdfly.store.path))
-    with TxnManager(env.app_globals.rdf_store, write=True) as txn:
+    with env.app_globals.rdf_store.txn_ctx(True) as txn:
         rdfly.bootstrap()
         rdfly.store.close()
     click.echo('Graph store initialized.')

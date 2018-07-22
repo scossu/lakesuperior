@@ -15,7 +15,6 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import InvalidResourceError
 from lakesuperior.globals import AppGlobals, ROOT_UID
 from lakesuperior.config_parser import parse_config
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
 logger = logging.getLogger(__name__)
@@ -123,7 +122,7 @@ class Migrator:
         self.nonrdfly = env.app_globals.nonrdfly
 
         if clear:
-            with TxnManager(env.app_globals.rdf_store, write=True) as txn:
+            with env.app_globals.rdf_store.txn_mgr(True) as txn:
                 self.rdfly.bootstrap()
                 self.rdfly.store.close()
             env.app_globals.nonrdfly.bootstrap()
@@ -247,7 +246,7 @@ class Migrator:
         gr = Graph(identifier=iuri).parse(data=data, format='turtle')
 
         # Store raw graph data. No checks.
-        with TxnManager(self.rdfly.store, True):
+        with self.rdfly.store.txn_mgr(True):
             self.rdfly.modify_rsrc(uid, add_trp=set(gr))
 
         # Grab binary and set new resource parameters.
@@ -281,7 +280,7 @@ class Migrator:
         for pred, obj in gr.predicate_objects():
             #import pdb; pdb.set_trace()
             obj_uid = obj.replace(ibase, '')
-            with TxnManager(self.rdfly.store, True):
+            with self.rdfly.store.txn_mgr(True):
                 conditions = bool(
                     isinstance(obj, URIRef)
                     and obj.startswith(iuri)

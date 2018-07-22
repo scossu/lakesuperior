@@ -7,7 +7,6 @@ from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.api import admin as admin_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 
 @pytest.mark.usefixtures('db')
@@ -37,7 +36,7 @@ class TestAdminApi:
         brk_uid = '/test_refint1'
         brk_uri = nsc['fcres'][brk_uid]
         store = env.app_globals.rdf_store
-        with TxnManager(store, True):
+        with store.txn_ctx(True):
             store.remove((URIRef('info:fcres/test_refint1'), None, None))
 
         #import pdb; pdb.set_trace()
