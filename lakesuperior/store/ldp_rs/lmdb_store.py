@@ -206,36 +206,6 @@ class LmdbStore(LmdbTripleStore, Store):
         self._txn_begin(write=write)
 
 
-    def get_data_cursors(self, txn):
-        """
-        Build the main data cursors for a transaction.
-
-        :param lmdb.Transaction txn: This can be a read or write transaction.
-
-        :rtype: dict(string, lmdb.Cursor)
-        :return: Keys are index labels, values are index cursors.
-        """
-        return {
-            'tk:t': txn.cursor(self.dbs['tk:t']),
-            'tk:c': txn.cursor(self.dbs['tk:c']),
-            'pfx:ns': txn.cursor(self.dbs['pfx:ns']),
-        }
-
-
-    def get_idx_cursors(self, txn):
-        """
-        Build the index cursors for a transaction.
-
-        :param lmdb.Transaction txn: This can be a read or write transaction.
-
-        :rtype: dict(string, lmdb.Cursor)
-        :return: dict of index labels, index cursors.
-        """
-        return {
-            key: txn.cursor(self.dbs[key])
-            for key in self.idx_keys}
-
-
     def add(self, triple, context=None, quoted=False):
         """
         Add a triple and start indexing.
@@ -466,66 +436,6 @@ class LmdbStore(LmdbTripleStore, Store):
 
     ## PRIVATE METHODS ##
 
-    def _init_db_environments(self, create=True):
-        """
-        Initialize the DB environment.
-
-        The main database is kept in one file, the indices in a separate one
-        (these may be even further split up depending on performance
-        considerations).
-
-        :param bool create: If True, the environment and its databases are
-        created.
-        """
-        path = self.path
-        if not exists(path):
-            if create is True:
-                makedirs(path)
-            else:
-                return NO_STORE
-
-        if getattr(env, 'wsgi_options', False):
-            self._workers = env.wsgi_options['workers']
-        else:
-            self._workers = 1
-        logger.info('Max LMDB readers: {}'.format(self._workers))
-
-        self.data_env = lmdb.open(
-                path + '/main', subdir=False, create=create,
-                map_size=self.MAP_SIZE, max_dbs=4,
-                max_spare_txns=self._workers, readahead=False)
-        self.idx_env = lmdb.open(
-                path + '/index', subdir=False, create=create,
-                map_size=self.MAP_SIZE, max_dbs=6,
-                max_spare_txns=self._workers, readahead=False)
-
-        # Clear stale readers.
-        data_stale_readers = self.data_env.reader_check()
-        idx_stale_readers = self.idx_env.reader_check()
-        logger.debug(
-                'Cleared data stale readers: {}'.format(data_stale_readers))
-        logger.debug(
-                'Cleared index stale readers: {}'.format(idx_stale_readers))
-
-        # Open and optionally create main databases.
-        self.dbs = {
-            # Main databases.
-            't:st': self.data_env.open_db(b't:st', create=create),
-            'spo:c': self.data_env.open_db(
-                    b'spo:c', create=create, dupsort=True, dupfixed=True),
-            'c:': self.data_env.open_db(b'c:', create=create),
-            'pfx:ns': self.data_env.open_db(b'pfx:ns', create=create),
-            # One-off indices.
-            'ns:pfx': self.idx_env.open_db(b'ns:pfx', create=create),
-            'th:t': self.idx_env.open_db(b'th:t', create=create),
-        }
-        # Other index databases.
-        for db_key in self.idx_keys:
-            if db_key not in ('ns:pfx', 'th:t'):
-                self.dbs[db_key] = self.idx_env.open_db(s2b(db_key),
-                        dupsort=True, dupfixed=True, create=create)
-
-
     def _normalize_context(self, context):
         """
         Normalize a context parameter to conform to the model expectations.
@@ -546,35 +456,35 @@ class LmdbStore(LmdbTripleStore, Store):
     ## Convenience methods—not necessary for functioning but useful for
     ## debugging.
 
-    def _keys_in_ctx(self, pk_ctx):
-        """
-        Convenience method to list all keys in a context.
+    #def _keys_in_ctx(self, pk_ctx):
+    #    """
+    #    Convenience method to list all keys in a context.
 
-        :param bytes pk_ctx: Pickled context URI.
+    #    :param bytes pk_ctx: Pickled context URI.
 
-        :rtype: Iterator(tuple)
-        :return: Generator of triples.
-        """
-        with self.cur('c:spo') as cur:
-            if cur.set_key(pk_ctx):
-                tkeys = cur.iternext_dup()
-                return {self._key_to_triple(tk) for tk in tkeys}
-            else:
-                return set()
+    #    :rtype: Iterator(tuple)
+    #    :return: Generator of triples.
+    #    """
+    #    with self.cur('c:spo') as cur:
+    #        if cur.set_key(pk_ctx):
+    #            tkeys = cur.iternext_dup()
+    #            return {self._key_to_triple(tk) for tk in tkeys}
+    #        else:
+    #            return set()
 
 
-    def _ctx_for_key(self, tkey):
-        """
-        Convenience method to list all contexts that a key is in.
+    #def _ctx_for_key(self, tkey):
+    #    """
+    #    Convenience method to list all contexts that a key is in.
 
-        :param bytes tkey: Triple key.
+    #    :param bytes tkey: Triple key.
 
-        :rtype: Iterator(rdflib.URIRef)
-        :return: Generator of context URIs.
-        """
-        with self.cur('spo:c') as cur:
-            if cur.set_key(tkey):
-                ctx = cur.iternext_dup()
-                return {self._unpickle(c) for c in ctx}
-            else:
-                return set()
+    #    :rtype: Iterator(rdflib.URIRef)
+    #    :return: Generator of context URIs.
+    #    """
+    #    with self.cur('spo:c') as cur:
+    #        if cur.set_key(tkey):
+    #            ctx = cur.iternext_dup()
+    #            return {self._unpickle(c) for c in ctx}
+    #        else:
+    #            return set()
