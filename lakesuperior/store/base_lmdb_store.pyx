@@ -273,6 +273,20 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
+    cpdef bint key_exists(self, unsigned char *key, db=None) except -1:
+        """
+        Return whether a key exists in a database.
+        """
+        key_v.mv_data = key
+        key_v.mv_size = len(key)
+
+        dbi = self.get_dbi(db)[0]
+        with self.txn_ctx():
+            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+
+            return rc == lmdb.MDB_SUCCESS
+
+
     cpdef put(self, unsigned char *key, unsigned char *data, db=None, flags=0):
         """
         Put one key/value pair.
@@ -322,6 +336,7 @@ cdef class BaseLmdbStore:
         """
         Get all the non-duplicate key-value pairs in a database.
         """
+        pass
 
 
     cpdef stats(self):

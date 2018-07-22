@@ -29,6 +29,7 @@ cdef class BaseLmdbStore:
         lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
 
+    cpdef bint key_exists(self, unsigned char *key, db=*) except -1
     cpdef get_data(self, unsigned char *key, db=*)
     cpdef get_dup_data(self, unsigned char *key, db=*)
     cpdef get_all_pairs(self, db=*)
