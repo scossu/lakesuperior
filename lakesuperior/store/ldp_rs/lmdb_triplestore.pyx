@@ -293,7 +293,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef void _remove(self, tuple triple_pattern, context=None):
         cdef:
             unsigned char spok[TRP_KLEN]
-            Py_ssize_t i = 0
+            size_t i = 0
             Key ck
             lmdb.MDB_val spok_v, ck_v
 
@@ -699,6 +699,37 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._cur_close(icur)
 
         return matches
+
+
+    cdef ResultSet _all_term_keys(self, term_type):
+        """
+        Return all keys of a (``s:po``, ``p:so``, ``o:sp``) index.
+        """
+        cdef:
+            lmdb.MDB_stat stat
+            Py_ssize_t i = 0
+
+        idx_label = self.lookup_indices['spo'.index(term_type)]
+        dbi = self.get_dbi(idx_label)
+
+        _check(lmdb.mdb_stat(self.txn, dbi[0], &stat))
+
+        icur = self._cur_open(self.txn, idx_label)
+        res = ResultSet(stat.ms_entries, KLEN)
+        while (
+                lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP)
+        == lmdb.MDB_SUCCESS):
+            res.data[i] = <unsigned char *>key_v.mv_data
+
+        self._cur_close(icur)
+
+
+    def _all_terms(self, term_type):
+        """
+        Return all terms of a type (``s``, ``p``, or ``o``) in the store.
+        """
+        for key in self._all_term_keys(term_type):
+            yield self._from_key(key)[0]
 
 
     # Key conversion methods.
