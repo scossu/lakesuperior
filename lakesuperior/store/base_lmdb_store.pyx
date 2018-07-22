@@ -1,10 +1,12 @@
 # cython: language_level = 3
+# cython: boudschecking = False
+# cython: wrapartound = False
 
 import logging
 import os
 
 from contextlib import contextmanager
-from os import exists, makedirs, path
+from os import makedirs, path
 from shutil import rmtree
 
 from lakesuperior import env
@@ -218,7 +220,7 @@ cdef class BaseLmdbStore:
 
     cpdef void _destroy(self) except *:
         """Remove the store directory from the filesystem."""
-        if exists(self.dbpath):
+        if path.exists(self.dbpath):
             rmtree(self.dbpath)
 
 

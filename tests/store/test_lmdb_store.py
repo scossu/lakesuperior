@@ -14,7 +14,7 @@ def store():
     store = LmdbStore('/tmp/test_lmdbstore')
     yield store
     store.close()
-    rmtree('/tmp/test_lmdbstore')
+    store.destroy()
 
 
 def _clean(res):

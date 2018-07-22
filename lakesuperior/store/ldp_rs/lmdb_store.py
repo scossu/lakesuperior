@@ -19,7 +19,7 @@ from lakesuperior.store.ldp_rs.lmdb_triplestore import LmdbTriplestore
 logger = logging.getLogger(__name__)
 
 
-class LmdbStore(LmdbTripleStore, Store):
+class LmdbStore(LmdbTriplestore, Store):
     """
     LMDB-backed store.
 
@@ -72,9 +72,6 @@ class LmdbStore(LmdbTripleStore, Store):
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
         super().__init__(path, open_env=False)
-
-        self._pickle = self.node_pickler.dumps
-        self._unpickle = self.node_pickler.loads
 
 
     def __del__(self):
@@ -130,7 +127,9 @@ class LmdbStore(LmdbTripleStore, Store):
 
         https://www.youtube.com/watch?v=lIVq7FJnPwg
 
-        :param str path: unused.
+        :param str path: unused. Left for RDFLib API compatibility. (actually
+            quite dangerous if it were used: it could turn into a
+            general-purpose recursive file and folder delete method!)
         """
         return self._destroy()
 

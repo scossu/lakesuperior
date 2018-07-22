@@ -1,4 +1,6 @@
 # cython: language_level = 3
+# cython: boudschecking = False
+# cython: wrapartound = False
 
 import hashlib
 import logging
@@ -215,12 +217,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     if rc == lmdb.MDB_NOTFOUND:
                         return 0
                     _check(
-                        rc, 'Error setting key on context {}.'.format(
-                            context))
-                    _check(
-                        lmdb.mdb_cursor_count(cur, &ct),
-                        'Error counting dup values for key {}.'.format(
-                            key_v.mv_data[0]))
+                        rc, 'Error setting key on context {}.'.format(context))
+                    _check(lmdb.mdb_cursor_count(cur, &ct))
                 finally:
                     self._cur_close(cur)
         else:
@@ -522,7 +520,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             return self._lookup(triple_pattern)
 
 
-    cdef ResultSet _lookup(self, triple_pattern):
+    cdef ResultSet _lookup(self, tuple triple_pattern):
         """
         Look up triples in the indices based on a triple pattern.
 
