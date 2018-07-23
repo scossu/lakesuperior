@@ -329,26 +329,6 @@ class LmdbStore(LmdbTriplestore, Store):
                 cur.delete()
 
 
-    def commit(self):
-        """Commit main transaction."""
-        logger.debug('Committing transaction.')
-        try:
-            self.txn.commit()
-        except (AttributeError, lmdb.Error):
-            pass
-        self.is_txn_rw = None
-
-
-    def rollback(self):
-        """Roll back main transaction."""
-        logger.debug('Rolling back transaction.')
-        try:
-            self.txn.abort()
-        except (AttributeError, lmdb.Error):
-            pass
-        self.is_txn_rw = None
-
-
     ## PRIVATE METHODS ##
 
     def _normalize_context(self, context):

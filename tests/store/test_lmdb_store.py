@@ -1,5 +1,6 @@
 import pytest
 
+from os import path
 from shutil import rmtree
 
 from rdflib import Namespace, URIRef
@@ -28,12 +29,16 @@ class TestStoreInit:
     '''
     def test_open_close(self):
         '''
-        Test opening and closing a store.
+        Test opening, closing and destroying a store.
         '''
-        tmpstore = LmdbStore('/tmp/test_lmdbstore_init')
+        env_path = '/tmp/test_lmdbstore_init'
+        tmpstore = LmdbStore(env_path)
         assert tmpstore.is_open
         tmpstore.close()
         assert not tmpstore.is_open
+        tmpstore.destroy()
+        assert not path.exists(env_path)
+        assert not path.exists(env_path + '-lock')
 
 
     def test_txn(self, store):
@@ -45,7 +50,7 @@ class TestStoreInit:
         store.commit()
         assert not store.is_txn_open
         store.begin(True)
-        store.rollback()
+        store.abort()
         assert not store.is_txn_open
 
 
@@ -54,8 +59,15 @@ class TestStoreInit:
         Test enclosing a transaction in a context.
         '''
         with store.txn_ctx() as txn:
-            pass
+            assert store.is_txn_open
+            assert not store.is_txn_rw
         assert not store.is_txn_open
+
+        with store.txn_ctx(True) as txn:
+            assert store.is_txn_open
+            assert store.is_txn_rw
+        assert not store.is_txn_open
+        assert not store.is_txn_rw
 
         try:
             with store.txn_ctx() as txn:

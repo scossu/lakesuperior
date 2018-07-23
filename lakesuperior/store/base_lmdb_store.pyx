@@ -133,12 +133,11 @@ cdef class BaseLmdbStore:
         Open, and optionally create, store environment.
         """
         if create:
-            print('Creating db env at {}'.format(self.env_path))
+            logger.info('Creating db env at {}'.format(self.env_path))
             parent_path = (
                     path.dirname(self.env_path)
                     if lmdb.MDB_NOSUBDIR & self.flags
                     else self.env_path)
-            print('Parent path is {}'.format(parent_path))
 
             if not path.exists(parent_path):
                 logger.info(
@@ -236,7 +235,14 @@ cdef class BaseLmdbStore:
     cpdef void _destroy(self) except *:
         """Remove the store directory from the filesystem."""
         if path.exists(self.env_path):
-            rmtree(self.env_path)
+            if lmdb.MDB_NOSUBDIR & self.flags:
+                try:
+                    os.unlink(self.env_path)
+                    os.unlink(self.env_path + '-lock')
+                except FileNotFoundError:
+                    pass
+            else:
+                rmtree(self.env_path)
 
 
     ### PYTHON-ACCESSIBLE METHODS ###
@@ -244,7 +250,8 @@ cdef class BaseLmdbStore:
     @property
     def is_txn_open(self):
         """Whether the main transaction is open."""
-        return self._txn_id() > 0
+        #return self._txn_id() > 0
+        return self.txn is not NULL
 
 
     @contextmanager
@@ -310,7 +317,7 @@ cdef class BaseLmdbStore:
                 self.txn = NULL
 
 
-    cpdef void begin(self, write=False) except *:
+    def begin(self, write=False):
         """
         Begin a transaction manually if not already in a txn context.
 
@@ -323,6 +330,18 @@ cdef class BaseLmdbStore:
             'read/write' if write else 'read-only'))
 
         self._txn_begin(write=write)
+
+
+    def commit(self):
+        """Commit main transaction."""
+        logger.debug('Committing transaction.')
+        self._txn_commit()
+
+
+    def abort(self):
+        """Roll back main transaction."""
+        logger.debug('Rolling back transaction.')
+        self._txn_abort()
 
 
     cpdef bint key_exists(self, unsigned char *key, db=None) except -1:
@@ -439,9 +458,13 @@ cdef class BaseLmdbStore:
             logger.warning('txn is NULL!')
         else:
             rc = lmdb.mdb_txn_commit(self.txn)
-            _check(rc, 'Error committing transaction: {}')
-            self.txn = NULL
-        self.is_txn_rw = None
+            try:
+                _check(rc, 'Error committing transaction.')
+                self.txn = NULL
+                self.is_txn_rw = None
+            except:
+                self._txn_abort()
+                raise
 
 
     cdef void _txn_abort(self) except *:

@@ -14,6 +14,7 @@ cdef:
 
 cdef class BaseLmdbStore:
     cdef:
+        public bint _open
         unsigned int readers
         bytes dbpath
         lmdb.MDB_dbi *dbis
@@ -22,14 +23,13 @@ cdef class BaseLmdbStore:
 
         void _cur_close(self, lmdb.MDB_cursor *cur) except *
         void _init_dbis(self, create=*) except *
-        void _txn_abort(self) except *
         void _txn_begin(self, write=*, lmdb.MDB_txn *parent=*) except *
         void _txn_commit(self) except *
+        void _txn_abort(self) except *
         size_t _txn_id(self) except -1
         lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
 
-    cpdef void begin(self, write=*) except *
     cpdef void close_env(self, bint commit_pending_transaction=*) except *
     cpdef void _destroy(self) except *
     cpdef bint key_exists(self, unsigned char *key, db=*) except -1
