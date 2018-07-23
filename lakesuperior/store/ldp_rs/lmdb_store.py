@@ -66,17 +66,10 @@ class LmdbStore(LmdbTriplestore, Store):
     transaction_aware = True
 
 
-    def __init__(self, path, identifier=None):
-        self.path = path
-        self.__open = False
+    def __init__(self, path, identifier=None, create=True):
+        super().__init__(path, open_env=True, create=create)
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
-        super().__init__(path, open_env=False)
-
-
-    def __del__(self):
-        """Properly close store for garbage collection."""
-        self.close(True)
 
 
     def __len__(self, context=None):
@@ -91,22 +84,23 @@ class LmdbStore(LmdbTriplestore, Store):
         return self._len(context)
 
 
-    @property
-    def is_open(self):
-        return self.__open
-
-
     # RDFLib DB management API
 
     def open(self, configuration=None, create=True):
         """
-        Open the database.
+        Open the store environment.
+
+        :param str configuration: If not specified on init, indicate the path
+            to use for the store.
+        :param bool create: Create the file and folder structure for the
+            store environment.
         """
-        try:
-            self.open_env(create)
-        except:
-            return NO_STORE
-        self.__open = True
+        if not self.is_open:
+            try:
+                self.open_env(create)
+            except:
+                return NO_STORE
+            self._open = True
 
         return VALID_STORE
 
@@ -117,7 +111,6 @@ class LmdbStore(LmdbTriplestore, Store):
 
         Do this at server shutdown.
         """
-        self.__open = False
         self.close_env(commit_pending_transaction)
 
 

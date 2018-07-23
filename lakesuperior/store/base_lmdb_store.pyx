@@ -102,24 +102,30 @@ cdef class BaseLmdbStore:
 
     ### INIT & TEARDOWN ###
 
-    def __init__(self, dbpath, open_env=False, create=False):
+    def __init__(self, env_path, open_env=True, create=False):
         """
         Initialize DB environment and databases.
 
-        :param str dbpath: The file path of the store.
+        :param str env_path: The file path of the store.
         :param bool open: Whether to open the store immediately. If ``False``
             the store can be manually opened with :py:meth:`opn_env`.
         :param bool create: Whether the file and directory structure should
             be created if the store is opened immediately.
         """
-        self.dbpath = dbpath.encode()
+        self._open = False
+        self.env_path = env_path
         if open_env:
             self.open_env(create)
-        logger.info('Init DB with path: {}'.format(self.dbpath.decode()))
+        logger.info('Init DB with path: {}'.format(self.env_path))
 
 
     def __dealloc__(self):
         self.close_env()
+
+
+    @property
+    def is_open(self):
+        return self._open
 
 
     def open_env(self, create):
@@ -127,9 +133,12 @@ cdef class BaseLmdbStore:
         Open, and optionally create, store environment.
         """
         if create:
+            print('Creating db env at {}'.format(self.env_path))
             parent_path = (
-                    path.dirname(self.dbpath) if lmdb.MDB_NOSUBDIR & self.flags
-                    else self.dbpath)
+                    path.dirname(self.env_path)
+                    if lmdb.MDB_NOSUBDIR & self.flags
+                    else self.env_path)
+            print('Parent path is {}'.format(parent_path))
 
             if not path.exists(parent_path):
                 logger.info(
@@ -137,9 +146,9 @@ cdef class BaseLmdbStore:
                 try:
                     makedirs(parent_path, mode=0o750, exist_ok=True)
                 except Exception as e:
-                    raise IOError(
+                    raise LmdbError(
                         'Could not create store at {}. Error: {}'.format(
-                            self.dbpath, e))
+                            self.env_path, e))
 
         # Create environment handle.
         rc = lmdb.mdb_env_create(&self.dbenv)
@@ -169,10 +178,12 @@ cdef class BaseLmdbStore:
 
         # Open DB environment.
         rc = lmdb.mdb_env_open(
-                self.dbenv, self.dbpath, self.flags, 0o640)
-        _check(rc, 'Error opening the database environment: {}')
+                self.dbenv, self.env_path.encode(), self.flags, 0o640)
+        _check(rc, 'Error opening the database environment: {}.'.format(
+                self.env_path))
 
         self._init_dbis(create)
+        self._open = True
 
 
     cdef void _init_dbis(self, create=True) except *:
@@ -209,19 +220,23 @@ cdef class BaseLmdbStore:
 
 
     cpdef void close_env(self, bint commit_pending_transaction=False) except *:
-        if self.is_txn_open:
-            if commit_pending_transaction:
-                self._txn_commit()
-            else:
-                self._txn_abort()
-        PyMem_Free(self.dbis)
-        lmdb.mdb_env_close(self.dbenv)
+        if self.is_open:
+            if self.is_txn_open:
+                if commit_pending_transaction:
+                    self._txn_commit()
+                else:
+                    self._txn_abort()
+
+            PyMem_Free(self.dbis)
+            lmdb.mdb_env_close(self.dbenv)
+
+        self._open = False
 
 
     cpdef void _destroy(self) except *:
         """Remove the store directory from the filesystem."""
-        if path.exists(self.dbpath):
-            rmtree(self.dbpath)
+        if path.exists(self.env_path):
+            rmtree(self.env_path)
 
 
     ### PYTHON-ACCESSIBLE METHODS ###
@@ -398,7 +413,7 @@ cdef class BaseLmdbStore:
 
             return {
                 'env_stats': env_stats,
-                'env_size': os.stat(self.dbpath).st_size,
+                'env_size': os.stat(self.env_path).st_size,
                 'db_stats': {
                     db_label: db_stats[db_label]
                     for db_label in self.dbi_labels

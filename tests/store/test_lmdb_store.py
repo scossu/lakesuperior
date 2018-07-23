@@ -26,7 +26,7 @@ class TestStoreInit:
     '''
     Tests for intializing and shutting down store and transactions.
     '''
-    def test_open_close(self, store):
+    def test_open_close(self):
         '''
         Test opening and closing a store.
         '''
