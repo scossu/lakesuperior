@@ -27,7 +27,7 @@ cdef class BaseLmdbStore:
         void _txn_commit(self) except *
         void _txn_abort(self) except *
         size_t _txn_id(self) except -1
-        lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=*)
+        lmdb.MDB_cursor *_cur_open(self, str dbname=*) except *
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *

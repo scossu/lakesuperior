@@ -207,7 +207,7 @@ cdef class BaseLmdbStore:
                         dbname, dbidx, flags))
                     rc = lmdb.mdb_dbi_open(
                             txn, dbbytename, flags, &self.dbis[dbidx])
-                    logger.debug('Created DB: {}: {}'.format(dbname, rc))
+                    logger.info('Created DB: {}: {}'.format(dbname, rc))
             else:
                 rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
@@ -303,7 +303,7 @@ cdef class BaseLmdbStore:
             _txn_is_tmp = False
 
         try:
-            cur = self._cur_open(<lmdb.MDB_txn *>txn, dbname)
+            cur = self._cur_open(dbname)
             yield
             self._cur_close(cur)
             if _txn_is_tmp:
@@ -488,12 +488,16 @@ cdef class BaseLmdbStore:
         return &self.dbis[dbidx]
 
 
-    cdef lmdb.MDB_cursor *_cur_open(self, lmdb.MDB_txn *txn, str dbname=None):
+    cdef lmdb.MDB_cursor *_cur_open(self, str dbname=None) except *:
         cdef:
             lmdb.MDB_cursor *cur
+            lmdb.MDB_dbi dbi
 
-        rc = lmdb.mdb_cursor_open(txn, self.get_dbi(dbname)[0], &cur)
-        _check(rc, 'Error opening cursor: {}')
+        dbi = self.get_dbi(dbname)[0]
+        print('DBI: {}'.format(dbi))
+
+        rc = lmdb.mdb_cursor_open(self.txn, dbi, &cur)
+        _check(rc, 'Error opening cursor: {}'.format(dbname))
 
         return cur
 

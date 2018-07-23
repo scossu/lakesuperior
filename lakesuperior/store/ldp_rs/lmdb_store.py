@@ -143,7 +143,9 @@ class LmdbStore(LmdbTriplestore, Store):
         if context is None:
             context = RDFLIB_DEFAULT_GRAPH_URI
 
-        Store.add(self, triple, context)
+        # TODO: figure out how the RDFLib dispatcher is inherited
+        # (and if there is a use for it in a first place)
+        #Store.add(self, triple, context)
 
         #logger.info('Adding triple: {}'.format(triple))
         pk_trp = self._pickle(triple)
