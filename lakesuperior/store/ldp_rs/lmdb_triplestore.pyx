@@ -90,10 +90,10 @@ lookup_ordering = [
 ]
 
 
-cdef inline void _hash(const unsigned char[:] s, Hash *ch):
+cdef inline void _hash(const unsigned char *s, Hash *ch):
     """Get the hash value of a serialized object."""
-    h = hashlib.new(TERM_HASH_ALGO, s).digest()
-    ch[0] = <Hash>hash
+    htmp = hashlib.new(TERM_HASH_ALGO, s).digest()
+    ch[0] = <unsigned char *>htmp
 
 
 logger = logging.getLogger(__name__)
@@ -210,17 +210,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._to_key(context, <Key *>key_v.mv_data)
             key_v.mv_size = KLEN
 
-            with self.txn_ctx():
-                try:
-                    cur = self._cur_open('c:spo')
-                    rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_SET)
-                    if rc == lmdb.MDB_NOTFOUND:
-                        return 0
-                    _check(
-                        rc, 'Error setting key on context {}.'.format(context))
-                    _check(lmdb.mdb_cursor_count(cur, &ct))
-                finally:
-                    self._cur_close(cur)
+            try:
+                cur = self._cur_open('c:spo')
+                rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_SET)
+                if rc == lmdb.MDB_NOTFOUND:
+                    return 0
+                _check(
+                    rc, 'Error setting key on context {}.'.format(context))
+                _check(lmdb.mdb_cursor_count(cur, &ct))
+            finally:
+                self._cur_close(cur)
         else:
             return self.stats()['num_triples']
 
@@ -265,10 +264,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             try:
                 keys[KLEN * i: KLEN * (i + 1)] = \
                         <unsigned char *>self._get_data(thash, 'th:t')
-                logger.info('Key found: {}'.format(thash))
+                logger.debug('Key found: {}'.format(thash))
             except TstoreKeyNotFoundError:
-                logger.info('Key not found: {}'.format(thash))
                 # If term is not found, add it...
+                logger.debug('Hash {} not found. Adding to DB.'.format(thash))
                 self._append('t:st', pk_t, &tkey)
                 keys[KLEN * i: KLEN * (i + 1)] = tkey
                 # ...and index it.
@@ -386,7 +385,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         ]
         data = [
             spok[: DBL_KLEN],
-            keys[0] + keys[2],
+            spok[: KLEN] + spok[DBL_KLEN: TRP_KLEN],
             spok[KLEN: TRP_KLEN],
         ]
 
@@ -414,6 +413,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         'Index operation \'{}\' is not supported.'.format(op))
             finally:
                 self._cur_close(icur)
+            i += 1
 
 
     # Lookup methods.
@@ -574,7 +574,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # Get all triples in the database.
                     dcur = self._cur_open('spo:c')
                     _check(lmdb.mdb_stat(
-                            self.txn, self._get_dbi('spo:c'), &db_stat),
+                            self.txn, self.get_dbi('spo:c')[0], &db_stat),
                         'Error gathering DB stats.')
                     ct = db_stat.ms_entries
                     res = ResultSet(<int>ct, TRP_KLEN)
@@ -873,14 +873,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = HLEN
 
         dbi = self.get_dbi('th:t')[0]
-        with self.txn_ctx():
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-            if rc == lmdb.MDB_NOTFOUND:
-                raise TstoreKeyNotFoundError()
-            _check(rc,
-                'Error getting data for key \'{}\'.'.format(key[0]))
+        rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+        if rc == lmdb.MDB_NOTFOUND:
+            raise TstoreKeyNotFoundError()
+        _check(rc,
+            'Error getting data for key \'{}\'.'.format(key[0]))
 
-            key = <Key *>data_v.mv_data
+        key = <Key *>data_v.mv_data
 
 
     cdef inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *:
@@ -912,14 +911,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
 
         dbi = self.get_dbi(db)[0]
-        with self.txn_ctx():
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-            if rc == lmdb.MDB_NOTFOUND:
-                raise TstoreKeyNotFoundError('Key not found: {}'.format(key))
-            _check(rc,
-                'Error getting data for key \'{}\'.'.format(key))
+        rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+        if rc == lmdb.MDB_NOTFOUND:
+            raise TstoreKeyNotFoundError('Key not found: {}'.format(key))
+        _check(rc,
+            'Error getting data for key \'{}\'.'.format(key))
 
-            return data_v.mv_data
+        return data_v.mv_data
 
 
     cdef void _append(

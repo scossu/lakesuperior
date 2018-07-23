@@ -207,7 +207,8 @@ cdef class BaseLmdbStore:
                         dbname, dbidx, flags))
                     rc = lmdb.mdb_dbi_open(
                             txn, dbbytename, flags, &self.dbis[dbidx])
-                    logger.info('Created DB: {}: {}'.format(dbname, rc))
+                    logger.debug('Created DB {}: {}'.format(
+                        dbname, self.dbis[dbidx]))
             else:
                 rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
@@ -263,17 +264,20 @@ cdef class BaseLmdbStore:
 
         :rtype: lmdb.Transaction
         """
-        try:
-            self._txn_begin(write=write)
-            self.is_txn_rw = write
-            logger.debug('before yield')
+        if self.txn is not NULL:
             yield
-            logger.debug('after yield')
-            self._txn_commit()
-            logger.debug('after _txn_commit')
-        except:
-            self._txn_abort()
-            raise
+        else:
+            try:
+                self._txn_begin(write=write)
+                self.is_txn_rw = write
+                logger.debug('before yield')
+                yield
+                logger.debug('after yield')
+                self._txn_commit()
+                logger.debug('after _txn_commit')
+            except:
+                self._txn_abort()
+                raise
 
 
     @contextmanager
@@ -450,7 +454,6 @@ cdef class BaseLmdbStore:
 
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction: {}')
-        logger.debug('txn ID: {}'.format(self._txn_id()))
 
 
     cdef void _txn_commit(self) except *:
@@ -494,7 +497,6 @@ cdef class BaseLmdbStore:
             lmdb.MDB_dbi dbi
 
         dbi = self.get_dbi(dbname)[0]
-        print('DBI: {}'.format(dbi))
 
         rc = lmdb.mdb_cursor_open(self.txn, dbi, &cur)
         _check(rc, 'Error opening cursor: {}'.format(dbname))
