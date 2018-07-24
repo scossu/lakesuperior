@@ -11,7 +11,6 @@ from lakesuperior.store.base_lmdb_store import LmdbError
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
-from libc cimport errno
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
@@ -131,7 +130,7 @@ cdef class ResultSet:
 
     cdef tuple to_tuple(self):
         """
-        Return the data set as a tuple.
+        Return the data set as a Python tuple.
         """
         return tuple(x for x in self.data[:self.size])
 
@@ -229,10 +228,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     # Triple and graph methods.
 
     cpdef void _add(
-            self, const unsigned char *pk_s,
-            const unsigned char *pk_p,
-            const unsigned char *pk_o,
-            const unsigned char *pk_c) except *:
+            self, bytes pk_s,
+            bytes pk_p,
+            bytes pk_o,
+            bytes pk_c) except *:
         """
         Add a triple and start indexing.
 
@@ -243,40 +242,54 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param bool quoted: Not used.
         """
         cdef:
-            Hash thash
             #const unsigned char[:] *pk_terms = [pk_s, pk_p, pk_o, pk_c]
-            lmdb.MDB_cursor *dcur
             lmdb.MDB_cursor *icur
             QuadKey keys
             char i
+            unsigned char thash[HLEN]
             # For some reason, using Key or TripleKey here breaks Cython.
             unsigned char spok[TRP_KLEN]
             unsigned char ck[KLEN]
-            Key tkey
+            unsigned char tkey[KLEN]
+            unsigned char nkey[KLEN]
 
+        logger.debug('Pickled context: {}'.format(pk_c))
         icur = self._cur_open('th:t')
-        dcur = self._cur_open('t:st')
-        key_v.mv_size = HLEN
-        data_v.mv_size = KLEN
 
         for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
+            logger.debug('Pickled term: {}'.format(pk_t))
             _hash(pk_t, &thash)
             try:
-                keys[KLEN * i: KLEN * (i + 1)] = \
-                        <unsigned char *>self._get_data(thash, 'th:t')
-                logger.debug('Key found: {}'.format(thash))
+                key_v.mv_data = &thash
+                key_v.mv_size = HLEN
+                rc = lmdb.mdb_get(
+                        self.txn, self.get_dbi('th:t')[0], &key_v, &data_v)
+                logger.debug('Up here (0)')
+                if rc == lmdb.MDB_NOTFOUND:
+                    raise TstoreKeyNotFoundError()
+                logger.debug('Up here (1)')
+                keys[KLEN * i: KLEN * (i + 1)] = <Key>data_v.mv_data
+                logger.debug('Up here (2)')
+                _check(rc)
+                logger.debug('Hash {} found.'.format(thash[: HLEN]))
             except TstoreKeyNotFoundError:
                 # If term is not found, add it...
-                logger.debug('Hash {} not found. Adding to DB.'.format(thash))
-                self._append('t:st', pk_t, &tkey)
-                keys[KLEN * i: KLEN * (i + 1)] = tkey
+                logger.debug('Hash {} not found. Adding to DB.'.format(
+                        thash[: HLEN]))
+                self._append('t:st', pk_t, len(pk_t), tkey, &nkey)
+                keys[KLEN * i: KLEN * (i + 1)] = nkey
+
                 # ...and index it.
+                logger.debug('Indexing on th:t: {}: {}'.format(
+                        thash[: HLEN], nkey[: KLEN]))
                 key_v.mv_data = thash
-                data_v.mv_data = &tkey
+                key_v.mv_size = HLEN
+                data_v.mv_data = nkey
+                data_v.mv_size = KLEN
+                logger.debug('DB key length: {}'.format(key_v.mv_size))
                 _check(
-                    lmdb.mdb_cursor_put(dcur, &key_v, &data_v, 0),
+                    lmdb.mdb_cursor_put(icur, &key_v, &data_v, 0),
                     'Error setting key {}.'.format(thash))
-        self._cur_close(dcur)
         self._cur_close(icur)
 
         # Add context.
@@ -780,7 +793,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Return all terms of a type (``s``, ``p``, or ``o``) in the store.
         """
         for key in self._all_term_keys(term_type):
-            yield self._from_key(key)[0]
+            yield self._from_key(key, KLEN)[0]
 
 
     def all_namespaces(self):
@@ -839,18 +852,42 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cpdef list _from_key(self, unsigned char *key):
+    def from_key(self, key):
+        logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
+        return self._from_key(key, len(key))
+
+
+    cdef inline list _from_key(self, unsigned char *key, Py_ssize_t size):
         """
         Convert a single or multiple key into one or more terms.
 
         :param Key key: The key to be converted.
         """
-        cdef Py_ssize_t i
+        cdef:
+            unsigned char *pk_t
+            Py_ssize_t i
+            unsigned char subkey[KLEN]
 
         ret = []
-        for i in range(0, len(key), KLEN):
-            thash = <Hash>self._get_data(key[i: i + KLEN], 't:st')
-            ret.append(self._unpickle(thash))
+        logger.debug('Key: {}'.format(key[: size]))
+        for i in range(0, size, KLEN):
+            subkey = key[i: i + KLEN]
+            logger.debug('Subkey: {}'.format(subkey[: KLEN]))
+            key_v.mv_data = subkey
+            key_v.mv_size = KLEN
+
+            dbi = self.get_dbi('t:st')[0]
+            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
+            if rc == lmdb.MDB_NOTFOUND:
+                raise TstoreKeyNotFoundError('Key not found: {}'.format(key[: size]))
+            _check(rc,
+                'Error getting data for key \'{}\'.'.format(key))
+
+            pk_t = <unsigned char *>data_v.mv_data
+            logger.debug('Pickle data from key: {}'.format(pk_t[: data_v.mv_size]))
+            ret.append(self._unpickle(pk_t[: data_v.mv_size]))
+
+        return ret
 
 
     cdef inline void _to_key(self, term, Key *key) except *:
@@ -921,8 +958,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef void _append(
-            self, str dbi, unsigned char *value, Key *lastkey,
-            unsigned int flags=0) except *:
+            self, str dblabel, const unsigned char *value, size_t vlen,
+            Key key, Key *nkey, unsigned int flags=0) except *:
         """
         Append one or more keys and values to the end of a database.
 
@@ -933,32 +970,35 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: Last key(s) inserted.
         """
         cdef:
-            lmdb.MDB_cursor *cur = self._cur_open(dbi)
-            Key nkey
+            lmdb.MDB_cursor *cur = self._cur_open(dblabel)
 
         rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST)
         if rc == lmdb.MDB_NOTFOUND:
-            lastkey[0] = FIRST_KEY
+            nkey[0] = FIRST_KEY
         else:
-            _check(rc, 'Error retrieving last key for DB {}.'.format(dbi))
-            lastkey = <Key *>key_v.mv_data
-        key_v.mv_size = KLEN
-        self._next_key(lastkey, &nkey)
+            _check(rc, 'Error retrieving last key for DB {}.'.format(dblabel))
+            key = <Key>key_v.mv_data
+            self._next_key(key, nkey)
+        logger.info('Last key in _append: {}'.format(key[: KLEN]))
         key_v.mv_data = nkey
+        key_v.mv_size = KLEN
         data_v.mv_data = value
-        data_v.mv_size = len(value)
+        data_v.mv_size = vlen
+        logger.debug('Appending value {} to db {} with key: {}'.format(
+            value[: vlen], dblabel, nkey[0][:KLEN]))
         lmdb.mdb_put(
-                self.txn, self.get_dbi(dbi)[0], &key_v, &data_v,
+                self.txn, self.get_dbi(dblabel)[0], &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)
+                #flags)
 
 
-    cdef void _next_key(self, Key *key, Key *nkey) except *:
+    cdef void _next_key(self, Key key, Key *nkey) except *:
         """
         Calculate the next closest byte sequence in lexicographical order.
 
         This is used to fill the next available slot after the last one in
         LMDB. Keys are byte strings, which is a convenient way to keep key
-        lengths as small as possible when they are referenced in several
+        lengths as small as possible since they are referenced in several
         indices.
 
         This function assumes that all the keys are padded with the `start`
@@ -969,11 +1009,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             size_t i = KLEN
 
-        nkey[0] = key[0]
+        nkey[0] = key
 
+        logger.debug('Last key in _next_key: {}'.format(key[: KLEN]))
         while i > 0:
             i -= 1
             if nkey[0][i] < 255:
+                print('Incrementing value: {}'.format(nkey[0][i]))
                 nkey[0][i] += 1
                 break
             # If the value exceeds 255, i.e. the current value is the last one
@@ -986,3 +1028,4 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # Move one position up and try to increment that.
                 else:
                     nkey[0][i] = KEY_START
+        logger.debug('New key: {}'.format(nkey[0][:KLEN]))

@@ -147,12 +147,10 @@ class LmdbStore(LmdbTriplestore, Store):
         # (and if there is a use for it in a first place)
         #Store.add(self, triple, context)
 
-        #logger.info('Adding triple: {}'.format(triple))
-        pk_trp = self._pickle(triple)
-
         pk_s, pk_p, pk_o = [self._pickle(t) for t in triple]
         #logger.debug('Adding quad: {} {}'.format(triple, context))
         pk_c = self._pickle(context)
+        logger.debug('pk_c: {}'.format(pk_c))
 
         self._add(pk_s, pk_p, pk_o, pk_c)
 

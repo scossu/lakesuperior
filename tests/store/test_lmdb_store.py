@@ -108,6 +108,7 @@ class TestBasicOps:
         with store.txn_ctx(True) as txn:
             store.add(trp)
 
+        with store.txn_ctx() as txn:
             res1 = set(store.triples((None, None, None)))
             res2 = set(store.triples(trp))
             assert len(res1) == 1
