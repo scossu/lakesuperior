@@ -11,7 +11,7 @@ from lakesuperior.store.base_lmdb_store import KeyNotFoundError, LmdbError
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
-from libc.string cimport memcpy
+from libc.string cimport memcmp, memcpy
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
@@ -681,8 +681,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: SPO keys matching the pattern.
         """
         cdef:
-            unsigned char fkp, ftl, r_subkey_rng
-            unsigned char flt_subkey_rng[2]
+            unsigned char fkp, ftl, r_subkey_rng, flt_subkey_rng
             unsigned char asm_rng[3]
             unsigned char luk[KLEN]
             unsigned char fk[KLEN]
@@ -726,7 +725,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # The index that does not match idx1 or idx2 is the unbound one.
 
         # Precompute the array slice points that are used in the loop.
-        flt_subkey_rng = [KLEN * fkp, KLEN * (fkp + 1)]
+        flt_subkey_rng = KLEN * fkp
         r_subkey_rng = KLEN * (1 - fkp)
         asm_rng = [
             KLEN * term_order[0],
@@ -756,7 +755,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 == lmdb.MDB_SUCCESS):
             memcpy(&match, data_v.mv_data, DBL_KLEN)
 
-            if match[flt_subkey_rng[0]: flt_subkey_rng[1]] == fk:
+            if memcmp(&match, &fk, flt_subkey_rng) == 0:
                 # Remainder (not filter) key to complete the triple.
                 memcpy(&rk, &match[r_subkey_rng], KLEN)
 
