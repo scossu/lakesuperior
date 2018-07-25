@@ -11,6 +11,7 @@ from lakesuperior.store.base_lmdb_store import LmdbError
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from libc.string cimport memcpy
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
@@ -65,6 +66,9 @@ ctypedef unsigned char TripleKey[TRP_KLEN]
 ctypedef unsigned char QuadKey[QUAD_KLEN]
 ctypedef unsigned char Hash[HLEN]
 
+
+cdef unsigned char first_key[KLEN]
+memcpy(&first_key, FIRST_KEY, KLEN)
 
 cdef unsigned char lookup_rank[3]
 lookup_rank = [0, 2, 1]
@@ -244,10 +248,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             #const unsigned char[:] *pk_terms = [pk_s, pk_p, pk_o, pk_c]
             lmdb.MDB_cursor *icur
-            QuadKey keys
             char i
+            unsigned char *pk_t
             unsigned char thash[HLEN]
             # For some reason, using Key or TripleKey here breaks Cython.
+            unsigned char keys[QUAD_KLEN]
             unsigned char spok[TRP_KLEN]
             unsigned char ck[KLEN]
             unsigned char tkey[KLEN]
@@ -264,20 +269,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 key_v.mv_size = HLEN
                 rc = lmdb.mdb_get(
                         self.txn, self.get_dbi('th:t')[0], &key_v, &data_v)
-                logger.debug('Up here (0)')
                 if rc == lmdb.MDB_NOTFOUND:
                     raise TstoreKeyNotFoundError()
-                logger.debug('Up here (1)')
-                keys[KLEN * i: KLEN * (i + 1)] = <Key>data_v.mv_data
-                logger.debug('Up here (2)')
                 _check(rc)
+                _check(lmdb.mdb_get(
+                        self.txn, self.get_dbi('th:t')[0], &key_v, &data_v))
+                memcpy(&keys[KLEN * i], data_v.mv_data, KLEN)
                 logger.debug('Hash {} found.'.format(thash[: HLEN]))
             except TstoreKeyNotFoundError:
                 # If term is not found, add it...
                 logger.debug('Hash {} not found. Adding to DB.'.format(
                         thash[: HLEN]))
                 self._append('t:st', pk_t, len(pk_t), tkey, &nkey)
-                keys[KLEN * i: KLEN * (i + 1)] = nkey
+                memcpy(&keys[KLEN * i], &nkey, KLEN)
 
                 # ...and index it.
                 logger.debug('Indexing on th:t: {}: {}'.format(
@@ -293,11 +297,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._cur_close(icur)
 
         # Add context.
-        ck = keys[TRP_KLEN: QUAD_KLEN]
+        memcpy(&ck, &keys[TRP_KLEN], KLEN)
         self.put(ck, b'', 'c:', lmdb.MDB_NOOVERWRITE)
 
         # Add triple:context association.
-        spok = keys[: TRP_KLEN]
+        memcpy(&spok, &keys, TRP_KLEN)
         self.put(spok, ck, 'spo:c', lmdb.MDB_NOOVERWRITE)
         # Index triple:context association.
         self.put(ck, spok, 'c:spo', lmdb.MDB_NOOVERWRITE)
@@ -315,7 +319,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         if context is not None:
             try:
                 self._to_key(context, &ck)
-            except TstoreKeyNotFoundError:
+            except KeyNotFoundError:
                 # If context is specified but not found, return to avoid
                 # deleting the wrong triples.
                 return
@@ -332,7 +336,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             ck_v.mv_size = KLEN
             spok_v.mv_size = TRP_KLEN
             while i < match_set.size:
-                spok = match_set.data[i]
+                memcpy(&spok, &match_set.data[i], TRP_KLEN)
                 spok_v.mv_data = &spok
                 if lmdb.mdb_cursor_get(
                         dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH
@@ -354,7 +358,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             spok_v.mv_size = TRP_KLEN
             # Loop over all SPO matching the triple pattern.
             while i < match_set.size:
-                spok = match_set.data[i]
+                memcpy(spok, &match_set.data[i], TRP_KLEN)
                 spok_v.mv_data = &spok
                 # Loop over all context associations for this SPO.
                 while lmdb.mdb_cursor_get(
@@ -391,17 +395,26 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char data[3][DBL_KLEN]
             Py_ssize_t i = 0
 
-        keys = [
-            spok[: KLEN],
-            spok[KLEN: DBL_KLEN],
-            spok[DBL_KLEN: TRP_KLEN],
-        ]
-        data = [
-            spok[: DBL_KLEN],
-            spok[: KLEN] + spok[DBL_KLEN: TRP_KLEN],
-            spok[KLEN: TRP_KLEN],
-        ]
+        memcpy(&keys[0], &spok[0], KLEN) # sk
+        memcpy(&keys[1], &spok[KLEN], KLEN) # pk
+        memcpy(&keys[2], &spok[DBL_KLEN], KLEN) # ok
 
+        memcpy(&data[0], &spok[KLEN], DBL_KLEN) # pok
+        memcpy(&data[1], &spok[0], KLEN) # sok, 1st part
+        memcpy(&data[1][KLEN], &spok[DBL_KLEN], KLEN) # sok, 2nd part
+        memcpy(&data[2], &spok[0], DBL_KLEN) # spk
+        #logger.debug('''Indices:
+        #spok: {}
+        #sk: {}
+        #pk: {}
+        #ok: {}
+        #spk: {}
+        #sok: {}
+        #pok: {}
+        #'''.format(
+        #        spok[:TRP_KLEN],
+        #        keys[0][:KLEN], keys[1][:KLEN], keys[2][:KLEN],
+        #        data[0][:DBL_KLEN], data[1][:DBL_KLEN], data[2][:DBL_KLEN]))
         key_v.mv_size = KLEN
         data_v.mv_size = DBL_KLEN
         while i < 3:
@@ -474,7 +487,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             if all(triple_pattern):
                 for i, term in enumerate(triple_pattern):
                     self._to_key(term, &tk)
-                    spok[KLEN * i: KLEN * (i + 1)] = tk
+                    memcpy(&spok[KLEN * i], &tk, KLEN)
                     if tk is NULL:
                         # A term in the triple is not found.
                         self._cur_close(icur)
@@ -490,7 +503,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(rc, 'Error getting key + data pair.')
                 self._cur_close(icur)
                 ret = ResultSet(1, TRP_KLEN)
-                ret.data = [spok]
+                memcpy(&ret.data[0], &spok, TRP_KLEN)
+
                 return ret
 
             # ? ? ? c
@@ -508,7 +522,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 while (lmdb.mdb_cursor_get(
                     icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
                 ) == lmdb.MDB_SUCCESS):
-                    ret.data[i] = <TripleKey>data_v.mv_data
+                    memcpy(&ret.data[i], data_v.mv_data, TRP_KLEN)
                     i += 1
                 self._cur_close(icur)
 
@@ -556,7 +570,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self._to_triple_key(triple_pattern, &spok)
                     if spok is not NULL:
                         matches = ResultSet(1, TRP_KLEN)
-                        matches.data = [spok]
+                        memcpy(&matches.data[0], &spok, TRP_KLEN)
                         return matches
                     else:
                         matches = ResultSet(0, TRP_KLEN)
@@ -594,7 +608,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     while lmdb.mdb_cursor_get(
                         dcur, NULL, &data_v, lmdb.MDB_NEXT
                     ) == lmdb.MDB_SUCCESS:
-                        res.data[i] = <Key>data_v.mv_data
+                        memcpy(&res.data[i], data_v.mv_data, KLEN)
                         i += 1
                     self._cur_close(dcur)
 
@@ -615,10 +629,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned char k[KLEN]
             size_t ct, i = 0
-            unsigned char match[DBL_KLEN]
             unsigned char subkey1[KLEN]
             unsigned char subkey2[KLEN]
-            unsigned int asm_rng[3][2]
+            unsigned char asm_rng[3]
             unsigned char _asm_key[TRP_KLEN]
 
         self._to_key(term, &k)
@@ -641,20 +654,22 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         if ct > 0:
             # Arrange results according to lookup order.
             asm_rng = [
-                [KLEN * term_order[0], KLEN * (term_order[0] + 1)],
-                [KLEN * term_order[1], KLEN * (term_order[1] + 1)],
-                [KLEN * term_order[2], KLEN * (term_order[2] + 1)],
+                KLEN * term_order[0],
+                KLEN * term_order[1],
+                KLEN * term_order[2],
             ]
 
             while lmdb.mdb_cursor_get(
                 icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
             ) == lmdb.MDB_SUCCESS:
-                match = <unsigned char *>data_v.mv_data
-                subkey1 = match[:KLEN]
-                subkey2 = match[KLEN: DBL_KLEN]
-                _asm_key[asm_rng[0][0]: asm_rng[0][1]] = k
-                _asm_key[asm_rng[1][0]: asm_rng[1][1]] = subkey1
-                _asm_key[asm_rng[2][0]: asm_rng[2][1]] = subkey2
+                memcpy(&subkey1, &data_v.mv_data[0], KLEN)
+                memcpy(&subkey2, &data_v.mv_data[KLEN], KLEN)
+
+                memcpy(&_asm_key[asm_rng[0]], &k, KLEN)
+                memcpy(&_asm_key[asm_rng[1]], &subkey1, KLEN)
+                memcpy(&_asm_key[asm_rng[2]], &subkey2, KLEN)
+
+                # TODO memcpy directly to matches.data[i]
                 matches.data[i] = _asm_key
                 i += 1
         return matches
@@ -673,9 +688,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: SPO keys matching the pattern.
         """
         cdef:
-            unsigned char fkp, ftl
-            unsigned char subkey_range[2]
-            unsigned char asm_rng[3][2]
+            unsigned char fkp, ftl, r_subkey_rng
+            unsigned char flt_subkey_rng[2]
+            unsigned char asm_rng[3]
             unsigned char luk[KLEN]
             unsigned char fk[KLEN]
             unsigned char rk[KLEN]
@@ -717,13 +732,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     break
             # The index that does not match idx1 or idx2 is the unbound one.
 
-        # Precompute the array slices that are used in the loop.
+        # Precompute the array slice points that are used in the loop.
         flt_subkey_rng = [KLEN * fkp, KLEN * (fkp + 1)]
-        r_subkey_rng = [KLEN * (1 - fkp), KLEN * (2 - fkp)]
+        r_subkey_rng = KLEN * (1 - fkp)
         asm_rng = [
-            [KLEN * term_order[0], KLEN * (term_order[0] + 1)],
-            [KLEN * (fkp + 1), KLEN * (fkp + 2)],
-            [KLEN * (2 - fkp), KLEN * (1 - fkp)],
+            KLEN * term_order[0],
+            KLEN * (fkp + 1),
+            KLEN * (2 - fkp),
         ]
 
         # Now Look up in index.
@@ -747,16 +762,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.mdb_cursor_get(
                     icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
                 == lmdb.MDB_SUCCESS):
-            match = <DoubleKey>data_v.mv_data
+            memcpy(&match, data_v.mv_data, DBL_KLEN)
 
             if match[flt_subkey_rng[0]: flt_subkey_rng[1]] == fk:
                 # Remainder (not filter) key to complete the triple.
-                rk = match[r_subkey_rng[0]: r_subkey_rng[1]]
+                memcpy(&rk, &match[r_subkey_rng], KLEN)
 
                 # Assemble result.
-                matches.data[i][asm_rng[0][0]: asm_rng[0][1]] = luk
-                matches.data[i][asm_rng[1][0]: asm_rng[1][1]] = fk
-                matches.data[i][asm_rng[2][0]: asm_rng[2][1]] = rk
+                memcpy(&matches.data[i][asm_rng[0]], &luk, KLEN)
+                memcpy(&matches.data[i][asm_rng[1]], &fk, KLEN)
+                memcpy(&matches.data[i][asm_rng[2]], &rk, KLEN)
             i += 1
 
         # Shrink the array to the actual number of matches.
@@ -783,7 +798,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         res = ResultSet(stat.ms_entries, KLEN)
         while lmdb.mdb_cursor_get(
                 icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP) == lmdb.MDB_SUCCESS:
-            res.data[i] = <unsigned char *>key_v.mv_data
+            memcpy(&res.data[i], key_v.mv_data, KLEN)
 
         self._cur_close(icur)
 
@@ -834,7 +849,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             while lmdb.mdb_cursor_get(
                     dcur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
             ) == lmdb.MDB_SUCCESS:
-                res.data[i] = <Key>data_v.mv_data
+                memcpy(&res.data[i], data_v.mv_data, KLEN)
         else:
             dbi = self.get_dbi('c:')
             _check(lmdb.mdb_stat(self.txn, dbi[0], &stat))
@@ -845,7 +860,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             while lmdb.mdb_cursor_get(
                     dcur, &key_v, NULL, lmdb.MDB_NEXT
             ) == lmdb.MDB_SUCCESS:
-                res.data[i] = <Key>key_v.mv_data
+                memcpy(&res.data[i], key_v.mv_data, KLEN)
 
         return res.to_tuple()
 
@@ -871,9 +886,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         ret = []
         logger.debug('Key: {}'.format(key[: size]))
         for i in range(0, size, KLEN):
-            subkey = key[i: i + KLEN]
+            memcpy(&subkey, &key[i], KLEN)
             logger.debug('Subkey: {}'.format(subkey[: KLEN]))
-            key_v.mv_data = subkey
+            key_v.mv_data = &subkey
             key_v.mv_size = KLEN
 
             dbi = self.get_dbi('t:st')[0]
@@ -883,7 +898,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             _check(rc,
                 'Error getting data for key \'{}\'.'.format(key))
 
-            pk_t = <unsigned char *>data_v.mv_data
+            memcpy(&pk_t, data_v.mv_data, data_v.mv_size)
             logger.debug('Pickle data from key: {}'.format(pk_t[: data_v.mv_size]))
             ret.append(self._unpickle(pk_t[: data_v.mv_size]))
 
@@ -906,7 +921,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Hash thash
         _hash(self._pickle(term), &thash)
-        key_v.mv_data = thash
+        key_v.mv_data = &thash
         key_v.mv_size = HLEN
 
         dbi = self.get_dbi('th:t')[0]
@@ -916,7 +931,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         _check(rc,
             'Error getting data for key \'{}\'.'.format(key[0]))
 
-        key = <Key *>data_v.mv_data
+        memcpy(key, data_v.mv_data, KLEN)
 
 
     cdef inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *:
@@ -929,7 +944,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         while  i < 3:
             self._to_key(terms[i], &key)
-            tkey[0][KLEN * i: KLEN * (i + 1)] = key
+            memcpy(tkey[KLEN * i], &key, KLEN)
             if key is NULL:
                 # A term in the triple is not found.
                 tkey = NULL
@@ -958,8 +973,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef void _append(
-            self, str dblabel, const unsigned char *value, size_t vlen,
-            Key key, Key *nkey, unsigned int flags=0) except *:
+            self, str dblabel, unsigned char *value, size_t vlen,
+            const Key key, Key *nkey, unsigned int flags=0) except *:
         """
         Append one or more keys and values to the end of a database.
 
@@ -974,12 +989,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST)
         if rc == lmdb.MDB_NOTFOUND:
-            nkey[0] = FIRST_KEY
+            memcpy(nkey, &first_key, KLEN)
         else:
             _check(rc, 'Error retrieving last key for DB {}.'.format(dblabel))
-            key = <Key>key_v.mv_data
+            memcpy(&key, key_v.mv_data, KLEN)
             self._next_key(key, nkey)
-        logger.info('Last key in _append: {}'.format(key[: KLEN]))
+        #logger.info('Last key in _append: {}'.format(key[: KLEN]))
         key_v.mv_data = nkey
         key_v.mv_size = KLEN
         data_v.mv_data = value
@@ -989,10 +1004,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         lmdb.mdb_put(
                 self.txn, self.get_dbi(dblabel)[0], &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)
-                #flags)
 
 
-    cdef void _next_key(self, Key key, Key *nkey) except *:
+    cdef void _next_key(self, const Key key, Key *nkey) except *:
         """
         Calculate the next closest byte sequence in lexicographical order.
 
@@ -1009,9 +1023,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             size_t i = KLEN
 
-        nkey[0] = key
+        memcpy(nkey, &key, KLEN)
 
-        logger.debug('Last key in _next_key: {}'.format(key[: KLEN]))
+        #logger.debug('Last key in _next_key: {}'.format(key[0]))
         while i > 0:
             i -= 1
             if nkey[0][i] < 255:
