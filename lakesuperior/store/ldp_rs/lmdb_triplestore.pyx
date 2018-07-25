@@ -7,7 +7,7 @@ import logging
 import os
 import pickle
 
-from lakesuperior.store.base_lmdb_store import LmdbError
+from lakesuperior.store.base_lmdb_store import KeyNotFoundError, LmdbError
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
@@ -100,10 +100,6 @@ cdef inline void _hash(const unsigned char *s, Hash *ch):
 
 
 logger = logging.getLogger(__name__)
-
-
-class TstoreKeyNotFoundError(LmdbError):
-    pass
 
 
 cdef class ResultSet:
@@ -215,12 +211,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             try:
                 cur = self._cur_open('c:spo')
-                rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_SET)
-                if rc == lmdb.MDB_NOTFOUND:
-                    return 0
                 _check(
-                    rc, 'Error setting key on context {}.'.format(context))
+                        lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_SET),
+                        'Error setting key on context {}.'.format(context))
                 _check(lmdb.mdb_cursor_count(cur, &ct))
+            except KeyNotFoundError:
+                return 0
             finally:
                 self._cur_close(cur)
         else:
@@ -267,16 +263,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             try:
                 key_v.mv_data = &thash
                 key_v.mv_size = HLEN
-                rc = lmdb.mdb_get(
-                        self.txn, self.get_dbi('th:t')[0], &key_v, &data_v)
-                if rc == lmdb.MDB_NOTFOUND:
-                    raise TstoreKeyNotFoundError()
-                _check(rc)
                 _check(lmdb.mdb_get(
                         self.txn, self.get_dbi('th:t')[0], &key_v, &data_v))
                 memcpy(&keys[KLEN * i], data_v.mv_data, KLEN)
                 logger.debug('Hash {} found.'.format(thash[: HLEN]))
-            except TstoreKeyNotFoundError:
+            except KeyNotFoundError:
                 # If term is not found, add it...
                 logger.debug('Hash {} not found. Adding to DB.'.format(
                         thash[: HLEN]))
@@ -475,7 +466,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             pk_c = self._pickle(context)
             try:
                 self._to_key(context, &ck)
-            except TstoreKeyNotFoundError:
+            except KeyNotFoundError:
                 # Context not found.
                 return ResultSet(0, TRP_KLEN)
 
@@ -494,14 +485,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         return ResultSet(0, TRP_KLEN)
                 data_v.mv_data = spok
                 data_v.mv_size = TRP_KLEN
-                rc = lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_GET_BOTH)
-                if rc == lmdb.MDB_NOTFOUND:
+                try:
+                    _check(lmdb.mdb_cursor_get(
+                            icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
+                except KeyNotFoundError:
                     # Triple not found.
-                    self._cur_close(icur)
                     return ResultSet(0, TRP_KLEN)
-                _check(rc, 'Error getting key + data pair.')
-                self._cur_close(icur)
+                finally:
+                    self._cur_close(icur)
                 ret = ResultSet(1, TRP_KLEN)
                 memcpy(&ret.data[0], &spok, TRP_KLEN)
 
@@ -510,8 +501,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # ? ? ? c
             elif not any(triple_pattern):
                 # Get all triples from the context
-                rc = lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET)
-                if rc == lmdb.MDB_NOTFOUND:
+                try:
+                    _check(lmdb.mdb_cursor_get(
+                        icur, &key_v, NULL, lmdb.MDB_SET))
+                except KeyNotFoundError:
                     # Triple not found.
                     self._cur_close(icur)
                     return ResultSet(0, TRP_KLEN)
@@ -745,12 +738,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         icur = self._cur_open(ludbl)
         key_v.mv_data = luk
         key_v.mv_size = KLEN
-        rc = lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET)
-
-        if rc == lmdb.MDB_NOTFOUND:
+        try:
+            _check(lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET))
+        except KeyNotFoundError:
             return ResultSet(0, TRP_KLEN)
 
-        _check(rc, 'Error getting 2bound lookup key.')
         _check(
                 lmdb.mdb_cursor_count(icur, &ct),
                 'Error getting 2bound term count.')
@@ -892,11 +884,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key_v.mv_size = KLEN
 
             dbi = self.get_dbi('t:st')[0]
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-            if rc == lmdb.MDB_NOTFOUND:
-                raise TstoreKeyNotFoundError('Key not found: {}'.format(key[: size]))
-            _check(rc,
-                'Error getting data for key \'{}\'.'.format(key))
+            _check(
+                    lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
+                    'Error getting data for key \'{}\'.'.format(key))
 
             memcpy(&pk_t, data_v.mv_data, data_v.mv_size)
             logger.debug('Pickle data from key: {}'.format(pk_t[: data_v.mv_size]))
@@ -925,11 +915,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = HLEN
 
         dbi = self.get_dbi('th:t')[0]
-        rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-        if rc == lmdb.MDB_NOTFOUND:
-            raise TstoreKeyNotFoundError()
-        _check(rc,
-            'Error getting data for key \'{}\'.'.format(key[0]))
+        _check(
+                lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
+                'Error getting data for key \'{}\'.'.format(key[0]))
 
         memcpy(key, data_v.mv_data, KLEN)
 
@@ -952,26 +940,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             i += 1
 
 
-    cdef void *_get_data(self, Key key, str db) except *:
-        """
-        Get a single value (non-dup) for a key.
-        """
-        cdef:
-            unsigned char[:] ret
-
-        key_v.mv_data = key
-        key_v.mv_size = KLEN
-
-        dbi = self.get_dbi(db)[0]
-        rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-        if rc == lmdb.MDB_NOTFOUND:
-            raise TstoreKeyNotFoundError('Key not found: {}'.format(key))
-        _check(rc,
-            'Error getting data for key \'{}\'.'.format(key))
-
-        return data_v.mv_data
-
-
     cdef void _append(
             self, str dblabel, unsigned char *value, size_t vlen,
             const Key key, Key *nkey, unsigned int flags=0) except *:
@@ -987,14 +955,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             lmdb.MDB_cursor *cur = self._cur_open(dblabel)
 
-        rc = lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST)
-        if rc == lmdb.MDB_NOTFOUND:
+        try:
+            _check(lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST))
+        except KeyNotFoundError:
             memcpy(nkey, &first_key, KLEN)
         else:
-            _check(rc, 'Error retrieving last key for DB {}.'.format(dblabel))
             memcpy(&key, key_v.mv_data, KLEN)
             self._next_key(key, nkey)
-        #logger.info('Last key in _append: {}'.format(key[: KLEN]))
         key_v.mv_data = nkey
         key_v.mv_size = KLEN
         data_v.mv_data = value

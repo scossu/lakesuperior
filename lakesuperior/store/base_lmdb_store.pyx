@@ -24,6 +24,8 @@ cdef void _check(int rc, str message='') except *:
     """
     Check return code.
     """
+    if rc == lmdb.MDB_NOTFOUND:
+        raise KeyNotFoundError()
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
                 message + '\nInternal error: '
@@ -33,6 +35,10 @@ cdef void _check(int rc, str message='') except *:
 
 
 class LmdbError(Exception):
+    pass
+
+
+class KeyNotFoundError(LmdbError):
     pass
 
 
@@ -392,11 +398,13 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(db)[0]
         with self.txn_ctx():
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-            if rc == lmdb.MDB_NOTFOUND:
+            try:
+                _check(
+                    lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
+                    'Error getting data for key \'{}\': {{}}'.format(
+                        key.decode()))
+            except KeyNotFoundError:
                 return None
-            _check(rc,
-                'Error getting data for key \'{}\': {{}}'.format(key.decode()))
 
             ret = <unsigned char *>data_v.mv_data
             return ret[:data_v.mv_size]
