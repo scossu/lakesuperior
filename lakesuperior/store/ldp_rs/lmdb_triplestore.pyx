@@ -1,6 +1,6 @@
 # cython: language_level = 3
-# cython: boudschecking = False
-# cython: wrapartound = False
+# cython: boundschecking = False
+# cython: wraparound = False
 
 import hashlib
 import logging
