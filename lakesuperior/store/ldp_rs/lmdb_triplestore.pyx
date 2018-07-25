@@ -7,7 +7,8 @@ import logging
 import os
 import pickle
 
-from lakesuperior.store.base_lmdb_store import KeyNotFoundError, LmdbError
+from lakesuperior.store.base_lmdb_store import (
+        KeyExistsError, KeyNotFoundError, LmdbError)
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
@@ -289,13 +290,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Add context.
         memcpy(&ck, &keys[TRP_KLEN], KLEN)
-        self.put(ck, b'', 'c:', lmdb.MDB_NOOVERWRITE)
-
-        # Add triple:context association.
         memcpy(&spok, &keys, TRP_KLEN)
-        self.put(spok, ck, 'spo:c', lmdb.MDB_NOOVERWRITE)
-        # Index triple:context association.
-        self.put(ck, spok, 'c:spo', lmdb.MDB_NOOVERWRITE)
+        try:
+            self.put(ck, b'', 'c:', lmdb.MDB_NOOVERWRITE)
+        except KeyExistsError:
+            pass
+        try:
+            # Add triple:context association.
+            self.put(spok, ck, 'spo:c', lmdb.MDB_NOOVERWRITE)
+        except KeyExistsError:
+            pass
+        try:
+            # Index triple:context association.
+            self.put(ck, spok, 'c:spo', lmdb.MDB_NOOVERWRITE)
+        except KeyExistsError:
+            pass
 
         self._index_triple(IDX_OP_ADD, spok)
 

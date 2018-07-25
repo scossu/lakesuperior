@@ -26,6 +26,8 @@ cdef void _check(int rc, str message='') except *:
     """
     if rc == lmdb.MDB_NOTFOUND:
         raise KeyNotFoundError()
+    if rc == lmdb.MDB_KEYEXIST:
+        raise KeyExistsError()
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
                 message + '\nInternal error: '
@@ -37,9 +39,12 @@ cdef void _check(int rc, str message='') except *:
 class LmdbError(Exception):
     pass
 
-
 class KeyNotFoundError(LmdbError):
     pass
+
+class KeyExistsError(LmdbError):
+    pass
+
 
 
 cdef class BaseLmdbStore:
