@@ -176,6 +176,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         'p:so': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'o:sp': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'c:spo': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'spo:c': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
     }
 
     flags = lmdb.MDB_NOSUBDIR | lmdb.MDB_NORDAHEAD
@@ -318,14 +319,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Add triple:context association.
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('spo:c')[0], &spo_v, &c_v,
-                lmdb.MDB_NOOVERWRITE))
+                lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
         try:
             # Index triple:context association.
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:spo')[0], &c_v, &spo_v,
-                lmdb.MDB_NOOVERWRITE))
+                lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
 
@@ -1018,7 +1019,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
                     'Error getting data for key \'{}\'.'.format(key))
 
-            #logger.debug('data: {}'.format((<unsigned char *>data_v.mv_data)[: KLEN]))
             pk_t = <unsigned char *>PyMem_Malloc(data_v.mv_size)
             if pk_t == NULL:
                 raise MemoryError()
@@ -1031,9 +1031,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 logger.debug('Unpickled term: {}'.format(py_term))
                 ret.append(py_term)
             finally:
-                logger.debug('Freeing pk_t...')
                 PyMem_Free(pk_t)
-                logger.debug('...done.')
         logger.debug('Ret: {}'.format(ret))
 
         return ret
