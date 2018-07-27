@@ -201,7 +201,7 @@ class LmdbStore(LmdbTriplestore, Store):
                 contexts = (Graph(identifier=context),)
             else:
                 logger.debug('spok: {}'.format(spok))
-                if self.key_exists(spok, 'spo:c'):
+                if self.key_exists(spok, 'spo:c', new_txn=False):
                     logger.debug('preparing contexts.')
                     contexts = tuple(
                         Graph(identifier=self.from_key(ck), store=self)
@@ -228,6 +228,7 @@ class LmdbStore(LmdbTriplestore, Store):
             self.put(prefix, namespace, 'pfx:ns')
             self.put(namespace, prefix, 'ns:pfx')
         else:
+            logger.debug('Opening RW transaction.')
             with self.txn_ctx(write=True) as wtxn:
                 self.put(prefix, namespace, 'pfx:ns')
                 self.put(namespace, prefix, 'ns:pfx')

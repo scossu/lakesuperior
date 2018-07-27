@@ -361,21 +361,38 @@ cdef class BaseLmdbStore:
         self._txn_abort()
 
 
-    cpdef bint key_exists(self, const unsigned char *key, db=None) except -1:
+    cpdef bint key_exists(
+            self, const unsigned char *key, db=None, new_txn=True) except -1:
         """
         Return whether a key exists in a database.
+
+        Wrap in a new transaction. Only use this if a transaction has not been
+        opened.
+        """
+        if new_txn is True:
+            with self.txn_ctx():
+                return self._key_exists(key, db)
+        else:
+            return self._key_exists(key, db)
+
+
+    cdef inline bint _key_exists(
+            self, const unsigned char *key, str db) except -1:
+        """
+        Return whether a key exists in a database.
+
+        To be used within an existing transaction.
         """
         cdef lmdb.MDB_val key_v, data_v
-        key_v.mv_data = &key
-        key_v.mv_size = len(key)
 
-        with self.txn_ctx():
-            try:
-                _check(lmdb.mdb_get(
-                    self.txn, self.get_dbi(db)[0], &key_v, &data_v))
-            except KeyNotFoundError:
-                return False
-            return True
+        key_v.mv_data = key
+        key_v.mv_size = len(key)
+        try:
+            _check(lmdb.mdb_get(
+                self.txn, self.get_dbi(db)[0], &key_v, &data_v))
+        except KeyNotFoundError:
+            return False
+        return True
 
 
     cpdef void put(
@@ -391,9 +408,8 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(db)[0]
 
-        with self.txn_ctx(True):
-            rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
-            _check(rc, 'Error putting data: {}')
+        rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
+        _check(rc, 'Error putting data: {}')
 
 
     cpdef get_data(self, unsigned char *key, db=None):
@@ -406,18 +422,17 @@ cdef class BaseLmdbStore:
         key_v.mv_data = key
         key_v.mv_size = len(key)
 
-        with self.txn_ctx():
-            try:
-                _check(
-                    lmdb.mdb_get(
-                        self.txn, self.get_dbi(db)[0], &key_v, &data_v),
-                    'Error getting data for key \'{}\': {{}}'.format(
-                        key.decode()))
-            except KeyNotFoundError:
-                return None
+        try:
+            _check(
+                lmdb.mdb_get(
+                    self.txn, self.get_dbi(db)[0], &key_v, &data_v),
+                'Error getting data for key \'{}\': {{}}'.format(
+                    key.decode()))
+        except KeyNotFoundError:
+            return None
 
-            ret = <unsigned char *>data_v.mv_data
-            return ret[:data_v.mv_size]
+        ret = <unsigned char *>data_v.mv_data
+        return ret[:data_v.mv_size]
 
 
     #cpdef get_all_pairs(self, db=None):
@@ -427,8 +442,17 @@ cdef class BaseLmdbStore:
     #    pass
 
 
-    cpdef stats(self):
+    cpdef dict stats(self, new_txn=True):
         """Gather statistics about the database."""
+        return self._stats()
+
+
+    cdef dict _stats(self):
+        """
+        Gather statistics about the database.
+
+        Cython-only, non-transaction-aware method.
+        """
         cdef:
             lmdb.MDB_stat stat
             lmdb.mdb_size_t entries
@@ -437,22 +461,21 @@ cdef class BaseLmdbStore:
         env_stats = <dict>stat
 
         db_stats = {}
-        with self.txn_ctx():
-            for i, dbl in enumerate(self.dbi_labels):
-                _check(
-                    lmdb.mdb_stat(self.txn, self.dbis[i], &stat),
-                    'Error getting datbase stats: {}')
-                entries = stat.ms_entries
-                db_stats[dbl] = <dict>stat
+        for i, dbl in enumerate(self.dbi_labels):
+            _check(
+                lmdb.mdb_stat(self.txn, self.dbis[i], &stat),
+                'Error getting datbase stats: {}')
+            entries = stat.ms_entries
+            db_stats[dbl] = <dict>stat
 
-            return {
-                'env_stats': env_stats,
-                'env_size': os.stat(self.env_path).st_size,
-                'db_stats': {
-                    db_label: db_stats[db_label]
-                    for db_label in self.dbi_labels
-                },
-            }
+        return {
+            'env_stats': env_stats,
+            'env_size': os.stat(self.env_path).st_size,
+            'db_stats': {
+                db_label: db_stats[db_label]
+                for db_label in self.dbi_labels
+            },
+        }
 
 
     ### CYTHON METHODS ###
@@ -471,13 +494,17 @@ cdef class BaseLmdbStore:
         if self.txn == NULL:
             logger.warning('txn is NULL!')
         else:
+            logger.debug('Attempting to commit transaction.')
             rc = lmdb.mdb_txn_commit(self.txn)
+            logger.debug('Transaction committed.')
             try:
                 _check(rc, 'Error committing transaction.')
                 self.txn = NULL
                 self.is_txn_rw = None
             except:
+                logger.debug('Attempting to abort transaction.')
                 self._txn_abort()
+                logger.debug('Transaction aborted.')
                 raise
 
 
