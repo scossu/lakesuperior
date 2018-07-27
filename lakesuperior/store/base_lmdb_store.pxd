@@ -34,7 +34,7 @@ cdef class BaseLmdbStore:
     cpdef void _destroy(self) except *
     cpdef bint key_exists(self, unsigned char *key, db=*) except -1
     cpdef get_data(self, unsigned char *key, db=*)
-    cpdef get_dup_data(self, unsigned char *key, db=*)
+    #cpdef get_dup_data(self, unsigned char *key, db=*)
     #cpdef get_all_pairs(self, db=*)
     cpdef void put(
             self, unsigned char *key, unsigned char *data, db=*, flags=*

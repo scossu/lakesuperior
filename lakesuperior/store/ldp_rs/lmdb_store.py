@@ -200,12 +200,19 @@ class LmdbStore(LmdbTriplestore, Store):
             if context is not None:
                 contexts = (Graph(identifier=context),)
             else:
+                logger.debug('spok: {}'.format(spok))
                 if self.key_exists(spok, 'spo:c'):
+                    logger.debug('preparing contexts.')
                     contexts = tuple(
                         Graph(identifier=self.from_key(ck), store=self)
-                        for ck in cur.iternext_dup())
+                        for ck in self.get_dup_data(spok, 'spo:c'))
+                    logger.debug('contexts: {}'.format(contexts))
+                else:
+                    contexts = (Graph(identifier=context),)
 
+            logger.debug('Before yield: {}: {}.'.format(spok, contexts))
             yield self.from_key(spok), contexts
+            logger.debug('All good after yield.')
 
 
     def bind(self, prefix, namespace):

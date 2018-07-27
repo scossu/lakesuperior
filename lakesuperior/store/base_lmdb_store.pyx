@@ -276,6 +276,8 @@ cdef class BaseLmdbStore:
         :rtype: lmdb.Transaction
         """
         if self.txn is not NULL:
+            logger.debug(
+                    'Transaction is already active. Not opening another one.')
             yield
         else:
             try:
@@ -359,18 +361,21 @@ cdef class BaseLmdbStore:
         self._txn_abort()
 
 
-    cpdef bint key_exists(self, unsigned char *key, db=None) except -1:
+    cpdef bint key_exists(self, const unsigned char *key, db=None) except -1:
         """
         Return whether a key exists in a database.
         """
-        key_v.mv_data = key
+        cdef lmdb.MDB_val key_v, data_v
+        key_v.mv_data = &key
         key_v.mv_size = len(key)
 
-        dbi = self.get_dbi(db)[0]
         with self.txn_ctx():
-            rc = lmdb.mdb_get(self.txn, dbi, &key_v, &data_v)
-
-            return rc == lmdb.MDB_SUCCESS
+            try:
+                _check(lmdb.mdb_get(
+                    self.txn, self.get_dbi(db)[0], &key_v, &data_v))
+            except KeyNotFoundError:
+                return False
+            return True
 
 
     cpdef void put(
@@ -401,11 +406,11 @@ cdef class BaseLmdbStore:
         key_v.mv_data = key
         key_v.mv_size = len(key)
 
-        dbi = self.get_dbi(db)[0]
         with self.txn_ctx():
             try:
                 _check(
-                    lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
+                    lmdb.mdb_get(
+                        self.txn, self.get_dbi(db)[0], &key_v, &data_v),
                     'Error getting data for key \'{}\': {{}}'.format(
                         key.decode()))
             except KeyNotFoundError:
@@ -413,13 +418,6 @@ cdef class BaseLmdbStore:
 
             ret = <unsigned char *>data_v.mv_data
             return ret[:data_v.mv_size]
-
-
-    cpdef get_dup_data(self, unsigned char *key, db=None):
-        """
-        Get all duplicate values for a key.
-        """
-        pass
 
 
     #cpdef get_all_pairs(self, db=None):
