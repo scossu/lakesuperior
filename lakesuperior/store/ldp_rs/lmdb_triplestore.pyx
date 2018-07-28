@@ -528,9 +528,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Get all duplicate values for a key.
         """
         cdef:
-            lmdb.MDB_stat db_stat
-            size_t i = 0
+            size_t ct, i = 0
             ResultSet ret
+            unsigned int dbflags
 
         key_v.mv_data = key
         key_v.mv_size = len(key)
@@ -541,16 +541,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         logger.debug('Key size: {}'.format(ksize))
         logger.debug('DB label: {}'.format(dblabel))
 
-        _check(lmdb.mdb_stat(self.txn, dbi, &db_stat))
+        _check(lmdb.mdb_dbi_flags(self.txn, dbi, &dbflags))
+        if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
+            raise ValueError('This DB is not set up with fixed values.')
 
-        rc = lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET_KEY)
-        # TODO Verify that the DB is DUPFIXED.
+        rc = lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET)
         try:
             _check(rc)
         except KeyNotFoundError:
             return ResultSet(0, 0)
 
-        ret = ResultSet(db_stat.ms_entries, data_v.mv_size)
+        _check(lmdb.mdb_cursor_count(cur, &ct))
+        ret = ResultSet(ct, data_v.mv_size)
         logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
 
         while True:
@@ -567,6 +569,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             i += 1
 
+        logger.debug('Total data in _get_dup_data: {}'.format(
+            ret.data[: ret.size]))
         return ret
 
 
