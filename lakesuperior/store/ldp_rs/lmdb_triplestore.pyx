@@ -141,8 +141,11 @@ cdef class ResultSet:
         self.ct = ct
         self.itemsize = itemsize
         self.size = self.itemsize * self.ct
-        logger.debug('Size of allocated ResultSet data: {}x{}'.format(
+
+        logger.debug('Dimensions of allocated ResultSet data: {}x{}'.format(
             self.ct, self.itemsize))
+        logger.debug('Size of allocated ResultSet data: {}'.format(
+            self.size))
         logger.debug('Memory address of allocated data: {0:x}'.format(
             <unsigned long>self.data))
 
@@ -168,7 +171,7 @@ cdef class ResultSet:
         Return the data set as a Python tuple.
         """
         return tuple(
-                self.data[self.itemsize * i: self.itemsize * (i + 1)]
+                self.data[i: i + self.itemsize]
                 for i in range(0, self.size, self.itemsize))
 
 
@@ -556,9 +559,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
 
         while True:
-            memcpy(ret.data + i * KLEN, data_v.mv_data, data_v.mv_size)
+            memcpy(ret.data + i * ret.itemsize, data_v.mv_data, ret.itemsize)
             logger.debug('Data in row: {}'.format(
-                ret.data[KLEN * i: KLEN * (i + 1)]))
+                ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
             rc = lmdb.mdb_cursor_get(
                 cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
