@@ -106,42 +106,79 @@ logger = logging.getLogger(__name__)
 cdef class ResultSet:
     """
     Pre-allocated result set.
+
+    Data in the set are stored as a 1D contiguous array of characters.
+    Access to elements at an arbitrary index position is achieved by using the
+    ``itemsize`` property multiplied by the index number.
+
+    Key properties:
+
+    ``ct``: number of elements in the set.
+    ``itemsize``: size of each element, in bytes. All elements have the same
+        size.
+    ``size``: Total size, in bytes, of the data set. This is the product of
+        ``itemsize`` and ``ct``.
     """
     cdef:
-        unsigned char **data
-        size_t size, itemsize
+        unsigned char *data
+        unsigned char itemsize
+        size_t ct, size
 
-    def __cinit__(self, size_t size, size_t itemsize):
-        self.data = <unsigned char **>PyMem_Malloc(size * itemsize)
+    def __cinit__(self, size_t ct, unsigned char itemsize):
+        """
+        Initialize and allocate memory for the data set.
+
+        :param size_t ct: Number of elements to be accounted for.
+        :param unsigned char itemsize: Size of an individual item.
+            Note that the ``itemsize`` is an unsigned char,
+            i.e. an item can be at most 255 bytes. This is for economy reasons,
+            since many multiplications are done between ``itemsize`` and other
+            char variables.
+        """
+        self.data = <unsigned char *>PyMem_Malloc(ct * itemsize)
         if not self.data:
             raise MemoryError()
-        self.size = size
+        self.ct = ct
         self.itemsize = itemsize
+        self.size = self.itemsize * self.ct
         logger.debug('Size of allocated ResultSet data: {}x{}'.format(
-            self.size, self.itemsize))
+            self.ct, self.itemsize))
         logger.debug('Memory address of allocated data: {0:x}'.format(
             <unsigned long>self.data))
 
     def __dealloc__(self):
         logger.debug('Releasing {} bytes of ResultSet...'.format(
-            self.size * self.itemsize))
+            self.ct * self.itemsize))
         PyMem_Free(self.data)
         logger.debug('...done.')
 
-    cdef void resize(self, size_t size) except *:
-        cdef unsigned char **mem
-        mem = <unsigned char **>PyMem_Realloc(self.data, size * self.itemsize)
-        if not mem:
+    cdef void resize(self, size_t ct) except *:
+        cdef unsigned char *tmp
+        tmp = <unsigned char *>PyMem_Realloc(self.data, ct * self.itemsize)
+        if not tmp:
             raise MemoryError()
-        self.data = mem
-        self.size = size
+        self.data = tmp
+        self.ct = ct
+        self.size = self.itemsize * self.ct
+
+    # Access methods.
 
     cdef tuple to_tuple(self):
         """
         Return the data set as a Python tuple.
         """
-        return tuple(x for x in self.data[:self.size])
+        return tuple(
+                self.data[self.itemsize * i: self.itemsize * (i + 1)]
+                for i in range(0, self.size, self.itemsize))
 
+
+    cdef unsigned char *get_item(self, i):
+        """
+        Get an item at a given index position.
+
+        The item size is known by the ``itemsize`` property of the object.
+        """
+        return self.data + self.itemsize * i
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):
@@ -283,14 +320,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 key_v.mv_size = HLEN
                 _check(lmdb.mdb_get(
                         self.txn, self.get_dbi('th:t')[0], &key_v, &data_v))
-                memcpy(keys + (KLEN * i), data_v.mv_data, KLEN)
+                memcpy(keys + (i * KLEN), data_v.mv_data, KLEN)
                 logger.debug('Hash {} found.'.format(thash[: HLEN]))
             except KeyNotFoundError:
                 # If term is not found, add it...
                 logger.debug('Hash {} not found. Adding to DB.'.format(
                         thash[: HLEN]))
                 self._append('t:st', pk_t, term_sizes[i], tkey, &nkey)
-                memcpy(keys + (KLEN * i), nkey, KLEN)
+                memcpy(keys + (i * KLEN), nkey, KLEN)
 
                 # ...and index it.
                 logger.debug('Indexing on th:t: {}: {}'.format(
@@ -366,9 +403,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             ck_v.mv_data = ck
             ck_v.mv_size = KLEN
             spok_v.mv_size = TRP_KLEN
-            while i < match_set.size:
-                memcpy(spok, match_set.data + i, TRP_KLEN)
-                spok_v.mv_data = &spok
+            while i < match_set.ct:
+                memcpy(spok, match_set.data + match_set.itemsize * i, TRP_KLEN)
+                spok_v.mv_data = spok
                 if lmdb.mdb_cursor_get(
                         dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH
                 ) == lmdb.MDB_SUCCESS:
@@ -388,9 +425,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         else:
             spok_v.mv_size = TRP_KLEN
             # Loop over all SPO matching the triple pattern.
-            while i < match_set.size:
-                memcpy(spok, match_set.data + i, TRP_KLEN)
-                spok_v.mv_data = &spok
+            while i < match_set.ct:
+                memcpy(spok, match_set.data + match_set.itemsize * i, TRP_KLEN)
+                spok_v.mv_data = spok
                 # Loop over all context associations for this SPO.
                 while lmdb.mdb_cursor_get(
                         dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP
@@ -514,11 +551,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             return ResultSet(0, 0)
 
         ret = ResultSet(db_stat.ms_entries, data_v.mv_size)
-        logger.debug('array sizes: {}, {}'.format(ret.size, ret.itemsize))
+        logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
 
         while True:
-            memcpy(ret.data[i], data_v.mv_data, data_v.mv_size)
-            logger.debug('Data in row: {}'.format(ret.data[i][: KLEN]))
+            memcpy(ret.data + i * KLEN, data_v.mv_data, data_v.mv_size)
+            logger.debug('Data in row: {}'.format(
+                ret.data[KLEN * i: KLEN * (i + 1)]))
 
             rc = lmdb.mdb_cursor_get(
                 cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
@@ -537,7 +575,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Python-facing method that returns results as a tuple.
         """
         ret = self._triple_keys(triple_pattern, context)
-        logger.debug('First row of triple key: {}'.format(ret.data[0][: TRP_KLEN]))
+        logger.debug('First row of triple key: {}'.format(ret.data[: TRP_KLEN]))
         logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
         return ret.to_tuple()
 
@@ -561,6 +599,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             size_t ct = 0, flt_ct = 0
             Py_ssize_t i = 0
             lmdb.MDB_cursor *icur
+            ResultSet flt_res, ret
 
         if context is not None:
             pk_c = self._pickle(context)
@@ -594,7 +633,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 finally:
                     self._cur_close(icur)
                 ret = ResultSet(1, TRP_KLEN)
-                memcpy(ret.data[0], spok, TRP_KLEN)
+                memcpy(ret.data, spok, TRP_KLEN)
 
                 return ret
 
@@ -615,7 +654,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 while (lmdb.mdb_cursor_get(
                     icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
                 ) == lmdb.MDB_SUCCESS):
-                    memcpy(ret.data + i, data_v.mv_data, TRP_KLEN)
+                    memcpy(ret.data + ret.itemsize * i, data_v.mv_data, TRP_KLEN)
                     i += 1
                 self._cur_close(icur)
 
@@ -624,26 +663,26 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Regular lookup. Filter _lookup() results by context.
             else:
                 res = self._lookup(triple_pattern)
-                if res.size == 0:
+                if res.ct == 0:
                     return ResultSet(0, TRP_KLEN)
 
-                flt_res = ResultSet(res.size, res.itemsize)
-                while flt_ct < res.size:
-                    data_v.mv_data = res.data[flt_ct]
+                flt_res = ResultSet(res.ct, res.itemsize)
+                while flt_ct < res.ct:
+                    data_v.mv_data = res.data + flt_ct * res.itemsize
                     rc = lmdb.mdb_cursor_get(
                             icur, &key_v, &data_v, lmdb.MDB_GET_BOTH)
                     if rc == lmdb.MDB_SUCCESS:
                         memcpy(
-                                flt_res.data + flt_ct,
-                                res.data + flt_ct, res.itemsize)
+                                flt_res.data + res.itemsize * flt_ct,
+                                res.data + res.itemsize * flt_ct, res.itemsize)
 
                     flt_ct += 1
 
-                flt_res.resize(flt_ct)
+                flt_res.resize(flt_ct * res.itemsize)
         # Unfiltered lookup. No context checked.
         else:
             res = self._lookup(triple_pattern)
-            print('Res data after return: {}'.format(res.data[0][: TRP_KLEN]))
+            print('Res data after return: {}'.format(res.data[: TRP_KLEN]))
             return res
 
 
@@ -668,7 +707,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self._to_triple_key(triple_pattern, &spok)
                     if spok is not NULL:
                         matches = ResultSet(1, TRP_KLEN)
-                        memcpy(matches.data[0], spok, TRP_KLEN)
+                        memcpy(matches.data, spok, TRP_KLEN)
                         return matches
                     else:
                         matches = ResultSet(0, TRP_KLEN)
@@ -708,7 +747,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     ) == lmdb.MDB_SUCCESS:
                         #logger.debug('Getting data: {}'.format((<unsigned char *>key_v.mv_data)[: TRP_KLEN]))
                         memcpy(
-                                res.data[i],
+                                res.data + res.itemsize * i,
                                 key_v.mv_data, TRP_KLEN)
                     self._cur_close(dcur)
                     logger.debug('Data[0]: {}'.format(res.data[0][:TRP_KLEN]))
@@ -731,7 +770,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char luk[KLEN]
             size_t ct, i = 0
             unsigned char asm_rng[3]
-            unsigned char test[TRP_KLEN]
             ResultSet ret
 
         self._to_key(term, &luk)
@@ -768,14 +806,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         while True:
             logger.debug('i: {}'.format(i))
-            memcpy(test + asm_rng[0], luk, KLEN)
-            logger.debug('Inserted {} in {}'.format(luk[: KLEN], asm_rng[0]))
-            memcpy(test + asm_rng[1], data_v.mv_data, KLEN)
-            logger.debug('Inserted in {}'.format(asm_rng[1]))
-            memcpy(test + asm_rng[2], data_v.mv_data + KLEN, KLEN)
+            memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
+            memcpy(
+                    ret.data + ret.itemsize * i + asm_rng[1],
+                    data_v.mv_data, KLEN)
+            memcpy(
+                    ret.data + ret.itemsize * i + asm_rng[2],
+                    data_v.mv_data + KLEN, KLEN)
 
-            ret.data[i] = test
-            logger.debug('Data: {}'.format(ret.data[i][:TRP_KLEN]))
+            logger.debug('Data: {}'.format(
+                ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
             rc = lmdb.mdb_cursor_get(
                     icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
@@ -805,15 +845,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         logger.debug('term1: {} term2: {}'.format(term1, term2))
         cdef:
             unsigned char fk_rng, fkp, lui, rk_rng, rkp
-            int i = 0
             unsigned char term_order[3]
             unsigned char asm_rng[3]
             unsigned char luk[KLEN]
             unsigned char fk[KLEN]
             unsigned char rk[KLEN]
             unsigned char match[DBL_KLEN]
-            unsigned char trp[TRP_KLEN]
-            size_t ct
+            size_t i = 0, ct
             ResultSet ret
 
         # First we need to get:
@@ -908,16 +946,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             if memcmp(data_v.mv_data + fk_rng, fk, KLEN) == 0:
                 logger.debug('Assembling results.')
                 # Assemble result.
-                memcpy(trp + asm_rng[0], luk, KLEN)
-                memcpy(trp + asm_rng[1], fk, KLEN)
+                memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
+                memcpy(ret.data + ret.itemsize * i + asm_rng[1], fk, KLEN)
                 # Remainder (unbound key) to complete the triple.
                 memcpy(
-                    trp + asm_rng[2], data_v.mv_data + rk_rng, KLEN)
-                logger.debug(
-                        'Assembled triple: {}'.format(trp[: TRP_KLEN]))
-                ret.data[i] = trp
-                logger.debug(
-                        'Assembled match: {}'.format(ret.data[i][: TRP_KLEN]))
+                    ret.data + ret.itemsize * i + asm_rng[2],
+                    data_v.mv_data + rk_rng, KLEN)
+
+                logger.debug('Assembled match: {}'.format(
+                    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
                 i += 1
 
             rc = lmdb.mdb_cursor_get(
@@ -954,7 +991,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         res = ResultSet(stat.ms_entries, KLEN)
         while lmdb.mdb_cursor_get(
                 icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP) == lmdb.MDB_SUCCESS:
-            memcpy(res.data[i], key_v.mv_data, KLEN)
+            memcpy(res.data + res.itemsize * i, key_v.mv_data, KLEN)
 
         self._cur_close(icur)
 
@@ -1005,7 +1042,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             while lmdb.mdb_cursor_get(
                     dcur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
             ) == lmdb.MDB_SUCCESS:
-                memcpy(res.data[i], data_v.mv_data, KLEN)
+                memcpy(res.data + res.itemsize * i, data_v.mv_data, KLEN)
         else:
             dbi = self.get_dbi('c:')
             _check(lmdb.mdb_stat(self.txn, dbi[0], &stat))
@@ -1016,7 +1053,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             while lmdb.mdb_cursor_get(
                     dcur, &key_v, NULL, lmdb.MDB_NEXT
             ) == lmdb.MDB_SUCCESS:
-                memcpy(res.data[i], key_v.mv_data, KLEN)
+                memcpy(res.data + res.itemsize * i, key_v.mv_data, KLEN)
 
         return res.to_tuple()
 
