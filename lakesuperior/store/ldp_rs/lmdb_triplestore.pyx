@@ -117,9 +117,16 @@ cdef class ResultSet:
             raise MemoryError()
         self.size = size
         self.itemsize = itemsize
+        logger.debug('Size of allocated ResultSet data: {}x{}'.format(
+            self.size, self.itemsize))
+        logger.debug('Memory address of allocated data: {0:x}'.format(
+            <unsigned long>self.data))
 
     def __dealloc__(self):
+        logger.debug('Releasing {} bytes of ResultSet...'.format(
+            self.size * self.itemsize))
         PyMem_Free(self.data)
+        logger.debug('...done.')
 
     cdef void resize(self, size_t size) except *:
         cdef unsigned char **mem
@@ -529,8 +536,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Python-facing method that returns results as a tuple.
         """
-        ret = self._triple_keys(triple_pattern, context).to_tuple()
-        return ret
+        ret = self._triple_keys(triple_pattern, context)
+        logger.debug('First row of triple key: {}'.format(ret.data[0][: TRP_KLEN]))
+        logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
+        return ret.to_tuple()
 
 
     cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
@@ -719,50 +728,65 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: SPO keys matching the pattern.
         """
         cdef:
-            unsigned char k[KLEN]
+            unsigned char luk[KLEN]
             size_t ct, i = 0
             unsigned char asm_rng[3]
+            unsigned char test[TRP_KLEN]
+            ResultSet ret
 
-        self._to_key(term, &k)
-        if k is NULL:
+        self._to_key(term, &luk)
+        if luk is NULL:
             return ResultSet(0, TRP_KLEN)
 
         term_order = lookup_ordering[idx]
         icur = self._cur_open(self.lookup_indices[idx])
-        key_v.mv_data = k
+        key_v.mv_data = luk
         key_v.mv_size = KLEN
-        _check(
-                lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET),
-                'Error getting resource count key.')
-        _check(
-                lmdb.mdb_cursor_count(icur, &ct),
-                'Error getting resource count.')
+        rc = lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET)
+        # TODO Verify that the DB is DUPFIXED.
+        try:
+            _check(rc)
+        except KeyNotFoundError:
+            return ResultSet(0, TRP_KLEN)
+
+        _check(lmdb.mdb_cursor_count(icur, &ct))
 
         # Allocate memory for results.
-        matches = ResultSet(ct, TRP_KLEN)
-        logger.debug('Entries for DB {}: {}'.format(idx, ct))
-        if ct > 0:
-            # Arrange results according to lookup order.
-            asm_rng = [
-                KLEN * term_order[0],
-                KLEN * term_order[1],
-                KLEN * term_order[2],
-            ]
-            logger.debug('asm_rng: {}'.format(asm_rng[:3]))
-            logger.debug('Searching for key: {}'.format(k))
+        ret = ResultSet(ct, TRP_KLEN)
+        logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
+        logger.debug('First row: {}'.format(
+                (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
 
-            rc = lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_FIRST_DUP)
+        # Arrange results according to lookup order.
+        asm_rng = [
+            KLEN * term_order[0],
+            KLEN * term_order[1],
+            KLEN * term_order[2],
+        ]
+        logger.debug('asm_rng: {}'.format(asm_rng[:3]))
+        logger.debug('luk: {}'.format(luk))
 
-            while rc == lmdb.MDB_SUCCESS:
-                memcpy(matches.data[i] + asm_rng[0], k, KLEN)
-                memcpy(matches.data[i] + asm_rng[1], data_v.mv_data, KLEN)
-                memcpy(matches.data[i] + asm_rng[2], data_v.mv_data + KLEN, KLEN)
-                logger.debug('Data: {}'.format(matches.data[i][:TRP_KLEN]))
+        while True:
+            logger.debug('i: {}'.format(i))
+            memcpy(test + asm_rng[0], luk, KLEN)
+            logger.debug('Inserted {} in {}'.format(luk[: KLEN], asm_rng[0]))
+            memcpy(test + asm_rng[1], data_v.mv_data, KLEN)
+            logger.debug('Inserted in {}'.format(asm_rng[1]))
+            memcpy(test + asm_rng[2], data_v.mv_data + KLEN, KLEN)
 
-                rc = lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
-                i += 1
-        return matches
+            ret.data[i] = test
+            logger.debug('Data: {}'.format(ret.data[i][:TRP_KLEN]))
+
+            rc = lmdb.mdb_cursor_get(
+                    icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
+            try:
+                _check(rc)
+            except KeyNotFoundError:
+                break
+
+            i += 1
+
+        return ret
 
 
     cdef ResultSet _lookup_2bound(
@@ -788,7 +812,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char fk[KLEN]
             unsigned char rk[KLEN]
             unsigned char match[DBL_KLEN]
+            unsigned char trp[TRP_KLEN]
             size_t ct
+            ResultSet ret
 
         # First we need to get:
         # - ludbl: The lookup DB label (s:po, p:so, o:sp)
@@ -871,35 +897,44 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         _check(
                 lmdb.mdb_cursor_count(icur, &ct),
                 'Error getting 2bound term count.')
-        # Initially allocate memory for the maximum possible matches,
+        # Initially allocate memory for the maximum possible ret,
         # it will be resized later.
-        matches = ResultSet(ct, TRP_KLEN)
-        # Iterate over matches and filter by second term.
+        ret = ResultSet(ct, TRP_KLEN)
+        # Iterate over ret and filter by second term.
         i = 0
-        while rc == lmdb.MDB_SUCCESS:
-            memcpy(match, data_v.mv_data, DBL_KLEN)
-
-            logger.debug('Match: {}'.format(match[: DBL_KLEN]))
+        while True:
+            logger.debug('Match: {}'.format((<unsigned char *>data_v.mv_data)[: DBL_KLEN]))
             logger.debug('fk: {}'.format(fk[: KLEN]))
-            if memcmp(match + fk_rng, fk, KLEN) == 0:
+            if memcmp(data_v.mv_data + fk_rng, fk, KLEN) == 0:
+                logger.debug('Assembling results.')
                 # Assemble result.
-                memcpy(matches.data[i] + asm_rng[0], luk, KLEN) # fill o
-                memcpy(matches.data[i] + asm_rng[1], fk, KLEN) # fill s
-                # Remainder (not filter) key to complete the triple.
+                memcpy(trp + asm_rng[0], luk, KLEN)
+                memcpy(trp + asm_rng[1], fk, KLEN)
+                # Remainder (unbound key) to complete the triple.
                 memcpy(
-                    matches.data[i] + asm_rng[2], match + rk_rng, KLEN)
-                logger.debug('Assembled match: {}'.format(matches.data[i][: TRP_KLEN])) # fill p
+                    trp + asm_rng[2], data_v.mv_data + rk_rng, KLEN)
+                logger.debug(
+                        'Assembled triple: {}'.format(trp[: TRP_KLEN]))
+                ret.data[i] = trp
+                logger.debug(
+                        'Assembled match: {}'.format(ret.data[i][: TRP_KLEN]))
                 i += 1
 
-            #_check(rc)
             rc = lmdb.mdb_cursor_get(
                     icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
+            try:
+                _check(rc)
+            except KeyNotFoundError:
+                break
 
-        # Shrink the array to the actual number of matches.
-        matches.resize(i)
+        # Shrink the array to the actual number of ret.
+        logger.debug('Resizing results to {} size.'.format(i))
+        ret.resize(i)
+        logger.debug('Closing cursor.')
         self._cur_close(icur)
 
-        return matches
+        logger.debug('Returning results from lookup_2bound.')
+        return ret
 
 
     cdef ResultSet _all_term_keys(self, term_type):
@@ -1019,6 +1054,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
                     'Error getting data for key \'{}\'.'.format(key))
 
+            logger.debug('Allocating data for from_key()')
             pk_t = <unsigned char *>PyMem_Malloc(data_v.mv_size)
             if pk_t == NULL:
                 raise MemoryError()
@@ -1031,6 +1067,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 logger.debug('Unpickled term: {}'.format(py_term))
                 ret.append(py_term)
             finally:
+                logger.debug('Releasing from_key memory.')
                 PyMem_Free(pk_t)
         logger.debug('Ret: {}'.format(ret))
 
