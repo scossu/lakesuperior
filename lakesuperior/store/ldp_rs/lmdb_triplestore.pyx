@@ -149,11 +149,13 @@ cdef class ResultSet:
         logger.debug('Memory address of allocated data: {0:x}'.format(
             <unsigned long>self.data))
 
+
     def __dealloc__(self):
         logger.debug('Releasing {} bytes of ResultSet...'.format(
             self.ct * self.itemsize))
         PyMem_Free(self.data)
         logger.debug('...done.')
+
 
     cdef void resize(self, size_t ct) except *:
         cdef unsigned char *tmp
@@ -519,7 +521,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get all duplicate values for a key. Python-facing method.
         """
-        logger.debug('Go fetch dup data.')
+        logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
         ret = self._get_dup_data(key, len(key), dblabel).to_tuple()
         logger.debug('Dup data as tuple: {}'.format(ret))
         return ret
@@ -530,19 +532,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get all duplicate values for a key.
         """
+        logger.debug('In _get_dup_data: key: {} in DB: {}'.format(key[: ksize], dblabel))
         cdef:
             size_t ct, i = 0
             ResultSet ret
             unsigned int dbflags
+            lmdb.MDB_cursor *cur
 
+        logger.debug('DB label: {}'.format(dblabel))
         key_v.mv_data = key
-        key_v.mv_size = len(key)
+        key_v.mv_size = ksize
+        logger.debug('Key: {}'.format(key[: ksize]))
+        logger.debug('Key size: {}'.format(ksize))
 
         cur = self._cur_open(dblabel)
         dbi = self.get_dbi(dblabel)[0]
-        logger.debug('Key: {}'.format(key[:KLEN]))
-        logger.debug('Key size: {}'.format(ksize))
-        logger.debug('DB label: {}'.format(dblabel))
 
         _check(lmdb.mdb_dbi_flags(self.txn, dbi, &dbflags))
         if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
@@ -582,7 +586,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Python-facing method that returns results as a tuple.
         """
         ret = self._triple_keys(triple_pattern, context)
-        logger.debug('First row of triple key: {}'.format(ret.data[: TRP_KLEN]))
+        logger.debug('All triple keys: {}'.format(ret.data[: ret.size]))
         logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
         return ret.to_tuple()
 
@@ -689,7 +693,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Unfiltered lookup. No context checked.
         else:
             res = self._lookup(triple_pattern)
-            print('Res data after return: {}'.format(res.data[: TRP_KLEN]))
+            print('Res data before _triple_keys return: {}'.format(res.data[: res.size]))
             return res
 
 
@@ -703,8 +707,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             TripleKey spok
             lmdb.MDB_stat db_stat
-            size_t ct = 0
-            Py_ssize_t i = 0
+            size_t ct = 0, i = 0
         s, p, o = triple_pattern
 
         if s is not None:
@@ -744,20 +747,34 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 else:
                     # Get all triples in the database.
                     dcur = self._cur_open('spo:c')
+                    rc = lmdb.mdb_cursor_get(
+                            dcur, &key_v, &data_v, lmdb.MDB_FIRST)
+                    try:
+                        _check(rc)
+                    except KeyNotFoundError:
+                        return ResultSet(0, TRP_KLEN)
+
                     _check(lmdb.mdb_stat(
                             self.txn, self.get_dbi('spo:c')[0], &db_stat),
                         'Error gathering DB stats.')
                     ct = db_stat.ms_entries
                     res = ResultSet(ct, TRP_KLEN)
-                    while lmdb.mdb_cursor_get(
-                        dcur, &key_v, &data_v, lmdb.MDB_NEXT
-                    ) == lmdb.MDB_SUCCESS:
-                        #logger.debug('Getting data: {}'.format((<unsigned char *>key_v.mv_data)[: TRP_KLEN]))
+
+                    while True:
                         memcpy(
                                 res.data + res.itemsize * i,
                                 key_v.mv_data, TRP_KLEN)
-                    self._cur_close(dcur)
-                    logger.debug('Data[0]: {}'.format(res.data[0][:TRP_KLEN]))
+
+                        rc = lmdb.mdb_cursor_get(
+                            dcur, &key_v, &data_v, lmdb.MDB_NEXT)
+                        try:
+                            _check(rc)
+                        except KeyNotFoundError:
+                            break
+                        finally:
+                            self._cur_close(dcur)
+
+                        i += 1
 
                     return res
 
@@ -830,6 +847,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(rc)
             except KeyNotFoundError:
                 break
+            finally:
+                self._cur_close(icur)
 
             i += 1
 
@@ -1086,10 +1105,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char subkey[KLEN]
 
         ret = []
-        logger.debug('Key: {}'.format(key[: size]))
+        logger.debug('Find term from key: {}'.format(key[: size]))
         for i in range(0, size, KLEN):
             memcpy(subkey, key + i, KLEN)
-            logger.debug('Subkey: {}'.format(subkey[: KLEN]))
             key_v.mv_data = &subkey
             key_v.mv_size = KLEN
 
@@ -1098,20 +1116,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     lmdb.mdb_get(self.txn, dbi, &key_v, &data_v),
                     'Error getting data for key \'{}\'.'.format(key))
 
-            logger.debug('Allocating data for from_key()')
             pk_t = <unsigned char *>PyMem_Malloc(data_v.mv_size)
             if pk_t == NULL:
                 raise MemoryError()
             try:
                 memcpy(pk_t, data_v.mv_data, data_v.mv_size)
-                logger.debug('Pickle data from key: {}'.format(pk_t))
                 pk = bytes(pk_t[: data_v.mv_size])
-                logger.debug('Pickle: {}'.format(pk))
                 py_term = pickle.loads(pk)
-                logger.debug('Unpickled term: {}'.format(py_term))
                 ret.append(py_term)
             finally:
-                logger.debug('Releasing from_key memory.')
                 PyMem_Free(pk_t)
         logger.debug('Ret: {}'.format(ret))
 

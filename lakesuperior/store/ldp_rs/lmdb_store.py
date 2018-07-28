@@ -212,7 +212,7 @@ class LmdbStore(LmdbTriplestore, Store):
 
             logger.debug('Before yield: {}: {}.'.format(spok, contexts))
             yield self.from_key(spok), contexts
-            logger.debug('All good after yield.')
+            logger.debug('After yield.')
 
 
     def bind(self, prefix, namespace):

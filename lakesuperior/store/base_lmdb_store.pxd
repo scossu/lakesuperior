@@ -27,7 +27,8 @@ cdef class BaseLmdbStore:
         void _txn_commit(self) except *
         void _txn_abort(self) except *
         inline bint _key_exists(
-                self, const unsigned char *key, str db) except -1
+            self, const unsigned char *key, unsigned char klen,
+            str db) except -1
         size_t _txn_id(self) except -1
         lmdb.MDB_cursor *_cur_open(self, str dbname=*) except *
         lmdb.MDB_dbi *get_dbi(self, str dbname=*)
@@ -35,7 +36,7 @@ cdef class BaseLmdbStore:
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *
     cpdef void _destroy(self) except *
-    cpdef bint key_exists(self, unsigned char *key, db=*, new_txn=*) except -1
+    cpdef bint key_exists(self, key, db=*, new_txn=*) except -1
     cpdef get_data(self, unsigned char *key, db=*)
     #cpdef get_dup_data(self, unsigned char *key, db=*)
     #cpdef get_all_pairs(self, db=*)

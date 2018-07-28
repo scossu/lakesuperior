@@ -361,8 +361,7 @@ cdef class BaseLmdbStore:
         self._txn_abort()
 
 
-    cpdef bint key_exists(
-            self, const unsigned char *key, db=None, new_txn=True) except -1:
+    cpdef bint key_exists(self, key, db=None, new_txn=True) except -1:
         """
         Return whether a key exists in a database.
 
@@ -371,13 +370,14 @@ cdef class BaseLmdbStore:
         """
         if new_txn is True:
             with self.txn_ctx():
-                return self._key_exists(key, db)
+                return self._key_exists(key, len(key), db)
         else:
-            return self._key_exists(key, db)
+            return self._key_exists(key, len(key), db)
 
 
     cdef inline bint _key_exists(
-            self, const unsigned char *key, str db) except -1:
+            self, const unsigned char *key, unsigned char klen,
+            str db) except -1:
         """
         Return whether a key exists in a database.
 
@@ -386,7 +386,9 @@ cdef class BaseLmdbStore:
         cdef lmdb.MDB_val key_v, data_v
 
         key_v.mv_data = key
-        key_v.mv_size = len(key)
+        key_v.mv_size = klen
+        logger.debug(
+                'Checking if key {} with size {} exists.'.format(key, klen))
         try:
             _check(lmdb.mdb_get(
                 self.txn, self.get_dbi(db)[0], &key_v, &data_v))
