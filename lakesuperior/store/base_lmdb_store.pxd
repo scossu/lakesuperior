@@ -31,7 +31,7 @@ cdef class BaseLmdbStore:
             str db) except -1
         size_t _txn_id(self) except -1
         lmdb.MDB_cursor *_cur_open(self, str dbname=*) except *
-        lmdb.MDB_dbi *get_dbi(self, str dbname=*)
+        lmdb.MDB_dbi get_dbi(self, str dbname=*)
         dict _stats(self)
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *

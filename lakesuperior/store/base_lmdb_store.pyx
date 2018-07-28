@@ -213,9 +213,6 @@ cdef class BaseLmdbStore:
                 for dbidx, dbname in enumerate(self.dbi_labels):
                     dbbytename = dbname.encode()
                     flags = self.dbi_flags.get(dbname, 0) | create_flag
-                    logger.debug(
-                        'Creating DB {} at index {} and with flags: {}'.format(
-                        dbname, dbidx, flags))
                     rc = lmdb.mdb_dbi_open(
                             txn, dbbytename, flags, &self.dbis[dbidx])
                     logger.debug('Created DB {}: {}'.format(
@@ -293,47 +290,6 @@ cdef class BaseLmdbStore:
                 raise
 
 
-    @contextmanager
-    def cur_ctx(self, dbname=None, txn=None, write=False):
-        """
-        Handle a cursor on a database by its index as a context manager.
-
-        An existing transaction can be used, otherwise a new one will be
-        automatically opened and closed within the cursor context.
-
-        :param str index: The database index. If not specified, a cursor is
-            opened for the main database environment.
-        :param lmdb.Transaction txn: Existing transaction to use. If not
-            specified, a new transaction will be opened.
-        :param bool write: Whether a write transaction is to be opened. Only
-            meaningful if ``txn`` is ``None``.
-
-        :rtype: lmdb.Cursor
-        """
-        cdef:
-            lmdb.MDB_cursor *cur
-
-        if self.txn is NULL:
-            _txn_is_tmp = True
-            self._txn_begin(write=write)
-        else:
-            _txn_is_tmp = False
-
-        try:
-            cur = self._cur_open(dbname)
-            yield
-            self._cur_close(cur)
-            if _txn_is_tmp:
-                self._txn_commit()
-        except:
-            if _txn_is_tmp:
-                self._txn_abort()
-            raise
-        finally:
-            if _txn_is_tmp:
-                self.txn = NULL
-
-
     def begin(self, write=False):
         """
         Begin a transaction manually if not already in a txn context.
@@ -391,7 +347,7 @@ cdef class BaseLmdbStore:
                 'Checking if key {} with size {} exists.'.format(key, klen))
         try:
             _check(lmdb.mdb_get(
-                self.txn, self.get_dbi(db)[0], &key_v, &data_v))
+                self.txn, self.get_dbi(db), &key_v, &data_v))
         except KeyNotFoundError:
             return False
         return True
@@ -408,7 +364,7 @@ cdef class BaseLmdbStore:
         data_v.mv_data = data
         data_v.mv_size = len(data)
 
-        dbi = self.get_dbi(db)[0]
+        dbi = self.get_dbi(db)
 
         rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
         _check(rc, 'Error putting data: {}')
@@ -426,10 +382,8 @@ cdef class BaseLmdbStore:
 
         try:
             _check(
-                lmdb.mdb_get(
-                    self.txn, self.get_dbi(db)[0], &key_v, &data_v),
-                'Error getting data for key \'{}\': {{}}'.format(
-                    key.decode()))
+                lmdb.mdb_get(self.txn, self.get_dbi(db), &key_v, &data_v),
+                'Error getting data for key \'{}\': {{}}'.format(key.decode()))
         except KeyNotFoundError:
             return None
 
@@ -520,15 +474,15 @@ cdef class BaseLmdbStore:
         return lmdb.mdb_txn_id(self.txn)
 
 
-    cdef lmdb.MDB_dbi *get_dbi(self, str dbname=None):
+    cdef lmdb.MDB_dbi get_dbi(self, str dbname=None):
         """
-        Return a DBI pointer by database name.
+        Return a DB handle by database name.
         """
         cdef size_t dbidx
 
         dbidx = 0 if dbname is None else self.dbi_labels.index(dbname)
 
-        return &self.dbis[dbidx]
+        return self.dbis[dbidx]
 
 
     cdef lmdb.MDB_cursor *_cur_open(self, str dbname=None) except *:
@@ -536,7 +490,7 @@ cdef class BaseLmdbStore:
             lmdb.MDB_cursor *cur
             lmdb.MDB_dbi dbi
 
-        dbi = self.get_dbi(dbname)[0]
+        dbi = self.get_dbi(dbname)
 
         rc = lmdb.mdb_cursor_open(self.txn, dbi, &cur)
         _check(rc, 'Error opening cursor: {}'.format(dbname))
