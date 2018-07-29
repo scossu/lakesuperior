@@ -470,23 +470,22 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char data[3][DBL_KLEN]
             Py_ssize_t i = 0
 
-        # TODO Align array notation with the rest (pointer arithmetic)
-        memcpy(&keys[0], &spok[0], KLEN) # sk
-        memcpy(&keys[1], &spok[KLEN], KLEN) # pk
-        memcpy(&keys[2], &spok[DBL_KLEN], KLEN) # ok
+        memcpy(&keys[0], spok, KLEN) # sk
+        memcpy(&keys[1], spok + KLEN, KLEN) # pk
+        memcpy(&keys[2], spok +DBL_KLEN, KLEN) # ok
 
-        memcpy(&data[0], &spok[KLEN], DBL_KLEN) # pok
-        memcpy(&data[1], &spok[0], KLEN) # sok, 1st part
-        memcpy(&data[1][KLEN], &spok[DBL_KLEN], KLEN) # sok, 2nd part
-        memcpy(&data[2], &spok[0], DBL_KLEN) # spk
+        memcpy(&data[0], spok + KLEN, DBL_KLEN) # pok
+        memcpy(&data[1], spok, KLEN) # sok, 1st part
+        memcpy(&data[1][KLEN], spok + DBL_KLEN, KLEN) # sok, 2nd part
+        memcpy(&data[2], spok, DBL_KLEN) # spk
         #logger.debug('''Indices:
         #spok: {}
         #sk: {}
         #pk: {}
         #ok: {}
-        #spk: {}
-        #sok: {}
         #pok: {}
+        #sok: {}
+        #spk: {}
         #'''.format(
         #        spok[:TRP_KLEN],
         #        keys[0][:KLEN], keys[1][:KLEN], keys[2][:KLEN],
