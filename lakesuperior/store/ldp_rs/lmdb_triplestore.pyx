@@ -94,9 +94,9 @@ lookup_ordering = [
 ]
 
 
-cdef inline void _hash(const unsigned char *s, Hash *ch):
+cdef inline void _hash(const unsigned char *s, Py_ssize_t size, Hash *ch):
     """Get the hash value of a serialized object."""
-    htmp = hashlib.new(TERM_HASH_ALGO, s).digest()
+    htmp = hashlib.new(TERM_HASH_ALGO, s[: size]).digest()
     ch[0] = <unsigned char *>htmp
 
 
@@ -316,9 +316,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         icur = self._cur_open('th:t')
         try:
             for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
-                logger.debug('Pickled term: {}'.format(pk_t))
+                logger.debug('Pickled term: {}'.format(pk_t[: term_sizes[i]]))
                 logger.debug('Pickled term size: {}'.format(term_sizes[i]))
-                _hash(pk_t[: len(pk_t)], &thash)
+                _hash(pk_t, term_sizes[i], &thash)
                 try:
                     key_v.mv_data = &thash
                     key_v.mv_size = HLEN
@@ -703,7 +703,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Unfiltered lookup. No context checked.
         else:
             res = self._lookup(triple_pattern)
-            print('Res data before _triple_keys return: {}'.format(res.data[: res.size]))
+            logger.debug('Res data before _triple_keys return: {}'.format(res.data[: res.size]))
             return res
 
 
@@ -810,9 +810,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._to_key(term, &luk)
         if luk is NULL:
             return ResultSet(0, TRP_KLEN)
+        logging.debug('luk: {}'.format(luk))
 
         term_order = lookup_ordering[idx]
         icur = self._cur_open(self.lookup_indices[idx])
+        logging.debug('term order: {}'.format(term_order))
         try:
             key_v.mv_data = luk
             key_v.mv_size = KLEN
@@ -1218,7 +1220,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: Keys stored for the term(s) or None if not found.
         """
         cdef Hash thash
-        _hash(self._pickle(term), &thash)
+        pk_t = self._pickle(term)
+        _hash(pk_t, len(pk_t), &thash)
         key_v.mv_data = &thash
         key_v.mv_size = HLEN
 
