@@ -220,9 +220,11 @@ class TestBasicOps:
             store.remove((URIRef('urn:test:s3'),
                     URIRef('urn:test:p3'), URIRef('urn:test:o3')))
 
+        with store.txn_ctx() as txn:
             res1 = set(store.triples((None, None, None)))
             assert len(res1) == 2
 
+        with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:test:s'), None, None))
             res2 = set(store.triples((None, None, None)))
             assert len(res2) == 0

@@ -159,9 +159,9 @@ class LmdbStore(LmdbTriplestore, Store):
         """
         Remove triples by a pattern.
 
-        :param tuple:rdflib.term.Identifier|None triple_pattern: 3-tuple of
+        :param tuple triple_pattern: 3-tuple of
         either RDF terms or None, indicating the triple(s) to be removed.
-        None is used as a wildcard.
+        ``None`` is used as a wildcard.
         :param context: Context to remove the triples from. If None (the
         default) the matching triples are removed from all contexts.
         :type context: rdflib.term.Identifier or None
@@ -170,7 +170,7 @@ class LmdbStore(LmdbTriplestore, Store):
         #    triple_pattern, context))
         context = self._normalize_context(context)
 
-        self._remove(triple_pattern, ck)
+        self._remove(triple_pattern, context)
 
 
     def triples(self, triple_pattern, context=None):

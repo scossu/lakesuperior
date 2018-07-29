@@ -436,9 +436,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     memcpy(spok, match_set.data + match_set.itemsize * i, TRP_KLEN)
                     spok_v.mv_data = spok
                     # Loop over all context associations for this SPO.
-                    while lmdb.mdb_cursor_get(
-                            dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP
-                    ) == lmdb.MDB_SUCCESS:
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                            dcur, &spok_v, &ck_v, lmdb.MDB_SET_KEY))
+                    except KeyNotFoundError:
+                        print('{} not found in spo:c.'.format(spok))
+                        break
+                    while True:
+                        try:
+                            _check(lmdb.mdb_cursor_get(
+                                dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP))
+                        except KeyNotFoundError:
+                            break
                         if lmdb.mdb_cursor_get(
                                 icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
                         ) == lmdb.MDB_SUCCESS:
@@ -447,9 +456,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             lmdb.mdb_cursor_del(icur, 0)
                     # Then delete the main entry.
                     if lmdb.mdb_cursor_get(
-                            dcur, &spok_v, NULL, lmdb.MDB_SET
+                            dcur, &spok_v, &ck_v, lmdb.MDB_SET
                     ) == lmdb.MDB_SUCCESS:
-                        lmdb.mdb_cursor_del(icur, lmdb.MDB_NODUPDATA)
+                        lmdb.mdb_cursor_del(dcur, lmdb.MDB_NODUPDATA)
                         self._index_triple(IDX_OP_REMOVE, spok)
                     i += 1
 
