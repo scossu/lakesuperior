@@ -1165,7 +1165,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return ret
 
 
-    cdef list _from_key(self, unsigned char *key, Py_ssize_t size):
+    cdef tuple _from_key(self, unsigned char *key, Py_ssize_t size):
         """
         Convert a single or multiple key into one or more terms.
 
@@ -1200,7 +1200,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 PyMem_Free(pk_t)
         logger.debug('Ret: {}'.format(ret))
 
-        return ret
+        return tuple(ret)
 
 
     cdef inline void _to_key(self, term, Key *key) except *:
