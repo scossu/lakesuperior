@@ -1240,7 +1240,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         while  i < 3:
             self._to_key(terms[i], &key)
-            memcpy(tkey + (KLEN * i), key, KLEN)
+            memcpy(tkey[0] + (KLEN * i), key, KLEN)
             if key is NULL:
                 # A term in the triple is not found.
                 tkey = NULL
