@@ -635,7 +635,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # s p o c
                 if all(triple_pattern):
                     for i, term in enumerate(triple_pattern):
-                        self._to_key(term, &tk)
+                        try:
+                            self._to_key(term, &tk)
+                        except KeyNotFoundError:
+                            # Context not found.
+                            return ResultSet(0, TRP_KLEN)
                         memcpy(spok + (KLEN * i), tk, KLEN)
                         if tk is NULL:
                             # A term in the triple is not found.
@@ -724,13 +728,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             if p is not None:
                 # s p o
                 if o is not None:
-                    self._to_triple_key(triple_pattern, &spok)
-                    if spok is not NULL:
-                        matches = ResultSet(1, TRP_KLEN)
-                        memcpy(matches.data, spok, TRP_KLEN)
-                        return matches
-                    else:
-                        matches = ResultSet(0, TRP_KLEN)
+                    try:
+                        self._to_triple_key(triple_pattern, &spok)
+                    except KeyNotFoundError:
+                        return ResultSet(0, TRP_KLEN)
+
+                    matches = ResultSet(1, TRP_KLEN)
+                    memcpy(matches.data, spok, TRP_KLEN)
+                    return matches
                 # s p ?
                 else:
                     return self._lookup_2bound(0, s, 1, p)
@@ -807,8 +812,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char asm_rng[3]
             size_t ct, i = 0
 
-        self._to_key(term, &luk)
-        if luk is NULL:
+        try:
+            self._to_key(term, &luk)
+        except KeyNotFoundError:
             return ResultSet(0, TRP_KLEN)
         logging.debug('luk: {}'.format(luk))
 
@@ -925,8 +931,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     term_order = lookup_ordering[lui][:3]
                     logger.debug('term order: {}'.format(term_order[:3]))
                     # Term to look up (lookup key)
-                    self._to_key(term, &luk)
-                    if luk is NULL:
+                    try:
+                        self._to_key(term, &luk)
+                    except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
                     logger.debug('Lookup key (luk): {}'.format(luk[: KLEN]))
                 # Second match is the filter.
@@ -948,8 +955,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     logger.debug('Filter subkey pos in result data: {}'.format(fkp))
                     logger.debug('Remainder (unbound) subkey pos in result data: {}'.format(rkp))
                     # Fliter term
-                    self._to_key(term, &fk)
-                    if fk is NULL:
+                    try:
+                        self._to_key(term, &fk)
+                    except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
                     logger.debug('Filter key (fk): {}'.format(fk[: KLEN]))
                     break
