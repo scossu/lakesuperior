@@ -239,7 +239,7 @@ class LmdbStore(LmdbTriplestore, Store):
         Get the namespace for a prefix.
         :param str prefix: Namespace prefix.
         """
-        ns = self.get_data(prefix, 'pfx:ns')
+        ns = self.get_data(prefix.encode(), 'pfx:ns')
 
         return Namespace(ns.decode()) if ns is not None else None
 
@@ -255,7 +255,7 @@ class LmdbStore(LmdbTriplestore, Store):
 
         :rtype: str or None
         """
-        prefix = self.get_data(namespace, 'ns:pfx')
+        prefix = self.get_data(str(namespace).encode(), 'ns:pfx')
 
         return prefix.decode() if prefix is not None else None
 

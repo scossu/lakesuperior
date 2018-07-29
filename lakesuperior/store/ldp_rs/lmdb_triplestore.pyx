@@ -1078,7 +1078,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             yield self._from_key(key, KLEN)[0]
 
 
-    def all_namespaces(self):
+    cpdef tuple all_namespaces(self):
         """
         Return all registered namespaces.
         """
@@ -1091,20 +1091,20 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             try:
                 _check(lmdb.mdb_cursor_get(
-                    dcur, &key_v, &data_v, lmdb.MDB_SET))
+                    dcur, &key_v, &data_v, lmdb.MDB_FIRST))
             except KeyNotFoundError:
-                return ResultSet(0, DBL_KLEN)
-
-            _check(lmdb.mdb_stat(self.txn, lmdb.mdb_cursor_dbi(dcur), &stat))
-            ret = ResultSet(stat.ms_entries, KLEN)
+                return tuple()
 
             while True:
-                ret.append((<str>key_v.mv_data, <str>data_v.mv_data))
+                ret.append((
+                    (<unsigned char *>key_v.mv_data)[: key_v.mv_size].decode(),
+                    (<unsigned char *>data_v.mv_data)[: data_v.mv_size].decode()))
+                logger.debug('Found namespace: {}:{}'.format(<unsigned char *>key_v.mv_data, <unsigned char *>data_v.mv_data))
                 try:
                     _check(lmdb.mdb_cursor_get(
                         dcur, &key_v, &data_v, lmdb.MDB_NEXT))
                 except KeyNotFoundError:
-                    return ret
+                    return tuple(ret)
 
                 i += 1
         finally:
