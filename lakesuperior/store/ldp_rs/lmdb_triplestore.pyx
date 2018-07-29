@@ -493,9 +493,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_size = DBL_KLEN
 
-        icur = self._cur_open(self.lookup_indices[i])
-        try:
-            while i < 3:
+        while i < 3:
+            icur = self._cur_open(self.lookup_indices[i])
+            try:
                 key_v.mv_data = keys[i]
                 data_v.mv_data = data[i]
 
@@ -514,8 +514,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     raise ValueError(
                         'Index operation \'{}\' is not supported.'.format(op))
                 i += 1
-        finally:
-            self._cur_close(icur)
+            finally:
+                self._cur_close(icur)
 
 
     # Lookup methods.
