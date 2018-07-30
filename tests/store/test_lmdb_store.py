@@ -285,7 +285,7 @@ class TestContext:
     '''
     Tests for context handling.
     '''
-    def test_add_graph(self, store):
+    def test_add_empty_graph(self, store):
         '''
         Test creating an empty and a non-empty graph.
         '''
@@ -294,6 +294,21 @@ class TestContext:
         with store.txn_ctx(True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
+
+
+    def test_add_graph_with_triple(self, store):
+        '''
+        Test creating an empty and a non-empty graph.
+        '''
+        trp = (URIRef('urn:test:s123'),
+                URIRef('urn:test:p123'), URIRef('urn:test:o123'))
+        ctx_uri = URIRef('urn:bogus:graph#a')
+
+        with store.txn_ctx(True) as txn:
+            store.add(trp, ctx_uri)
+
+        with store.txn_ctx() as txn:
+            assert ctx_uri in {gr.identifier for gr in store.contexts(trp)}
 
 
     def test_empty_context(self, store):

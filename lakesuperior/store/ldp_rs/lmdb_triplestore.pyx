@@ -401,14 +401,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *ck_cur
 
         _hash(pk_c, size, &c_hash)
-        if not self.key_exists(c_hash, 'th:t'):
+        if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
             if self.is_txn_rw:
                 # Use existing R/W transaction.
                 # Main entry.
                 self._append(pk_c, size, &ck, dblabel=b't:st')
                 # Index.
-                self._put(ck, KLEN, pk_c, size, 'th:t')
+                self._put(ck, KLEN, pk_c, size, b'th:t')
                 # Add to list of contexts.
                 self._put(ck, KLEN, b'', 0, 'c:')
             else:
@@ -417,9 +417,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 try:
                     self._append(pk_c, size, &ck, txn=tmp_txn, dblabel=b't:st')
                     # Index.
-                    self._put(ck, KLEN, pk_c, size, 'th:t', txn=tmp_txn)
+                    self._put(ck, KLEN, pk_c, size, b'th:t', txn=tmp_txn)
                     # Add to list of contexts.
-                    self._put(ck, KLEN, b'', 0, 'c:', txn=tmp_txn)
+                    self._put(ck, KLEN, b'', 0, b'c:', txn=tmp_txn)
                     lmdb.mdb_txn_commit(tmp_txn)
                 except:
                     lmdb.mdb_txn_abort(tmp_txn)
@@ -1178,15 +1178,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
                 ret = ResultSet(stat.ms_entries, KLEN)
 
+                self._to_triple_key(triple, &spok)
+                key_v.mv_data = spok
+                key_v.mv_size = TRP_KLEN
                 try:
                     _check(lmdb.mdb_cursor_get(
                             cur, &key_v, &data_v, lmdb.MDB_SET_KEY))
                 except KeyNotFoundError:
                     return tuple()
 
-                self._to_triple_key(triple, &spok)
-                key_v.mv_data = spok
-                key_v.mv_size = TRP_KLEN
                 while True:
                     memcpy(ret.data + ret.itemsize * i, data_v.mv_data, KLEN)
                     try:
@@ -1194,6 +1194,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
                     except KeyNotFoundError:
                         break
+
+                    i += 1
             else:
                 _check(lmdb.mdb_stat(
                     self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
@@ -1201,7 +1203,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 try:
                     _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, &data_v, lmdb.MDB_SET_KEY))
+                            cur, &key_v, &data_v, lmdb.MDB_FIRST))
                 except KeyNotFoundError:
                     return tuple()
 
@@ -1213,6 +1215,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             cur, &key_v, NULL, lmdb.MDB_NEXT))
                     except KeyNotFoundError:
                         break
+
+                    i += 1
 
             return ret.to_tuple()
 

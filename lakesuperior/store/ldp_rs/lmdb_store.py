@@ -276,7 +276,7 @@ class LmdbStore(LmdbTriplestore, Store):
         :rtype: Iterator(rdflib.Graph)
         """
         for ctx_uri in self.all_contexts(triple):
-            yield Graph(identifier=ctx_uri, store=self)
+            yield Graph(identifier=self.from_key(ctx_uri)[0], store=self)
 
 
     def add_graph(self, graph):

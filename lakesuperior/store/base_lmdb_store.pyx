@@ -325,7 +325,8 @@ cdef class BaseLmdbStore:
         """
         if new_txn is True:
             with self.txn_ctx():
-                return self._key_exists(key, len(key), dblabel=dblabel)
+                return self._key_exists(
+                        key, len(key), dblabel=dblabel.encode())
         else:
             return self._key_exists(key, len(key), dblabel=dblabel.encode())
 
@@ -390,7 +391,7 @@ cdef class BaseLmdbStore:
         try:
             self._get_data(key, len(key), &rv, dblabel=dblabel.encode())
 
-            return (<bytes>rv.mv_data)[: rv.mv_size]
+            return (<unsigned char *>rv.mv_data)[: rv.mv_size]
         except KeyNotFoundError:
             return None
 
