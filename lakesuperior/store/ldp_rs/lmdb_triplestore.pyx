@@ -215,9 +215,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     ]
 
     lookup_indices = [
-        's:po',
-        'p:so',
-        'o:sp',
+        b's:po',
+        b'p:so',
+        b'o:sp',
     ]
 
     dbi_flags = {
@@ -303,7 +303,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char keys[QUAD_KLEN]
             unsigned char spok[TRP_KLEN]
             unsigned char ck[KLEN]
-            unsigned char tkey[KLEN]
             unsigned char nkey[KLEN]
             unsigned int term_sizes[4]
 
@@ -330,7 +329,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # If term is not found, add it...
                     logger.debug('Hash {} not found. Adding to DB.'.format(
                             thash[: HLEN]))
-                    self._append('t:st', pk_t, term_sizes[i], tkey, &nkey)
+                    self._append(pk_t, term_sizes[i], &nkey, dblabel=b't:st')
                     memcpy(keys + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
@@ -529,29 +528,31 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    cpdef get_dup_data(self, key, dblabel=None):
+    cpdef get_dup_data(self, key, dblabel=''):
         """
         Get all duplicate values for a key. Python-facing method.
         """
         logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
-        ret = self._get_dup_data(key, len(key), dblabel).to_tuple()
+        ret = self._get_dup_data(key, len(key), dblabel.encode()).to_tuple()
         logger.debug('Dup data as tuple: {}'.format(ret))
         return ret
 
 
     cdef ResultSet _get_dup_data(
-            self, unsigned char *key, unsigned char ksize, dblabel=None):
+            self, unsigned char *key, unsigned char ksize,
+            unsigned char *dblabel=b''):
         """
         Get all duplicate values for a key.
         """
-        logger.debug('In _get_dup_data: key: {} in DB: {}'.format(key[: ksize], dblabel))
+        logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
+                key[: ksize], dblabel.decode()))
         cdef:
             size_t ct, i = 0
             unsigned int dbflags
             ResultSet ret
             lmdb.MDB_cursor *cur
 
-        logger.debug('DB label: {}'.format(dblabel))
+        logger.debug('DB label: {}'.format(dblabel.decode()))
         key_v.mv_data = key
         key_v.mv_size = ksize
         logger.debug('Key: {}'.format(key[: ksize]))
@@ -1268,8 +1269,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef void _append(
-            self, str dblabel, unsigned char *value, size_t vlen,
-            const Key key, Key *nkey, unsigned int flags=0) except *:
+            self, unsigned char *value, size_t vlen, Key *nkey,
+            unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL,
+            unsigned int flags=0) except *:
         """
         Append one or more keys and values to the end of a database.
 
@@ -1280,7 +1282,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: Last key(s) inserted.
         """
         cdef:
+            unsigned char key[KLEN]
             lmdb.MDB_cursor *cur = self._cur_open(dblabel)
+
+        if txn is NULL:
+            txn = self.txn
 
         try:
             _check(lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST))
@@ -1297,7 +1303,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         data_v.mv_data = value
         data_v.mv_size = vlen
         logger.debug('Appending value {} to db {} with key: {}'.format(
-            value[: vlen], dblabel, nkey[0][:KLEN]))
+            value[: vlen], dblabel.decode(), nkey[0][:KLEN]))
         logger.debug('data size: {}'.format(data_v.mv_size))
         lmdb.mdb_put(
                 self.txn, self.get_dbi(dblabel), &key_v, &data_v,

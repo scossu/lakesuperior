@@ -210,13 +210,12 @@ cdef class BaseLmdbStore:
         rc = lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
         try:
             if len(self.dbi_labels):
-                for dbidx, dbname in enumerate(self.dbi_labels):
-                    dbbytename = dbname.encode()
-                    flags = self.dbi_flags.get(dbname, 0) | create_flag
+                for dbidx, dblabel in enumerate(self.dbi_labels):
+                    flags = self.dbi_flags.get(dblabel, 0) | create_flag
                     rc = lmdb.mdb_dbi_open(
-                            txn, dbbytename, flags, &self.dbis[dbidx])
+                            txn, dblabel.encode(), flags, &self.dbis[dbidx])
                     logger.debug('Created DB {}: {}'.format(
-                        dbname, self.dbis[dbidx]))
+                        dblabel, self.dbis[dbidx]))
             else:
                 rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
@@ -317,23 +316,23 @@ cdef class BaseLmdbStore:
         self._txn_abort()
 
 
-    cpdef bint key_exists(self, key, db=None, new_txn=True) except -1:
+    def key_exists(self, key, dblabel='', new_txn=True):
         """
-        Return whether a key exists in a database.
+        Return whether a key exists in a database (Python-facing method).
 
         Wrap in a new transaction. Only use this if a transaction has not been
         opened.
         """
         if new_txn is True:
             with self.txn_ctx():
-                return self._key_exists(key, len(key), db)
+                return self._key_exists(key, len(key), dblabel=dblabel)
         else:
-            return self._key_exists(key, len(key), db)
+            return self._key_exists(key, len(key), dblabel=dblabel.encode())
 
 
     cdef inline bint _key_exists(
             self, const unsigned char *key, unsigned char klen,
-            str db) except -1:
+            unsigned char *dblabel=b'') except -1:
         """
         Return whether a key exists in a database.
 
@@ -347,30 +346,58 @@ cdef class BaseLmdbStore:
                 'Checking if key {} with size {} exists.'.format(key, klen))
         try:
             _check(lmdb.mdb_get(
-                self.txn, self.get_dbi(db), &key_v, &data_v))
+                self.txn, self.get_dbi(dblabel), &key_v, &data_v))
         except KeyNotFoundError:
             return False
         return True
 
 
-    cpdef void put(
-            self, unsigned char *key, unsigned char *data, db=None, flags=0
-    ) except *:
+    def put(self, key, data, dblabel='', flags=0):
+        """
+        Put one key/value pair (Python-facing method).
+        """
+        self._put(
+                key, len(key), data, len(data), dblabel=dblabel.encode(),
+                txn=self.txn, flags=flags)
+
+
+    cdef void _put(
+            self, unsigned char *key, size_t key_size, unsigned char *data,
+            size_t data_size, unsigned char *dblabel='',
+            lmdb.MDB_txn *txn=NULL, unsigned int flags=0) except *:
         """
         Put one key/value pair.
         """
+        if txn is NULL:
+            txn = self.txn
+
         key_v.mv_data = key
-        key_v.mv_size = len(key)
+        key_v.mv_size = key_size
         data_v.mv_data = data
-        data_v.mv_size = len(data)
+        data_v.mv_size = data_size
 
-        dbi = self.get_dbi(db)
+        rc = lmdb.mdb_put(
+                self.txn, self.get_dbi(dblabel), &key_v, &data_v, flags)
+        _check(rc, 'Error putting data: {}, {}'.format(
+                key[: key_size], data[: data_size]))
 
-        rc = lmdb.mdb_put(self.txn, dbi, &key_v, &data_v, flags)
-        _check(rc, 'Error putting data: {}')
+
+    cpdef bytes get_data(self, key, dblabel=''):
+        """
+        Get a single value (non-dup) for a key (Python-facing method).
+        """
+        cdef lmdb.MDB_val rv
+        try:
+            self._get_data(key, len(key), &rv, dblabel=dblabel.encode())
+
+            return (<bytes>rv.mv_data)[: rv.mv_size]
+        except KeyNotFoundError:
+            return None
 
 
-    cpdef get_data(self, unsigned char *key, db=None):
+    cdef void _get_data(
+            self, unsigned char *key, size_t klen, lmdb.MDB_val *rv,
+            unsigned char *dblabel='') except *:
         """
         Get a single value (non-dup) for a key.
         """
@@ -380,15 +407,9 @@ cdef class BaseLmdbStore:
         key_v.mv_data = key
         key_v.mv_size = len(key)
 
-        try:
-            _check(
-                lmdb.mdb_get(self.txn, self.get_dbi(db), &key_v, &data_v),
-                'Error getting data for key \'{}\': {{}}'.format(key.decode()))
-        except KeyNotFoundError:
-            return None
-
-        ret = <unsigned char *>data_v.mv_data
-        return ret[:data_v.mv_size]
+        _check(
+            lmdb.mdb_get(self.txn, self.get_dbi(dblabel), &key_v, rv),
+            'Error getting data for key \'{}\': {{}}'.format(key.decode()))
 
 
     #cpdef get_all_pairs(self, db=None):
@@ -417,12 +438,12 @@ cdef class BaseLmdbStore:
         env_stats = <dict>stat
 
         db_stats = {}
-        for i, dbl in enumerate(self.dbi_labels):
+        for i, dblabel in enumerate(self.dbi_labels):
             _check(
                 lmdb.mdb_stat(self.txn, self.dbis[i], &stat),
                 'Error getting datbase stats: {}')
             entries = stat.ms_entries
-            db_stats[dbl] = <dict>stat
+            db_stats[dblabel.encode()] = <dict>stat
 
         return {
             'env_stats': env_stats,
@@ -474,26 +495,36 @@ cdef class BaseLmdbStore:
         return lmdb.mdb_txn_id(self.txn)
 
 
-    cdef lmdb.MDB_dbi get_dbi(self, str dbname=None):
+    cdef lmdb.MDB_dbi get_dbi(
+            self, unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL):
         """
         Return a DB handle by database name.
         """
         cdef size_t dbidx
 
-        dbidx = 0 if dbname is None else self.dbi_labels.index(dbname)
+        if txn is NULL:
+            txn = self.txn
+
+        dbidx = (
+                0 if dblabel is b''
+                else self.dbi_labels.index(dblabel.decode()))
 
         return self.dbis[dbidx]
 
 
-    cdef lmdb.MDB_cursor *_cur_open(self, str dbname=None) except *:
+    cdef lmdb.MDB_cursor *_cur_open(
+            self, unsigned char *dblabel='', lmdb.MDB_txn *txn=NULL) except *:
         cdef:
             lmdb.MDB_cursor *cur
             lmdb.MDB_dbi dbi
 
-        dbi = self.get_dbi(dbname)
+        if txn is NULL:
+            txn = self.txn
 
-        rc = lmdb.mdb_cursor_open(self.txn, dbi, &cur)
-        _check(rc, 'Error opening cursor: {}'.format(dbname))
+        dbi = self.get_dbi(dblabel, txn=txn)
+
+        rc = lmdb.mdb_cursor_open(txn, dbi, &cur)
+        _check(rc, 'Error opening cursor: {}'.format(dblabel))
 
         return cur
 
