@@ -382,6 +382,50 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._index_triple(IDX_OP_ADD, spok)
 
 
+    cpdef void _add_graph(
+            self, unsigned char *pk_c, Py_ssize_t size) except *:
+        """
+        Add a graph.
+
+        :param pk_c: Pickled context URIRef object.
+        :type pk_c: const unsigned char *
+        :param size: Size of pickled string.
+        :type size: Py_ssize_t
+        """
+        cdef:
+            unsigned char c_hash[HLEN]
+            unsigned char ck[KLEN]
+            lmdb.MDB_txn *tmp_txn
+            lmdb.MDB_cursor *th_cur
+            lmdb.MDB_cursor *pk_cur
+            lmdb.MDB_cursor *ck_cur
+
+        _hash(pk_c, size, &c_hash)
+        if not self.key_exists(c_hash, 'th:t'):
+            # Insert context term if not existing.
+            if self.is_txn_rw:
+                # Use existing R/W transaction.
+                # Main entry.
+                self._append(pk_c, size, &ck, dblabel=b't:st')
+                # Index.
+                self._put(ck, KLEN, pk_c, size, 'th:t')
+                # Add to list of contexts.
+                self._put(ck, KLEN, b'', 0, 'c:')
+            else:
+                # Open new R/W transactions.
+                _check(lmdb.mdb_txn_begin(self.dbenv, self.txn, 0, &tmp_txn))
+                try:
+                    self._append(pk_c, size, &ck, txn=tmp_txn, dblabel=b't:st')
+                    # Index.
+                    self._put(ck, KLEN, pk_c, size, 'th:t', txn=tmp_txn)
+                    # Add to list of contexts.
+                    self._put(ck, KLEN, b'', 0, 'c:', txn=tmp_txn)
+                    lmdb.mdb_txn_commit(tmp_txn)
+                except:
+                    lmdb.mdb_txn_abort(tmp_txn)
+                    raise
+
+
     cpdef void _remove(self, tuple triple_pattern, context=None):
         cdef:
             unsigned char spok[TRP_KLEN]

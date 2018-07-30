@@ -297,29 +297,7 @@ class LmdbStore(LmdbTriplestore, Store):
         if isinstance(graph, Graph):
             graph = graph.identifier
         pk_c = self._pickle(graph)
-        c_hash = self._hash(pk_c)
-        with self.cur('th:t') as cur:
-            c_exists = cur.set_key(c_hash)
-        if not c_exists:
-            # Insert context term if not existing.
-            if self.is_txn_rw:
-                # Use existing R/W transaction.
-                with self.cur('t:st') as cur:
-                    ck = self._append(cur, pk_c)
-                with self.cur('th:t') as cur:
-                    cur.put(c_hash, ck)
-                with self.cur('c:') as cur:
-                    cur.put(ck, b'')
-            else:
-                # Open new R/W transactions.
-                with self.data_env.begin(write=True) as wtxn:
-                    with wtxn.cursor(self.dbs['t:st']) as cur:
-                        ck = self._append(cur, pk_c)
-                    with wtxn.cursor(self.dbs['c:']) as cur:
-                        cur.put(ck, b'')
-                with self.idx_env.begin(write=True) as wtxn:
-                    with wtxn.cursor(self.dbs['th:t']) as cur:
-                        cur.put(c_hash, ck)
+        self._add_graph(pk_c, len(pk_c))
 
 
     def remove_graph(self, graph):
