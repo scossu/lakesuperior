@@ -210,7 +210,7 @@ class LmdbStore(LmdbTriplestore, Store):
                 else:
                     contexts = (Graph(identifier=context),)
 
-            logger.debug('Before yield: {}: {}.'.format(spok, contexts))
+            logger.debug('Triples before yield: {}: {}.'.format(spok, contexts))
             yield self.from_key(spok), contexts
             logger.debug('After yield.')
 
@@ -289,7 +289,7 @@ class LmdbStore(LmdbTriplestore, Store):
 
         This may be called by read-only operations:
         https://github.com/RDFLib/rdflib/blob/master/rdflib/graph.py#L1623
-        Therefore it needs to open a write transaction. This is not ideal
+        In which case it needs to open a write transaction. This is not ideal
         but the only way to handle datasets in RDFLib.
 
         :param rdflib.URIRef graph: URI of the named graph to add.
@@ -308,11 +308,7 @@ class LmdbStore(LmdbTriplestore, Store):
         """
         if isinstance(graph, Graph):
             graph = graph.identifier
-        self.remove((None, None, None), graph)
-
-        with self.cur('c:') as cur:
-            if cur.set_key(self._to_key(graph)):
-                cur.delete()
+        self._remove_graph(graph)
 
 
     ## PRIVATE METHODS ##

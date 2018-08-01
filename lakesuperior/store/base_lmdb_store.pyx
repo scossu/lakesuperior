@@ -377,6 +377,8 @@ cdef class BaseLmdbStore:
         data_v.mv_data = data
         data_v.mv_size = data_size
 
+        logger.debug('Putting: {}, {} into DB {}'.format(key[: key_size],
+            data[: data_size], dblabel))
         rc = lmdb.mdb_put(
                 self.txn, self.get_dbi(dblabel), &key_v, &data_v, flags)
         _check(rc, 'Error putting data: {}, {}'.format(
@@ -411,6 +413,29 @@ cdef class BaseLmdbStore:
         _check(
             lmdb.mdb_get(self.txn, self.get_dbi(dblabel), &key_v, rv),
             'Error getting data for key \'{}\': {{}}'.format(key.decode()))
+
+
+    def delete(self, key, dblabel=''):
+        """
+        Delete one single value by key. Python-facing method.
+        """
+        self._delete(key, len(key), dblabel.encode())
+
+
+    cdef void _delete(
+            self, unsigned char *key, size_t klen,
+            unsigned char *dblabel=b'') except *:
+        """
+        Delete one single value by key from a non-dup database.
+
+        TODO Allow deleting duplicate keys.
+        """
+        key_v.mv_data = key
+        key_v.mv_size = klen
+        try:
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(dblabel), &key_v, NULL))
+        except KeyNotFoundError:
+            pass
 
 
     #cpdef get_all_pairs(self, db=None):

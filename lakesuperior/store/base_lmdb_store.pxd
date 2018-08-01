@@ -46,6 +46,10 @@ cdef class BaseLmdbStore:
                 self, unsigned char *key, size_t klen, lmdb.MDB_val *rv,
                 unsigned char *dblabel=*) except *
 
+        void _delete(
+                self, unsigned char *key, size_t klen,
+                unsigned char *dblabel=*) except *
+
         dict _stats(self)
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *
