@@ -320,6 +320,21 @@ class TestContext:
         with store.txn_ctx(True) as txn:
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
+        with store.txn_ctx(True) as txn:
+            store.remove_graph(gr_uri)
+            assert gr_uri not in {gr.identifier for gr in store.contexts()}
+
+
+    def test_context_ro_txn(self, store):
+        '''
+        Test creating a context within a read-only transaction.
+        '''
+        gr_uri = URIRef('urn:bogus:empty#b')
+
+        with store.txn_ctx() as txn:
+            store.add_graph(gr_uri)
+            assert gr_uri in {gr.identifier for gr in store.contexts()}
+        with store.txn_ctx(True) as txn:
             store.remove_graph(gr_uri)
             assert gr_uri not in {gr.identifier for gr in store.contexts()}
 
@@ -375,6 +390,12 @@ class TestContext:
 
         with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:s:1'), None, None))
+            assert len(set(store.triples((None, None, None), gr_uri))) == 2
+            assert len(set(store.triples((None, None, None)))) == 3
+
+        # This should result in no change because the graph does not exist.
+        with store.txn_ctx(True) as txn:
+            store.remove((None, None, None), URIRef('urn:phony:graph#xyz'))
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None)))) == 3
 
