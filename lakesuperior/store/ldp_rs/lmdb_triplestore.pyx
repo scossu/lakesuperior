@@ -238,7 +238,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         'spo:c': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
     }
 
-    flags = lmdb.MDB_NOSUBDIR | lmdb.MDB_NORDAHEAD
+    flags = lmdb.MDB_NORDAHEAD
 
     options = {
         'map_size': 1024 ** 4 # 1Tb.
@@ -411,6 +411,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *ck_cur
 
         _hash(pk_c, pk_size, &c_hash)
+        logger.debug('Adding a graph.')
         if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
             if self.is_txn_rw:
@@ -429,8 +430,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self._append(
                             pk_c, pk_size, &ck, dblabel=b't:st', txn=tmp_txn)
                     # Index.
-                    self._put(pk_c, pk_size, ck, KLEN, b'th:t', txn=tmp_txn)
+                    self._put(c_hash, HLEN, ck, KLEN, b'th:t', txn=tmp_txn)
                     # Add to list of contexts.
+                    logger.debug('Adding context to c: {}'.format(ck[: KLEN]))
                     self._put(ck, KLEN, b'', 0, b'c:', txn=tmp_txn)
                     _check(lmdb.mdb_txn_commit(tmp_txn))
                 except:
@@ -588,8 +590,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Delete a context.
         """
         cdef:
-            unsigned char key[KLEN]
-            lmdb.MDB_val pk_v
+            unsigned char chash[HLEN]
+            unsigned char ck[KLEN]
+            lmdb.MDB_val ck_v, chash_v
 
         logger.debug('Deleting context: {}'.format(gr_uri))
         logger.debug('Pickled context: {}'.format(self._pickle(gr_uri)))
@@ -599,16 +602,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Clean up all terms related to the graph.
         pk_c = self._pickle(gr_uri)
-        pk_v.mv_data = <unsigned char *>pk_c
-        pk_v.mv_size = len(pk_c)
+        _hash(pk_c, len(pk_c), &chash)
+        self._to_key(gr_uri, &ck)
 
-        self._to_key(gr_uri, &key)
-        key_v.mv_data = key
-        key_v.mv_size = KLEN
+        ck_v.mv_data = ck
+        ck_v.mv_size = KLEN
+        chash_v.mv_data = chash
+        chash_v.mv_size = HLEN
         try:
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'c:'), &key_v, NULL))
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b't:st'), &key_v, NULL))
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'th:t'), &pk_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'c:'), &ck_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(b't:st'), &ck_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'th:t'), &chash_v, NULL))
         except KeyNotFoundError:
             pass
 
@@ -759,25 +763,27 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # ? ? ? c
                 elif not any(triple_pattern):
                     # Get all triples from the context
+                    logger.debug('Lookup: ? ? ? c')
                     try:
                         _check(lmdb.mdb_cursor_get(
-                            icur, &key_v, NULL, lmdb.MDB_SET))
+                            icur, &key_v, &data_v, lmdb.MDB_SET_KEY))
                     except KeyNotFoundError:
                         # Triple not found.
                         return ResultSet(0, TRP_KLEN)
 
-                    _check(lmdb.mdb_cursor_count(icur, &ct),
-                            'Error counting values.')
+                    _check(lmdb.mdb_cursor_count(icur, &ct))
                     ret = ResultSet(ct, TRP_KLEN)
-                    while (lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP
-                    ) == lmdb.MDB_SUCCESS):
+                    i = 0
+                    while True:
                         memcpy(
                                 ret.data + ret.itemsize * i,
                                 data_v.mv_data, TRP_KLEN)
+                        try:
+                            _check(lmdb.mdb_cursor_get(
+                                icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
+                        except KeyNotFoundError:
+                            return ret
                         i += 1
-
-                    return ret
 
                 # Regular lookup. Filter _lookup() results by context.
                 else:
@@ -1293,7 +1299,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     def from_key(self, key):
         logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
-        ret = self._from_key(key, len(key))
+        try:
+            ret = self._from_key(key, len(key))
+        except:
+            raise RuntimeError('Error looking for key: {}'.format(key))
         logger.debug('Ret in public function: {}'.format(ret))
         return ret
 

@@ -210,7 +210,8 @@ class LmdbStore(LmdbTriplestore, Store):
                 else:
                     contexts = (Graph(identifier=context),)
 
-            logger.debug('Triples before yield: {}: {}.'.format(spok, contexts))
+            logger.debug('Triple keys before yield: {}: {}.'.format(
+                spok, contexts))
             yield self.from_key(spok), contexts
             logger.debug('After yield.')
 

@@ -379,8 +379,7 @@ cdef class BaseLmdbStore:
 
         logger.debug('Putting: {}, {} into DB {}'.format(key[: key_size],
             data[: data_size], dblabel))
-        rc = lmdb.mdb_put(
-                self.txn, self.get_dbi(dblabel), &key_v, &data_v, flags)
+        rc = lmdb.mdb_put(txn, self.get_dbi(dblabel), &key_v, &data_v, flags)
         _check(rc, 'Error putting data: {}, {}'.format(
                 key[: key_size], data[: data_size]))
 

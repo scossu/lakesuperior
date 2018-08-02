@@ -12,6 +12,12 @@ from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
 
 @pytest.fixture(scope='class')
 def store():
+    """
+    Test LMDB store.
+
+    This store has a different life cycle than the one used for tests in higher
+    levels of the stack.
+    """
     store = LmdbStore('/tmp/test_lmdbstore')
     yield store
     store.close()
@@ -280,6 +286,7 @@ class TestBindings:
                 assert store.prefix(ns) == pfx
 
 
+
 @pytest.mark.usefixtures('store')
 class TestContext:
     '''
@@ -302,7 +309,7 @@ class TestContext:
         '''
         trp = (URIRef('urn:test:s123'),
                 URIRef('urn:test:p123'), URIRef('urn:test:o123'))
-        ctx_uri = URIRef('urn:bogus:graph#a')
+        ctx_uri = URIRef('urn:bogus:graph#b')
 
         with store.txn_ctx(True) as txn:
             store.add(trp, ctx_uri)
@@ -344,7 +351,7 @@ class TestContext:
         Test adding triples to a graph.
         '''
         gr_uri = URIRef('urn:bogus:graph#a') # From previous test
-        gr2_uri = URIRef('urn:bogus:graph#b') # Never created before
+        gr2_uri = URIRef('urn:bogus:graph#z') # Never created before
         trp1 = (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1'))
         trp2 = (URIRef('urn:s:2'), URIRef('urn:p:2'), URIRef('urn:o:2'))
         trp3 = (URIRef('urn:s:3'), URIRef('urn:p:3'), URIRef('urn:o:3'))
@@ -359,7 +366,7 @@ class TestContext:
             store.add(trp3, gr_uri)
             store.add(trp4) # Goes to the default graph.
 
-            assert len(set(store.triples((None, None, None)))) == 4
+            assert len(set(store.triples((None, None, None)))) == 5
             assert len(set(store.triples((None, None, None),
                 RDFLIB_DEFAULT_GRAPH_URI))) == 2
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
