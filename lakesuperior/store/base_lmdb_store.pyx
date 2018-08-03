@@ -470,11 +470,12 @@ cdef class BaseLmdbStore:
             entries = stat.ms_entries
             db_stats[dblabel.encode()] = <dict>stat
 
+        logger.debug('raw stats: {}'.format(db_stats))
         return {
             'env_stats': env_stats,
             'env_size': os.stat(self.env_path).st_size,
             'db_stats': {
-                db_label: db_stats[db_label]
+                db_label: db_stats[db_label.encode()]
                 for db_label in self.dbi_labels
             },
         }

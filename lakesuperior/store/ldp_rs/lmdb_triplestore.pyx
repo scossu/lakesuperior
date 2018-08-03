@@ -250,12 +250,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef dict stats(self, new_txn=True):
         """Gather statistics about the database."""
         st = self._stats()
-        st['num_triples'] = st['db_stats']['spo:c']['entries']
+        st['num_triples'] = st['db_stats']['spo:c']['ms_entries']
 
         return st
 
 
-    def _len(self, context=None):
+    cpdef size_t _len(self, context=None) except -1:
         """
         Return the length of the dataset.
 
@@ -278,9 +278,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             except KeyNotFoundError:
                 return 0
             else:
-                return self.stats()['num_triples']
+                return ct
             finally:
                 self._cur_close(cur)
+        else:
+            return self.stats()['num_triples']
 
 
     ## PRIVATE METHODS ##
