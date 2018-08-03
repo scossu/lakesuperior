@@ -468,7 +468,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 ck_v.mv_size = KLEN
                 spok_v.mv_size = TRP_KLEN
                 while i < match_set.ct:
-                    memcpy(spok, match_set.data + match_set.itemsize * i, TRP_KLEN)
+                    memcpy(
+                            spok, match_set.data + match_set.itemsize * i,
+                            TRP_KLEN)
                     spok_v.mv_data = spok
                     if lmdb.mdb_cursor_get(
                             dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH
@@ -490,34 +492,39 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 spok_v.mv_size = TRP_KLEN
                 # Loop over all SPO matching the triple pattern.
                 while i < match_set.ct:
-                    memcpy(spok, match_set.data + match_set.itemsize * i, TRP_KLEN)
+                    memcpy(
+                            spok, match_set.data + match_set.itemsize * i,
+                            TRP_KLEN)
                     spok_v.mv_data = spok
                     # Loop over all context associations for this SPO.
                     try:
                         _check(lmdb.mdb_cursor_get(
                             dcur, &spok_v, &ck_v, lmdb.MDB_SET_KEY))
                     except KeyNotFoundError:
-                        print('{} not found in spo:c.'.format(spok))
-                        break
-                    while True:
-                        try:
-                            _check(lmdb.mdb_cursor_get(
-                                dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP))
-                        except KeyNotFoundError:
-                            break
-                        if lmdb.mdb_cursor_get(
+                        logger.debug('{} not found in spo:c.'.format(spok))
+                        # Move on to the next SPO.
+                        continue
+                    else:
+                        while True:
+                            if lmdb.mdb_cursor_get(
                                 icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
-                        ) == lmdb.MDB_SUCCESS:
-                            # Delete index first while we have the
-                            # context reference.
-                            lmdb.mdb_cursor_del(icur, 0)
-                    # Then delete the main entry.
-                    if lmdb.mdb_cursor_get(
+                            ) == lmdb.MDB_SUCCESS:
+                                # Delete index.
+                                lmdb.mdb_cursor_del(icur, 0)
+                            # Move on to next associated context.
+                            try:
+                                _check(lmdb.mdb_cursor_get(
+                                    dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP))
+                            except KeyNotFoundError:
+                                break
+                        # Then delete the main entry.
+                        if lmdb.mdb_cursor_get(
                             dcur, &spok_v, &ck_v, lmdb.MDB_SET
-                    ) == lmdb.MDB_SUCCESS:
-                        lmdb.mdb_cursor_del(dcur, lmdb.MDB_NODUPDATA)
-                        self._index_triple(IDX_OP_REMOVE, spok)
-                    i += 1
+                        ) == lmdb.MDB_SUCCESS:
+                            lmdb.mdb_cursor_del(dcur, lmdb.MDB_NODUPDATA)
+                            self._index_triple(IDX_OP_REMOVE, spok)
+                    finally:
+                        i += 1
 
         finally:
             self._cur_close(icur)
