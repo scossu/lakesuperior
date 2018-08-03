@@ -1439,7 +1439,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             value[: vlen], dblabel.decode(), nkey[0][:KLEN]))
         logger.debug('data size: {}'.format(data_v.mv_size))
         lmdb.mdb_put(
-                self.txn, self.get_dbi(dblabel), &key_v, &data_v,
+                txn, self.get_dbi(dblabel), &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)
 
 

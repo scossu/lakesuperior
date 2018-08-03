@@ -340,6 +340,15 @@ class TestContext:
 
         with store.txn_ctx() as txn:
             store.add_graph(gr_uri)
+            a = 5 #bogus stuff for debugger
+        # The lookup must happen in a separate transaction. The first
+        # transaction opens a separate (non-child) R/W transaction while it is
+        # already isolated so even after the RW txn is committed, the RO one
+        # doesn't know anything about the changes.
+        # If the RW transaction could be nested inside the RO one that would
+        # allow a lookup in the same transaction, but this does not seem to be
+        # possible.
+        with store.txn_ctx() as txn:
             assert gr_uri in {gr.identifier for gr in store.contexts()}
         with store.txn_ctx(True) as txn:
             store.remove_graph(gr_uri)
@@ -397,12 +406,17 @@ class TestContext:
 
         with store.txn_ctx(True) as txn:
             store.remove((URIRef('urn:s:1'), None, None))
+            assert len(set(store.triples(
+                (URIRef('urn:s:1'), None, None), gr_uri))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None)))) == 3
 
         # This should result in no change because the graph does not exist.
         with store.txn_ctx(True) as txn:
             store.remove((None, None, None), URIRef('urn:phony:graph#xyz'))
+            store.remove(
+                    (URIRef('urn:s:1'), None, None),
+                    URIRef('urn:phony:graph#xyz'))
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None)))) == 3
 
