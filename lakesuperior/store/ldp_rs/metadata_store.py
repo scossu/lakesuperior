@@ -15,16 +15,12 @@ class MetadataStore(BaseLmdbStore):
     resource URIs.
     """
 
-    db_labels = ('checksums',)
+    dbi_labels = ['checksums']
     """
     At the moment only ``checksums`` is implemented. It is a registry of
     LDP resource graphs, indicated in the key by their UID, and their
     cryptographic hashes.
     """
-
-    path = path.join(
-        env.app_globals.config['application']['store']['ldp_rs']['location'],
-        'metadata')
 
 
     def get_checksum(self, uri):
@@ -34,10 +30,8 @@ class MetadataStore(BaseLmdbStore):
         :param str uri: Resource URI (``info:fcres...``).
         :rtype: bytes
         """
-        with self.cur(index='checksums') as cur:
-            cksum = cur.get(uri.encode('utf-8'))
-
-        return cksum
+        with self.txn_ctx():
+            return self.get_data(uri.encode(), 'checksums')
 
 
     def update_checksum(self, uri, cksum):
@@ -47,8 +41,8 @@ class MetadataStore(BaseLmdbStore):
         :param str uri: Resource URI (``info:fcres...``).
         :param bytes cksum: Checksum bytestring.
         """
-        with self.cur(index='checksums', write=True) as cur:
-            cur.put(uri.encode('utf-8'), cksum)
+        with self.txn_ctx(True):
+            self.put(uri.encode(), cksum, 'checksums')
 
 
     def delete_checksum(self, uri):
@@ -57,6 +51,5 @@ class MetadataStore(BaseLmdbStore):
 
         :param str uri: Resource URI (``info:fcres...``).
         """
-        with self.cur(index='checksums', write=True) as cur:
-            if cur.set_key(uri.encode('utf-8')):
-                cur.delete()
+        with self.txn_ctx(True):
+            self.delete(uri.encode(), 'checksums')

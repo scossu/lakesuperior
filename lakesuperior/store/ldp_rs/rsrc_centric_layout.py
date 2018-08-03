@@ -205,7 +205,7 @@ class RsrcCentricLayout:
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
             store.rollback()
-        store.destroy(store.path)
+        store.destroy()
 
         logger.info('Initializing the graph store with system data.')
         store.open()
@@ -219,7 +219,8 @@ class RsrcCentricLayout:
 
         checksum = to_isomorphic(gr).graph_digest()
         digest = sha256(str(checksum).encode('ascii')).digest()
-        MetadataStore().update_checksum(ROOT_RSRC_URI, digest)
+
+        env.app_globals.md_store.update_checksum(ROOT_RSRC_URI, digest)
 
 
     def get_raw(self, uri, ctx=None):

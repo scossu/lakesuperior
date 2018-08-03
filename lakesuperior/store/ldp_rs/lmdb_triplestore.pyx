@@ -196,6 +196,7 @@ cdef class ResultSet:
         return self.data + self.itemsize * i
 
 
+
 cdef class LmdbTriplestore(BaseLmdbStore):
 
     _pickle = pickle.dumps

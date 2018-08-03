@@ -69,8 +69,8 @@ cdef class BaseLmdbStore:
 
     """
 
-    dbi_labels = None
-    dbi_flags = None
+    dbi_labels = []
+    dbi_flags = []
     """
     Configuration of databases in the environment.
 
