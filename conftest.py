@@ -35,17 +35,18 @@ def db(app):
     '''
     Set up and tear down test triplestore.
     '''
-    makedirs(data_dir, exist_ok=True)
     env.app_globals.rdfly.bootstrap()
     env.app_globals.nonrdfly.bootstrap()
     print('Initialized data store.')
+    env.app_globals.rdf_store.open()
 
     yield env.app_globals.rdfly
 
     # TODO improve this by using tempfile.TemporaryDirectory as a context
     # manager.
     print('Removing fixture data directory.')
-    rmtree(data_dir)
+    env.app_globals.rdf_store.close()
+    env.app_globals.rdf_store.destroy()
 
 
 @pytest.fixture
