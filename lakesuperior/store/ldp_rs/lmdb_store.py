@@ -96,6 +96,7 @@ class LmdbStore(LmdbTriplestore, Store):
             store environment.
         """
         if not self.is_open:
+            logger.debug('Store is not open.')
             try:
                 self.open_env(create)
             except:
@@ -196,6 +197,8 @@ class LmdbStore(LmdbTriplestore, Store):
         # but anyway...
         context = self._normalize_context(context)
 
+        logger.debug(
+                'Getting triples for: {}, {}'.format(triple_pattern, context))
         for spok in self.triple_keys(triple_pattern, context):
             if context is not None:
                 contexts = (Graph(identifier=context),)

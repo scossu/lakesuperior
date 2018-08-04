@@ -70,7 +70,7 @@ cdef class BaseLmdbStore:
     """
 
     dbi_labels = []
-    dbi_flags = []
+    dbi_flags = {}
     """
     Configuration of databases in the environment.
 
@@ -113,7 +113,7 @@ cdef class BaseLmdbStore:
 
     ### INIT & TEARDOWN ###
 
-    def __init__(self, env_path, open_env=True, create=False):
+    def __init__(self, env_path, open_env=True, create=True):
         """
         Initialize DB environment and databases.
 
@@ -124,6 +124,7 @@ cdef class BaseLmdbStore:
             be created if the store is opened immediately.
         """
         self._open = False
+        self.txn = NULL
         self.env_path = env_path
         if open_env:
             self.open_env(create)
@@ -246,6 +247,9 @@ cdef class BaseLmdbStore:
             if lmdb.MDB_NOSUBDIR & self.flags:
                 try:
                     os.unlink(self.env_path)
+                except FileNotFoundError:
+                    pass
+                try:
                     os.unlink(self.env_path + '-lock')
                 except FileNotFoundError:
                     pass
@@ -274,8 +278,12 @@ cdef class BaseLmdbStore:
         if self.txn is not NULL:
             logger.debug(
                     'Transaction is already active. Not opening another one.')
+            logger.debug('before yield')
             yield
+            logger.debug('after yield')
         else:
+            logger.debug('Beginning {} transaction.'.format(
+                'RW' if write else 'RO'))
             try:
                 self._txn_begin(write=write)
                 self.is_txn_rw = write
@@ -311,9 +319,14 @@ cdef class BaseLmdbStore:
 
 
     def abort(self):
-        """Roll back main transaction."""
+        """Abort main transaction."""
         logger.debug('Rolling back transaction.')
         self._txn_abort()
+
+
+    def rollback(self):
+        """Alias for :py:meth:`abort`"""
+        self.abort()
 
 
     def key_exists(self, key, dblabel='', new_txn=True):
@@ -490,7 +503,7 @@ cdef class BaseLmdbStore:
         flags = 0 if write else lmdb.MDB_RDONLY
 
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
-        _check(rc, 'Error opening transaction: {}')
+        _check(rc, 'Error opening transaction.')
 
 
     cdef void _txn_commit(self) except *:

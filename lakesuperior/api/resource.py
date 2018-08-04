@@ -74,7 +74,7 @@ def transaction(write=False):
             thread_env.timestamp = arrow.utcnow()
             thread_env.timestamp_term = Literal(
                     thread_env.timestamp, datatype=XSD.dateTime)
-            with env.app_globals.rdf_store.txn_mgr(write) as txn:
+            with env.app_globals.rdf_store.txn_ctx(write):
                 ret = fn(*args, **kwargs)
             if len(env.app_globals.changelog):
                 job = Thread(target=_process_queue)

@@ -14,6 +14,7 @@ from flask import (
         request, send_file)
 from rdflib import Graph, plugin, parser#, serializer
 
+from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm

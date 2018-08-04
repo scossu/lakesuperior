@@ -42,7 +42,7 @@ def triple_match(s=None, p=None, o=None, return_full=False):
     :return: Matching resource URIs if ``return_full`` is false, or
         matching triples otherwise.
     """
-    with rdf_store.txn_ctx() as txn:
+    with rdf_store.txn_ctx():
         matches = rdf_store.triples((s, p, o), None)
         # Strip contexts and de-duplicate.
         qres = (
@@ -95,7 +95,7 @@ def term_query(terms, or_logic=False):
     '''.format(qry_terms)
     logger.debug('Query: {}'.format(qry_str))
 
-    with rdf_store.txn_mgr() as txn:
+    with rdf_store.txn_ctx():
         qres = rdfly.raw_query(qry_str)
         return {row[0] for row in qres}
 
@@ -124,7 +124,7 @@ def sparql_query(qry_str, fmt):
     :rtype: BytesIO
     :return: Serialized SPARQL results.
     """
-    with rdf_store.txn_mgr() as txn:
+    with rdf_store.txn_ctx():
         qres = rdfly.raw_query(qry_str)
         out_stream = BytesIO(qres.serialize(format=fmt))
 

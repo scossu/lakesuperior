@@ -744,6 +744,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 # s p o c
                 if all(triple_pattern):
+                    logger.debug('Lookup: s p o c')
                     for i, term in enumerate(triple_pattern):
                         try:
                             self._to_key(term, &tk)
@@ -757,11 +758,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             return ResultSet(0, TRP_KLEN)
                     data_v.mv_data = spok
                     data_v.mv_size = TRP_KLEN
+                    logger.debug(
+                            'Found spok {}. Matching with context {}'.format(
+                                (<TripleKey>data_v.mv_data)[: TRP_KLEN],
+                                (<Key>key_v.mv_data)[: KLEN]))
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
                     except KeyNotFoundError:
                         # Triple not found.
+                        logger.debug('spok / ck pair not found.')
                         return ResultSet(0, TRP_KLEN)
                     finally:
                         self._cur_close(icur)
@@ -1162,7 +1168,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(icur)
 
 
-    cdef ResultSet _all_term_keys(self, term_type):
+    cpdef ResultSet _all_term_keys(self, term_type):
         """
         Return all keys of a (``s:po``, ``p:so``, ``o:sp``) index.
         """
@@ -1178,7 +1184,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             try:
                 _check(lmdb.mdb_cursor_get(
-                    icur, &key_v, &data_v, lmdb.MDB_SET))
+                    icur, &key_v, NULL, lmdb.MDB_FIRST))
             except KeyNotFoundError:
                 return ResultSet(0, DBL_KLEN)
 
@@ -1200,7 +1206,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Return all terms of a type (``s``, ``p``, or ``o``) in the store.
         """
-        for key in self._all_term_keys(term_type):
+        for key in self._all_term_keys(term_type).to_tuple():
+            logger.debug('Yielding: {}'.format(key))
             yield self._from_key(key, KLEN)[0]
 
 
@@ -1375,9 +1382,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_data = &thash
         key_v.mv_size = HLEN
 
-        _check(
-                lmdb.mdb_get(self.txn, self.get_dbi('th:t'), &key_v, &data_v),
-                'Error getting data for key \'{}\'.'.format(key[0]))
+        _check(lmdb.mdb_get(self.txn, self.get_dbi('th:t'), &key_v, &data_v))
+        logger.debug('Found key: {}'.format((<Key>data_v.mv_data)[: KLEN]))
 
         memcpy(key, data_v.mv_data, KLEN)
 

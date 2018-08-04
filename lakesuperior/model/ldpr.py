@@ -24,7 +24,6 @@ from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
-from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 from lakesuperior.toolbox import Toolbox
 
 
@@ -784,14 +783,14 @@ class Ldpr(metaclass=ABCMeta):
         """
         Save the resource checksum in a dedicated metadata store.
         """
-        MetadataStore().update_checksum(self.uri, self.rsrc_digest)
+        env.app_globals.md_store.update_checksum(self.uri, self.rsrc_digest)
 
 
     def _delete_checksum(self):
         """
         Delete the resource checksum from the metadata store.
         """
-        MetadataStore().delete_checksum(self.uri)
+        env.app_globals.md_store.delete_checksum(self.uri)
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):

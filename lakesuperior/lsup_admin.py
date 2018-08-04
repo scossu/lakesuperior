@@ -58,10 +58,8 @@ def bootstrap():
         click.echo('Aborting.')
         sys.exit(1)
 
-    click.echo('Initializing graph store at {}'.format(rdfly.store.path))
-    with env.app_globals.rdf_store.txn_ctx(True) as txn:
-        rdfly.bootstrap()
-        rdfly.store.close()
+    click.echo('Initializing graph store at {}'.format(rdfly.store.env_path))
+    rdfly.bootstrap()
     click.echo('Graph store initialized.')
 
     click.echo('Initializing binary store at {}'.format(nonrdfly.root))

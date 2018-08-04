@@ -204,7 +204,9 @@ class RsrcCentricLayout:
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
-            store.rollback()
+            print('store txn is open.')
+            store.abort()
+        store.close()
         store.destroy()
 
         logger.info('Initializing the graph store with system data.')
@@ -221,6 +223,7 @@ class RsrcCentricLayout:
         digest = sha256(str(checksum).encode('ascii')).digest()
 
         env.app_globals.md_store.update_checksum(ROOT_RSRC_URI, digest)
+        store.close()
 
 
     def get_raw(self, uri, ctx=None):
@@ -606,8 +609,10 @@ class RsrcCentricLayout:
         :rtype: set
         :return: Triples referencing a repository URI that is not a resource.
         """
-        #import pdb; pdb.set_trace()
+        logger.debug('Find referential integrity violations.')
+        import pdb; pdb.set_trace()
         for i, obj in enumerate(self.store.all_terms('o'), start=1):
+            logger.debug('term: {}'.format(obj))
             if (
                     isinstance(obj, URIRef)
                     and obj.startswith(nsc['fcres'])
