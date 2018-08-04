@@ -727,6 +727,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char spok[TRP_KLEN]
             size_t ct = 0, flt_j = 0, i = 0, j = 0
             lmdb.MDB_cursor *icur
+            lmdb.MDB_val key_v, data_v
             ResultSet flt_res, ret
 
         if context is not None:
