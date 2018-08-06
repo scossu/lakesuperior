@@ -319,17 +319,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char nkey[KLEN]
             unsigned int term_sizes[4]
 
-        logger.info('Calculating term sizes.')
+        logger.debug('Trying to add a triple.')
         term_sizes = [len(pk_s), len(pk_p), len(pk_o), len(pk_c)]
-
-        logger.debug('Pickled context: {}'.format(pk_c))
-        logger.debug('Term sizes: {}'.format(term_sizes))
 
         icur = self._cur_open('th:t')
         try:
             for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
-                logger.debug('Pickled term: {}'.format(pk_t[: term_sizes[i]]))
-                logger.debug('Pickled term size: {}'.format(term_sizes[i]))
                 _hash(pk_t, term_sizes[i], &thash)
                 try:
                     key_v.mv_data = &thash
@@ -337,7 +332,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('th:t'), &key_v, &data_v))
                     memcpy(keys + (i * KLEN), data_v.mv_data, KLEN)
-                    logger.debug('Hash {} found.'.format(thash[: HLEN]))
+                    logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
                 except KeyNotFoundError:
                     # If term is not found, add it...
                     logger.debug('Hash {} not found. Adding to DB.'.format(
@@ -352,17 +347,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     key_v.mv_size = HLEN
                     data_v.mv_data = nkey
                     data_v.mv_size = KLEN
-                    logger.debug('DB key length: {}'.format(key_v.mv_size))
                     _check(
                         lmdb.mdb_cursor_put(icur, &key_v, &data_v, 0),
                         'Error setting key {}.'.format(thash))
         finally:
             self._cur_close(icur)
+            logger.debug('Triple add action completed.')
 
         # Add context.
         # TODO We can avoid 2 memcpy's by copying directly to the destinations.
         memcpy(ck, keys + TRP_KLEN, KLEN)
         memcpy(spok, keys, TRP_KLEN)
+        logger.debug('spo: {} c: {}'.format(spok[: TRP_KLEN], ck[: KLEN]))
 
         spo_v.mv_data = spok
         spo_v.mv_size = TRP_KLEN
@@ -371,12 +367,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         null_v.mv_data = b''
         null_v.mv_size = 0
 
+        logger.debug('Adding context.')
         try:
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:'), &c_v, &null_v,
                 lmdb.MDB_NOOVERWRITE))
         except KeyExistsError:
             pass
+        logger.debug('Added c:.')
         try:
             # Add triple:context association.
             _check(lmdb.mdb_put(
@@ -384,14 +382,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
+        logger.debug('Added spo:c.')
         try:
-            # Index triple:context association.
+            # Index context:triple association.
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:spo'), &c_v, &spo_v,
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
+        logger.debug('Added c:spo.')
 
+        logger.debug('All main data entered. Indexing.')
         self._index_triple(IDX_OP_ADD, spok)
 
 
@@ -418,16 +419,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
             if self.is_txn_rw:
+                logger.debug('Working in existing RW transaction.')
                 # Use existing R/W transaction.
                 # Main entry.
                 self._append(pk_c, pk_size, &ck, b't:st')
                 # Index.
                 self._put(c_hash, HLEN, ck, KLEN, b'th:t')
                 # Add to list of contexts.
-                logger.debug('Adding context to c: {}'.format(ck[: KLEN]))
                 self._put(ck, KLEN, b'', 0, 'c:')
             else:
                 # Open new R/W transactions.
+                logger.debug('Opening a temporary RW transaction.')
                 _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &tmp_txn))
                 try:
                     self._append(
@@ -435,9 +437,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # Index.
                     self._put(c_hash, HLEN, ck, KLEN, b'th:t', txn=tmp_txn)
                     # Add to list of contexts.
-                    logger.debug('Adding context to c: {}'.format(ck[: KLEN]))
                     self._put(ck, KLEN, b'', 0, b'c:', txn=tmp_txn)
                     _check(lmdb.mdb_txn_commit(tmp_txn))
+                    logger.debug('Temp RW transaction closed.')
                 except:
                     lmdb.mdb_txn_abort(tmp_txn)
                     raise
@@ -450,6 +452,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Key ck
             lmdb.MDB_val spok_v, ck_v
 
+        logger.debug('Removing triple: {}'.format(triple_pattern))
         if context is not None:
             try:
                 self._to_key(context, &ck)
@@ -475,18 +478,25 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             spok, match_set.data + match_set.itemsize * i,
                             TRP_KLEN)
                     spok_v.mv_data = spok
-                    if lmdb.mdb_cursor_get(
-                            dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH
-                    ) == lmdb.MDB_SUCCESS:
-                        _check(
-                            lmdb.mdb_cursor_del(dcur, 0),
-                            'Error deleting main entry.')
-                        if lmdb.mdb_cursor_get(
-                                icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
-                        ) == lmdb.MDB_SUCCESS:
-                            _check(
-                                lmdb.mdb_cursor_del(icur, 0),
-                                'Error deleting index entry.')
+                    # Delete spo:c entry.
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                                dcur, &spok_v, &ck_v, lmdb.MDB_GET_BOTH))
+                    except KeyNotFoundError:
+                        pass
+                    else:
+                        _check(lmdb.mdb_cursor_del(dcur, 0))
+
+                        # Delete c:spo entry.
+                        try:
+                            _check(lmdb.mdb_cursor_get(
+                                    icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH))
+                        except KeyNotFoundError:
+                            pass
+                        else:
+                            _check(lmdb.mdb_cursor_del(icur, 0))
+
+                        # Delete lookup indices.
                         self._index_triple(IDX_OP_REMOVE, spok)
                     i += 1
 
@@ -509,10 +519,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         continue
                     else:
                         while True:
-                            if lmdb.mdb_cursor_get(
-                                icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH
-                            ) == lmdb.MDB_SUCCESS:
+                            try:
+                                _check(lmdb.mdb_cursor_get(
+                                    icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH))
                                 # Delete index.
+                            except KeyNotFoundError:
+                                pass
+                            else:
                                 lmdb.mdb_cursor_del(icur, 0)
                             # Move on to next associated context.
                             try:
@@ -521,17 +534,22 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             except KeyNotFoundError:
                                 break
                         # Then delete the main entry.
-                        if lmdb.mdb_cursor_get(
-                            dcur, &spok_v, &ck_v, lmdb.MDB_SET
-                        ) == lmdb.MDB_SUCCESS:
+                        try:
+                            _check(lmdb.mdb_cursor_get(
+                                dcur, &spok_v, &ck_v, lmdb.MDB_SET))
+                        except KeyNotFoundError:
+                            pass
+                        else:
                             lmdb.mdb_cursor_del(dcur, lmdb.MDB_NODUPDATA)
                             self._index_triple(IDX_OP_REMOVE, spok)
                     finally:
                         i += 1
 
         finally:
-            self._cur_close(icur)
+            logger.debug('Closing spo:c in _remove.')
             self._cur_close(dcur)
+            logger.debug('Closing c:spo in _remove.')
+            self._cur_close(icur)
 
 
     cdef void _index_triple(self, str op, TripleKey spok) except *:
@@ -569,6 +587,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_size = DBL_KLEN
 
+        logger.debug('Start indexing.')
         while i < 3:
             icur = self._cur_open(self.lookup_indices[i])
             try:
@@ -576,11 +595,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = data[i]
 
                 if op == IDX_OP_REMOVE:
-                    if lmdb.mdb_cursor_get(
-                            icur, &key_v, &data_v, lmdb.MDB_GET_BOTH
-                    ) == lmdb.MDB_SUCCESS:
+                    logger.debug('Index remove operation.')
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                                icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
+                    except KeyNotFoundError:
+                        pass
+                    else:
                         _check(lmdb.mdb_cursor_del(icur, 0))
                 elif op == IDX_OP_ADD:
+                    logger.debug('Index add operation.')
                     try:
                         _check(lmdb.mdb_cursor_put(
                                 icur, &key_v, &data_v, lmdb.MDB_NODUPDATA))
@@ -755,7 +779,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         memcpy(spok + (KLEN * i), tk, KLEN)
                         if tk is NULL:
                             # A term in the triple is not found.
-                            self._cur_close(icur)
                             return ResultSet(0, TRP_KLEN)
                     data_v.mv_data = spok
                     data_v.mv_size = TRP_KLEN
@@ -770,8 +793,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         # Triple not found.
                         logger.debug('spok / ck pair not found.')
                         return ResultSet(0, TRP_KLEN)
-                    finally:
-                        self._cur_close(icur)
                     ret = ResultSet(1, TRP_KLEN)
                     memcpy(ret.data, spok, TRP_KLEN)
 
