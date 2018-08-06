@@ -64,19 +64,19 @@ class TestStoreInit:
         '''
         Test enclosing a transaction in a context.
         '''
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             assert store.is_txn_open
             assert not store.is_txn_rw
         assert not store.is_txn_open
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             assert store.is_txn_open
             assert store.is_txn_rw
         assert not store.is_txn_open
         assert not store.is_txn_rw
 
         try:
-            with store.txn_ctx() as txn:
+            with store.txn_ctx():
                 raise RuntimeError
         except RuntimeError:
             assert not store.is_txn_open
@@ -87,7 +87,7 @@ class TestStoreInit:
         Test rolling back a transaction.
         '''
         try:
-            with store.txn_ctx(True) as txn:
+            with store.txn_ctx(True):
                 store.add((
                     URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
                     URIRef('urn:nogo:o')))
@@ -95,7 +95,7 @@ class TestStoreInit:
         except RuntimeError:
             pass
 
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             res = set(store.triples((None, None, None)))
         assert len(res) == 0
 
@@ -111,10 +111,10 @@ class TestBasicOps:
         '''
         trp = (
             URIRef('urn:test:s'), URIRef('urn:test:p'), URIRef('urn:test:o'))
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add(trp)
 
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             res1 = set(store.triples((None, None, None)))
             res2 = set(store.triples(trp))
             assert len(res1) == 1
@@ -128,7 +128,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching one bound term.
         '''
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             res1 = set(store.triples((URIRef('urn:test:s'), None, None)))
             res2 = set(store.triples((None, URIRef('urn:test:p'), None)))
             res3 = set(store.triples((None, None, URIRef('urn:test:o'))))
@@ -143,7 +143,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching two bound terms.
         '''
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             res1 = set(store.triples(
                 (URIRef('urn:test:s'), URIRef('urn:test:p'), None)))
             res2 = set(store.triples(
@@ -161,7 +161,7 @@ class TestBasicOps:
         '''
         Test triple patterns matching 3 bound terms (exact match).
         '''
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             pattern = (
                 URIRef('urn:test:s'), URIRef('urn:test:p'),
                 URIRef('urn:test:o'))
@@ -173,7 +173,7 @@ class TestBasicOps:
         '''
         Test empty matches with 1 bound term.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add((
                 URIRef('urn:test:s'),
                 URIRef('urn:test:p2'), URIRef('urn:test:o2')))
@@ -195,7 +195,7 @@ class TestBasicOps:
         '''
         Test empty matches with 2 bound terms.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             res1 = set(store.triples(
                 (URIRef('urn:test:s2'), URIRef('urn:test:p'), None)))
             res2 = set(store.triples(
@@ -210,7 +210,7 @@ class TestBasicOps:
         '''
         Test empty matches with 3 bound terms.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             res1 = set(store.triples((
                 URIRef('urn:test:s2'), URIRef('urn:test:p3'),
                 URIRef('urn:test:o2'))))
@@ -222,18 +222,106 @@ class TestBasicOps:
         '''
         Test removing one or more triples.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((URIRef('urn:test:s3'),
                     URIRef('urn:test:p3'), URIRef('urn:test:o3')))
 
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             res1 = set(store.triples((None, None, None)))
             assert len(res1) == 2
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((URIRef('urn:test:s'), None, None))
             res2 = set(store.triples((None, None, None)))
             assert len(res2) == 0
+
+
+@pytest.mark.usefixtures('store')
+class TestCleanup:
+    '''
+    Tests for proper cleanup on resource deletion.
+    '''
+    @pytest.fixture
+    def data(self):
+        return {
+            'spo1': (
+            URIRef('urn:test:s1'), URIRef('urn:test:p1'), URIRef('urn:test:o1')),
+            'spo2': (
+            URIRef('urn:test:s2'), URIRef('urn:test:p2'), URIRef('urn:test:o2')),
+            'c1': URIRef('urn:test:c1'),
+            'c2': URIRef('urn:test:c2'),
+        }
+
+    def _is_empty(self, store):
+        stats = store.stats()['db_stats']
+        for dblabel in ('spo:c', 'c:spo', 's:po', 'p:so', 'o:sp',):
+            if stats[dblabel]['ms_entries'] > 0:
+                return False
+
+        return True
+
+
+    def test_cleanup_spo(self, store, data):
+        with store.txn_ctx(True):
+            store.add(data['spo1'])
+        with store.txn_ctx():
+            assert not self._is_empty(store)
+
+        with store.txn_ctx(True):
+            store.remove(data['spo1'])
+        with store.txn_ctx():
+            assert self._is_empty(store)
+
+
+    def test_cleanup_spoc1(self, store, data):
+        with store.txn_ctx(True):
+            store.add(data['spo1'], data['c1'])
+        with store.txn_ctx():
+            assert not self._is_empty(store)
+
+        with store.txn_ctx(True):
+            store.remove(data['spo1'], data['c1'])
+        with store.txn_ctx():
+            assert self._is_empty(store)
+
+
+    def test_cleanup_spoc2(self, store, data):
+        with store.txn_ctx(True):
+            store.add(data['spo1'], data['c1'])
+
+        with store.txn_ctx(True):
+            store.remove((None, None, None), data['c1'])
+        with store.txn_ctx():
+            assert self._is_empty(store)
+
+
+    def test_cleanup_spoc3(self, store, data):
+        with store.txn_ctx(True):
+            store.add(data['spo1'], data['c1'])
+            store.add(data['spo2'], data['c1'])
+
+        with store.txn_ctx(True):
+            store.remove((data['spo1'][0], None, None), data['c1'])
+        with store.txn_ctx():
+            assert not self._is_empty(store)
+
+        with store.txn_ctx(True):
+            store.remove((data['spo2'][0], None, None), data['c1'])
+        with store.txn_ctx():
+            assert self._is_empty(store)
+
+
+    def test_cleanup_spoc4(self, store, data):
+        with store.txn_ctx(True):
+            store.add(data['spo1'], data['c1'])
+            store.add(data['spo2'], data['c1'])
+            store.add(data['spo2'], data['c2'])
+
+        with store.txn_ctx(True):
+            store.remove((None, None, None))
+        with store.txn_ctx():
+            assert self._is_empty(store)
+
 
 
 @pytest.mark.usefixtures('store')
@@ -255,7 +343,7 @@ class TestBindings:
         '''
         Test namespace bindings.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             for b in bindings:
                 store.bind(*b)
 
@@ -270,7 +358,7 @@ class TestBindings:
         '''
         Test namespace to prefix conversion.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             for b in bindings:
                 pfx, ns = b
                 assert store.namespace(pfx) == ns
@@ -280,7 +368,7 @@ class TestBindings:
         '''
         Test namespace to prefix conversion.
         '''
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             for b in bindings:
                 pfx, ns = b
                 assert store.prefix(ns) == pfx
@@ -298,7 +386,7 @@ class TestContext:
         '''
         gr_uri = URIRef('urn:bogus:graph#a')
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
 
@@ -311,10 +399,10 @@ class TestContext:
                 URIRef('urn:test:p123'), URIRef('urn:test:o123'))
         ctx_uri = URIRef('urn:bogus:graph#b')
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add(trp, ctx_uri)
 
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             assert ctx_uri in {gr.identifier for gr in store.contexts(trp)}
 
 
@@ -324,10 +412,10 @@ class TestContext:
         '''
         gr_uri = URIRef('urn:bogus:empty#a')
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add_graph(gr_uri)
             assert gr_uri in {gr.identifier for gr in store.contexts()}
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove_graph(gr_uri)
             assert gr_uri not in {gr.identifier for gr in store.contexts()}
 
@@ -338,7 +426,7 @@ class TestContext:
         '''
         gr_uri = URIRef('urn:bogus:empty#b')
 
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             store.add_graph(gr_uri)
             a = 5 #bogus stuff for debugger
         # The lookup must happen in a separate transaction. The first
@@ -348,9 +436,9 @@ class TestContext:
         # If the RW transaction could be nested inside the RO one that would
         # allow a lookup in the same transaction, but this does not seem to be
         # possible.
-        with store.txn_ctx() as txn:
+        with store.txn_ctx():
             assert gr_uri in {gr.identifier for gr in store.contexts()}
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove_graph(gr_uri)
             assert gr_uri not in {gr.identifier for gr in store.contexts()}
 
@@ -366,7 +454,7 @@ class TestContext:
         trp3 = (URIRef('urn:s:3'), URIRef('urn:p:3'), URIRef('urn:o:3'))
         trp4 = (URIRef('urn:s:4'), URIRef('urn:p:4'), URIRef('urn:o:4'))
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.add(trp1, gr_uri)
             store.add(trp2, gr_uri)
             store.add(trp2, gr_uri) # Duplicate; dropped.
@@ -399,12 +487,12 @@ class TestContext:
         gr_uri = URIRef('urn:bogus:graph#a')
         gr2_uri = URIRef('urn:bogus:graph#b')
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((None, None, None), gr2_uri)
             assert len(set(store.triples((None, None, None), gr2_uri))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((URIRef('urn:s:1'), None, None))
             assert len(set(store.triples(
                 (URIRef('urn:s:1'), None, None), gr_uri))) == 0
@@ -412,7 +500,7 @@ class TestContext:
             assert len(set(store.triples((None, None, None)))) == 3
 
         # This should result in no change because the graph does not exist.
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((None, None, None), URIRef('urn:phony:graph#xyz'))
             store.remove(
                     (URIRef('urn:s:1'), None, None),
@@ -420,12 +508,12 @@ class TestContext:
             assert len(set(store.triples((None, None, None), gr_uri))) == 2
             assert len(set(store.triples((None, None, None)))) == 3
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((URIRef('urn:s:4'), None, None),
                     RDFLIB_DEFAULT_GRAPH_URI)
             assert len(set(store.triples((None, None, None)))) == 2
 
-        with store.txn_ctx(True) as txn:
+        with store.txn_ctx(True):
             store.remove((None, None, None))
             assert len(set(store.triples((None, None, None)))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 0
@@ -460,7 +548,7 @@ class TestTransactions:
 #        ''', format='n3')
 #
 #    def _test_basic(self, sample_gr):
-#        with store.txn_ctx() as txn:
+#        with store.txn_ctx():
 #            implies = URIRef("http://www.w3.org/2000/10/swap/log#implies")
 #            a = URIRef('http://test/a')
 #            b = URIRef('http://test/b')
