@@ -357,12 +357,14 @@ cdef class BaseLmdbStore:
         key_v.mv_data = key
         key_v.mv_size = klen
         logger.debug(
-                'Checking if key {} with size {} exists.'.format(key, klen))
+                'Checking if key {} with size {} exists...'.format(key, klen))
         try:
             _check(lmdb.mdb_get(
                 self.txn, self.get_dbi(dblabel), &key_v, &data_v))
         except KeyNotFoundError:
+            logger.debug('...no.')
             return False
+        logger.debug('...yes.')
         return True
 
 
@@ -502,32 +504,41 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
+        logger.info('Opening {} transaction'.format(
+            'RW' if write else 'RO'))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
+        logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
 
 
     cdef void _txn_commit(self) except *:
         if self.txn == NULL:
             logger.warning('txn is NULL!')
         else:
-            logger.debug('Attempting to commit transaction.')
+            logger.info('Attempting to commit transaction @ {:x}.'.format(<unsigned long>self.txn))
             rc = lmdb.mdb_txn_commit(self.txn)
-            logger.debug('Transaction committed.')
+            logger.info('Transaction committed.')
             try:
                 _check(rc, 'Error committing transaction.')
                 self.txn = NULL
                 self.is_txn_rw = None
             except:
-                logger.debug('Attempting to abort transaction.')
+                logger.info('Attempting to abort transaction.')
                 self._txn_abort()
-                logger.debug('Transaction aborted.')
+                logger.info('Transaction aborted.')
                 raise
 
 
     cdef void _txn_abort(self) except *:
+        logger.info('Attempting to abort transaction @ {:x}.'.format(<unsigned long>self.txn))
         lmdb.mdb_txn_abort(self.txn)
         self.txn = NULL
         self.is_txn_rw = None
+        logger.info('Transaction aborted.')
+
+
+    cpdef int txn_id(self):
+        return self._txn_id()
 
 
     cdef size_t _txn_id(self) except -1:
@@ -562,13 +573,18 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(dblabel, txn=txn)
 
+        logger.info('Opening cursor for DB {} (DBI {})...'.format(dblabel, dbi))
         rc = lmdb.mdb_cursor_open(txn, dbi, &cur)
         _check(rc, 'Error opening cursor: {}'.format(dblabel))
+        logger.info('...opened @ {:x}.'.format(<unsigned long>cur))
 
         return cur
 
 
     cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:
         """Close a cursor."""
+        logger.info('Closing cursor @ {:x} for DBI {}...'.format(
+            <unsigned long>cur, lmdb.mdb_cursor_dbi(cur) ))
         lmdb.mdb_cursor_close(cur)
+        logger.info('...closed.')
 

@@ -246,11 +246,10 @@ class RsrcCentricLayout:
         Return a count of first-class resources, subdivided in "live" and
         historic snapshots.
         """
-        with self.ds.store.txn_ctx() as txn:
-            main = set(
-                    self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
-            hist = set(
-                    self.ds.graph(HIST_GR_URI)[ : nsc['foaf'].primaryTopic : ])
+        main = set(
+                self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
+        hist = set(
+                self.ds.graph(HIST_GR_URI)[ : nsc['foaf'].primaryTopic : ])
 
         return {'main': len(main), 'hist': len(hist)}
 
@@ -527,11 +526,13 @@ class RsrcCentricLayout:
         graph_types = set() # Graphs that need RDF type metadata added.
         # Create add and remove sets for each graph.
         for t in remove_trp:
+            logger.debug('Adding triple to remove list: {}'.format(remove_trp))
             map_graph = self._map_graph_uri(t, uid)
             target_gr_uri = map_graph[0]
             remove_routes[target_gr_uri].add(t)
             graph_types.add(map_graph)
         for t in add_trp:
+            logger.debug('Adding triple to add list: {}'.format(add_trp))
             map_graph = self._map_graph_uri(t, uid)
             target_gr_uri = map_graph[0]
             add_routes[target_gr_uri].add(t)
@@ -543,12 +544,15 @@ class RsrcCentricLayout:
 
         # Remove and add triple sets from each graph.
         for gr_uri, trp in remove_routes.items():
+            logger.debug('Removing triple: {}'.format(trp))
             gr = self.ds.graph(gr_uri)
             gr -= trp
         for gr_uri, trp in add_routes.items():
+            logger.debug('Adding triple: {}'.format(trp))
             gr = self.ds.graph(gr_uri)
             gr += trp
             # Add metadata.
+            import pdb; pdb.set_trace()
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
             ts = getattr(env, 'timestamp_term', Literal(arrow.utcnow()))
@@ -562,6 +566,7 @@ class RsrcCentricLayout:
 
         # Add graph RDF types.
         for gr_uri, gr_type in graph_types:
+            logger.debug('Adding RDF type: {}'.format(gr_uri))
             meta_gr.add((gr_uri, RDF.type, gr_type))
 
 

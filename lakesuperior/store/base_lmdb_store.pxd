@@ -58,3 +58,4 @@ cdef class BaseLmdbStore:
     #cpdef get_all_pairs(self, db=*)
     cpdef bytes get_data(self, key, dblabel=*)
     cpdef dict stats(self, new_txn=*)
+    cpdef int txn_id(self)
