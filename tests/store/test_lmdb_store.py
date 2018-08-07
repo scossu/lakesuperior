@@ -236,6 +236,74 @@ class TestBasicOps:
             assert len(res2) == 0
 
 
+
+@pytest.mark.usefixtures('store')
+class TestRemoveMulti:
+    '''
+    Tests for proper removal of multiple combinations of triple and context.
+    '''
+    @pytest.fixture
+    def data(self):
+        return {
+            'spo1': (
+            URIRef('urn:test:s1'), URIRef('urn:test:p1'), URIRef('urn:test:o1')),
+            'spo2': (
+            URIRef('urn:test:s1'), URIRef('urn:test:p1'), URIRef('urn:test:o2')),
+            'spo3': (
+            URIRef('urn:test:s1'), URIRef('urn:test:p1'), URIRef('urn:test:o3')),
+            'c1': URIRef('urn:test:c1'),
+            'c2': URIRef('urn:test:c2'),
+            'c3': URIRef('urn:test:c3'),
+        }
+
+
+    def test_init(self, store, data):
+        """
+        Initialize the store with test data.
+        """
+        with store.txn_ctx(True):
+            store.add(data['spo1'], data['c1'])
+            store.add(data['spo2'], data['c1'])
+            store.add(data['spo3'], data['c1'])
+            store.add(data['spo1'], data['c2'])
+            store.add(data['spo2'], data['c2'])
+            store.add(data['spo3'], data['c2'])
+            store.add(data['spo1'], data['c3'])
+            store.add(data['spo2'], data['c3'])
+            store.add(data['spo3'], data['c3'])
+
+            assert len(store) == 9
+            assert len(set(store.triples((None, None, None)))) == 3
+            assert len(set(store.triples((None, None, None), data['c1']))) == 3
+            assert len(set(store.triples((None, None, None), data['c2']))) == 3
+            assert len(set(store.triples((None, None, None), data['c3']))) == 3
+
+
+    def test_remove_1ctx(self, store, data):
+        """
+        Test removing all triples from a context.
+        """
+        with store.txn_ctx(True):
+            store.remove((None, None, None), data['c1'])
+
+            assert len(store) == 6
+            assert len(set(store.triples((None, None, None)))) == 3
+            assert len(set(store.triples((None, None, None), data['c1']))) == 0
+            assert len(set(store.triples((None, None, None), data['c2']))) == 3
+            assert len(set(store.triples((None, None, None), data['c3']))) == 3
+
+
+    def test_remove_1subj(self, store, data):
+        """
+        Test removing one subject from all contexts.
+        """
+        with store.txn_ctx(True):
+            store.remove((data['spo1'][0], None, None))
+
+            assert len(store) == 0
+
+
+
 @pytest.mark.usefixtures('store')
 class TestCleanup:
     '''

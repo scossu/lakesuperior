@@ -468,11 +468,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         icur = self._cur_open('c:spo')
 
         try:
+            spok_v.mv_size = TRP_KLEN
             # If context was specified, remove only associations with that context.
             if context is not None:
                 ck_v.mv_data = ck
                 ck_v.mv_size = KLEN
-                spok_v.mv_size = TRP_KLEN
                 while i < match_set.ct:
                     memcpy(
                             spok, match_set.data + match_set.itemsize * i,
@@ -487,6 +487,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     else:
                         _check(lmdb.mdb_cursor_del(dcur, 0))
 
+                        # Restore ck after delete.
+                        ck_v.mv_data = ck
+
                         # Delete c:spo entry.
                         try:
                             _check(lmdb.mdb_cursor_get(
@@ -496,13 +499,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         else:
                             _check(lmdb.mdb_cursor_del(icur, 0))
 
-                        # Delete lookup indices.
-                        self._index_triple(IDX_OP_REMOVE, spok)
+                        # Delete lookup indices, only if no other context
+                        # association is present.
+                        spok_v.mv_data = spok
+                        try:
+                            _check(lmdb.mdb_cursor_get(
+                                dcur, &spok_v, NULL, lmdb.MDB_SET))
+                        except KeyNotFoundError:
+                            self._index_triple(IDX_OP_REMOVE, spok)
                     i += 1
 
             # If no context is specified, remove all associations.
             else:
-                spok_v.mv_size = TRP_KLEN
                 # Loop over all SPO matching the triple pattern.
                 while i < match_set.ct:
                     memcpy(
@@ -514,26 +522,29 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         _check(lmdb.mdb_cursor_get(
                             dcur, &spok_v, &ck_v, lmdb.MDB_SET_KEY))
                     except KeyNotFoundError:
-                        logger.debug('{} not found in spo:c.'.format(spok))
                         # Move on to the next SPO.
                         continue
                     else:
+                        ck = <Key>ck_v.mv_data
                         while True:
+
+                            # Delete c:spo association.
                             try:
                                 _check(lmdb.mdb_cursor_get(
                                     icur, &ck_v, &spok_v, lmdb.MDB_GET_BOTH))
-                                # Delete index.
                             except KeyNotFoundError:
                                 pass
                             else:
                                 lmdb.mdb_cursor_del(icur, 0)
+                                # Restore the pointer to the deleted SPO.
+                                spok_v.mv_data = spok
                             # Move on to next associated context.
                             try:
                                 _check(lmdb.mdb_cursor_get(
                                     dcur, &spok_v, &ck_v, lmdb.MDB_NEXT_DUP))
                             except KeyNotFoundError:
                                 break
-                        # Then delete the main entry.
+                        # Then delete the spo:c association.
                         try:
                             _check(lmdb.mdb_cursor_get(
                                 dcur, &spok_v, &ck_v, lmdb.MDB_SET))
@@ -542,6 +553,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         else:
                             lmdb.mdb_cursor_del(dcur, lmdb.MDB_NODUPDATA)
                             self._index_triple(IDX_OP_REMOVE, spok)
+                            #ck_v.mv_data = ck # Unnecessary?
                     finally:
                         i += 1
 
@@ -587,7 +599,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_size = DBL_KLEN
 
-        logger.debug('Start indexing.')
+        logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
         while i < 3:
             icur = self._cur_open(self.lookup_indices[i])
             try:
