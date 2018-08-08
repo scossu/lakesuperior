@@ -358,7 +358,6 @@ class RsrcCentricLayout:
         v_triples = self.ds.graph(nsc['fcadmin'][uid]).triples(
                 (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
 
-        #import pdb; pdb.set_trace()
         #Get version graphs proper.
         for vtrp in v_triples:
             # While at it, add the hasVersion triple to the result graph.
@@ -552,7 +551,6 @@ class RsrcCentricLayout:
             gr = self.ds.graph(gr_uri)
             gr += trp
             # Add metadata.
-            import pdb; pdb.set_trace()
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
             ts = getattr(env, 'timestamp_term', Literal(arrow.utcnow()))
@@ -615,7 +613,6 @@ class RsrcCentricLayout:
         :return: Triples referencing a repository URI that is not a resource.
         """
         logger.debug('Find referential integrity violations.')
-        import pdb; pdb.set_trace()
         for i, obj in enumerate(self.store.all_terms('o'), start=1):
             logger.debug('term: {}'.format(obj))
             if (

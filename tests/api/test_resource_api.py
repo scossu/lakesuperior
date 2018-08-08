@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from rdflib import Graph, Literal, URIRef
 
+from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
@@ -461,14 +462,12 @@ class TestResourceCRUD:
         """
         Verify that a checksum is created and updated appropriately.
         """
-        mds = MetadataStore()
-        root_cksum1 = mds.get_checksum(nsc['fcres']['/'])
+        root_cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
         uid = '/test_checksum'
         rsrc_api.create_or_replace(uid)
 
-        mds = MetadataStore()
-        root_cksum2 = mds.get_checksum(nsc['fcres']['/'])
-        cksum1 = mds.get_checksum(nsc['fcres'][uid])
+        root_cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
+        cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
         assert len(cksum1)
         assert root_cksum1 != root_cksum2
@@ -477,15 +476,13 @@ class TestResourceCRUD:
                 uid,
                 'DELETE {} INSERT {<> a <http://ex.org/ns#Hello> .} WHERE {}')
 
-        mds = MetadataStore()
-        cksum2 = mds.get_checksum(nsc['fcres'][uid])
+        cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
         assert cksum1 != cksum2
 
         rsrc_api.delete(uid)
 
-        mds = MetadataStore()
-        cksum3 = mds.get_checksum(nsc['fcres'][uid])
+        cksum3 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
         assert cksum3 is None
 

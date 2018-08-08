@@ -75,7 +75,7 @@ class AppGlobals:
         self._config = config
         self._rdfly = rdfly_cls(app_conf['store']['ldp_rs'])
         self._nonrdfly = nonrdfly_cls(app_conf['store']['ldp_nr'])
-        self._mdstore = MetadataStore(path.join(
+        self._md_store = MetadataStore(path.join(
                 app_conf['data_dir'], 'metadata'), create=True)
         self._changelog = deque()
 
@@ -129,7 +129,7 @@ class AppGlobals:
 
     @property
     def md_store(self):
-        return self._mdstore
+        return self._md_store
         """
         Metadata store (LMDB).
 

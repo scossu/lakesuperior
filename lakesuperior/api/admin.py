@@ -22,8 +22,8 @@ def stats():
     :return: Store statistics, resource statistics.
     """
     import lakesuperior.env_setup
-    repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
     with env.app_globals.rdf_store.txn_ctx():
+        repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
         repo_stats['store_stats'] = env.app_globals.rdf_store.stats()
 
     return repo_stats
