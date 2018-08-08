@@ -140,6 +140,11 @@ cdef class BaseLmdbStore:
         return self._open
 
 
+    @property
+    def readers(self):
+        return self._readers
+
+
     def open_env(self, create):
         """
         Open, and optionally create, store environment.
@@ -176,16 +181,19 @@ cdef class BaseLmdbStore:
         _check(rc, 'Error setting max. databases: {}')
 
         # Set max readers.
-        self.readers = self.options.get('max_spare_txns', False)
-        if not self.readers:
-            self.readers = (
+        self._readers = self.options.get('max_spare_txns', False)
+        if not self._readers:
+            self._readers = (
                     env.wsgi_options['workers']
                     if getattr(env, 'wsgi_options', False)
                     else 1)
-            logger.info('Max LMDB readers: {}'.format(self.readers))
-        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self.readers)
-        logger.debug('Max. readers: {}'.format(self.readers))
+            logger.info('Max LMDB readers: {}'.format(self._readers))
+        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
+        logger.debug('Max. readers: {}'.format(self._readers))
         _check(rc, 'Error setting max. readers: {}')
+
+        # Clear stale readers.
+        self._clear_stale_readers()
 
         # Open DB environment.
         rc = lmdb.mdb_env_open(
@@ -195,6 +203,17 @@ cdef class BaseLmdbStore:
 
         self._init_dbis(create)
         self._open = True
+
+
+    cdef void _clear_stale_readers(self) except *:
+        """
+        Clear stale readers.
+        """
+        cdef int stale_readers
+
+        _check(lmdb.mdb_reader_check(self.dbenv, &stale_readers))
+        if stale_readers > 0:
+            logger.debug('Cleared {} stale readers.'.format(stale_readers))
 
 
     cdef void _init_dbis(self, create=True) except *:
@@ -234,6 +253,8 @@ cdef class BaseLmdbStore:
                     self._txn_commit()
                 else:
                     self._txn_abort()
+
+            self._clear_stale_readers()
 
             PyMem_Free(self.dbis)
             lmdb.mdb_env_close(self.dbenv)
@@ -485,7 +506,6 @@ cdef class BaseLmdbStore:
             entries = stat.ms_entries
             db_stats[dblabel.encode()] = <dict>stat
 
-        logger.debug('raw stats: {}'.format(db_stats))
         return {
             'env_stats': env_stats,
             'env_size': os.stat(self.env_path).st_size,
@@ -504,8 +524,8 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        logger.info('Opening {} transaction'.format(
-            'RW' if write else 'RO'))
+        #logger.info('Opening {} transaction'.format(
+        #    'RW' if write else 'RO'))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
         logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
@@ -514,27 +534,28 @@ cdef class BaseLmdbStore:
     cdef void _txn_commit(self) except *:
         if self.txn == NULL:
             logger.warning('txn is NULL!')
-        else:
-            logger.info('Attempting to commit transaction @ {:x}.'.format(<unsigned long>self.txn))
+        #else:
+        #    logger.info('Attempting to commit transaction @ {:x}.'.format(<unsigned long>self.txn))
             rc = lmdb.mdb_txn_commit(self.txn)
-            logger.info('Transaction committed.')
+            logger.info('Transaction @ {:x} committed.'.format(
+                <unsigned long>self.txn))
             try:
                 _check(rc, 'Error committing transaction.')
                 self.txn = NULL
                 self.is_txn_rw = None
             except:
-                logger.info('Attempting to abort transaction.')
+                #logger.info('Attempting to abort transaction.')
                 self._txn_abort()
-                logger.info('Transaction aborted.')
                 raise
 
 
     cdef void _txn_abort(self) except *:
-        logger.info('Attempting to abort transaction @ {:x}.'.format(<unsigned long>self.txn))
+        #logger.info('Attempting to abort transaction @ {:x}.'.format(<unsigned long>self.txn))
         lmdb.mdb_txn_abort(self.txn)
         self.txn = NULL
         self.is_txn_rw = None
-        logger.info('Transaction aborted.')
+        logger.info('Transaction @ {:x} aborted.'.format(
+            <unsigned long>self.txn))
 
 
     cpdef int txn_id(self):
@@ -573,18 +594,18 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(dblabel, txn=txn)
 
-        logger.info('Opening cursor for DB {} (DBI {})...'.format(dblabel, dbi))
+        #logger.info('Opening cursor for DB {} (DBI {})...'.format(dblabel, dbi))
         rc = lmdb.mdb_cursor_open(txn, dbi, &cur)
         _check(rc, 'Error opening cursor: {}'.format(dblabel))
-        logger.info('...opened @ {:x}.'.format(<unsigned long>cur))
+        #logger.info('...opened @ {:x}.'.format(<unsigned long>cur))
 
         return cur
 
 
     cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:
         """Close a cursor."""
-        logger.info('Closing cursor @ {:x} for DBI {}...'.format(
-            <unsigned long>cur, lmdb.mdb_cursor_dbi(cur) ))
+        #logger.info('Closing cursor @ {:x} for DBI {}...'.format(
+        #    <unsigned long>cur, lmdb.mdb_cursor_dbi(cur) ))
         lmdb.mdb_cursor_close(cur)
-        logger.info('...closed.')
+        #logger.info('...closed.')
 

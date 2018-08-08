@@ -15,12 +15,13 @@ cdef:
 cdef class BaseLmdbStore:
     cdef:
         public bint _open
-        unsigned int readers
+        unsigned int _readers
         bytes dbpath
         lmdb.MDB_dbi *dbis
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
 
+        void _clear_stale_readers(self) except *
         void _cur_close(self, lmdb.MDB_cursor *cur) except *
         void _init_dbis(self, create=*) except *
         void _txn_begin(self, write=*, lmdb.MDB_txn *parent=*) except *

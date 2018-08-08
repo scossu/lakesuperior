@@ -1,3 +1,4 @@
+import logging
 import pytest
 
 from os import makedirs, path
@@ -57,3 +58,7 @@ def rnd_img():
     return random_image(8, 256)
 
 
+@pytest.fixture(autouse=True)
+def disable_logging():
+    """Disable logging in all tests."""
+    logging.disable(logging.INFO)

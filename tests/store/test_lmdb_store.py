@@ -606,7 +606,10 @@ class TestTransactions:
 #
 #    @pytest.fixture
 #    def sample_gr(self):
-#        return Graph().parse('''
+#        from rdflib import Graph, plugin
+#        from rdflib.store import Store
+#        store = plugin.get('Lmdb', Store)('/tmp/rdflibtest')
+#        return Graph(store).parse('''
 #        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 #        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 #        @prefix : <http://test/> .
@@ -615,8 +618,9 @@ class TestTransactions:
 #        :a :d :c .
 #        ''', format='n3')
 #
-#    def _test_basic(self, sample_gr):
-#        with store.txn_ctx():
+#    def test_basic(self, sample_gr):
+#        from rdflib.namespace import RDF
+#        with sample_gr.store.txn_ctx():
 #            implies = URIRef("http://www.w3.org/2000/10/swap/log#implies")
 #            a = URIRef('http://test/a')
 #            b = URIRef('http://test/b')
@@ -661,6 +665,7 @@ class TestTransactions:
 #                formulaBContext=Context(g,formulaB)
 #                g.remove_context(formulaB)
 #                assert len(list(g.triples((None,RDF.type,None))))==2
-#                assert len(g)==3 assert len(formulaBContext)==0
+#                assert len(g)==3
+#                assert len(formulaBContext)==0
 #                g.remove((None,None,None))
 #                assert len(g)==0
