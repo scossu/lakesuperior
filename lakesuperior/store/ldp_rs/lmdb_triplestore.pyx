@@ -1350,12 +1350,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     def from_key(self, key):
         logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
-        try:
-            ret = self._from_key(key, len(key))
-        except:
-            raise RuntimeError('Error looking for key: {}'.format(key))
-        logger.debug('Ret in public function: {}'.format(ret))
-        return ret
+        return self._from_key(key, len(key))
 
 
     cdef tuple _from_key(self, unsigned char *key, Py_ssize_t size):
@@ -1365,7 +1360,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param Key key: The key to be converted.
         """
         cdef:
-            unsigned char *pk_t
             Py_ssize_t i
             unsigned char subkey[KLEN]
 
@@ -1381,16 +1375,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         self.txn, self.get_dbi('t:st'), &key_v, &data_v),
                     'Error getting data for key \'{}\'.'.format(key))
 
-            pk_t = <unsigned char *>PyMem_Malloc(data_v.mv_size)
-            if pk_t == NULL:
-                raise MemoryError()
-            try:
-                memcpy(pk_t, data_v.mv_data, data_v.mv_size)
-                pk = bytes(pk_t[: data_v.mv_size])
-                py_term = pickle.loads(pk)
-                ret.append(py_term)
-            finally:
-                PyMem_Free(pk_t)
+            pk = bytes((<unsigned char *>data_v.mv_data)[: data_v.mv_size])
+            py_term = pickle.loads(pk)
+            ret.append(py_term)
         logger.debug('Ret: {}'.format(ret))
 
         return tuple(ret)
@@ -1410,9 +1397,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Hash thash
         pk_t = self._pickle(term)
-        logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, len(pk_t)))
+        #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, len(pk_t)))
         _hash(pk_t, len(pk_t), &thash)
-        logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
+        #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash
         key_v.mv_size = HLEN
 
