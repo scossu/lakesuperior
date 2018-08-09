@@ -308,9 +308,9 @@ cdef class BaseLmdbStore:
             try:
                 self._txn_begin(write=write)
                 self.is_txn_rw = write
-                logger.debug('before yield')
+                logger.debug('In txn_ctx, before yield')
                 yield
-                logger.debug('after yield')
+                logger.debug('In txn_ctx, after yield')
                 self._txn_commit()
                 logger.debug('after _txn_commit')
             except:
@@ -524,8 +524,8 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        #logger.info('Opening {} transaction'.format(
-        #    'RW' if write else 'RO'))
+        logger.info('Opening {} transaction'.format(
+            'RW' if write else 'RO'))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
         logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
@@ -534,28 +534,24 @@ cdef class BaseLmdbStore:
     cdef void _txn_commit(self) except *:
         if self.txn == NULL:
             logger.warning('txn is NULL!')
-        #else:
-        #    logger.info('Attempting to commit transaction @ {:x}.'.format(<unsigned long>self.txn))
-            rc = lmdb.mdb_txn_commit(self.txn)
-            logger.info('Transaction @ {:x} committed.'.format(
-                <unsigned long>self.txn))
-            try:
-                _check(rc, 'Error committing transaction.')
-                self.txn = NULL
-                self.is_txn_rw = None
-            except:
-                #logger.info('Attempting to abort transaction.')
-                self._txn_abort()
-                raise
+
+        txid = '{:x}'.format(<unsigned long>self.txn)
+        try:
+            _check(lmdb.mdb_txn_commit(self.txn))
+            logger.info('Transaction @ {} committed.'.format(txid))
+            self.txn = NULL
+            self.is_txn_rw = None
+        except:
+            self._txn_abort()
+            raise
 
 
     cdef void _txn_abort(self) except *:
-        #logger.info('Attempting to abort transaction @ {:x}.'.format(<unsigned long>self.txn))
+        txid = '{:x}'.format(<unsigned long>self.txn)
         lmdb.mdb_txn_abort(self.txn)
         self.txn = NULL
         self.is_txn_rw = None
-        logger.info('Transaction @ {:x} aborted.'.format(
-            <unsigned long>self.txn))
+        logger.info('Transaction @ {} aborted.'.format(txid))
 
 
     cpdef int txn_id(self):
