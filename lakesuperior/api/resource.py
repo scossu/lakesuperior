@@ -303,7 +303,7 @@ def delete(uid, soft=True, inbound=True):
     # to break them.
     refint = env.app_globals.rdfly.config['referential_integrity']
     inbound = True if refint else inbound
-    repr_opts = {'incl_inbound' : True} if refint else {}
+    repr_opts = {'incl_inbound' : True} if inbound else {}
 
     rsrc = LdpFactory.from_stored(uid, repr_opts, strict=soft)
     if soft:

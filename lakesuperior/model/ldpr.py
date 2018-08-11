@@ -517,12 +517,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Remove all traces of a resource and versions.
         """
-        logger.info('Purging resource {}'.format(self.uid))
-        refint = rdfly.config['referential_integrity']
-        inbound = True if refint else inbound
-
-        for desc_uri in rdfly.get_descendants(self.uid):
-            rdfly.forget_rsrc(rdfly.uri_to_uid(desc_uri), inbound)
+        logger.info('Forgetting resource {}'.format(self.uid))
 
         rdfly.forget_rsrc(self.uid, inbound)
 

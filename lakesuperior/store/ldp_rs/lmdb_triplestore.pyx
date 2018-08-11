@@ -471,6 +471,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             spok_v.mv_size = TRP_KLEN
             # If context was specified, remove only associations with that context.
             if context is not None:
+                logger.debug('Removing triples in matching context.')
                 ck_v.mv_data = ck
                 ck_v.mv_size = KLEN
                 while i < match_set.ct:
@@ -511,6 +512,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             # If no context is specified, remove all associations.
             else:
+                logger.debug('Removing triples in all contexts.')
                 # Loop over all SPO matching the triple pattern.
                 while i < match_set.ct:
                     memcpy(
@@ -645,19 +647,23 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Remove all triples and indices associated with the graph.
         self._remove((None, None, None), gr_uri)
+        # Remove the graph if it is in triples.
+        self._remove((gr_uri, None, None))
+        self._remove((None, None, gr_uri))
 
         # Clean up all terms related to the graph.
         pk_c = self._pickle(gr_uri)
         _hash(pk_c, len(pk_c), &chash)
         self._to_key(gr_uri, &ck)
 
-        ck_v.mv_data = ck
         ck_v.mv_size = KLEN
-        chash_v.mv_data = chash
         chash_v.mv_size = HLEN
         try:
+            ck_v.mv_data = ck
             _check(lmdb.mdb_del(self.txn, self.get_dbi(b'c:'), &ck_v, NULL))
+            ck_v.mv_data = ck
             _check(lmdb.mdb_del(self.txn, self.get_dbi(b't:st'), &ck_v, NULL))
+            chash_v.mv_data = chash
             _check(lmdb.mdb_del(self.txn, self.get_dbi(b'th:t'), &chash_v, NULL))
         except KeyNotFoundError:
             pass

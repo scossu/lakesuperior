@@ -475,14 +475,13 @@ class RsrcCentricLayout:
         """
         # Localize variables to be used in loops.
         uri = nsc['fcres'][uid]
-        topic_uri = nsc['foaf'].primaryTopic
         uid_fn = self.uri_to_uid
 
-        # remove children.
+        # remove children and descendants.
         if children:
-            logger.debug('Purging children for /{}'.format(uid))
-            for rsrc_uri in self.get_descendants(uid, False):
-                self.forget_rsrc(uid_fn(rsrc_uri), inbound, False)
+            logger.debug('Forgetting offspring of {}'.format(uid))
+            for desc_uri in self.get_descendants(uid, False):
+                self.forget_rsrc(uid_fn(desc_uri), inbound, False)
             # Remove structure graph.
             self.ds.remove_graph(nsc['fcstruct'][uid])
 
