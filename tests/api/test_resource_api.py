@@ -458,6 +458,38 @@ class TestResourceCRUD:
                 rsrc_api.resurrect('{}/child{}'.format(uid, i))
 
 
+    def test_hard_delete_descendants(self):
+        """
+        Forget a resource with all its descendants.
+        """
+        uid = '/test_hard_delete_children02'
+        rsrc_api.create_or_replace(uid)
+        for i in range(1, 4):
+            rsrc_api.create_or_replace('{}/child{}'.format(uid, i))
+            for j in range(i):
+                rsrc_api.create_or_replace('{}/child{}/grandchild{}'.format(
+                    uid, i, j))
+        rsrc_api.delete(uid, False)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.get(uid)
+        with pytest.raises(ResourceNotExistsError):
+            rsrc_api.resurrect(uid)
+
+        for i in range(1, 4):
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.get('{}/child{}'.format(uid, i))
+            with pytest.raises(ResourceNotExistsError):
+                rsrc_api.resurrect('{}/child{}'.format(uid, i))
+
+            for j in range(i):
+                with pytest.raises(ResourceNotExistsError):
+                    rsrc_api.get('{}/child{}/grandchild{}'.format(
+                        uid, i, j))
+                with pytest.raises(ResourceNotExistsError):
+                    rsrc_api.resurrect('{}/child{}/grandchild{}'.format(
+                        uid, i, j))
+
+
     def test_checksum(self):
         """
         Verify that a checksum is created and updated appropriately.

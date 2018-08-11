@@ -3,7 +3,7 @@ import pytest
 from os import path
 from shutil import rmtree
 
-from rdflib import Namespace, URIRef
+from rdflib import Graph, Namespace, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
@@ -531,6 +531,8 @@ class TestContext:
             store.add(trp3, gr_uri)
             store.add(trp4) # Goes to the default graph.
 
+        # Quick size checks.
+        with store.txn_ctx():
             assert len(set(store.triples((None, None, None)))) == 5
             assert len(set(store.triples((None, None, None),
                 RDFLIB_DEFAULT_GRAPH_URI))) == 2
@@ -546,6 +548,18 @@ class TestContext:
             assert trp3 in _clean(store.triples((None, None, None), gr2_uri))
             assert trp3 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
+
+        # Verify that contexts are in the right place.
+        with store.txn_ctx():
+            # trp3 is in both graphs.
+            res_no_ctx = store.triples(trp3)
+            res_ctx = store.triples(trp3, gr2_uri)
+            for res in res_no_ctx:
+                assert Graph(identifier=gr_uri) in res[1]
+                assert Graph(identifier=gr2_uri) in res[1]
+            for res in res_ctx:
+                assert Graph(identifier=gr_uri) in res[1]
+                assert Graph(identifier=gr2_uri) in res[1]
 
 
     def test_delete_from_ctx(self, store):
@@ -586,6 +600,41 @@ class TestContext:
             assert len(set(store.triples((None, None, None)))) == 0
             assert len(set(store.triples((None, None, None), gr_uri))) == 0
             assert len(store) == 0
+
+
+    def test_remove_shared_ctx(self, store):
+        """
+        Remove a context that shares triples with another one.
+        """
+        trp1 = (
+                URIRef('urn:bogus:shared_s:1'), URIRef('urn:bogus:shared_p:1'),
+                URIRef('urn:bogus:shared_o:1'))
+        trp2 = (
+                URIRef('urn:bogus:shared_s:2'), URIRef('urn:bogus:shared_p:2'),
+                URIRef('urn:bogus:shared_o:2'))
+        trp3 = (
+                URIRef('urn:bogus:shared_s:3'), URIRef('urn:bogus:shared_p:3'),
+                URIRef('urn:bogus:shared_o:3'))
+        ctx1 = URIRef('urn:bogus:shared_graph#a')
+        ctx2 = URIRef('urn:bogus:shared_graph#b')
+
+        with store.txn_ctx(True):
+            store.add(trp1, ctx1)
+            store.add(trp2, ctx1)
+            store.add(trp2, ctx2)
+            store.add(trp3, ctx2)
+
+        with store.txn_ctx(True):
+            store.remove_graph(ctx1)
+
+        with store.txn_ctx():
+            assert len(set(store.triples(trp1))) == 0
+            assert len(set(store.triples(trp2))) == 1
+            assert len(set(store.triples(trp3))) == 1
+
+
+
+
 
 
 @pytest.mark.usefixtures('store')
