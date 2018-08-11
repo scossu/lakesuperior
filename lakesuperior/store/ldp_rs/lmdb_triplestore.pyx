@@ -880,6 +880,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 self._cur_close(icur)
         # Unfiltered lookup. No context checked.
         else:
+            logger.debug('No context in query.')
             res = self._lookup(triple_pattern)
             logger.debug('Res data before _triple_keys return: {}'.format(
                 res.data[: res.size]))
@@ -897,14 +898,20 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             TripleKey spok
             lmdb.MDB_stat db_stat
             size_t ct = 0, i = 0
+            lmdb.MDB_val spok_v, ck_v
+
         s, p, o = triple_pattern
 
         if s is not None:
             if p is not None:
                 # s p o
                 if o is not None:
+                    spok_v.mv_data = spok
+                    spok_v.mv_size = TRP_KLEN
                     try:
                         self._to_triple_key(triple_pattern, &spok)
+                        _check(lmdb.mdb_get(
+                            self.txn, self.get_dbi('spo:c'), &spok_v, &ck_v))
                     except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
 
