@@ -396,9 +396,9 @@ class RsrcCentricLayout:
         ptopic_uri = nsc['foaf'].primaryTopic
 
         yield from (
-            (match[:3] if full_triple else match[0])
-            for match in self.ds.quads((None, None, subj_uri, None))
-            if set(meta_gr[ : ptopic_uri : match[0]])
+            (match[0] if full_triple else match[0][0])
+            for match in self.ds.triples((None, None, subj_uri))
+            if set(meta_gr[ : ptopic_uri : match[0][0]])
         )
 
 

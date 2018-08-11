@@ -198,18 +198,15 @@ class LmdbStore(LmdbTriplestore, Store):
         logger.debug(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
         for spok in self.triple_keys(triple_pattern, context):
-            if context is not None:
-                contexts = (Graph(identifier=context),)
+            logger.debug('spok: {}'.format(spok))
+            if self.key_exists(spok, 'spo:c', new_txn=False):
+                logger.debug('preparing contexts.')
+                contexts = tuple(
+                    Graph(identifier=self.from_key(ck)[0], store=self)
+                    for ck in self.get_dup_data(spok, 'spo:c'))
+                logger.debug('contexts: {}'.format(contexts))
             else:
-                logger.debug('spok: {}'.format(spok))
-                if self.key_exists(spok, 'spo:c', new_txn=False):
-                    logger.debug('preparing contexts.')
-                    contexts = tuple(
-                        Graph(identifier=self.from_key(ck)[0], store=self)
-                        for ck in self.get_dup_data(spok, 'spo:c'))
-                    logger.debug('contexts: {}'.format(contexts))
-                else:
-                    contexts = (Graph(identifier=context),)
+                contexts = (Graph(identifier=context),)
 
             logger.debug('Triple keys before yield: {}: {}.'.format(
                 spok, contexts))
