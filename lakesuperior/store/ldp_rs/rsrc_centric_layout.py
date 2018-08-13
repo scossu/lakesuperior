@@ -480,7 +480,7 @@ class RsrcCentricLayout:
         # remove children and descendants.
         if children:
             logger.debug('Forgetting offspring of {}'.format(uid))
-            for desc_uri in self.get_descendants(uid, False):
+            for desc_uri in self.get_descendants(uid):
                 self.forget_rsrc(uid_fn(desc_uri), inbound, False)
             # Remove structure graph.
             self.ds.remove_graph(nsc['fcstruct'][uid])
