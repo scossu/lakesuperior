@@ -200,7 +200,7 @@ class LmdbStore(LmdbTriplestore, Store):
         for spok in self.triple_keys(triple_pattern, context):
             logger.debug('spok: {}'.format(spok))
             if self.key_exists(spok, 'spo:c', new_txn=False):
-                logger.debug('preparing contexts.')
+                #logger.debug('preparing contexts.')
                 contexts = tuple(
                     Graph(identifier=self.from_key(ck)[0], store=self)
                     for ck in self.get_dup_data(spok, 'spo:c'))

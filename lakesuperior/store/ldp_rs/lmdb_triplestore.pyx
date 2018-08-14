@@ -1224,9 +1224,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_stat stat
 
         idx_label = self.lookup_indices['spo'.index(term_type)]
+        logger.debug('Looking for all terms in index: {}'.format(idx_label))
         icur = self._cur_open(idx_label)
         try:
             _check(lmdb.mdb_stat(self.txn, lmdb.mdb_cursor_dbi(icur), &stat))
+            # TODO: This may allocate memory for several times the amount
+            # needed. Even though it is resized later, we need to know how
+            # performance is affected by this.
             ret = ResultSet(stat.ms_entries, KLEN)
 
             try:
@@ -1243,6 +1247,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 try:
                     _check(rc)
                 except KeyNotFoundError:
+                    ret.resize(i + 1)
                     return ret
                 i += 1
         finally:

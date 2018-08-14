@@ -226,19 +226,19 @@ class RsrcCentricLayout:
         store.close()
 
 
-    def get_raw(self, uri, ctx=None):
+    def get_raw(self, subject, ctx=None):
         """
         Get a raw graph of a non-LDP resource.
 
         The graph is queried across all contexts or within a specific one.
 
-        :param rdflib.term.URIRef s: URI of the subject.
+        :param rdflib.term.URIRef subject: URI of the subject.
         :param rdflib.term.URIRef ctx: URI of the optional context. If None,
             all named graphs are queried.
 
         :rtype: rdflib.Graph
         """
-        return self.store.triples((nsc['fcres'][uid], None, None), ctx)
+        return self.store.triples((subject, None, None), ctx)
 
 
     def count_rsrc(self):

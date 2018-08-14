@@ -39,7 +39,6 @@ class TestAdminApi:
         with store.txn_ctx(True):
             store.remove((URIRef('info:fcres/test_refint1'), None, None))
 
-        #import pdb; pdb.set_trace()
         check_res = admin_api.integrity_check()
 
         assert check_res != set()

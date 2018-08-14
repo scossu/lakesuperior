@@ -539,6 +539,8 @@ class TestResourceVersioning:
         }'''
         rsrc_api.create_or_replace(uid, rdf_data=rdf_data, rdf_fmt='turtle')
         ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
+        #FIXME Without this, the test fails.
+        set(rsrc_api.get_version(uid, ver_uid))
 
         rsrc_api.update(uid, update_str)
         current = rsrc_api.get(uid)
