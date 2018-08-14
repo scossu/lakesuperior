@@ -188,9 +188,9 @@ cdef class BaseLmdbStore:
                     if getattr(env, 'wsgi_options', False)
                     else 1)
             logger.info('Max LMDB readers: {}'.format(self._readers))
-        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
-        logger.debug('Max. readers: {}'.format(self._readers))
-        _check(rc, 'Error setting max. readers: {}')
+        #rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
+        #logger.debug('Max. readers: {}'.format(self._readers))
+        #_check(rc, 'Error setting max. readers: {}')
 
         # Clear stale readers.
         self._clear_stale_readers()
@@ -234,8 +234,8 @@ cdef class BaseLmdbStore:
                     flags = self.dbi_flags.get(dblabel, 0) | create_flag
                     rc = lmdb.mdb_dbi_open(
                             txn, dblabel.encode(), flags, &self.dbis[dbidx])
-                    logger.debug('Created DB {}: {}'.format(
-                        dblabel, self.dbis[dbidx]))
+                    #logger.debug('Created DB {}: {}'.format(
+                    #    dblabel, self.dbis[dbidx]))
             else:
                 rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
@@ -297,22 +297,22 @@ cdef class BaseLmdbStore:
         :rtype: lmdb.Transaction
         """
         if self.txn is not NULL:
-            logger.debug(
-                    'Transaction is already active. Not opening another one.')
-            logger.debug('before yield')
+            #logger.debug(
+            #        'Transaction is already active. Not opening another one.')
+            #logger.debug('before yield')
             yield
-            logger.debug('after yield')
+            #logger.debug('after yield')
         else:
-            logger.debug('Beginning {} transaction.'.format(
-                'RW' if write else 'RO'))
+            #logger.debug('Beginning {} transaction.'.format(
+            #    'RW' if write else 'RO'))
             try:
                 self._txn_begin(write=write)
                 self.is_txn_rw = write
-                logger.debug('In txn_ctx, before yield')
+                #logger.debug('In txn_ctx, before yield')
                 yield
-                logger.debug('In txn_ctx, after yield')
+                #logger.debug('In txn_ctx, after yield')
                 self._txn_commit()
-                logger.debug('after _txn_commit')
+                #logger.debug('after _txn_commit')
             except:
                 self._txn_abort()
                 raise
@@ -327,21 +327,21 @@ cdef class BaseLmdbStore:
         """
         if not self.is_open:
             raise RuntimeError('Store must be opened first.')
-        logger.debug('Beginning a {} transaction.'.format(
-            'read/write' if write else 'read-only'))
+        #logger.debug('Beginning a {} transaction.'.format(
+        #    'read/write' if write else 'read-only'))
 
         self._txn_begin(write=write)
 
 
     def commit(self):
         """Commit main transaction."""
-        logger.debug('Committing transaction.')
+        #logger.debug('Committing transaction.')
         self._txn_commit()
 
 
     def abort(self):
         """Abort main transaction."""
-        logger.debug('Rolling back transaction.')
+        #logger.debug('Rolling back transaction.')
         self._txn_abort()
 
 
@@ -377,15 +377,15 @@ cdef class BaseLmdbStore:
 
         key_v.mv_data = key
         key_v.mv_size = klen
-        logger.debug(
-                'Checking if key {} with size {} exists...'.format(key, klen))
+        #logger.debug(
+        #        'Checking if key {} with size {} exists...'.format(key, klen))
         try:
             _check(lmdb.mdb_get(
                 self.txn, self.get_dbi(dblabel), &key_v, &data_v))
         except KeyNotFoundError:
-            logger.debug('...no.')
+            #logger.debug('...no.')
             return False
-        logger.debug('...yes.')
+        #logger.debug('...yes.')
         return True
 
 
@@ -413,8 +413,8 @@ cdef class BaseLmdbStore:
         data_v.mv_data = data
         data_v.mv_size = data_size
 
-        logger.debug('Putting: {}, {} into DB {}'.format(key[: key_size],
-            data[: data_size], dblabel))
+        #logger.debug('Putting: {}, {} into DB {}'.format(key[: key_size],
+        #    data[: data_size], dblabel))
         rc = lmdb.mdb_put(txn, self.get_dbi(dblabel), &key_v, &data_v, flags)
         _check(rc, 'Error putting data: {}, {}'.format(
                 key[: key_size], data[: data_size]))

@@ -139,24 +139,24 @@ cdef class ResultSet:
         self.itemsize = itemsize
         self.size = self.itemsize * self.ct
 
-        logger.debug('Got malloc sizes: {}, {}'.format(ct, itemsize))
-        logger.debug(
-            'Allocating {0} ({1}x{2}) bytes of ResultSet data...'.format(
-                self.size, self.ct, self.itemsize))
+        #logger.debug('Got malloc sizes: {}, {}'.format(ct, itemsize))
+        #logger.debug(
+        #    'Allocating {0} ({1}x{2}) bytes of ResultSet data...'.format(
+        #        self.size, self.ct, self.itemsize))
         self.data = <unsigned char *>PyMem_Malloc(ct * itemsize)
         if not self.data:
             raise MemoryError()
-        logger.debug('...done allocating @ {0:x}.'.format(
-                <unsigned long>self.data))
+        #logger.debug('...done allocating @ {0:x}.'.format(
+        #        <unsigned long>self.data))
 
 
     def __dealloc__(self):
-        logger.debug(
-            'Releasing {0} ({1}x{2}) bytes of ResultSet @ {3:x}...'.format(
-                self.size, self.ct, self.itemsize,
-                <unsigned long>self.data))
+        #logger.debug(
+        #    'Releasing {0} ({1}x{2}) bytes of ResultSet @ {3:x}...'.format(
+        #        self.size, self.ct, self.itemsize,
+        #        <unsigned long>self.data))
         PyMem_Free(self.data)
-        logger.debug('...done releasing.')
+        #logger.debug('...done releasing.')
 
 
     cdef void resize(self, size_t ct) except *:
@@ -164,14 +164,14 @@ cdef class ResultSet:
         self.ct = ct
         self.size = self.itemsize * self.ct
 
-        logger.debug(
-            'Resizing ResultSet to {0} ({1}x{2}) bytes @ {3:x}...'.format(
-                self.itemsize * ct, ct, self.itemsize,
-                <unsigned long>self.data))
+        #logger.debug(
+        #    'Resizing ResultSet to {0} ({1}x{2}) bytes @ {3:x}...'.format(
+        #        self.itemsize * ct, ct, self.itemsize,
+        #        <unsigned long>self.data))
         tmp = <unsigned char *>PyMem_Realloc(self.data, ct * self.itemsize)
         if not tmp:
             raise MemoryError()
-        logger.debug('...done resizing.')
+        #logger.debug('...done resizing.')
 
         self.data = tmp
 
@@ -319,7 +319,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char nkey[KLEN]
             unsigned int term_sizes[4]
 
-        logger.debug('Trying to add a triple.')
+        #logger.debug('Trying to add a triple.')
         term_sizes = [len(pk_s), len(pk_p), len(pk_o), len(pk_c)]
 
         icur = self._cur_open('th:t')
@@ -332,17 +332,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('th:t'), &key_v, &data_v))
                     memcpy(keys + (i * KLEN), data_v.mv_data, KLEN)
-                    logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
+                    #logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
                 except KeyNotFoundError:
                     # If term is not found, add it...
-                    logger.debug('Hash {} not found. Adding to DB.'.format(
-                            thash[: HLEN]))
+                    #logger.debug('Hash {} not found. Adding to DB.'.format(
+                    #        thash[: HLEN]))
                     self._append(pk_t, term_sizes[i], &nkey, dblabel=b't:st')
                     memcpy(keys + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
-                    logger.debug('Indexing on th:t: {}: {}'.format(
-                            thash[: HLEN], nkey[: KLEN]))
+                    #logger.debug('Indexing on th:t: {}: {}'.format(
+                    #        thash[: HLEN], nkey[: KLEN]))
                     key_v.mv_data = thash
                     key_v.mv_size = HLEN
                     data_v.mv_data = nkey
@@ -352,13 +352,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         'Error setting key {}.'.format(thash))
         finally:
             self._cur_close(icur)
-            logger.debug('Triple add action completed.')
+            #logger.debug('Triple add action completed.')
 
         # Add context.
         # TODO We can avoid 2 memcpy's by copying directly to the destinations.
         memcpy(ck, keys + TRP_KLEN, KLEN)
         memcpy(spok, keys, TRP_KLEN)
-        logger.debug('spo: {} c: {}'.format(spok[: TRP_KLEN], ck[: KLEN]))
+        #logger.debug('spo: {} c: {}'.format(spok[: TRP_KLEN], ck[: KLEN]))
 
         spo_v.mv_data = spok
         spo_v.mv_size = TRP_KLEN
@@ -367,14 +367,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         null_v.mv_data = b''
         null_v.mv_size = 0
 
-        logger.debug('Adding context.')
+        #logger.debug('Adding context.')
         try:
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:'), &c_v, &null_v,
                 lmdb.MDB_NOOVERWRITE))
         except KeyExistsError:
             pass
-        logger.debug('Added c:.')
+        #logger.debug('Added c:.')
         try:
             # Add triple:context association.
             _check(lmdb.mdb_put(
@@ -382,7 +382,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
-        logger.debug('Added spo:c.')
+        #logger.debug('Added spo:c.')
         try:
             # Index context:triple association.
             _check(lmdb.mdb_put(
@@ -390,9 +390,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
-        logger.debug('Added c:spo.')
+        #logger.debug('Added c:spo.')
 
-        logger.debug('All main data entered. Indexing.')
+        #logger.debug('All main data entered. Indexing.')
         self._index_triple(IDX_OP_ADD, spok)
 
 
@@ -415,11 +415,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *ck_cur
 
         _hash(pk_c, pk_size, &c_hash)
-        logger.debug('Adding a graph.')
+        #logger.debug('Adding a graph.')
         if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
             if self.is_txn_rw:
-                logger.debug('Working in existing RW transaction.')
+                #logger.debug('Working in existing RW transaction.')
                 # Use existing R/W transaction.
                 # Main entry.
                 self._append(pk_c, pk_size, &ck, b't:st')
@@ -429,7 +429,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 self._put(ck, KLEN, b'', 0, 'c:')
             else:
                 # Open new R/W transactions.
-                logger.debug('Opening a temporary RW transaction.')
+                #logger.debug('Opening a temporary RW transaction.')
                 _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &tmp_txn))
                 try:
                     self._append(
@@ -439,7 +439,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # Add to list of contexts.
                     self._put(ck, KLEN, b'', 0, b'c:', txn=tmp_txn)
                     _check(lmdb.mdb_txn_commit(tmp_txn))
-                    logger.debug('Temp RW transaction closed.')
+                    #logger.debug('Temp RW transaction closed.')
                 except:
                     lmdb.mdb_txn_abort(tmp_txn)
                     raise
@@ -452,7 +452,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Key ck
             lmdb.MDB_val spok_v, ck_v
 
-        logger.debug('Removing triple: {}'.format(triple_pattern))
+        #logger.debug('Removing triple: {}'.format(triple_pattern))
         if context is not None:
             try:
                 self._to_key(context, &ck)
@@ -471,7 +471,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             spok_v.mv_size = TRP_KLEN
             # If context was specified, remove only associations with that context.
             if context is not None:
-                logger.debug('Removing triples in matching context.')
+                #logger.debug('Removing triples in matching context.')
                 ck_v.mv_data = ck
                 ck_v.mv_size = KLEN
                 while i < match_set.ct:
@@ -512,7 +512,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             # If no context is specified, remove all associations.
             else:
-                logger.debug('Removing triples in all contexts.')
+                #logger.debug('Removing triples in all contexts.')
                 # Loop over all SPO matching the triple pattern.
                 while i < match_set.ct:
                     memcpy(
@@ -560,9 +560,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         i += 1
 
         finally:
-            logger.debug('Closing spo:c in _remove.')
+            #logger.debug('Closing spo:c in _remove.')
             self._cur_close(dcur)
-            logger.debug('Closing c:spo in _remove.')
+            #logger.debug('Closing c:spo in _remove.')
             self._cur_close(icur)
 
 
@@ -601,7 +601,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_size = DBL_KLEN
 
-        logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
+        #logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
         while i < 3:
             icur = self._cur_open(self.lookup_indices[i])
             try:
@@ -609,7 +609,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = data[i]
 
                 if op == IDX_OP_REMOVE:
-                    logger.debug('Index remove operation.')
+                    #logger.debug('Index remove operation.')
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
@@ -618,7 +618,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     else:
                         _check(lmdb.mdb_cursor_del(icur, 0))
                 elif op == IDX_OP_ADD:
-                    logger.debug('Index add operation.')
+                    #logger.debug('Index add operation.')
                     try:
                         _check(lmdb.mdb_cursor_put(
                                 icur, &key_v, &data_v, lmdb.MDB_NODUPDATA))
@@ -642,8 +642,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char ck[KLEN]
             lmdb.MDB_val ck_v, chash_v
 
-        logger.debug('Deleting context: {}'.format(gr_uri))
-        logger.debug('Pickled context: {}'.format(self._pickle(gr_uri)))
+        #logger.debug('Deleting context: {}'.format(gr_uri))
+        #logger.debug('Pickled context: {}'.format(self._pickle(gr_uri)))
 
         # Remove all triples and indices associated with the graph.
         self._remove((None, None, None), gr_uri)
@@ -675,9 +675,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get all duplicate values for a key. Python-facing method.
         """
-        logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
+        #logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
         ret = self._get_dup_data(key, len(key), dblabel.encode()).to_tuple()
-        logger.debug('Dup data as tuple: {}'.format(ret))
+        #logger.debug('Dup data as tuple: {}'.format(ret))
         return ret
 
 
@@ -687,19 +687,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get all duplicate values for a key.
         """
-        logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
-                key[: ksize], dblabel.decode()))
+        #logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
+        #        key[: ksize], dblabel.decode()))
         cdef:
             size_t ct, i = 0
             unsigned int dbflags
             ResultSet ret
             lmdb.MDB_cursor *cur
 
-        logger.debug('DB label: {}'.format(dblabel.decode()))
+        #logger.debug('DB label: {}'.format(dblabel.decode()))
         key_v.mv_data = key
         key_v.mv_size = ksize
-        logger.debug('Key: {}'.format(key[: ksize]))
-        logger.debug('Key size: {}'.format(ksize))
+        #logger.debug('Key: {}'.format(key[: ksize]))
+        #logger.debug('Key size: {}'.format(ksize))
 
         cur = self._cur_open(dblabel)
         try:
@@ -716,14 +716,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             _check(lmdb.mdb_cursor_count(cur, &ct))
             ret = ResultSet(ct, data_v.mv_size)
-            logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
+            #logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
 
             while True:
                 memcpy(
                         ret.data + i * ret.itemsize, data_v.mv_data,
                         ret.itemsize)
-                logger.debug('Data in row: {}'.format(
-                    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
+                #logger.debug('Data in row: {}'.format(
+                #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
                 rc = lmdb.mdb_cursor_get(
                     cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
@@ -734,8 +734,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 i += 1
 
-            logger.debug('Total data in _get_dup_data: {}'.format(
-                ret.data[: ret.size]))
+            #logger.debug('Total data in _get_dup_data: {}'.format(
+            #    ret.data[: ret.size]))
             return ret
         finally:
             self._cur_close(cur)
@@ -747,7 +747,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         ret = self._triple_keys(triple_pattern, context)
         #logger.debug('All triple keys: {}'.format(ret.data[: ret.size]))
-        logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
+        #logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
         return ret.to_tuple()
 
 
@@ -787,7 +787,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 # s p o c
                 if all(triple_pattern):
-                    logger.debug('Lookup: s p o c')
+                    #logger.debug('Lookup: s p o c')
                     for i, term in enumerate(triple_pattern):
                         try:
                             self._to_key(term, &tk)
@@ -800,16 +800,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             return ResultSet(0, TRP_KLEN)
                     data_v.mv_data = spok
                     data_v.mv_size = TRP_KLEN
-                    logger.debug(
-                            'Found spok {}. Matching with context {}'.format(
-                                (<TripleKey>data_v.mv_data)[: TRP_KLEN],
-                                (<Key>key_v.mv_data)[: KLEN]))
+                    #logger.debug(
+                    #        'Found spok {}. Matching with context {}'.format(
+                    #            (<TripleKey>data_v.mv_data)[: TRP_KLEN],
+                    #            (<Key>key_v.mv_data)[: KLEN]))
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
                     except KeyNotFoundError:
                         # Triple not found.
-                        logger.debug('spok / ck pair not found.')
+                        #logger.debug('spok / ck pair not found.')
                         return ResultSet(0, TRP_KLEN)
                     ret = ResultSet(1, TRP_KLEN)
                     memcpy(ret.data, spok, TRP_KLEN)
@@ -819,7 +819,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # ? ? ? c
                 elif not any(triple_pattern):
                     # Get all triples from the context
-                    logger.debug('Lookup: ? ? ? c')
+                    #logger.debug('Lookup: ? ? ? c')
                     try:
                         _check(lmdb.mdb_cursor_get(
                             icur, &key_v, &data_v, lmdb.MDB_SET_KEY))
@@ -847,29 +847,29 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     if res.ct == 0:
                         return ResultSet(0, TRP_KLEN)
 
-                    logger.debug('Allocating for context filtering.')
+                    #logger.debug('Allocating for context filtering.')
                     key_v.mv_data = ck
                     key_v.mv_size = KLEN
                     data_v.mv_size = TRP_KLEN
 
                     flt_res = ResultSet(res.ct, res.itemsize)
                     while j < res.ct:
-                        logger.debug('Checking row #{}'.format(flt_j))
+                        #logger.debug('Checking row #{}'.format(flt_j))
                         data_v.mv_data = res.data + j * res.itemsize
-                        logger.debug('Checking c:spo {}, {}'.format(
-                            (<unsigned char *>key_v.mv_data)[: key_v.mv_size],
-                            (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                        #logger.debug('Checking c:spo {}, {}'.format(
+                        #    (<unsigned char *>key_v.mv_data)[: key_v.mv_size],
+                        #    (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                         try:
                             # Verify that the triple is associated with the
                             # context being searched.
                             _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
                         except KeyNotFoundError:
-                            logger.debug('Discarding source[{}].'.format(j))
+                            #logger.debug('Discarding source[{}].'.format(j))
                             continue
                         else:
-                            logger.debug('Copying source[{}] to dest[{}].'.format(
-                                j, flt_j))
+                            #logger.debug('Copying source[{}] to dest[{}].'.format(
+                            #    j, flt_j))
                             memcpy(
                                     flt_res.data + res.itemsize * flt_j,
                                     res.data + res.itemsize * j, res.itemsize)
@@ -886,10 +886,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 self._cur_close(icur)
         # Unfiltered lookup. No context checked.
         else:
-            logger.debug('No context in query.')
+            #logger.debug('No context in query.')
             res = self._lookup(triple_pattern)
-            logger.debug('Res data before _triple_keys return: {}'.format(
-                res.data[: res.size]))
+            #logger.debug('Res data before _triple_keys return: {}'.format(
+            #    res.data[: res.size]))
             return res
 
 
@@ -1004,11 +1004,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._to_key(term, &luk)
         except KeyNotFoundError:
             return ResultSet(0, TRP_KLEN)
-        logging.debug('luk: {}'.format(luk))
+        #logging.debug('luk: {}'.format(luk))
 
         term_order = lookup_ordering[idx]
         icur = self._cur_open(self.lookup_indices[idx])
-        logging.debug('term order: {}'.format(term_order[: 3]))
+        #logging.debug('term order: {}'.format(term_order[: 3]))
         try:
             key_v.mv_data = luk
             key_v.mv_size = KLEN
@@ -1028,9 +1028,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             # Allocate memory for results.
             ret = ResultSet(ct, TRP_KLEN)
-            logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
-            logger.debug('First row: {}'.format(
-                    (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
+            #logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
+            #logger.debug('First row: {}'.format(
+            #        (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
 
             # Arrange results according to lookup order.
             asm_rng = [
@@ -1038,11 +1038,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 KLEN * term_order[1],
                 KLEN * term_order[2],
             ]
-            logger.debug('asm_rng: {}'.format(asm_rng[:3]))
-            logger.debug('luk: {}'.format(luk))
+            #logger.debug('asm_rng: {}'.format(asm_rng[:3]))
+            #logger.debug('luk: {}'.format(luk))
 
             while True:
-                logger.debug('i: {}'.format(i))
+                #logger.debug('i: {}'.format(i))
                 memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
                 memcpy(
                         ret.data + ret.itemsize * i + asm_rng[1],
@@ -1051,8 +1051,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         ret.data + ret.itemsize * i + asm_rng[2],
                         data_v.mv_data + KLEN, KLEN)
 
-                logger.debug('Data: {}'.format(
-                    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
+                #logger.debug('Data: {}'.format(
+                #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
                 rc = lmdb.mdb_cursor_get(
                         icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
@@ -1079,8 +1079,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :rtype: iterator(bytes)
         :return: SPO keys matching the pattern.
         """
-        logger.debug('idx1: {} idx2: {}'.format(idx1, idx2))
-        logger.debug('term1: {} term2: {}'.format(term1, term2))
+        #logger.debug('idx1: {} idx2: {}'.format(idx1, idx2))
+        #logger.debug('term1: {} term2: {}'.format(term1, term2))
         cdef:
             unsigned char fk_rng, fkp, lui, rk_rng, rkp
             unsigned char term_order[3]
@@ -1099,35 +1099,35 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # - fkp: The position of filter key in a (s, p, o) term (0÷2)
         # - rkp: The position of unbound key in a (s, p, o) term (0÷2)
         # These have to be selected in the order given by lookup_rank.
-        logger.debug('Begin 2bound setup.')
+        #logger.debug('Begin 2bound setup.')
         ludbl = None # Lookup DB label: s:po, p:so, or o:sp
         while i < 3:
-            logger.debug('i: {}'.format(i))
+            #logger.debug('i: {}'.format(i))
             lui = lookup_rank[i] # Lookup term index: 0÷2
-            logger.debug('term index handled (lui): {}'.format('spo'[lui]))
+            #logger.debug('term index handled (lui): {}'.format('spo'[lui]))
             if lui == idx1 or lui == idx2:
                 term = term1 if lui == idx1 else term2
-                logger.debug('Bound term being handled: {}'.format(term))
+                #logger.debug('Bound term being handled: {}'.format(term))
                 #luti = b'spo'[lui]
                 #logger.debug('luti: {}'.format(luti))
                 # First match is used to find the lookup DB.
                 if ludbl is None:
-                    logger.debug('ludbl is None. Looking for lookup key.')
+                    #logger.debug('ludbl is None. Looking for lookup key.')
                     #v_label = self.lookup_indices[luti]
                     # Lookup database key (cursor) name
                     ludbl = self.lookup_indices[lui]
                     term_order = lookup_ordering[lui][:3]
-                    logger.debug('term order: {}'.format(term_order[:3]))
+                    #logger.debug('term order: {}'.format(term_order[:3]))
                     # Term to look up (lookup key)
                     try:
                         self._to_key(term, &luk)
                     except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
-                    logger.debug('Lookup key (luk): {}'.format(luk[: KLEN]))
+                    #logger.debug('Lookup key (luk): {}'.format(luk[: KLEN]))
                 # Second match is the filter.
                 else:
-                    logger.debug('ludbl is {}. Looking for filter key.'.format(
-                        ludbl))
+                    #logger.debug('ludbl is {}. Looking for filter key.'.format(
+                    #    ludbl))
 
                     # Precompute the array slice points that are used in
                     # the loop.
@@ -1140,14 +1140,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     else:
                         fkp = 1
                         rkp = 0
-                    logger.debug('Filter subkey pos in result data: {}'.format(fkp))
-                    logger.debug('Remainder (unbound) subkey pos in result data: {}'.format(rkp))
+                    #logger.debug('Filter subkey pos in result data: {}'.format(fkp))
+                    #logger.debug('Remainder (unbound) subkey pos in result data: {}'.format(rkp))
                     # Fliter term
                     try:
                         self._to_key(term, &fk)
                     except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
-                    logger.debug('Filter key (fk): {}'.format(fk[: KLEN]))
+                    #logger.debug('Filter key (fk): {}'.format(fk[: KLEN]))
                     break
             # The index that does not match idx1 or idx2 is the unbound one.
             i += 1
@@ -1158,7 +1158,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             KLEN * term_order[fkp + 1],
             KLEN * term_order[rkp + 1],
         ]
-        logger.debug('asm_rng: {}'.format(asm_rng[:3]))
+        #logger.debug('asm_rng: {}'.format(asm_rng[:3]))
         fk_rng = KLEN * fkp
         rk_rng = KLEN * rkp
 
@@ -1182,11 +1182,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Iterate over ret and filter by second term.
             i = 0
             while True:
-                logger.debug('Match: {}'.format(
-                        (<unsigned char *>data_v.mv_data)[: DBL_KLEN]))
-                logger.debug('fk: {}'.format(fk[: KLEN]))
+                #logger.debug('Match: {}'.format(
+                #        (<unsigned char *>data_v.mv_data)[: DBL_KLEN]))
+                #logger.debug('fk: {}'.format(fk[: KLEN]))
                 if memcmp(data_v.mv_data + fk_rng, fk, KLEN) == 0:
-                    logger.debug('Assembling results.')
+                    #logger.debug('Assembling results.')
                     # Assemble result.
                     memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
                     memcpy(ret.data + ret.itemsize * i + asm_rng[1], fk, KLEN)
@@ -1195,8 +1195,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         ret.data + ret.itemsize * i + asm_rng[2],
                         data_v.mv_data + rk_rng, KLEN)
 
-                    logger.debug('Assembled match: {}'.format(
-                        ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
+                    #logger.debug('Assembled match: {}'.format(
+                    #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
                     i += 1
 
                 try:
@@ -1206,10 +1206,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     break
 
             # Shrink the array to the actual number of ret.
-            logger.debug('Resizing results to {} size.'.format(i))
+            #logger.debug('Resizing results to {} size.'.format(i))
             ret.resize(i)
 
-            logger.debug('Returning results from lookup_2bound.')
+            #logger.debug('Returning results from lookup_2bound.')
             return ret
         finally:
             self._cur_close(icur)
@@ -1224,7 +1224,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_stat stat
 
         idx_label = self.lookup_indices['spo'.index(term_type)]
-        logger.debug('Looking for all terms in index: {}'.format(idx_label))
+        #logger.debug('Looking for all terms in index: {}'.format(idx_label))
         icur = self._cur_open(idx_label)
         try:
             _check(lmdb.mdb_stat(self.txn, lmdb.mdb_cursor_dbi(icur), &stat))
@@ -1259,7 +1259,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Return all terms of a type (``s``, ``p``, or ``o``) in the store.
         """
         for key in self._all_term_keys(term_type).to_tuple():
-            logger.debug('Yielding: {}'.format(key))
+            #logger.debug('Yielding: {}'.format(key))
             yield self._from_key(key, KLEN)[0]
 
 
@@ -1284,7 +1284,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 ret.append((
                     (<unsigned char *>key_v.mv_data)[: key_v.mv_size].decode(),
                     (<unsigned char *>data_v.mv_data)[: data_v.mv_size].decode()))
-                logger.debug('Found namespace: {}:{}'.format(<unsigned char *>key_v.mv_data, <unsigned char *>data_v.mv_data))
+                #logger.debug('Found namespace: {}:{}'.format(<unsigned char *>key_v.mv_data, <unsigned char *>data_v.mv_data))
                 try:
                     _check(lmdb.mdb_cursor_get(
                         dcur, &key_v, &data_v, lmdb.MDB_NEXT))
@@ -1367,7 +1367,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     # Key conversion methods.
 
     def from_key(self, key):
-        logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
+        #logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
         return self._from_key(key, len(key))
 
 
@@ -1382,7 +1382,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char subkey[KLEN]
 
         ret = []
-        logger.debug('Find term from key: {}'.format(key[: size]))
+        #logger.debug('Find term from key: {}'.format(key[: size]))
         for i in range(0, size, KLEN):
             memcpy(subkey, key + i, KLEN)
             key_v.mv_data = &subkey
@@ -1396,7 +1396,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             pk = bytes((<unsigned char *>data_v.mv_data)[: data_v.mv_size])
             py_term = pickle.loads(pk)
             ret.append(py_term)
-        logger.debug('Ret: {}'.format(ret))
+        #logger.debug('Ret: {}'.format(ret))
 
         return tuple(ret)
 
@@ -1422,7 +1422,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = HLEN
 
         _check(lmdb.mdb_get(self.txn, self.get_dbi('th:t'), &key_v, &data_v))
-        logger.debug('Found key: {}'.format((<Key>data_v.mv_data)[: KLEN]))
+        #logger.debug('Found key: {}'.format((<Key>data_v.mv_data)[: KLEN]))
 
         memcpy(key, data_v.mv_data, KLEN)
 
@@ -1481,9 +1481,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_data = value
         data_v.mv_size = vlen
-        logger.debug('Appending value {} to db {} with key: {}'.format(
-            value[: vlen], dblabel.decode(), nkey[0][:KLEN]))
-        logger.debug('data size: {}'.format(data_v.mv_size))
+        #logger.debug('Appending value {} to db {} with key: {}'.format(
+        #    value[: vlen], dblabel.decode(), nkey[0][:KLEN]))
+        #logger.debug('data size: {}'.format(data_v.mv_size))
         lmdb.mdb_put(
                 txn, self.get_dbi(dblabel), &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)
@@ -1525,4 +1525,4 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # Move one position up and try to increment that.
                 else:
                     nkey[0][i] = KEY_START
-        logger.debug('New key: {}'.format(nkey[0][:KLEN]))
+        #logger.debug('New key: {}'.format(nkey[0][:KLEN]))

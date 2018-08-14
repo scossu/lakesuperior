@@ -96,7 +96,7 @@ class LmdbStore(LmdbTriplestore, Store):
             store environment.
         """
         if not self.is_open:
-            logger.debug('Store is not open.')
+            #logger.debug('Store is not open.')
             try:
                 self.open_env(create)
             except:
@@ -195,23 +195,23 @@ class LmdbStore(LmdbTriplestore, Store):
         # but anyway...
         context = self._normalize_context(context)
 
-        logger.debug(
-                'Getting triples for: {}, {}'.format(triple_pattern, context))
+        #logger.debug(
+        #        'Getting triples for: {}, {}'.format(triple_pattern, context))
         for spok in self.triple_keys(triple_pattern, context):
-            logger.debug('spok: {}'.format(spok))
+            #logger.debug('spok: {}'.format(spok))
             if self.key_exists(spok, 'spo:c', new_txn=False):
                 #logger.debug('preparing contexts.')
                 contexts = tuple(
                     Graph(identifier=self.from_key(ck)[0], store=self)
                     for ck in self.get_dup_data(spok, 'spo:c'))
-                logger.debug('contexts: {}'.format(contexts))
+                #logger.debug('contexts: {}'.format(contexts))
             else:
                 contexts = (Graph(identifier=context),)
 
-            logger.debug('Triple keys before yield: {}: {}.'.format(
-                spok, contexts))
+            #logger.debug('Triple keys before yield: {}: {}.'.format(
+            #    spok, contexts))
             yield self.from_key(spok), contexts
-            logger.debug('After yield.')
+            #logger.debug('After yield.')
 
 
     def bind(self, prefix, namespace):
@@ -227,7 +227,7 @@ class LmdbStore(LmdbTriplestore, Store):
             self.put(prefix, namespace, 'pfx:ns')
             self.put(namespace, prefix, 'ns:pfx')
         else:
-            logger.debug('Opening RW transaction.')
+            #logger.debug('Opening RW transaction.')
             with self.txn_ctx(write=True) as wtxn:
                 self.put(prefix, namespace, 'pfx:ns')
                 self.put(namespace, prefix, 'ns:pfx')
