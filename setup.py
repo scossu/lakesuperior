@@ -47,6 +47,23 @@ extensions = [
         libraries = ['lmdb']
     ),
     Extension(
+        'lakesuperior.sandbox.threading_poc',
+        [
+            path.join(lakesuperior.basedir, 'sandbox', 'threading_poc.pyx'),
+            path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
+            path.join(lakesuperior.basedir, 'lib', 'midl.c'),
+        ],
+        include_dirs = [
+            path.join(lakesuperior.basedir, 'cy_include'),
+            path.join(lakesuperior.basedir, 'include'),
+            path.join(lakesuperior.basedir, 'lib'),
+        ],
+        library_dirs = [
+            path.join(lakesuperior.basedir, 'lib'),
+        ],
+        libraries = ['lmdb']
+    ),
+    Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [path.join(
             lakesuperior.basedir, 'store', 'ldp_rs', 'lmdb_triplestore.pyx')],
