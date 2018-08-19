@@ -222,8 +222,16 @@ class RsrcCentricLayout:
         checksum = to_isomorphic(gr).graph_digest()
         digest = sha256(str(checksum).encode('ascii')).digest()
 
-        env.app_globals.md_store.update_checksum(ROOT_RSRC_URI, digest)
-        store.close()
+        # Clear and initialize metadata store.
+        md_store = env.app_globals.md_store
+        if getattr(md_store, 'is_txn_open', False):
+            logger.warn('Metadata store txn is open.')
+            md_store.abort()
+        md_store.close_env()
+        md_store.destroy()
+        md_store.open_env(True)
+        md_store.update_checksum(ROOT_RSRC_URI, digest)
+        md_store.close_env()
 
 
     def get_raw(self, subject, ctx=None):
