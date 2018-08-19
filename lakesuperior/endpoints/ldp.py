@@ -671,8 +671,10 @@ def _digest_headers(uri):
     """
     headers = {}
     digest = env.app_globals.md_store.get_checksum(uri)
-    headers['Digest'] = 'SHA256={}'.format(b64encode(digest).decode('ascii'))
-    headers['ETag'] = 'W/{}'.format(digest.hex())
+    if digest:
+        headers['Digest'] = 'SHA256={}'.format(
+                b64encode(digest).decode('ascii'))
+        headers['ETag'] = 'W/{}'.format(digest.hex())
 
     return headers
 

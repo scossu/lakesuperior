@@ -54,7 +54,7 @@ cdef class BaseLmdbStore:
         dict _stats(self)
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *
-    cpdef void _destroy(self) except *
+    cpdef void destroy(self, _path=*) except *
     #cpdef get_dup_data(self, unsigned char *key, db=*)
     #cpdef get_all_pairs(self, db=*)
     cpdef bytes get_data(self, key, dblabel=*)

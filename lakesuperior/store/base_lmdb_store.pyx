@@ -262,8 +262,16 @@ cdef class BaseLmdbStore:
         self._open = False
 
 
-    cpdef void _destroy(self) except *:
-        """Remove the store directory from the filesystem."""
+    cpdef void destroy(self, _path='') except *:
+        """
+        Destroy the store.
+
+        https://www.youtube.com/watch?v=lIVq7FJnPwg
+
+        :param str _path: unused. Left for RDFLib API compatibility. (actually
+            quite dangerous if it were used: it could turn into a
+            general-purpose recursive file and folder delete method!)
+        """
         if path.exists(self.env_path):
             if lmdb.MDB_NOSUBDIR & self.flags:
                 try:

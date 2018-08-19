@@ -115,19 +115,6 @@ class LmdbStore(LmdbTriplestore, Store):
         self.close_env(commit_pending_transaction)
 
 
-    def destroy(self, path=''):
-        """
-        Destroy the store.
-
-        https://www.youtube.com/watch?v=lIVq7FJnPwg
-
-        :param str path: unused. Left for RDFLib API compatibility. (actually
-            quite dangerous if it were used: it could turn into a
-            general-purpose recursive file and folder delete method!)
-        """
-        return self._destroy()
-
-
     # RDFLib triple methods.
 
     def add(self, triple, context=None, quoted=False):
