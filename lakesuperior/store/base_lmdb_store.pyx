@@ -30,8 +30,8 @@ cdef void _check(int rc, str message='') except *:
         raise KeyExistsError()
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
-                message + '\nInternal error: '
-                if len(message) else 'LMDB Error: ')
+                message + '\nInternal error ({}): '.format(rc)
+                if len(message) else 'LMDB Error ({}): '.format(rc))
         out_msg += lmdb.mdb_strerror(rc).decode()
         raise LmdbError(out_msg)
 

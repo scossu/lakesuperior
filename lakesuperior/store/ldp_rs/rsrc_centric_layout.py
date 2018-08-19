@@ -204,7 +204,7 @@ class RsrcCentricLayout:
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
-            print('store txn is open.')
+            logger.warn('store txn is open.')
             store.abort()
         store.close()
         store.destroy()
@@ -494,11 +494,11 @@ class RsrcCentricLayout:
 
         # remove children and descendants.
         if children:
-            logger.debug('Forgetting offspring of {}'.format(uid))
+            #logger.debug('Forgetting offspring of {}'.format(uid))
             for desc_uri in self.get_descendants(uid):
                 self.forget_rsrc(uid_fn(desc_uri), inbound, False)
             # Remove structure graph.
-            self.ds.remove_graph(nsc['fcstruct'][uid])
+            self.store.remove_graph(nsc['fcstruct'][uid])
 
         # Remove inbound references.
         if inbound:
@@ -539,13 +539,13 @@ class RsrcCentricLayout:
         graph_types = set() # Graphs that need RDF type metadata added.
         # Create add and remove sets for each graph.
         for t in remove_trp:
-            logger.debug('Adding triple to remove list: {}'.format(remove_trp))
+            #logger.debug('Adding triple to remove list: {}'.format(remove_trp))
             map_graph = self._map_graph_uri(t, uid)
             target_gr_uri = map_graph[0]
             remove_routes[target_gr_uri].add(t)
             graph_types.add(map_graph)
         for t in add_trp:
-            logger.debug('Adding triple to add list: {}'.format(add_trp))
+            #logger.debug('Adding triple to add list: {}'.format(add_trp))
             map_graph = self._map_graph_uri(t, uid)
             target_gr_uri = map_graph[0]
             add_routes[target_gr_uri].add(t)
@@ -557,11 +557,11 @@ class RsrcCentricLayout:
 
         # Remove and add triple sets from each graph.
         for gr_uri, trp in remove_routes.items():
-            logger.debug('Removing triple: {}'.format(trp))
+            #logger.debug('Removing triple: {}'.format(trp))
             gr = self.ds.graph(gr_uri)
             gr -= trp
         for gr_uri, trp in add_routes.items():
-            logger.debug('Adding triple: {}'.format(trp))
+            #logger.debug('Adding triple: {}'.format(trp))
             gr = self.ds.graph(gr_uri)
             gr += trp
             # Add metadata.
@@ -578,7 +578,7 @@ class RsrcCentricLayout:
 
         # Add graph RDF types.
         for gr_uri, gr_type in graph_types:
-            logger.debug('Adding RDF type: {}'.format(gr_uri))
+            #logger.debug('Adding RDF type: {}'.format(gr_uri))
             meta_gr.add((gr_uri, RDF.type, gr_type))
 
 
@@ -628,7 +628,7 @@ class RsrcCentricLayout:
         """
         logger.debug('Find referential integrity violations.')
         for i, obj in enumerate(self.store.all_terms('o'), start=1):
-            logger.debug('term: {}'.format(obj))
+            #logger.debug('term: {}'.format(obj))
             if (
                     isinstance(obj, URIRef)
                     and obj.startswith(nsc['fcres'])
