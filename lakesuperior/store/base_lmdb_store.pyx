@@ -4,6 +4,8 @@
 
 import logging
 import os
+import threading
+import multiprocessing
 
 from contextlib import contextmanager
 from os import makedirs, path
@@ -124,11 +126,11 @@ cdef class BaseLmdbStore:
             be created if the store is opened immediately.
         """
         self._open = False
-        self.txn = NULL
+        self.is_txn_open = False
         self.env_path = env_path
         if open_env:
             self.open_env(create)
-        logger.info('Init DB with path: {}'.format(self.env_path))
+        #logger.info('Init DB with path: {}'.format(self.env_path))
 
 
     def __dealloc__(self):
@@ -149,16 +151,17 @@ cdef class BaseLmdbStore:
         """
         Open, and optionally create, store environment.
         """
+        logger.info('Opening environment at {}.'.format(self.env_path))
         if create:
-            logger.info('Creating db env at {}'.format(self.env_path))
+            #logger.info('Creating db env at {}'.format(self.env_path))
             parent_path = (
                     path.dirname(self.env_path)
                     if lmdb.MDB_NOSUBDIR & self.flags
                     else self.env_path)
 
             if not path.exists(parent_path):
-                logger.info(
-                        'Creating store directory at {}'.format(parent_path))
+                #logger.info(
+                #        'Creating store directory at {}'.format(parent_path))
                 try:
                     makedirs(parent_path, mode=0o750, exist_ok=True)
                 except Exception as e:
@@ -187,10 +190,9 @@ cdef class BaseLmdbStore:
                     env.wsgi_options['workers']
                     if getattr(env, 'wsgi_options', False)
                     else 1)
-            logger.info('Max LMDB readers: {}'.format(self._readers))
-        #rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
-        #logger.debug('Max. readers: {}'.format(self._readers))
-        #_check(rc, 'Error setting max. readers: {}')
+        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
+        logger.info('Max. readers: {}'.format(self._readers))
+        _check(rc, 'Error setting max. readers: {}')
 
         # Clear stale readers.
         self._clear_stale_readers()
@@ -240,7 +242,7 @@ cdef class BaseLmdbStore:
                 rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
 
             _check(rc, 'Error opening database: {}')
-            lmdb.mdb_txn_commit(txn)
+            _check(lmdb.mdb_txn_commit(txn))
         except:
             lmdb.mdb_txn_abort(txn)
             raise
@@ -288,13 +290,6 @@ cdef class BaseLmdbStore:
 
     ### PYTHON-ACCESSIBLE METHODS ###
 
-    @property
-    def is_txn_open(self):
-        """Whether the main transaction is open."""
-        #return self._txn_id() > 0
-        return self.txn is not NULL
-
-
     @contextmanager
     def txn_ctx(self, write=False):
         """
@@ -304,7 +299,7 @@ cdef class BaseLmdbStore:
 
         :rtype: lmdb.Transaction
         """
-        if self.txn is not NULL:
+        if self.is_txn_open:
             #logger.debug(
             #        'Transaction is already active. Not opening another one.')
             #logger.debug('before yield')
@@ -532,23 +527,26 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        logger.info('Opening {} transaction'.format(
-            'RW' if write else 'RO'))
+        logger.info('Opening {} transaction in process {}, thread {}'.format(
+            'RW' if write else 'RO',
+            multiprocessing.current_process().name,
+            threading.currentThread().getName()))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
         logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
 
+        self.is_txn_open = True
+        self.is_txn_rw = write
+        logger.info('txn is open: {}'.format(self.is_txn_open))
+
 
     cdef void _txn_commit(self) except *:
-        if self.txn == NULL:
-            logger.warning('txn is NULL!')
-
         txid = '{:x}'.format(<unsigned long>self.txn)
         try:
             _check(lmdb.mdb_txn_commit(self.txn))
             logger.info('Transaction @ {} committed.'.format(txid))
-            self.txn = NULL
-            self.is_txn_rw = None
+            self.is_txn_open = False
+            self.is_txn_rw = False
         except:
             self._txn_abort()
             raise
@@ -557,8 +555,8 @@ cdef class BaseLmdbStore:
     cdef void _txn_abort(self) except *:
         txid = '{:x}'.format(<unsigned long>self.txn)
         lmdb.mdb_txn_abort(self.txn)
-        self.txn = NULL
-        self.is_txn_rw = None
+        self.is_txn_open = False
+        self.is_txn_rw = False
         logger.info('Transaction @ {} aborted.'.format(txid))
 
 

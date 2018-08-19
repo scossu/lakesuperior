@@ -4,7 +4,10 @@ import re
 from abc import ABCMeta
 from collections import defaultdict
 from hashlib import sha256
-from threading import Thread
+# The threading and multiprocessing options below can be toggled by commenting
+# either one.
+#from threading import Thread as _Defer
+from multiprocessing import Process as _Defer
 from urllib.parse import urldefrag
 from uuid import uuid4
 
@@ -297,11 +300,11 @@ class Ldpr(metaclass=ABCMeta):
                 hasattr(self, '_imr_options')
                 and self._imr_options.get('incl_srv_mgd')
                 and not self._imr_options.get('incl_inbound')
-                and self._imr_options.get('incl_children')):
+                and not self._imr_options.get('incl_children')):
             gr = self.imr
         else:
             gr = rdfly.get_imr(
-                    self.uid, incl_inbound=False, incl_children=True)
+                    self.uid, incl_inbound=False, incl_children=False)
         return to_isomorphic(gr)
 
 
@@ -757,7 +760,7 @@ class Ldpr(metaclass=ABCMeta):
         cksum_action = (
                 self._delete_checksum if ev_type == RES_DELETED
                 else self._update_checksum)
-        Thread(target=cksum_action).run()
+        _Defer(target=cksum_action).start()
 
         # Clear IMR buffer.
         if hasattr(self, '_imr'):
