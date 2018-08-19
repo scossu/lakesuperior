@@ -254,10 +254,10 @@ class RsrcCentricLayout:
         Return a count of first-class resources, subdivided in "live" and
         historic snapshots.
         """
-        main = set(
-                self.ds.graph(META_GR_URI)[ : nsc['foaf'].primaryTopic : ])
-        hist = set(
-                self.ds.graph(HIST_GR_URI)[ : nsc['foaf'].primaryTopic : ])
+        main = set(self.store.triples(
+            (None, nsc['foaf'].primaryTopic, None), META_GR_URI))
+        hist = set(self.store.triples(
+            (None, nsc['foaf'].primaryTopic, None), HIST_GR_URI))
 
         return {'main': len(main), 'hist': len(hist)}
 
@@ -275,6 +275,7 @@ class RsrcCentricLayout:
         """
         See base_rdf_layout.get_imr.
         """
+        #import pdb; pdb.set_trace()
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
 
@@ -310,9 +311,15 @@ class RsrcCentricLayout:
         See base_rdf_layout.ask_rsrc_exists.
         """
         logger.debug('Checking if resource exists: {}'.format(uid))
-        meta_gr = self.ds.graph(nsc['fcadmin'][uid])
-        return bool(
-                meta_gr[nsc['fcres'][uid] : RDF.type : nsc['fcrepo'].Resource])
+        res = self.store.triples(
+            (nsc['fcres'][uid], RDF.type, nsc['fcrepo'].Resource),
+            nsc['fcadmin'][uid])
+        try:
+            next(res)
+        except StopIteration:
+            return False
+        else:
+            return True
 
 
     def get_metadata(self, uid, ver_uid=None, strict=True):
@@ -464,12 +471,12 @@ class RsrcCentricLayout:
         """
         # Add meta graph for user-defined triples. This may not be used but
         # it's simple and harmless to add here.
-        self.ds.graph(META_GR_URI).add(
+        self.store.add(
                 (nsc['fcmain'][uid], nsc['foaf'].primaryTopic,
-                nsc['fcres'][uid]))
+                nsc['fcres'][uid]), META_GR_URI)
         gr = self.ds.graph(nsc['fcmain'][uid])
-        logger.debug('Updating graph {} with statements: {}'.format(
-            nsc['fcmain'][uid], qry))
+        #logger.debug('Updating graph {} with statements: {}'.format(
+        #    nsc['fcmain'][uid], qry))
 
         return gr.update(qry)
 
