@@ -1,8 +1,12 @@
 language: python
 python:
-  - "3.5"
   - "3.6"
+  - "3.7"
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y liblmdb-dev
 install:
+  - pip install -q cython
   - pip install -e .
 script:
   - python setup.py test
@@ -15,6 +19,6 @@ deploy:
     on:
         tags: true
         branch: master
-        python: "3.5"
+        python: "3.6"
     distributions: "bdist_wheel"
 
