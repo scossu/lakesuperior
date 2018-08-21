@@ -67,7 +67,7 @@ class LmdbStore(LmdbTriplestore, Store):
 
 
     def __init__(self, path, identifier=None, create=True):
-        super().__init__(path, open_env=True, create=create)
+        LmdbTriplestore.__init__(self, path, open_env=True, create=create)
 
         self.identifier = identifier or URIRef(pathname2url(abspath(path)))
 

@@ -11,12 +11,13 @@ from contextlib import contextmanager
 from os import makedirs, path
 from shutil import rmtree
 
-from lakesuperior import env
+from lakesuperior import env, wsgi
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
 from libc cimport errno
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from cython.parallel import parallel, prange
 
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,11 @@ cdef class BaseLmdbStore:
     :rtype: dict
     """
 
+    readers_mult = 4
+    """
+    Number to multiply WSGI workers by to set the numer of LMDB reader slots.
+    """
+
     ### INIT & TEARDOWN ###
 
     def __init__(self, env_path, open_env=True, create=True):
@@ -151,6 +157,10 @@ cdef class BaseLmdbStore:
         """
         Open, and optionally create, store environment.
         """
+        if self.is_open:
+            logger.warning('Environment already open.')
+            return
+
         logger.info('Opening environment at {}.'.format(self.env_path))
         if create:
             #logger.info('Creating db env at {}'.format(self.env_path))
@@ -184,12 +194,8 @@ cdef class BaseLmdbStore:
         _check(rc, 'Error setting max. databases: {}')
 
         # Set max readers.
-        self._readers = self.options.get('max_spare_txns', False)
-        if not self._readers:
-            self._readers = (
-                    env.wsgi_options['workers']
-                    if getattr(env, 'wsgi_options', False)
-                    else 1)
+        self._readers = self.options.get(
+                'max_spare_txns', wsgi.workers * self.readers_mult)
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
         logger.info('Max. readers: {}'.format(self._readers))
         _check(rc, 'Error setting max. readers: {}')

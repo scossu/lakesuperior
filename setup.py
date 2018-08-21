@@ -61,6 +61,8 @@ extensions = [
         library_dirs = [
             path.join(lakesuperior.basedir, 'lib'),
         ],
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp'],
         libraries = ['lmdb']
     ),
     Extension(
@@ -167,7 +169,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'fcrepo=lakesuperior.wsgi:run',
+            #'fcrepo=lakesuperior.wsgi:run',
             'lsup-admin=lakesuperior.lsup_admin:admin',
             'lsup-benchmark=lakesuperior.util.benchmark:run',
             'profiler=lakesuperior.profiler:run',
