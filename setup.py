@@ -95,7 +95,7 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions, annotate=True),
+    ext_modules = cythonize(extensions, force=False),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -144,7 +144,6 @@ setup(
         'click-log',
         'gevent',
         'gunicorn',
-        'lmdb',
         'rdflib',
         'rdflib-jsonld',
         'requests',
@@ -153,7 +152,10 @@ setup(
         'stomp.py',
     ],
 
-    setup_requires=[] + pytest_runner,
+    setup_requires=[
+        'setuptools>=18.0',
+        'Cython==0.28.4',
+    ] + pytest_runner,
     tests_require=[
         'Pillow',
         'numpy',
