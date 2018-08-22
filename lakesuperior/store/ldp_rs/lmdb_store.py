@@ -7,8 +7,6 @@ from os import makedirs
 from os.path import abspath
 from urllib.request import pathname2url
 
-import lmdb
-
 from rdflib import Graph, Namespace, URIRef, Variable
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.store import Store, VALID_STORE, NO_STORE

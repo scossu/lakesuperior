@@ -528,6 +528,52 @@ cdef class BaseLmdbStore:
         }
 
 
+    # UNFINISHED
+    #cdef int _reader_list_callback(self, const unsigned char *msg, void *ctx):
+    #    """
+    #    Callback for reader info function.
+
+    #    Example from py-lmdb:
+    #    static int env_readers_callback(const char *msg, void *str_)
+    #    {
+    #        PyObject **str = str_;
+    #        PyObject *s = PyUnicode_FromString(msg);
+    #        PyObject *new;
+    #        if(! s) {
+    #            return -1;
+    #        }
+    #        new = PyUnicode_Concat(*str, s);
+    #        Py_CLEAR(*str);
+    #        *str = new;
+    #        if(! new) {
+    #            return -1;
+    #        }
+    #        return 0;
+    #    }
+    #    """
+    #    cdef:
+    #        unicode str = ctx[0].decode('utf-8')
+    #        unicode s = msg.decode('utf-8')
+    #    if not len(s):
+    #        return -1
+    #    str += s
+    #    logger.info('message: {}'.format(msg))
+    #    if not len(str):
+    #        return -1
+    #    ctx = &str
+
+
+    #cpdef str reader_list(self):
+    #    """
+    #    Information about the reader lock table.
+    #    """
+    #    cdef unsigned char *ctx
+    #    lmdb.mdb_reader_list(self.dbenv, <lmdb.MDB_msg_func *>self._reader_list_callback, &ctx)
+    #    logger.info('Reader info: {}'.format(ctx))
+
+    #    return (ctx).decode('ascii')
+
+
     ### CYTHON METHODS ###
 
     cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL) except *:
@@ -543,7 +589,7 @@ cdef class BaseLmdbStore:
             'RW' if write else 'RO',
             multiprocessing.current_process().pid,
             threading.currentThread().getName()))
-        logger.info('Readers: {}'.format(self.reader_list()))
+        #logger.info('Readers: {}'.format(self.reader_list()))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
         logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))

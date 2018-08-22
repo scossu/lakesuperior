@@ -33,45 +33,42 @@ extensions = [
         'lakesuperior.store.base_lmdb_store',
         [
             path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx'),
-            path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
-            path.join(lakesuperior.basedir, 'lib', 'midl.c'),
+        #    path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
+        #    path.join(lakesuperior.basedir, 'lib', 'midl.c'),
         ],
         include_dirs = [
             path.join(lakesuperior.basedir, 'cy_include'),
             path.join(lakesuperior.basedir, 'include'),
-            path.join(lakesuperior.basedir, 'lib'),
+        #    path.join(lakesuperior.basedir, 'lib'),
         ],
         library_dirs = [
             path.join(lakesuperior.basedir, 'lib'),
         ],
         libraries = ['lmdb']
     ),
-    Extension(
-        'lakesuperior.sandbox.threading_poc',
-        [
-            path.join(lakesuperior.basedir, 'sandbox', 'threading_poc.pyx'),
-            path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
-            path.join(lakesuperior.basedir, 'lib', 'midl.c'),
-        ],
-        include_dirs = [
-            path.join(lakesuperior.basedir, 'cy_include'),
-            path.join(lakesuperior.basedir, 'include'),
-            path.join(lakesuperior.basedir, 'lib'),
-        ],
-        library_dirs = [
-            path.join(lakesuperior.basedir, 'lib'),
-        ],
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
-        libraries = ['lmdb']
-    ),
+    #Extension(
+    #    'lakesuperior.sandbox.nested_txn_poc',
+    #    [
+    #        path.join(lakesuperior.basedir, 'sandbox', 'nested_txn_poc.pyx'),
+    #    ],
+    #    include_dirs = [
+    #        path.join(lakesuperior.basedir, 'cy_include'),
+    #        path.join(lakesuperior.basedir, 'include'),
+    #    ],
+    #    library_dirs = [
+    #        path.join(lakesuperior.basedir, 'lib'),
+    #    ],
+    #    extra_compile_args=['-fopenmp'],
+    #    extra_link_args=['-fopenmp'],
+    #    libraries = ['lmdb']
+    #),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [path.join(
             lakesuperior.basedir, 'store', 'ldp_rs', 'lmdb_triplestore.pyx')],
         include_dirs = [
             path.join(lakesuperior.basedir, 'include'),
-            path.join(lakesuperior.basedir, 'store'),
+        #    path.join(lakesuperior.basedir, 'store'),
         ],
         library_dirs = [
             path.join(lakesuperior.basedir, 'lib'),
@@ -144,6 +141,7 @@ setup(
         'click-log',
         'gevent',
         'gunicorn',
+        #'lmdb',
         'rdflib',
         'rdflib-jsonld',
         'requests',
@@ -154,6 +152,7 @@ setup(
 
     setup_requires=[
         'setuptools>=18.0',
+        # Pin version to avoid C code generation discrepancies across distros.
         'Cython==0.28.4',
     ] + pytest_runner,
     tests_require=[
@@ -174,7 +173,8 @@ setup(
             #'fcrepo=lakesuperior.wsgi:run',
             'lsup-admin=lakesuperior.lsup_admin:admin',
             'lsup-benchmark=lakesuperior.util.benchmark:run',
-            'profiler=lakesuperior.profiler:run',
+            'lsup-profiler=lakesuperior.profiler:run',
+            'lsup-server=lakesuperior.server:run',
         ],
     },
 

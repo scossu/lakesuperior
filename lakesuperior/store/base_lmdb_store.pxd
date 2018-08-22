@@ -52,6 +52,7 @@ cdef class BaseLmdbStore:
                 unsigned char *dblabel=*) except *
 
         dict _stats(self)
+        #int _reader_list_callback(self, const unsigned char *msg, void *str_)
 
     cpdef void close_env(self, bint commit_pending_transaction=*) except *
     cpdef void destroy(self, _path=*) except *
@@ -60,3 +61,4 @@ cdef class BaseLmdbStore:
     cpdef bytes get_data(self, key, dblabel=*)
     cpdef dict stats(self, new_txn=*)
     cpdef int txn_id(self)
+    #cpdef str reader_list(self)

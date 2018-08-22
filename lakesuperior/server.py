@@ -14,7 +14,11 @@ from lakesuperior.app import create_app
 dictConfig(env.app_globals.config['logging'])
 logger = logging.getLogger(__name__)
 
+# this stays at the module level so it's used by GUnicorn.
 fcrepo = create_app(env.app_globals.config['application'])
 
-if __name__ == "__main__":
+def run():
     fcrepo.run(host='0.0.0.0')
+
+if __name__ == "__main__":
+    run()
