@@ -305,9 +305,12 @@ cdef class BaseLmdbStore:
 
         :rtype: lmdb.Transaction
         """
+        if not self.is_open:
+            raise LmdbError('Store is not open.')
+
         if self.is_txn_open:
-            #logger.debug(
-            #        'Transaction is already active. Not opening another one.')
+            logger.debug(
+                    'Transaction is already active. Not opening another one.')
             #logger.debug('before yield')
             yield
             #logger.debug('after yield')
@@ -456,7 +459,7 @@ cdef class BaseLmdbStore:
 
         _check(
             lmdb.mdb_get(self.txn, self.get_dbi(dblabel), &key_v, rv),
-            'Error getting data for key \'{}\': {{}}'.format(key.decode()))
+            'Error getting data for key \'{}\'.'.format(key.decode()))
 
 
     def delete(self, key, dblabel=''):
@@ -528,15 +531,19 @@ cdef class BaseLmdbStore:
     ### CYTHON METHODS ###
 
     cdef void _txn_begin(self, write=True, lmdb.MDB_txn *parent=NULL) except *:
+        if not self.is_open:
+            raise LmdbError('Store is not open.')
+
         cdef:
             unsigned int flags
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        logger.info('Opening {} transaction in process {}, thread {}'.format(
+        logger.info('Opening {} transaction in PID {}, thread {}'.format(
             'RW' if write else 'RO',
-            multiprocessing.current_process().name,
+            multiprocessing.current_process().pid,
             threading.currentThread().getName()))
+        logger.info('Readers: {}'.format(self.reader_list()))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
         logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))

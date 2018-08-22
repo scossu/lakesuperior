@@ -40,12 +40,15 @@ def db(app):
     env.app_globals.nonrdfly.bootstrap()
     print('Initialized data store.')
     env.app_globals.rdf_store.open()
+    env.app_globals.metadata_store.open()
 
     yield env.app_globals.rdfly
 
     # TODO improve this by using tempfile.TemporaryDirectory as a context
     # manager.
     print('Removing fixture data directory.')
+    env.app_globals.metadata_store.close()
+    env.app_globals.metadata_store.destroy()
     env.app_globals.rdf_store.close()
     env.app_globals.rdf_store.destroy()
 
