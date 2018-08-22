@@ -52,7 +52,7 @@ class __Defaults:
     preload_app = True
     app_mode = 'prod'
     worker_class = 'gevent'
-    max_requests = 512
+    max_requests = 0
 
     def __init__(self):
         with open(self.config_file, 'r') as fh:
