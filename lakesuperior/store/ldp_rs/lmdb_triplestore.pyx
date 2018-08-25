@@ -322,9 +322,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char thash[HLEN]
             # Using Key or TripleKey here breaks Cython. This might be a bug.
             # See https://github.com/cython/cython/issues/2517
-            unsigned char keys[QUAD_KLEN]
-            unsigned char spok[TRP_KLEN]
-            unsigned char ck[KLEN]
+            unsigned char spock[QUAD_KLEN]
             unsigned char nkey[KLEN]
             unsigned int term_sizes[4]
 
@@ -340,14 +338,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     key_v.mv_size = HLEN
                     _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('th:t'), &key_v, &data_v))
-                    memcpy(keys + (i * KLEN), data_v.mv_data, KLEN)
+                    memcpy(spock + (i * KLEN), data_v.mv_data, KLEN)
                     #logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
                 except KeyNotFoundError:
                     # If term is not found, add it...
                     #logger.debug('Hash {} not found. Adding to DB.'.format(
                     #        thash[: HLEN]))
                     self._append(pk_t, term_sizes[i], &nkey, dblabel=b't:st')
-                    memcpy(keys + (i * KLEN), nkey, KLEN)
+                    memcpy(spock + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
                     #logger.debug('Indexing on th:t: {}: {}'.format(
@@ -363,15 +361,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(icur)
             #logger.debug('Triple add action completed.')
 
-        # Add context.
-        # TODO We can avoid 2 memcpy's by copying directly to the destinations.
-        memcpy(ck, keys + TRP_KLEN, KLEN)
-        memcpy(spok, keys, TRP_KLEN)
-        #logger.debug('spo: {} c: {}'.format(spok[: TRP_KLEN], ck[: KLEN]))
-
-        spo_v.mv_data = spok
+        spo_v.mv_data = spock
         spo_v.mv_size = TRP_KLEN
-        c_v.mv_data = ck
+        c_v.mv_data = spock + TRP_KLEN
         c_v.mv_size = KLEN
         null_v.mv_data = b''
         null_v.mv_size = 0
@@ -402,7 +394,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added c:spo.')
 
         #logger.debug('All main data entered. Indexing.')
-        self._index_triple(IDX_OP_ADD, spok)
+        self._index_triple(IDX_OP_ADD, spock[: TRP_KLEN])
 
 
     cpdef void _add_graph(
@@ -698,74 +690,73 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    cpdef get_dup_data(self, key, dblabel=''):
-        """
-        Get all duplicate values for a key. Python-facing method.
-        """
-        #logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
-        ret = self._get_dup_data(key, len(key), dblabel.encode()).to_tuple()
-        #logger.debug('Dup data as tuple: {}'.format(ret))
-        return ret
+    #cpdef get_dup_data(self, key, dblabel=''):
+    #    """
+    #    Get all duplicate values for a key. Python-facing method.
+    #    """
+    #    #logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
+    #    ret = self._get_dup_data(key, len(key), dblabel.encode()).to_tuple()
+    #    #logger.debug('Dup data as tuple: {}'.format(ret))
+    #    return ret
 
 
-    cdef ResultSet _get_dup_data(
-            self, unsigned char *key, unsigned char ksize,
-            unsigned char *dblabel=b''):
-        """
-        Get all duplicate values for a key.
-        """
-        #logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
-        #        key[: ksize], dblabel.decode()))
-        cdef:
-            size_t ct, i = 0
-            unsigned int dbflags
-            ResultSet ret
-            lmdb.MDB_cursor *cur
+    #def iter_dup_data(self, key, ksize, dblabel):
+    #    """
+    #    Get all duplicate values for a key.
+    #    """
+    #    #logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
+    #    #        key[: ksize], dblabel.decode()))
+    #    cdef:
+    #        size_t ct, i = 0
+    #        unsigned int dbflags
+    #        ResultSet ret
+    #        lmdb.MDB_cursor *cur
 
-        #logger.debug('DB label: {}'.format(dblabel.decode()))
-        key_v.mv_data = key
-        key_v.mv_size = ksize
-        #logger.debug('Key: {}'.format(key[: ksize]))
-        #logger.debug('Key size: {}'.format(ksize))
+    #    #logger.debug('DB label: {}'.format(dblabel.decode()))
+    #    key_v.mv_data = key
+    #    key_v.mv_size = ksize
+    #    #logger.debug('Key: {}'.format(key[: ksize]))
+    #    #logger.debug('Key size: {}'.format(ksize))
 
-        cur = self._cur_open(dblabel)
-        try:
-            _check(lmdb.mdb_dbi_flags(
-                self.txn, lmdb.mdb_cursor_dbi(cur), &dbflags))
-            if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
-                raise ValueError('This DB is not set up with fixed values.')
+    #    cur = self._cur_open(dblabel)
+    #    try:
+    #        _check(lmdb.mdb_dbi_flags(
+    #            self.txn, lmdb.mdb_cursor_dbi(cur), &dbflags))
+    #        if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
+    #            raise ValueError('This DB is not set up with fixed values.')
 
-            rc = lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET)
-            try:
-                _check(rc)
-            except KeyNotFoundError:
-                return ResultSet(0, 0)
+    #        rc = lmdb.mdb_cursor_get(
+    #                cur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE)
+    #        try:
+    #            _check(rc)
+    #        except KeyNotFoundError:
+    #            return ResultSet(0, 0)
 
-            _check(lmdb.mdb_cursor_count(cur, &ct))
-            ret = ResultSet(ct, data_v.mv_size)
-            #logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
+    #        _check(lmdb.mdb_cursor_count(cur, &ct))
+    #        ret = ResultSet(ct, data_v.mv_size)
+    #        #logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
 
-            while True:
-                memcpy(
-                        ret.data + i * ret.itemsize, data_v.mv_data,
-                        ret.itemsize)
-                #logger.debug('Data in row: {}'.format(
-                #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
+    #        while True:
+    #            memcpy(
+    #                    ret.data + i * ret.itemsize, data_v.mv_data,
+    #                    ret.itemsize)
+    #            #logger.debug('Data in row: {}'.format(
+    #            #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
-                rc = lmdb.mdb_cursor_get(
-                    cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
-                try:
-                    _check(rc)
-                except KeyNotFoundError:
-                    break
+    #            rc = lmdb.mdb_cursor_get(
+    #                cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
+    #            try:
+    #                _check(rc)
+    #            except KeyNotFoundError:
+    #                break
 
-                i += 1
+    #            i += 1
 
-            #logger.debug('Total data in _get_dup_data: {}'.format(
-            #    ret.data[: ret.size]))
-            return ret
-        finally:
-            self._cur_close(cur)
+    #        #logger.debug('Total data in _get_dup_data: {}'.format(
+    #        #    ret.data[: ret.size]))
+    #        return ret
+    #    finally:
+    #        self._cur_close(cur)
 
 
     cpdef tuple triple_keys(self, tuple triple_pattern, context=None):
@@ -1025,7 +1016,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char luk[KLEN]
             unsigned int dbflags
             unsigned char asm_rng[3]
-            size_t ct, i = 0
+            size_t ct, ct_keys, i = 0, j, offset
 
         try:
             self._to_key(term, &luk)
@@ -1039,15 +1030,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             key_v.mv_data = luk
             key_v.mv_size = KLEN
-            rc = lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET)
-
-            _check(lmdb.mdb_dbi_flags(
-                self.txn, lmdb.mdb_cursor_dbi(icur), &dbflags))
-            if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
-                raise ValueError('This DB is not set up with fixed values.')
 
             try:
-                _check(rc)
+                # Get results by the page.
+                _check(lmdb.mdb_cursor_get(
+                        icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             except KeyNotFoundError:
                 return ResultSet(0, TRP_KLEN)
 
@@ -1070,19 +1057,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             while True:
                 #logger.debug('i: {}'.format(i))
-                memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
-                memcpy(
-                        ret.data + ret.itemsize * i + asm_rng[1],
-                        data_v.mv_data, KLEN)
-                memcpy(
-                        ret.data + ret.itemsize * i + asm_rng[2],
-                        data_v.mv_data + KLEN, KLEN)
+                j = 0
+                ct_keys = data_v.mv_size // ret.itemsize
+                while j < ct_keys:
+                    offset = ret.itemsize * i + ret.itemsize * j
+                    memcpy(ret.data + offset + asm_rng[0], luk, KLEN)
+                    memcpy(ret.data + offset + asm_rng[1], data_v.mv_data, KLEN)
+                    memcpy(ret.data + offset + asm_rng[2], data_v.mv_data + KLEN, KLEN)
 
                 #logger.debug('Data: {}'.format(
                 #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
 
                 rc = lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
+                        icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE)
                 try:
                     _check(rc)
                 except KeyNotFoundError:
