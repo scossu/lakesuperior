@@ -222,6 +222,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         's:po',
         'p:so',
         'o:sp',
+        'po:s',
+        'so:p',
+        'sp:o',
         'c:spo',
     ]
 
@@ -229,12 +232,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         b's:po',
         b'p:so',
         b'o:sp',
+        b'po:s',
+        b'so:p',
+        b'sp:o',
     ]
 
     dbi_flags = {
         's:po': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'p:so': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'o:sp': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'po:s': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'so:p': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
+        'sp:o': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'c:spo': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
         'spo:c': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
     }
@@ -575,17 +584,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             unsigned char keys[3][KLEN]
-            unsigned char data[3][DBL_KLEN]
+            unsigned char dbl_keys[3][DBL_KLEN]
             Py_ssize_t i = 0
+            lmdb.MDB_val key_v, dbl_key_v
 
-        memcpy(&keys[0], spok, KLEN) # sk
-        memcpy(&keys[1], spok + KLEN, KLEN) # pk
-        memcpy(&keys[2], spok +DBL_KLEN, KLEN) # ok
+        keys[0] = spok # sk
+        keys[1] = spok + KLEN # pk
+        keys[2] = spok + DBL_KLEN # ok
 
-        memcpy(&data[0], spok + KLEN, DBL_KLEN) # pok
-        memcpy(&data[1], spok, KLEN) # sok, 1st part
-        memcpy(&data[1][KLEN], spok + DBL_KLEN, KLEN) # sok, 2nd part
-        memcpy(&data[2], spok, DBL_KLEN) # spk
+        dbl_keys[0] = spok + KLEN # pok
+        memcpy(&dbl_keys[1], spok, KLEN) # sok, 1st part
+        memcpy(&dbl_keys[1][KLEN], spok + DBL_KLEN, KLEN) # sok, 2nd part
+        dbl_keys[2] = spok # spk
         #logger.debug('''Indices:
         #spok: {}
         #sk: {}
@@ -597,31 +607,47 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #'''.format(
         #        spok[:TRP_KLEN],
         #        keys[0][:KLEN], keys[1][:KLEN], keys[2][:KLEN],
-        #        data[0][:DBL_KLEN], data[1][:DBL_KLEN], data[2][:DBL_KLEN]))
+        #        dbl_keys[0][:DBL_KLEN], dbl_keys[1][:DBL_KLEN], dbl_keys[2][:DBL_KLEN]))
         key_v.mv_size = KLEN
-        data_v.mv_size = DBL_KLEN
+        dbl_key_v.mv_size = DBL_KLEN
 
         #logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
         while i < 3:
-            icur = self._cur_open(self.lookup_indices[i])
+            cur1 = self._cur_open(self.lookup_indices[i]) # s:po, p:so, o:sp
+            cur2 = self._cur_open(self.lookup_indices[i + 3])# sp:o, ps:o, os:p
             try:
                 key_v.mv_data = keys[i]
-                data_v.mv_data = data[i]
+                dbl_key_v.mv_data = dbl_keys[i]
 
                 if op == IDX_OP_REMOVE:
                     #logger.debug('Index remove operation.')
                     try:
                         _check(lmdb.mdb_cursor_get(
-                                icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
+                                cur1, &key_v, &dbl_key_v, lmdb.MDB_GET_BOTH))
                     except KeyNotFoundError:
                         pass
                     else:
-                        _check(lmdb.mdb_cursor_del(icur, 0))
+                        _check(lmdb.mdb_cursor_del(cur1, 0))
+
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                                cur2, &dbl_key_v, &key_v, lmdb.MDB_GET_BOTH))
+                    except KeyNotFoundError:
+                        pass
+                    else:
+                        _check(lmdb.mdb_cursor_del(cur2, 0))
                 elif op == IDX_OP_ADD:
                     #logger.debug('Index add operation.')
                     try:
                         _check(lmdb.mdb_cursor_put(
-                                icur, &key_v, &data_v, lmdb.MDB_NODUPDATA))
+                                cur1, &key_v, &dbl_key_v, lmdb.MDB_NODUPDATA))
+                    except KeyExistsError:
+                        # Do not raise on MDB_KEYEXIST error code.
+                        pass
+
+                    try:
+                        _check(lmdb.mdb_cursor_put(
+                                cur2, &dbl_key_v, &key_v, lmdb.MDB_NODUPDATA))
                     except KeyExistsError:
                         # Do not raise on MDB_KEYEXIST error code.
                         pass
@@ -630,7 +656,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         'Index operation \'{}\' is not supported.'.format(op))
                 i += 1
             finally:
-                self._cur_close(icur)
+                self._cur_close(cur1)
+                self._cur_close(cur2)
 
 
     cpdef void _remove_graph(self, object gr_uri) except *:
