@@ -157,48 +157,6 @@ class LmdbStore(LmdbTriplestore, Store):
         self._remove(triple_pattern, context)
 
 
-    def triples(self, triple_pattern, context=None):
-        """
-        Generator over matching triples.
-
-        :param tuple triple_pattern: 3 RDFLib terms
-        :param context: Context graph, if available.
-        :type context: rdflib.Graph or None
-
-        :rtype: Iterator
-        :return: Generator over triples and contexts in which each result has
-            the following format::
-
-                (s, p, o), generator(contexts)
-
-        Where the contexts generator lists all context that the triple appears
-        in.
-        """
-        #logger.debug('Getting triples for pattern: {} and context: {}'.format(
-        #    triple_pattern, context))
-        # This sounds strange, RDFLib should be passing None at this point,
-        # but anyway...
-        context = self._normalize_context(context)
-
-        #logger.debug(
-        #        'Getting triples for: {}, {}'.format(triple_pattern, context))
-        for spok in self.triple_keys(triple_pattern, context):
-            #logger.debug('spok: {}'.format(spok))
-            if self.key_exists(spok, 'spo:c', new_txn=False):
-                #logger.debug('preparing contexts.')
-                contexts = tuple(
-                    Graph(identifier=self.from_key(ck)[0], store=self)
-                    for ck in self.get_dup_data(spok, 'spo:c'))
-                #logger.debug('contexts: {}'.format(contexts))
-            else:
-                contexts = (Graph(identifier=context),)
-
-            #logger.debug('Triple keys before yield: {}: {}.'.format(
-            #    spok, contexts))
-            yield self.from_key(spok), contexts
-            #logger.debug('After yield.')
-
-
     def bind(self, prefix, namespace):
         """
         Bind a prefix to a namespace.

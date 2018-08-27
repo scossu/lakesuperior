@@ -1,11 +1,14 @@
 # cython: language_level = 3
 # cython: boundschecking = False
 # cython: wraparound = False
+# cython: profile = True
 
 import hashlib
 import logging
 import os
 import pickle
+
+from rdflib import Graph
 
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
@@ -690,16 +693,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    #cpdef get_dup_data(self, key, dblabel=''):
-    #    """
-    #    Get all duplicate values for a key. Python-facing method.
-    #    """
-    #    #logger.debug('Go fetch dup data for key: {} in DB: {}'.format(key, dblabel))
-    #    ret = self._get_dup_data(key, len(key), dblabel.encode()).to_tuple()
-    #    #logger.debug('Dup data as tuple: {}'.format(ret))
-    #    return ret
-
-
     #def iter_dup_data(self, key, ksize, dblabel):
     #    """
     #    Get all duplicate values for a key.
@@ -759,14 +752,74 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     #        self._cur_close(cur)
 
 
-    cpdef tuple triple_keys(self, tuple triple_pattern, context=None):
+    def triples(self, triple_pattern, context=None):
         """
-        Python-facing method that returns results as a tuple.
+        Generator over matching triples.
+
+        :param tuple triple_pattern: 3 RDFLib terms
+        :param context: Context graph, if available.
+        :type context: rdflib.Graph or None
+
+        :rtype: Iterator
+        :return: Generator over triples and contexts in which each result has
+            the following format::
+
+                (s, p, o), generator(contexts)
+
+        Where the contexts generator lists all context that the triple appears
+        in.
         """
-        ret = self._triple_keys(triple_pattern, context)
-        #logger.debug('All triple keys: {}'.format(ret.data[: ret.size]))
-        #logger.debug('Triples as tuple: {}'.format(ret.to_tuple()))
-        return ret.to_tuple()
+        cdef:
+            Py_ssize_t i = 0, o = 0
+            unsigned char spok[TRP_KLEN]
+            unsigned char ck[KLEN]
+            lmdb.MDB_val key_v, data_v
+
+        # This sounds strange, RDFLib should be passing None at this point,
+        # but anyway...
+        context = self._normalize_context(context)
+
+        # WATCH: Maybe need an ``if context is not None``?
+        # In theory, ``None`` should be a context too...
+        try:
+            self._to_key(context, &ck)
+        except KeyNotFoundError:
+            return iter(())
+
+        #logger.debug(
+        #        'Getting triples for: {}, {}'.format(triple_pattern, context))
+        rset = self._triple_keys(triple_pattern, context)
+
+        cur = self._cur_open('spo:c')
+        try:
+            key_v.mv_size = TRP_KLEN
+            #data_v.mv_size = KLEN
+            while i < rset.ct:
+                #if self.key_exists(spok, 'spo:c', new_txn=False):
+                key_v.mv_data = rset.data + i * TRP_KLEN
+                logger.info('Checking contexts for triples: {}'.format(
+                    (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
+                # Get contexts associated with each triple.
+                contexts = []
+                #data_v.mv_data = ck
+                while True:
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                            cur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
+                    except KeyNotFoundError:
+                        break
+
+                    c_uri = self._from_key(
+                            <Key>data_v.mv_data, data_v.mv_size)
+                    contexts += (Graph(identifier=c_uri, store=self))
+
+                logger.info('Triple keys before yield: {}: {}.'.format(
+                    (<TripleKey>key_v.mv_data)[:TRP_KLEN], contexts))
+                yield self._from_key(<TripleKey>key_v.mv_data, TRP_KLEN), tuple(contexts)
+                i += 1
+                #logger.debug('After yield.')
+        finally:
+            self._cur_close(cur)
 
 
     cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
@@ -1393,13 +1446,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             Py_ssize_t i
-            unsigned char subkey[KLEN]
 
         ret = []
         #logger.debug('Find term from key: {}'.format(key[: size]))
         for i in range(0, size, KLEN):
-            memcpy(subkey, key + i, KLEN)
-            key_v.mv_data = &subkey
+            key_v.mv_data = key + i
             key_v.mv_size = KLEN
 
             _check(
@@ -1438,7 +1489,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         _check(lmdb.mdb_get(self.txn, self.get_dbi('th:t'), &key_v, &data_v))
         #logger.debug('Found key: {}'.format((<Key>data_v.mv_data)[: KLEN]))
 
-        memcpy(key, data_v.mv_data, KLEN)
+        key[0] = <Key>data_v.mv_data
 
 
     cdef inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *:
