@@ -15,6 +15,7 @@ from lakesuperior.store.base_lmdb_store import (
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from cython.parallel import parallel, prange
 from libc.string cimport memcmp, memcpy, strchr
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
@@ -97,7 +98,15 @@ lookup_ordering = [
 ]
 
 
-cdef inline void _hash(const unsigned char *s, Py_ssize_t size, Hash *ch):
+cdef unsigned char lookup_ordering_2bound[3][3]
+lookup_ordering_2bound = [
+    [1, 2, 0], # po:s
+    [0, 2, 1], # so:p
+    [0, 1, 2], # sp:o
+]
+
+
+cdef inline void _hash(const unsigned char *s, size_t size, Hash *ch):
     """Get the hash value of a serialized object."""
     htmp = hashlib.new(TERM_HASH_ALGO, s[: size]).digest()
     ch[0] = <unsigned char *>htmp
@@ -124,8 +133,8 @@ cdef class ResultSet:
     """
     cdef:
         unsigned char *data
-        unsigned char itemsize
-        size_t ct, size
+        readonly unsigned char itemsize
+        readonly size_t ct, size
 
     def __cinit__(self, size_t ct, unsigned char itemsize):
         """
@@ -181,13 +190,17 @@ cdef class ResultSet:
 
     # Access methods.
 
-    cdef tuple to_tuple(self):
+    def to_tuple(self):
         """
         Return the data set as a Python tuple.
         """
         return tuple(
                 self.data[i: i + self.itemsize]
                 for i in range(0, self.size, self.itemsize))
+
+
+    def get_item_obj(self, i):
+        return self.get_item(i)[: self.itemsize]
 
 
     cdef unsigned char *get_item(self, i):
@@ -449,7 +462,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     raise
 
 
-    cpdef void _remove(self, tuple triple_pattern, context=None):
+    cpdef void _remove(self, tuple triple_pattern, context=None) except *:
         cdef:
             unsigned char spok[TRP_KLEN]
             size_t i = 0
@@ -580,7 +593,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned char keys[3][KLEN]
             unsigned char dbl_keys[3][DBL_KLEN]
-            Py_ssize_t i = 0
+            size_t i = 0
             lmdb.MDB_val key_v, dbl_key_v
 
         keys[0] = spok # sk
@@ -770,7 +783,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         in.
         """
         cdef:
-            Py_ssize_t i = 0, o = 0
+            size_t i = 0, j = 0
             unsigned char spok[TRP_KLEN]
             unsigned char ck[KLEN]
             lmdb.MDB_val key_v, data_v
@@ -779,13 +792,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # but anyway...
         context = self._normalize_context(context)
 
-        # WATCH: Maybe need an ``if context is not None``?
-        # In theory, ``None`` should be a context too...
-        try:
-            self._to_key(context, &ck)
-        except KeyNotFoundError:
-            return iter(())
-
         #logger.debug(
         #        'Getting triples for: {}, {}'.format(triple_pattern, context))
         rset = self._triple_keys(triple_pattern, context)
@@ -793,30 +799,27 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cur = self._cur_open('spo:c')
         try:
             key_v.mv_size = TRP_KLEN
-            #data_v.mv_size = KLEN
-            while i < rset.ct:
-                #if self.key_exists(spok, 'spo:c', new_txn=False):
-                key_v.mv_data = rset.data + i * TRP_KLEN
-                logger.info('Checking contexts for triples: {}'.format(
+            for i in range(rset.ct):
+                logger.debug('Checking contexts for triples: {}'.format(
                     (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
+                key_v.mv_data = rset.data + i * TRP_KLEN
                 # Get contexts associated with each triple.
-                contexts = []
-                #data_v.mv_data = ck
+                contexts = set()
+                # This shall never be MDB_NOTFOUND.
+                _check(lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET))
                 while True:
+                    c_uri = self._from_key(<Key>data_v.mv_data, KLEN)[0]
+                    contexts.add(Graph(identifier=c_uri, store=self))
                     try:
                         _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
+                            cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
                     except KeyNotFoundError:
                         break
 
-                    c_uri = self._from_key(
-                            <Key>data_v.mv_data, data_v.mv_size)
-                    contexts += (Graph(identifier=c_uri, store=self))
-
-                logger.info('Triple keys before yield: {}: {}.'.format(
+                logger.debug('Triple keys before yield: {}: {}.'.format(
                     (<TripleKey>key_v.mv_data)[:TRP_KLEN], contexts))
-                yield self._from_key(<TripleKey>key_v.mv_data, TRP_KLEN), tuple(contexts)
-                i += 1
+                yield self._from_key(
+                        <TripleKey>key_v.mv_data, TRP_KLEN), contexts
                 #logger.debug('After yield.')
         finally:
             self._cur_close(cur)
@@ -824,7 +827,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
         """
-        Top-level Cython-facing lookup method.
+        Top-level lookup method.
 
         This method is used by `triples` which returns native Python tuples,
         as well as by other methods that need to iterate and filter triple
@@ -914,8 +917,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 # Regular lookup. Filter _lookup() results by context.
                 else:
-                    res = self._lookup(triple_pattern)
-                    if res.ct == 0:
+                    try:
+                        res = self._lookup(triple_pattern)
+                    except KeyNotFoundError:
                         return ResultSet(0, TRP_KLEN)
 
                     #logger.debug('Allocating for context filtering.')
@@ -958,7 +962,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Unfiltered lookup. No context checked.
         else:
             #logger.debug('No context in query.')
-            res = self._lookup(triple_pattern)
+            try:
+                res = self._lookup(triple_pattern)
+            except KeyNotFoundError:
+                return ResultSet(0, TRP_KLEN)
             #logger.debug('Res data before _triple_keys return: {}'.format(
             #    res.data[: res.size]))
             return res
@@ -1069,7 +1076,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char luk[KLEN]
             unsigned int dbflags
             unsigned char asm_rng[3]
-            size_t ct, ct_keys, i = 0, j, offset
+            size_t ct
+            size_t pg_offset = 0, src_offset, ret_offset
+            Py_ssize_t j # Needs to be signed for OpenMP
 
         try:
             self._to_key(term, &luk)
@@ -1084,13 +1093,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key_v.mv_data = luk
             key_v.mv_size = KLEN
 
-            try:
-                # Get results by the page.
-                _check(lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
-            except KeyNotFoundError:
-                return ResultSet(0, TRP_KLEN)
-
+            _check(lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET))
             _check(lmdb.mdb_cursor_count(icur, &ct))
 
             # Allocate memory for results.
@@ -1105,31 +1108,37 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 KLEN * term_order[1],
                 KLEN * term_order[2],
             ]
-            #logger.debug('asm_rng: {}'.format(asm_rng[:3]))
-            #logger.debug('luk: {}'.format(luk))
+            logger.debug('asm_rng: {}'.format(asm_rng[:3]))
+            logger.debug('luk: {}'.format(luk))
 
+            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
+            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
-                #logger.debug('i: {}'.format(i))
-                j = 0
-                ct_keys = data_v.mv_size // ret.itemsize
-                while j < ct_keys:
-                    offset = ret.itemsize * i + ret.itemsize * j
-                    memcpy(ret.data + offset + asm_rng[0], luk, KLEN)
-                    memcpy(ret.data + offset + asm_rng[1], data_v.mv_data, KLEN)
-                    memcpy(ret.data + offset + asm_rng[2], data_v.mv_data + KLEN, KLEN)
+                logger.debug('pg_offset: {}'.format(pg_offset))
+                logger.debug('Got data in 1bound: {}'.format((<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                for j in prange(data_v.mv_size // DBL_KLEN, nogil=True):
+                    src_offset = pg_offset + DBL_KLEN * j
+                    ret_offset = pg_offset + ret.itemsize * j
+                    memcpy(ret.data + ret_offset + asm_rng[0], luk, KLEN)
+                    memcpy(ret.data + ret_offset + asm_rng[1], data_v.mv_data + src_offset, KLEN)
+                    memcpy(ret.data + ret_offset + asm_rng[2], data_v.mv_data + src_offset + KLEN, KLEN)
 
-                #logger.debug('Data: {}'.format(
-                #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
-
-                rc = lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE)
                 try:
-                    _check(rc)
+                    # Get results by the page.
+                    _check(lmdb.mdb_cursor_get(
+                            icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
                 except KeyNotFoundError:
+                    # For testing only. Errors will be caught in triples()
+                    # when looking for a context.
+                    #if ret_offset + ret.itemsize < ret.size:
+                    #    raise RuntimeError(
+                    #        'Retrieved less values than expected: {} of {}.'
+                    #        .format(pg_offset, ret.size))
                     return ret
 
-                i += 1
+                pg_offset += data_v.mv_size
 
+            logger.debug('Assembled data: {}'.format(ret.data[: ret.size]))
         finally:
             self._cur_close(icur)
 
@@ -1139,145 +1148,114 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Look up triples for a pattern with two bound terms.
 
-        :param  bound: terms (dict) Triple labels and terms to search for,
-        in the format of, e.g. {'s': URIRef('urn:s:1'), 'o':
-        URIRef('urn:o:1')}
+        :param str idx1: The index to look up as one of the keys of
+            ``lookup_ordering_2bound``.
+        :param rdflib.URIRef term1: First bound term to search for.
 
-        :rtype: iterator(bytes)
+        :rtype: Iterator(bytes)
         :return: SPO keys matching the pattern.
         """
-        #logger.debug('idx1: {} idx2: {}'.format(idx1, idx2))
-        #logger.debug('term1: {} term2: {}'.format(term1, term2))
         cdef:
-            unsigned char fk_rng, fkp, lui, rk_rng, rkp
-            unsigned char term_order[3]
+            unsigned char luk1_offset, luk2_offset
+            unsigned char luk1[KLEN]
+            unsigned char luk2[KLEN]
+            unsigned char luk[DBL_KLEN]
+            unsigned int dbflags
             unsigned char asm_rng[3]
-            unsigned char luk[KLEN]
-            unsigned char fk[KLEN]
-            unsigned char rk[KLEN]
-            unsigned char match[DBL_KLEN]
-            size_t i = 0, ct
+            unsigned char term_order[3] # Lookup ordering
+            size_t ct, i = 0, pg_offset = 0, ret_offset, src_offset
+            Py_ssize_t j # Needs to be signed for OpenMP
             ResultSet ret
 
-        # First we need to get:
-        # - ludbl: The lookup DB label (s:po, p:so, o:sp)
-        # - luk: The KLEN-byte lookup key
-        # - fk: The KLEN-byte filter key
-        # - fkp: The position of filter key in a (s, p, o) term (0÷2)
-        # - rkp: The position of unbound key in a (s, p, o) term (0÷2)
-        # These have to be selected in the order given by lookup_rank.
-        #logger.debug('Begin 2bound setup.')
-        ludbl = None # Lookup DB label: s:po, p:so, or o:sp
-        while i < 3:
-            #logger.debug('i: {}'.format(i))
-            lui = lookup_rank[i] # Lookup term index: 0÷2
-            #logger.debug('term index handled (lui): {}'.format('spo'[lui]))
-            if lui == idx1 or lui == idx2:
-                term = term1 if lui == idx1 else term2
-                #logger.debug('Bound term being handled: {}'.format(term))
-                #luti = b'spo'[lui]
-                #logger.debug('luti: {}'.format(luti))
-                # First match is used to find the lookup DB.
-                if ludbl is None:
-                    #logger.debug('ludbl is None. Looking for lookup key.')
-                    #v_label = self.lookup_indices[luti]
-                    # Lookup database key (cursor) name
-                    ludbl = self.lookup_indices[lui]
-                    term_order = lookup_ordering[lui][:3]
-                    #logger.debug('term order: {}'.format(term_order[:3]))
-                    # Term to look up (lookup key)
-                    try:
-                        self._to_key(term, &luk)
-                    except KeyNotFoundError:
-                        return ResultSet(0, TRP_KLEN)
-                    #logger.debug('Lookup key (luk): {}'.format(luk[: KLEN]))
-                # Second match is the filter.
+        try:
+            self._to_key(term1, &luk1)
+            self._to_key(term2, &luk2)
+        except KeyNotFoundError:
+            return ResultSet(0, TRP_KLEN)
+        logging.debug('luk1: {}'.format(luk1[: KLEN]))
+        logging.debug('luk2: {}'.format(luk2[: KLEN]))
+
+        for i in range(3):
+            if (
+                    idx1 in lookup_ordering_2bound[i][: 2]
+                    and idx2 in lookup_ordering_2bound[i][: 2]):
+                term_order = lookup_ordering_2bound[i]
+                if term_order[0] == idx1:
+                    luk1_offset = 0
+                    luk2_offset = KLEN
                 else:
-                    #logger.debug('ludbl is {}. Looking for filter key.'.format(
-                    #    ludbl))
+                    luk1_offset = KLEN
+                    luk2_offset = 0
+                dblabel = self.lookup_indices[i + 3] # skip 1bound index labels
+                break
 
-                    # Precompute the array slice points that are used in
-                    # the loop.
+                if i == 2:
+                    raise ValueError(
+                            'Indices {} and {} not found in LU keys.'.format(
+                                idx1, idx2))
 
-                    # Filter key position (sub-key position in lookup results)
-                    # This is either 0 or 1
-                    if term_order[1] == lui:
-                        fkp = 0
-                        rkp = 1
-                    else:
-                        fkp = 1
-                        rkp = 0
-                    #logger.debug('Filter subkey pos in result data: {}'.format(fkp))
-                    #logger.debug('Remainder (unbound) subkey pos in result data: {}'.format(rkp))
-                    # Fliter term
-                    try:
-                        self._to_key(term, &fk)
-                    except KeyNotFoundError:
-                        return ResultSet(0, TRP_KLEN)
-                    #logger.debug('Filter key (fk): {}'.format(fk[: KLEN]))
-                    break
-            # The index that does not match idx1 or idx2 is the unbound one.
-            i += 1
+        logger.debug('Term order: {}'.format(term_order[:3]))
+        logger.debug('LUK offsets: {}, {}'.format(luk1_offset, luk2_offset))
+        # Compose terms in lookup key.
+        memcpy(luk + luk1_offset, luk1, KLEN)
+        memcpy(luk + luk2_offset, luk2, KLEN)
 
-        # Precompute pointer arithmetic outside of the loop.
-        asm_rng = [
-            KLEN * term_order[0],
-            KLEN * term_order[fkp + 1],
-            KLEN * term_order[rkp + 1],
-        ]
-        #logger.debug('asm_rng: {}'.format(asm_rng[:3]))
-        fk_rng = KLEN * fkp
-        rk_rng = KLEN * rkp
+        logger.debug('Lookup key: {}'.format(luk))
 
-        # Now Look up in index.
-        icur = self._cur_open(ludbl)
+        icur = self._cur_open(dblabel)
+        logger.debug('Database label: {}'.format(dblabel))
+
         try:
             key_v.mv_data = luk
-            key_v.mv_size = KLEN
-            try:
-                _check(lmdb.mdb_cursor_get(
-                        icur, &key_v, &data_v, lmdb.MDB_SET))
-            except KeyNotFoundError:
-                return ResultSet(0, TRP_KLEN)
+            key_v.mv_size = DBL_KLEN
 
-            _check(
-                    lmdb.mdb_cursor_count(icur, &ct),
-                    'Error getting 2bound term count.')
-            # Initially allocate memory for the maximum possible ret,
-            # it will be resized later.
+            _check(lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET))
+            _check(lmdb.mdb_cursor_count(icur, &ct))
+
+            # Allocate memory for results.
             ret = ResultSet(ct, TRP_KLEN)
-            # Iterate over ret and filter by second term.
-            i = 0
+            #logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
+            #logger.debug('First row: {}'.format(
+            #        (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
+
+            # Arrange results according to lookup order.
+            asm_rng = [
+                KLEN * term_order[0],
+                KLEN * term_order[1],
+                KLEN * term_order[2],
+            ]
+            logger.debug('asm_rng: {}'.format(asm_rng[:3]))
+            logger.debug('luk: {}'.format(luk))
+
+            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
+            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
-                #logger.debug('Match: {}'.format(
-                #        (<unsigned char *>data_v.mv_data)[: DBL_KLEN]))
-                #logger.debug('fk: {}'.format(fk[: KLEN]))
-                if memcmp(data_v.mv_data + fk_rng, fk, KLEN) == 0:
-                    #logger.debug('Assembling results.')
-                    # Assemble result.
-                    memcpy(ret.data + ret.itemsize * i + asm_rng[0], luk, KLEN)
-                    memcpy(ret.data + ret.itemsize * i + asm_rng[1], fk, KLEN)
-                    # Remainder (unbound key) to complete the triple.
-                    memcpy(
-                        ret.data + ret.itemsize * i + asm_rng[2],
-                        data_v.mv_data + rk_rng, KLEN)
+                logger.debug('Got data in 2bound: {}'.format((<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                for j in prange(data_v.mv_size // KLEN, nogil=True):
+                    src_offset = pg_offset + KLEN * j
+                    ret_offset = pg_offset + ret.itemsize * j
+                    #logger.debug('Page offset: {}'.format(pg_offset))
+                    #logger.debug('Ret offset: {}'.format(ret_offset))
+                    memcpy(ret.data + ret_offset + asm_rng[0], luk, KLEN)
+                    memcpy(ret.data + ret_offset + asm_rng[1], luk + KLEN, KLEN)
+                    memcpy(ret.data + ret_offset + asm_rng[2], data_v.mv_data + src_offset, KLEN)
+                    #logger.debug('Assembled triple: {}'.format((ret.data + ret_offset)[: TRP_KLEN]))
 
-                    #logger.debug('Assembled match: {}'.format(
-                    #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
-                    i += 1
-
+                logger.debug('Assembled data: {}'.format((ret.data + pg_offset)[: ret.size]))
                 try:
+                    # Get results by the page.
                     _check(lmdb.mdb_cursor_get(
-                            icur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
+                            icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
                 except KeyNotFoundError:
-                    break
+                    # For testing only. Errors will be caught in triples()
+                    # when looking for a context.
+                    #if ret_offset + ret.itemsize < ret.size:
+                    #    raise RuntimeError(
+                    #        'Retrieved less values than expected: {} of {}.'
+                    #        .format(pg_offset, ret.size))
+                    return ret
 
-            # Shrink the array to the actual number of ret.
-            #logger.debug('Resizing results to {} size.'.format(i))
-            ret.resize(i)
-
-            #logger.debug('Returning results from lookup_2bound.')
-            return ret
+                pg_offset += data_v.mv_size
         finally:
             self._cur_close(icur)
 
@@ -1287,7 +1265,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Return all keys of a (``s:po``, ``p:so``, ``o:sp``) index.
         """
         cdef:
-            Py_ssize_t i = 0
+            size_t i = 0
             lmdb.MDB_stat stat
 
         idx_label = self.lookup_indices['spo'.index(term_type)]
@@ -1335,7 +1313,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Return all registered namespaces.
         """
         cdef:
-            Py_ssize_t i = 0
+            size_t i = 0
             lmdb.MDB_stat stat
 
         ret = []
@@ -1371,7 +1349,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             lmdb.MDB_stat stat
-            Py_ssize_t i = 0
+            size_t i = 0
             unsigned char spok[TRP_KLEN]
             unsigned char ck[KLEN]
             lmdb.MDB_cursor_op op
@@ -1438,14 +1416,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return self._from_key(key, len(key))
 
 
-    cdef tuple _from_key(self, unsigned char *key, Py_ssize_t size):
+    cdef tuple _from_key(self, unsigned char *key, size_t size):
         """
         Convert a single or multiple key into one or more terms.
 
         :param Key key: The key to be converted.
         """
         cdef:
-            Py_ssize_t i
+            size_t i
 
         ret = []
         #logger.debug('Find term from key: {}'.format(key[: size]))

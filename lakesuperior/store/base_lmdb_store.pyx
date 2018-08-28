@@ -257,7 +257,7 @@ cdef class BaseLmdbStore:
 
     cpdef void close_env(self, bint commit_pending_transaction=False) except *:
         if self.is_open:
-            if self.is_txn_open:
+            if self.is_txn_open is True:
                 if commit_pending_transaction:
                     self._txn_commit()
                 else:

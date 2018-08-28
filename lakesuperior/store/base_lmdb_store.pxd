@@ -5,6 +5,7 @@ from lakesuperior.cy_include cimport cylmdb as lmdb
 cdef:
     int rc
     size_t i
+    bint is_txn_open
 
     lmdb.MDB_val key_v, data_v
     lmdb.MDB_dbi dbi
