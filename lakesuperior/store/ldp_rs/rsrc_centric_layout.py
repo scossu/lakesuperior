@@ -311,6 +311,7 @@ class RsrcCentricLayout:
         See base_rdf_layout.ask_rsrc_exists.
         """
         logger.debug('Checking if resource exists: {}'.format(uid))
+        #import pdb; pdb.set_trace()
         res = self.store.triples(
             (nsc['fcres'][uid], RDF.type, nsc['fcrepo'].Resource),
             nsc['fcadmin'][uid])

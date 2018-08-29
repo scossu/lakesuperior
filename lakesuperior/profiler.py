@@ -11,7 +11,7 @@ from lakesuperior.globals import AppGlobals
 
 options = {
     'restrictions': [30],
-    #'profile_dir': '/tmp/lsup_profiling'
+    'profile_dir': '/tmp/lsup_profiling'
 }
 
 from lakesuperior.app import create_app

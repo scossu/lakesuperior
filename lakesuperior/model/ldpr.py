@@ -828,7 +828,7 @@ class Ldpr(metaclass=ABCMeta):
            :class:`lakesuperior.exceptions.RefIntViolationError` is raised.
            Otherwise, the violation is simply logged.
         """
-        for o in self.provided_imr.objects():
+        for o in set(self.provided_imr.objects()):
             if(
                     isinstance(o, URIRef) and
                     str(o).startswith(nsc['fcres']) and

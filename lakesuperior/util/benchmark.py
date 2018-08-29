@@ -15,7 +15,7 @@ Benchmark script to measure write performance.
 '''
 
 default_n = 10000
-webroot = 'http://localhost:8000/ldp'
+webroot = 'http://localhost:5000/ldp'
 container_uri = webroot + '/pomegranate'
 
 def run():
@@ -33,9 +33,9 @@ def run():
         raise ValueError('Not a valid verb.')
     method = choice.lower() or 'put'
 
-    sys.stdout.write('RDF Sources (r), Non-RDF (n), or Both 50/50 (b)? [b] >')
+    sys.stdout.write('RDF Sources (r), Non-RDF (n), or Both 50/50 (b)? [r] >')
     choice = input().lower()
-    res_type = choice or 'b'
+    res_type = choice or 'r'
 
     if del_cont  == 'y':
         requests.delete(container_uri, headers={'prefer': 'no-tombstone'})

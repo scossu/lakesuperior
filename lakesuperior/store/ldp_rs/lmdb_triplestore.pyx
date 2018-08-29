@@ -792,8 +792,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # but anyway...
         context = self._normalize_context(context)
 
-        #logger.debug(
-        #        'Getting triples for: {}, {}'.format(triple_pattern, context))
+        logger.info(
+                'Getting triples for: {}, {}'.format(triple_pattern, context))
         rset = self._triple_keys(triple_pattern, context)
 
         cur = self._cur_open('spo:c')
@@ -1079,6 +1079,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             size_t ct
             size_t pg_offset = 0, src_offset, ret_offset
             Py_ssize_t j # Needs to be signed for OpenMP
+            lmdb.MDB_cursor *icur
 
         try:
             self._to_key(term, &luk)
@@ -1165,6 +1166,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char term_order[3] # Lookup ordering
             size_t ct, i = 0, pg_offset = 0, ret_offset, src_offset
             Py_ssize_t j # Needs to be signed for OpenMP
+            lmdb.MDB_cursor *icur
             ResultSet ret
 
         try:
@@ -1209,10 +1211,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key_v.mv_data = luk
             key_v.mv_size = DBL_KLEN
 
-            _check(lmdb.mdb_cursor_get(icur, &key_v, NULL, lmdb.MDB_SET))
+            # Count duplicates for key and allocate memory for result set.
+            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
             _check(lmdb.mdb_cursor_count(icur, &ct))
-
-            # Allocate memory for results.
             ret = ResultSet(ct, TRP_KLEN)
             #logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
             #logger.debug('First row: {}'.format(
@@ -1228,7 +1229,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             logger.debug('luk: {}'.format(luk))
 
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
-            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
+            _check(lmdb.mdb_cursor_get(
+                icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
                 logger.debug('Got data in 2bound: {}'.format((<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                 for j in prange(data_v.mv_size // KLEN, nogil=True):

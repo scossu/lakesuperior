@@ -162,7 +162,7 @@ cdef class BaseLmdbStore:
             logger.warning('Environment already open.')
             return
 
-        logger.info('Opening environment at {}.'.format(self.env_path))
+        logger.debug('Opening environment at {}.'.format(self.env_path))
         if create:
             #logger.info('Creating db env at {}'.format(self.env_path))
             parent_path = (
@@ -198,7 +198,7 @@ cdef class BaseLmdbStore:
         self._readers = self.options.get(
                 'max_spare_txns', wsgi.workers * self.readers_mult)
         rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
-        logger.info('Max. readers: {}'.format(self._readers))
+        logger.debug('Max. readers: {}'.format(self._readers))
         _check(rc, 'Error setting max. readers: {}')
 
         # Clear stale readers.
@@ -586,18 +586,18 @@ cdef class BaseLmdbStore:
 
         flags = 0 if write else lmdb.MDB_RDONLY
 
-        logger.info('Opening {} transaction in PID {}, thread {}'.format(
+        logger.debug('Opening {} transaction in PID {}, thread {}'.format(
             'RW' if write else 'RO',
             multiprocessing.current_process().pid,
             threading.currentThread().getName()))
-        #logger.info('Readers: {}'.format(self.reader_list()))
+        #logger.debug('Readers: {}'.format(self.reader_list()))
         rc = lmdb.mdb_txn_begin(self.dbenv, parent, flags, &self.txn)
         _check(rc, 'Error opening transaction.')
-        logger.info('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
+        logger.debug('Opened transaction @ {:x}'.format(<unsigned long>self.txn))
 
         self.is_txn_open = True
         self.is_txn_rw = write
-        logger.info('txn is open: {}'.format(self.is_txn_open))
+        logger.debug('txn is open: {}'.format(self.is_txn_open))
 
 
     cdef void _txn_commit(self) except *:
