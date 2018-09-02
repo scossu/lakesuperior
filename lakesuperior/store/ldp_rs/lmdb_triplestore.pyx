@@ -8,7 +8,11 @@ import logging
 import os
 import pickle
 
+from collections.abc import Sequence
+from functools import wraps
+
 from rdflib import Graph
+from rdflib.term import Node
 
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
@@ -132,7 +136,7 @@ cdef class ResultSet:
         ``itemsize`` and ``ct``.
     """
     cdef:
-        unsigned char *data
+        readonly unsigned char *data
         readonly unsigned char itemsize
         readonly size_t ct, size
 
@@ -210,6 +214,302 @@ cdef class ResultSet:
         The item size is known by the ``itemsize`` property of the object.
         """
         return self.data + self.itemsize * i
+
+
+
+def use_data(fn):
+    @wraps(fn)
+    def _wrapper(self, other):
+        if isinstance(other, SimpleGraph):
+            other = other.data
+    return _wrapper
+
+
+cdef class SimpleGraph:
+    """
+    Fast and simple implementation of a graph.
+
+    Most functions should mimic RDFLib's graph with less overhead. It uses
+        the same funny but functional slicing notation.
+    """
+
+    cdef:
+        readonly set data
+
+    def __init__(
+            self, set data=set(), tuple lookup=(), store=None):
+        """
+        Initialize the graph with pre-existing data or by looking up a store.
+
+        Either ``data``, or both ``lookup`` and ``store``, can be provided.
+        ``lookup`` and ``store`` have precedence. If none of them is specified,
+        an empty graph is initialized.
+
+        :param rdflib.URIRef uri: The graph URI.
+            This will serve as the subject for some queries.
+        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
+        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
+            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
+            Any and all elements may be ``None``.
+        :param lmdbStore store: the store to look data up.
+        """
+        if data:
+            self.data = set(data)
+        else:
+            if not lookup:
+                self.data = set()
+            else:
+                self._data_from_lookup(lookup, store)
+
+
+    cdef void _data_from_lookup(
+            self, tuple lookup, LmdbTriplestore store) except *:
+        cdef:
+            size_t i
+            unsigned char spok[TRP_KLEN]
+
+        self.data = set()
+        keyset = store.triple_keys(*lookup)
+
+        for i in range(keyset.ct):
+            spok = keyset.data + i * TRP_KLEN
+            self.data.add(store.from_key(spok, TRP_KLEN))
+
+    # Basic set operations.
+
+    def add(self, dataset):
+        self.data.add(dataset)
+
+    def remove(self, item):
+        self.data.remove(item)
+
+    def __len__(self):
+        return len(self.data)
+
+    @use_data
+    def __eq__(self, other):
+        return self.data == other
+
+    def __repr__(self):
+        return repr(self.data)
+
+    def __str__(self):
+        return str(self.data)
+
+    @use_data
+    def __sub__(self, other):
+        return self.data - other
+
+    @use_data
+    def __isub__(self, other):
+        self.data -= other
+        return self
+
+    @use_data
+    def __and__(self, other):
+        return self.data & other
+
+    @use_data
+    def __iand__(self, other):
+        self.data &= other
+        return self
+
+    @use_data
+    def __or__(self, other):
+        return self.data | other
+
+    @use_data
+    def __ior__(self, other):
+        self.data |= other
+        return self
+
+    @use_data
+    def __xor__(self, other):
+        return self.data ^ other
+
+    @use_data
+    def __ixor__(self, other):
+        self.data ^= other
+        return self
+
+    def __contains__(self, item):
+        return item in self.data
+
+    def __iter__(self):
+        return self.data.__iter__()
+
+
+    # Slicing.
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            s, p, o = item.start, item.stop, item.step
+            return self._lookup(s, p, o)
+        else:
+            raise TypeError(f'Wrong slice format: {item}.')
+
+
+    cpdef void set(self, tuple trp) except *:
+        """
+        Set a single value for subject and predicate.
+
+        Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
+        """
+        self.remove_triples((trp[0], trp[1], None))
+        self.data.add(trp)
+
+
+    cpdef void remove_triples(self, pattern) except *:
+        """
+        Remove triples by pattern.
+        """
+        s, p, o = pattern
+        for match in self._lookup(s, p, o):
+            self.data.remove(match)
+
+
+    cpdef as_rdflib(self):
+        """
+        :rtype: rdflib.Graph
+        """
+        gr = Graph()
+        for trp in self.data:
+            gr.add(trp)
+
+        return gr
+
+
+    cdef _lookup(self, s, p, o):
+        if s is None and p is None and o is None:
+            return self.data
+        elif s is None and p is None:
+            return {(r[0], r[1]) for r in self.data if r[2] == o}
+        elif s is None and o is None:
+            return {(r[0], r[2]) for r in self.data if r[1] == p}
+        elif p is None and o is None:
+            return {(r[1], r[2]) for r in self.data if r[0] == s}
+        elif s is None:
+            return {r[0] for r in self.data if r[1] == p and r[2] == o}
+        elif p is None:
+            return {r[1] for r in self.data if r[0] == s and r[2] == o}
+        elif o is None:
+            return {r[2] for r in self.data if r[0] == s and r[1] == p}
+        else:
+            # all given
+            return (s,p,o) in self.data
+
+
+    cpdef set terms(self, str type):
+        """
+        Get all terms of a type: subject, predicate or object.
+
+        :param str type: One of ``s``, ``p`` or ``o``.
+        """
+        i = 'spo'.index(type)
+        return {r[i] for r in self.data}
+
+
+
+cdef class Imr(SimpleGraph):
+    """
+    In-memory resource data container.
+
+    This is an extension of :py:class:`~SimpleGraph` that adds a subject URI to
+    the data set and some convenience methods.
+
+    Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
+    will create a new ``Imr`` instance with the same subject URI.
+    """
+    cdef:
+        readonly object uri
+
+    def __init__(self, uri, *args, **kwargs):
+        """
+        Initialize the graph with pre-existing data or by looking up a store.
+
+        Either ``data``, or ``lookup`` *and* ``store``, can be provide.
+        ``lookup`` and ``store`` have precedence. If none of them is specified,
+        an empty graph is initialized.
+
+        :param rdflib.URIRef uri: The graph URI.
+            This will serve as the subject for some queries.
+        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
+        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
+            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
+            Any and all elements may be ``None``.
+        :param lmdbStore store: the store to look data up.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.uri = uri
+
+
+    def __str__(self):
+        return f'<{self.__class__.__name__} uri={self.uri}, data={self.data}>'
+
+    @use_data
+    def __sub__(self, other):
+        return self.__class__(uri=self.uri, data=self.data - other)
+
+    @use_data
+    def __and__(self, other):
+        return self.__class__(uri=self.uri, data=self.data & other)
+
+    @use_data
+    def __or__(self, other):
+        return self.__class__(uri=self.uri, data=self.data | other)
+
+    @use_data
+    def __xor__(self, other):
+        return self.__class__(uri=self.uri, data=self.data ^ other)
+
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            s, p, o = item.start, item.stop, item.step
+            return self._lookup(s, p, o)
+
+        elif isinstance(item, Node):
+            # If a Node is given, return all values for that predicate.
+            return {
+                    r[2] for r in self.data
+                    if r[0] == self.uri and r[1] == item}
+        else:
+            raise TypeError(f'Wrong slice format: {item}.')
+
+
+    def value(self, p, strict=False):
+        """
+        Get an individual value.
+
+        :param rdflib.termNode p: Predicate to search for.
+        :param bool strict: If set to ``True`` the method raises an error if
+            more than one value is found. If ``False`` (the default) only
+            the first found result is returned.
+        :rtype: rdflib.term.Node
+        """
+        values = self[p]
+
+        if strict and len(values) > 1:
+            raise RuntimeError('More than one value found for {}, {}.'.format(
+                    self.uri, p))
+
+        for ret in values:
+            return ret
+
+        return None
+
+
+    cpdef as_rdflib(self):
+        """
+        :rtype: rdflib.Resource
+        """
+        gr = Graph()
+        for trp in self.data:
+            logger.info(f'Adding triple to Imr: {trp}')
+            gr.add(trp)
+
+        return gr.resource(identifier=self.uri)
 
 
 
@@ -479,7 +779,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 return
 
         # Get the matching pattern.
-        match_set = self._triple_keys(triple_pattern, context)
+        match_set = self.triple_keys(triple_pattern, context)
 
         dcur = self._cur_open('spo:c')
         icur = self._cur_open('c:spo')
@@ -706,63 +1006,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    #def iter_dup_data(self, key, ksize, dblabel):
-    #    """
-    #    Get all duplicate values for a key.
-    #    """
-    #    #logger.debug('In _get_dup_data: key: {} in DB: {}'.format(
-    #    #        key[: ksize], dblabel.decode()))
-    #    cdef:
-    #        size_t ct, i = 0
-    #        unsigned int dbflags
-    #        ResultSet ret
-    #        lmdb.MDB_cursor *cur
+    # TODO Deprecate RDFLib API?
+    def contexts(self, triple=None):
+        """
+        Get a list of all contexts.
 
-    #    #logger.debug('DB label: {}'.format(dblabel.decode()))
-    #    key_v.mv_data = key
-    #    key_v.mv_size = ksize
-    #    #logger.debug('Key: {}'.format(key[: ksize]))
-    #    #logger.debug('Key size: {}'.format(ksize))
-
-    #    cur = self._cur_open(dblabel)
-    #    try:
-    #        _check(lmdb.mdb_dbi_flags(
-    #            self.txn, lmdb.mdb_cursor_dbi(cur), &dbflags))
-    #        if not lmdb.MDB_DUPFIXED & dbflags or not lmdb.MDB_DUPSORT & dbflags:
-    #            raise ValueError('This DB is not set up with fixed values.')
-
-    #        rc = lmdb.mdb_cursor_get(
-    #                cur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE)
-    #        try:
-    #            _check(rc)
-    #        except KeyNotFoundError:
-    #            return ResultSet(0, 0)
-
-    #        _check(lmdb.mdb_cursor_count(cur, &ct))
-    #        ret = ResultSet(ct, data_v.mv_size)
-    #        #logger.debug('array sizes: {}x{}'.format(ret.ct, ret.itemsize))
-
-    #        while True:
-    #            memcpy(
-    #                    ret.data + i * ret.itemsize, data_v.mv_data,
-    #                    ret.itemsize)
-    #            #logger.debug('Data in row: {}'.format(
-    #            #    ret.data[ret.itemsize * i: ret.itemsize * (i + 1)]))
-
-    #            rc = lmdb.mdb_cursor_get(
-    #                cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP)
-    #            try:
-    #                _check(rc)
-    #            except KeyNotFoundError:
-    #                break
-
-    #            i += 1
-
-    #        #logger.debug('Total data in _get_dup_data: {}'.format(
-    #        #    ret.data[: ret.size]))
-    #        return ret
-    #    finally:
-    #        self._cur_close(cur)
+        :rtype: Iterator(rdflib.Graph)
+        """
+        for ctx_uri in self.all_contexts(triple):
+            yield Graph(
+                    identifier=self.from_key(ctx_uri, len(ctx_uri))[0],
+                    store=self)
 
 
     def triples(self, triple_pattern, context=None):
@@ -792,9 +1046,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # but anyway...
         context = self._normalize_context(context)
 
-        logger.info(
+        logger.debug(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
-        rset = self._triple_keys(triple_pattern, context)
+        rset = self.triple_keys(triple_pattern, context)
 
         cur = self._cur_open('spo:c')
         try:
@@ -804,12 +1058,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
                 key_v.mv_data = rset.data + i * TRP_KLEN
                 # Get contexts associated with each triple.
-                contexts = set()
+                contexts = []
                 # This shall never be MDB_NOTFOUND.
                 _check(lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET))
                 while True:
-                    c_uri = self._from_key(<Key>data_v.mv_data, KLEN)[0]
-                    contexts.add(Graph(identifier=c_uri, store=self))
+                    c_uri = self.from_key(<Key>data_v.mv_data, KLEN)[0]
+                    contexts.append(Graph(identifier=c_uri, store=self))
                     try:
                         _check(lmdb.mdb_cursor_get(
                             cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
@@ -817,15 +1071,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         break
 
                 logger.debug('Triple keys before yield: {}: {}.'.format(
-                    (<TripleKey>key_v.mv_data)[:TRP_KLEN], contexts))
-                yield self._from_key(
-                        <TripleKey>key_v.mv_data, TRP_KLEN), contexts
+                    (<TripleKey>key_v.mv_data)[:TRP_KLEN], tuple(contexts)))
+                yield self.from_key(
+                        <TripleKey>key_v.mv_data, TRP_KLEN), tuple(contexts)
                 #logger.debug('After yield.')
         finally:
             self._cur_close(cur)
 
 
-    cdef ResultSet _triple_keys(self, tuple triple_pattern, context=None):
+    cpdef ResultSet triple_keys(self, tuple triple_pattern, context=None):
         """
         Top-level lookup method.
 
@@ -837,6 +1091,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param context: Context graph or URI, or None.
         :type context: rdflib.term.Identifier or None
         """
+        # TODO: Improve performance by allowing passing contexts as a tuple.
         cdef:
             unsigned char tk[KLEN]
             unsigned char ck[KLEN]
@@ -966,7 +1221,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 res = self._lookup(triple_pattern)
             except KeyNotFoundError:
                 return ResultSet(0, TRP_KLEN)
-            #logger.debug('Res data before _triple_keys return: {}'.format(
+            #logger.debug('Res data before triple_keys return: {}'.format(
             #    res.data[: res.size]))
             return res
 
@@ -1116,7 +1371,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
                 logger.debug('pg_offset: {}'.format(pg_offset))
-                logger.debug('Got data in 1bound: {}'.format((<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                logger.debug(
+                        'Got data in 1bound ({}): {}'.format(
+                            data_v.mv_size,
+                            (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                 for j in prange(data_v.mv_size // DBL_KLEN, nogil=True):
                     src_offset = pg_offset + DBL_KLEN * j
                     ret_offset = pg_offset + ret.itemsize * j
@@ -1139,7 +1397,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 pg_offset += data_v.mv_size
 
-            logger.debug('Assembled data: {}'.format(ret.data[: ret.size]))
+            logger.debug('Assembled data in 1bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
         finally:
             self._cur_close(icur)
 
@@ -1169,6 +1427,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *icur
             ResultSet ret
 
+        logging.debug(
+                f'2bound lookup for term {term1} at position {idx1} '
+                f'and term {term2} at position {idx2}.')
         try:
             self._to_key(term1, &luk1)
             self._to_key(term2, &luk2)
@@ -1191,10 +1452,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 dblabel = self.lookup_indices[i + 3] # skip 1bound index labels
                 break
 
-                if i == 2:
-                    raise ValueError(
-                            'Indices {} and {} not found in LU keys.'.format(
-                                idx1, idx2))
+                #if i == 2:
+                #    raise ValueError(
+                #            'Indices {} and {} not found in LU keys.'.format(
+                #                idx1, idx2))
 
         logger.debug('Term order: {}'.format(term_order[:3]))
         logger.debug('LUK offsets: {}, {}'.format(luk1_offset, luk2_offset))
@@ -1232,8 +1493,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             _check(lmdb.mdb_cursor_get(
                 icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
-                logger.debug('Got data in 2bound: {}'.format((<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                for j in prange(data_v.mv_size // KLEN, nogil=True):
+                logger.debug('Got data in 2bound ({}): {}'.format(
+                    data_v.mv_size,
+                    (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                for j in range(data_v.mv_size // KLEN):
                     src_offset = pg_offset + KLEN * j
                     ret_offset = pg_offset + ret.itemsize * j
                     #logger.debug('Page offset: {}'.format(pg_offset))
@@ -1243,7 +1506,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     memcpy(ret.data + ret_offset + asm_rng[2], data_v.mv_data + src_offset, KLEN)
                     #logger.debug('Assembled triple: {}'.format((ret.data + ret_offset)[: TRP_KLEN]))
 
-                logger.debug('Assembled data: {}'.format((ret.data + pg_offset)[: ret.size]))
+                logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, (ret.data + pg_offset)[: ret.size]))
                 try:
                     # Get results by the page.
                     _check(lmdb.mdb_cursor_get(
@@ -1307,7 +1570,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         for key in self._all_term_keys(term_type).to_tuple():
             #logger.debug('Yielding: {}'.format(key))
-            yield self._from_key(key, KLEN)[0]
+            yield self.from_key(key, KLEN)[0]
 
 
     cpdef tuple all_namespaces(self):
@@ -1413,12 +1676,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    def from_key(self, key):
-        #logger.debug('Received Key in Python method: {} Size: {}'.format(key, len(key)))
-        return self._from_key(key, len(key))
-
-
-    cdef tuple _from_key(self, unsigned char *key, size_t size):
+    cdef tuple from_key(self, unsigned char *key, size_t size):
         """
         Convert a single or multiple key into one or more terms.
 

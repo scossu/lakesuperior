@@ -211,16 +211,6 @@ class LmdbStore(LmdbTriplestore, Store):
             yield (pfx, Namespace(ns))
 
 
-    def contexts(self, triple=None):
-        """
-        Get a list of all contexts.
-
-        :rtype: Iterator(rdflib.Graph)
-        """
-        for ctx_uri in self.all_contexts(triple):
-            yield Graph(identifier=self.from_key(ctx_uri)[0], store=self)
-
-
     def add_graph(self, graph):
         """
         Add a graph to the database.

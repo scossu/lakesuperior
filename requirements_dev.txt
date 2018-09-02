@@ -9,7 +9,7 @@ click-log==0.2.1
 click==6.7
 gevent==1.2.2
 gunicorn==19.7.1
-numpy==1.14.1
+numpy==1.15.1
 pytest-flask==0.10.0
 pytest==3.2.2
 rdflib==4.2.2

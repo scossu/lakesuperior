@@ -16,6 +16,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
+from lakesuperior.store.ldp_rs.lmdb_triplestore import Imr
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource
@@ -36,7 +37,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = Ldpc(uid, provided_imr=Graph(identifier=nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Imr(uri=nsc['fcres'][uid]))
 
         return rsrc
 
@@ -48,7 +49,7 @@ class LdpFactory:
 
         This factory method creates and returns an instance of an LDPR subclass
         based on information that needs to be queried from the underlying
-        graph store.
+        g"http://api.edu/location/id/1234/thumbnail"raph store.
 
         N.B. The resource must exist.
 
@@ -56,7 +57,7 @@ class LdpFactory:
         """
         # This will blow up if strict is True and the resource is a tombstone.
         rsrc_meta = rdfly.get_metadata(uid, strict=strict)
-        rdf_types = set(rsrc_meta[nsc['fcres'][uid] : RDF.type])
+        rdf_types = rsrc_meta[nsc['fcres'][uid] : RDF.type]
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')
@@ -101,10 +102,11 @@ class LdpFactory:
         if rdf_data:
             graph = Graph().parse(
                 data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid])
+            data = set(graph)
+        else:
+            data = set()
 
-        provided_imr = Graph(identifier=uri)
-        if graph:
-            provided_imr += graph
+        provided_imr = Imr(uri=uri, data=data)
         #logger.debug('Provided graph: {}'.format(
         #        pformat(set(provided_imr))))
 
@@ -115,9 +117,9 @@ class LdpFactory:
                     'Binary stream must be provided if mimetype is specified.')
 
             # Determine whether it is a basic, direct or indirect container.
-            if Ldpr.MBR_RSRC_URI in provided_imr.predicates() and \
-                    Ldpr.MBR_REL_URI in provided_imr.predicates():
-                if Ldpr.INS_CNT_REL_URI in provided_imr.predicates():
+            if provided_imr[ : Ldpr.MBR_RSRC_URI : ] and \
+                    provided_imr[ : Ldpr.MBR_REL_URI : ]:
+                if provided_imr[ : Ldpr.INS_CNT_REL_URI : ]:
                     cls = LdpIc
                 else:
                     cls = LdpDc

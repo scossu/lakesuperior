@@ -24,6 +24,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
+from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph, Imr
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -217,8 +218,10 @@ class RsrcCentricLayout:
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
-            gr = self.get_imr('/', incl_inbound=False, incl_children=True)
+            imr = self.get_imr('/', incl_inbound=False, incl_children=True)
 
+        gr = Graph(identifier=imr.uri)
+        gr += imr.data
         checksum = to_isomorphic(gr).graph_digest()
         digest = sha256(str(checksum).encode('ascii')).digest()
 
@@ -244,9 +247,10 @@ class RsrcCentricLayout:
         :param rdflib.term.URIRef ctx: URI of the optional context. If None,
             all named graphs are queried.
 
-        :rtype: rdflib.Graph
+        :rtype: SimpleGraph
         """
-        return self.store.triples((subject, None, None), ctx)
+        return SimpleGraph(
+                store=self.store, lookup=((subject, None, None), ctx))
 
 
     def count_rsrc(self):
@@ -279,26 +283,21 @@ class RsrcCentricLayout:
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
 
-        graphs = {pfx[uid] for pfx in self.graph_ns_types.keys()}
+        contexts = {pfx[uid] for pfx in self.graph_ns_types.keys()}
 
-        # Exclude children: remove containment graphs.
+        # Exclude children: remove containment contexts.
         if not incl_children:
-            graphs.remove(nsc['fcstruct'][uid])
+            contexts.remove(nsc['fcstruct'][uid])
 
-        rsrc_graphs = [
-                self.ds.graph(gr)
-                for gr in graphs]
-        resultset = set(chain.from_iterable(rsrc_graphs))
+        imr = Imr(uri=nsc['fcres'][uid])
 
-        imr = Graph(identifier=nsc['fcres'][uid])
-        imr += resultset
+        for ctx in contexts:
+            imr |= SimpleGraph(
+                    lookup=((None, None, None), ctx), store=self.store).data
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            imr += self.get_inbound_rel(nsc['fcres'][uid])
-
-        #logger.debug('Found resource: {}'.format(
-        #        imr.serialize(format='turtle').decode('utf-8')))
+            imr |= set(self.get_inbound_rel(nsc['fcres'][uid]))
 
         if strict:
             self._check_rsrc_status(imr)
@@ -330,14 +329,15 @@ class RsrcCentricLayout:
         logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
-        uri = nsc['fcres'][uid]
-        gr = Graph(identifier=uri)
-        gr += self.ds.graph(nsc['fcadmin'][uid])
+        imr = Imr(
+                uri=nsc['fcres'][uid],
+                lookup=((None, None, None), nsc['fcadmin'][uid]),
+                store=self.store)
 
         if strict:
-            self._check_rsrc_status(gr)
+            self._check_rsrc_status(imr)
 
-        return gr
+        return imr
 
 
     def get_user_data(self, uid):
@@ -350,10 +350,12 @@ class RsrcCentricLayout:
         # *TODO* This only works as long as there is only one user-provided
         # graph. If multiple user-provided graphs will be supported, this
         # should use another query to get all of them.
-        userdata_gr = Graph(identifier=nsc['fcres'][uid])
-        userdata_gr += self.ds.graph(nsc['fcmain'][uid])
+        uri = nsc['fcres'][uid]
+        userdata = Imr(
+                uri=uri, lookup=((uri, None, None),nsc['fcmain'][uid]),
+                store=self.store)
 
-        return userdata_gr
+        return userdata
 
 
     def get_version_info(self, uid):
@@ -368,16 +370,13 @@ class RsrcCentricLayout:
         # Fedora are quite fluid anyways...
 
         # Result graph.
-        vmeta_gr = Graph(identifier=nsc['fcres'][uid])
-
-        # Get version meta graphs.
-        v_triples = self.ds.graph(nsc['fcadmin'][uid]).triples(
-                (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None))
+        vmeta = Imr(uri=nsc['fcres'][uid], lookup=(
+            (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None),
+                nsc['fcadmin'][uid]), store=self.store)
 
         #Get version graphs proper.
-        for vtrp in v_triples:
-            # While at it, add the hasVersion triple to the result graph.
-            vmeta_gr.add(vtrp)
+        for vtrp in vmeta:
+            # Add the hasVersion triple to the result graph.
             vmeta_uris = self.ds.graph(HIST_GR_URI).subjects(
                     nsc['foaf'].primaryTopic, vtrp[2])
             # Get triples in the meta graph filtering out undesired triples.
@@ -388,9 +387,9 @@ class RsrcCentricLayout:
                             (trp[1] != nsc['rdf'].type
                             or trp[2] not in self.ignore_vmeta_types)
                             and (trp[1] not in self.ignore_vmeta_preds)):
-                        vmeta_gr.add((vtrp[2], trp[1], trp[2]))
+                        vmeta.add((vtrp[2], trp[1], trp[2]))
 
-        return vmeta_gr
+        return vmeta
 
 
     def get_inbound_rel(self, subj_uri, full_triple=True):
@@ -557,14 +556,15 @@ class RsrcCentricLayout:
         meta_gr = self.ds.graph(meta_gr_uri)
 
         # Remove and add triple sets from each graph.
-        for gr_uri, trp in remove_routes.items():
-            #logger.debug('Removing triple: {}'.format(trp))
-            gr = self.ds.graph(gr_uri)
-            gr -= trp
-        for gr_uri, trp in add_routes.items():
-            #logger.debug('Adding triple: {}'.format(trp))
-            gr = self.ds.graph(gr_uri)
-            gr += trp
+        #import pdb; pdb.set_trace()
+        for gr_uri, triples in remove_routes.items():
+            for trp in triples:
+                logger.debug('Removing triple: {}'.format(trp))
+                self.store.remove(trp, gr_uri)
+        for gr_uri, triples in add_routes.items():
+            for trp in triples:
+                logger.debug('Adding triple: {}'.format(trp))
+                self.store.add(trp, gr_uri)
             # Add metadata.
             meta_gr.set(
                     (gr_uri, nsc['foaf'].primaryTopic, nsc['fcres'][uid]))
@@ -646,23 +646,23 @@ class RsrcCentricLayout:
 
     ## PROTECTED MEMBERS ##
 
-    def _check_rsrc_status(self, gr):
+    def _check_rsrc_status(self, imr):
         """
         Check if a resource is not existing or if it is a tombstone.
         """
-        uid = self.uri_to_uid(gr.identifier)
-        if not len(gr):
+        uid = self.uri_to_uid(imr.uri)
+        if not len(imr):
             raise ResourceNotExistsError(uid)
 
         # Check if resource is a tombstone.
-        if gr[gr.identifier : RDF.type : nsc['fcsystem'].Tombstone]:
-            raise TombstoneError(
-                    uid, gr.value(gr.identifier, nsc['fcrepo'].created))
-        elif gr.value(gr.identifier, nsc['fcsystem'].tombstone):
+        if imr[imr.uri: RDF.type: nsc['fcsystem'].Tombstone]:
+            ts = imr.value(nsc['fcrepo'].created)
+            raise TombstoneError(uid, ts)
+        elif imr.value(nsc['fcsystem'].tombstone):
             raise TombstoneError(
                 self.uri_to_uid(
-                    gr.value(gr.identifier, nsc['fcsystem'].tombstone)),
-                gr.value(gr.identifier, nsc['fcrepo'].created))
+                    imr.value(nsc['fcsystem'].tombstone),
+                    imr.value(nsc['fcrepo'].created)))
 
 
     def _map_graph_uri(self, t, uid):

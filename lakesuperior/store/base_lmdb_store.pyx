@@ -604,7 +604,7 @@ cdef class BaseLmdbStore:
         txid = '{:x}'.format(<unsigned long>self.txn)
         try:
             _check(lmdb.mdb_txn_commit(self.txn))
-            logger.info('Transaction @ {} committed.'.format(txid))
+            logger.debug('Transaction @ {} committed.'.format(txid))
             self.is_txn_open = False
             self.is_txn_rw = False
         except:

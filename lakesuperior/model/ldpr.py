@@ -26,6 +26,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
+from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph, Imr
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -157,18 +158,18 @@ class Ldpr(metaclass=ABCMeta):
         # Disable all internal checks e.g. for raw I/O.
 
 
-    @property
-    def rsrc(self):
-        """
-        The RDFLib resource representing this LDPR. This is a live
-        representation of the stored data if present.
+    #@property
+    #def rsrc(self):
+    #    """
+    #    The RDFLib resource representing this LDPR. This is a live
+    #    representation of the stored data if present.
 
-        :rtype: rdflib.Resource
-        """
-        if not hasattr(self, '_rsrc'):
-            self._rsrc = rdfly.ds.resource(self.uri)
+    #    :rtype: rdflib.Resource
+    #    """
+    #    if not hasattr(self, '_rsrc'):
+    #        self._rsrc = rdfly.ds.resource(self.uri)
 
-        return self._rsrc
+    #    return self._rsrc
 
 
     @property
@@ -198,9 +199,7 @@ class Ldpr(metaclass=ABCMeta):
         if not hasattr(self, '_imr'):
             if hasattr(self, '_imr_options'):
                 logger.debug(
-                    'Getting RDF representation for resource {}'
-                    .format(self.uid))
-                #logger.debug('IMR options:{}'.format(self._imr_options))
+                    'Getting RDF triples for resource {}'.format(self.uid))
                 imr_options = self._imr_options
             else:
                 imr_options = {}
@@ -211,15 +210,14 @@ class Ldpr(metaclass=ABCMeta):
 
 
     @imr.setter
-    def imr(self, v):
+    def imr(self, data):
         """
         Replace in-memory buffered resource.
 
         :param v: New set of triples to populate the IMR with.
         :type v: set or rdflib.Graph
         """
-        self._imr = Graph(identifier=self.uri)
-        self._imr += v
+        self._imr = Imr(self.uri, data=set(data))
 
 
     @imr.deleter
@@ -264,6 +262,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         out_gr = Graph(identifier=self.uri)
 
+        #import pdb; pdb.set_trace()
         for t in self.imr:
             if (
                 # Exclude digest hash and version information.
@@ -301,11 +300,11 @@ class Ldpr(metaclass=ABCMeta):
                 and self._imr_options.get('incl_srv_mgd')
                 and not self._imr_options.get('incl_inbound')
                 and not self._imr_options.get('incl_children')):
-            gr = self.imr
+            imr = self.imr
         else:
-            gr = rdfly.get_imr(
+            imr = rdfly.get_imr(
                     self.uid, incl_inbound=False, incl_children=False)
-        return to_isomorphic(gr)
+        return to_isomorphic(imr.as_rdflib())
 
 
     @property
@@ -448,16 +447,12 @@ class Ldpr(metaclass=ABCMeta):
 
         remove_trp = {
             (self.uri, pred, None) for pred in self.delete_preds_on_replace}
-        add_trp = (
-            set(self.provided_imr) |
-            self._containment_rel(create))
+        add_trp = set(
+            self.provided_imr | self._containment_rel(create))
 
         self.modify(ev_type, remove_trp, add_trp)
-        new_gr = Graph(identifier=self.uri)
-        for trp in add_trp:
-            new_gr.add(trp)
 
-        self.imr = new_gr
+        self.imr = add_trp
 
         return ev_type
 
@@ -613,7 +608,7 @@ class Ldpr(metaclass=ABCMeta):
 
         ver_gr = rdfly.get_imr(
             self.uid, ver_uid=ver_uid, incl_children=False)
-        self.provided_imr = Graph(identifier=self.uri)
+        self.provided_imr = Imr(uri=self.uri)
 
         for t in ver_gr:
             if not self._is_trp_managed(t):
@@ -624,26 +619,24 @@ class Ldpr(metaclass=ABCMeta):
         return self.create_or_replace(create_only=False)
 
 
-    def check_mgd_terms(self, trp):
+    def check_mgd_terms(self, gr):
         """
         Check whether server-managed terms are in a RDF payload.
 
-        :param rdflib.Graph trp: The graph to validate.
+        :param rdflib.Graph gr: The graph to validate.
         """
-        subjects = {t[0] for t in trp}
-        offending_subjects = subjects & srv_mgd_subjects
+        offending_subjects = gr.terms('s') & srv_mgd_subjects
         if offending_subjects:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
                 for s in offending_subjects:
                     logger.info('Removing offending subj: {}'.format(s))
-                    for t in trp:
+                    for t in gr:
                         if t[0] == s:
-                            trp.remove(t)
+                            gr.remove(t)
 
-        predicates = {t[1] for t in trp}
-        offending_predicates = predicates & srv_mgd_predicates
+        offending_predicates = gr.terms('p') & srv_mgd_predicates
         # Allow some predicates if the resource is being created.
         if offending_predicates:
             if self.handling == 'strict':
@@ -651,11 +644,11 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 for p in offending_predicates:
                     logger.info('Removing offending pred: {}'.format(p))
-                    for t in trp:
+                    for t in gr:
                         if t[1] == p:
-                            trp.remove(t)
+                            gr.remove(t)
 
-        types = {t[2] for t in trp if t[1] == RDF.type}
+        types = {t[2] for t in gr if t[1] == RDF.type}
         offending_types = types & srv_mgd_types
         if not self.is_stored:
             offending_types -= self.smt_allow_on_create
@@ -665,13 +658,11 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 for to in offending_types:
                     logger.info('Removing offending type: {}'.format(to))
-                    for t in trp:
-                        if t[1] == RDF.type and t[2] == to:
-                            trp.remove(t)
+                    gr.remove_triples((None, RDF.type, to))
 
-        #logger.debug('Sanitized graph: {}'.format(trp.serialize(
+        #logger.debug('Sanitized graph: {}'.format(gr.serialize(
         #    format='turtle').decode('utf-8')))
-        return trp
+        return gr
 
 
     def sparql_delta(self, qry_str):
@@ -704,24 +695,17 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = Graph(identifier=self.uri)
-        pre_gr += self.imr
-        post_gr = Graph(identifier=self.uri)
-        post_gr += self.imr
+        pre_gr = self.imr
+        post_rdfgr = Graph(uri=self.uri)
+        post_rdfgr += self.imr
 
-        post_gr.update(qry_str)
+        post_rdfgr.update(qry_str)
+        post_gr = Imr(post_rdfgr.identifier, data=set(post_rdfgr))
 
-        remove_gr, add_gr = self._dedup_deltas(pre_gr, post_gr)
+        remove_gr = self.check_mgd_terms(pre_gr - post_gr)
+        add_gr = self.check_mgd_terms(post_gr - pre_gr)
 
-        #logger.debug('Removing: {}'.format(
-        #    remove_gr.serialize(format='turtle').decode('utf8')))
-        #logger.debug('Adding: {}'.format(
-        #    add_gr.serialize(format='turtle').decode('utf8')))
-
-        remove_trp = self.check_mgd_terms(set(remove_gr))
-        add_trp = self.check_mgd_terms(set(add_gr))
-
-        return remove_trp, add_trp
+        return remove_gr, add_gr
 
 
     ## PROTECTED METHODS ##
@@ -762,7 +746,7 @@ class Ldpr(metaclass=ABCMeta):
                 else self._update_checksum)
         _Defer(target=cksum_action).start()
 
-        # Clear IMR buffer.
+        # Reset IMR buffer.
         if hasattr(self, '_imr'):
             delattr(self, '_imr')
             try:
@@ -828,7 +812,8 @@ class Ldpr(metaclass=ABCMeta):
            :class:`lakesuperior.exceptions.RefIntViolationError` is raised.
            Otherwise, the violation is simply logged.
         """
-        for o in set(self.provided_imr.objects()):
+        for trp in self.provided_imr.data:
+            o = trp[2]
             if(
                     isinstance(o, URIRef) and
                     str(o).startswith(nsc['fcres']) and
@@ -937,28 +922,13 @@ class Ldpr(metaclass=ABCMeta):
         return self._add_ldp_dc_ic_rel(parent_rsrc)
 
 
-    def _dedup_deltas(self, remove_gr, add_gr):
-        """
-        Remove duplicate triples from add and remove delta graphs, which would
-        otherwise contain unnecessary statements that annul each other.
-
-        :rtype: tuple
-        :return: 2 "clean" sets of respectively remove statements and
-        add statements.
-        """
-        return (
-            remove_gr - add_gr,
-            add_gr - remove_gr
-        )
-
-
     def _add_ldp_dc_ic_rel(self, cont_rsrc):
         """
         Add relationship triples from a parent direct or indirect container.
 
         :param rdflib.resource.Resouce cont_rsrc:  The container resource.
         """
-        cont_p = set(cont_rsrc.metadata.predicates())
+        cont_p = cont_rsrc.metadata.terms('p')
 
         logger.info('Checking direct or indirect containment.')
         logger.debug('Parent predicates: {}'.format(cont_p))
