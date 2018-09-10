@@ -356,6 +356,8 @@ cdef class SimpleGraph:
         Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
         """
         self.remove_triples((trp[0], trp[1], None))
+        if None in trp:
+            raise ValueError(f'Invalid triple: {trp}')
         self.data.add(trp)
 
 
@@ -506,7 +508,7 @@ cdef class Imr(SimpleGraph):
         """
         gr = Graph()
         for trp in self.data:
-            logger.info(f'Adding triple to Imr: {trp}')
+            #logger.debug(f'Adding triple to Imr: {trp}')
             gr.add(trp)
 
         return gr.resource(identifier=self.uri)

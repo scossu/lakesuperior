@@ -262,7 +262,6 @@ class Ldpr(metaclass=ABCMeta):
         """
         out_gr = Graph(identifier=self.uri)
 
-        #import pdb; pdb.set_trace()
         for t in self.imr:
             if (
                 # Exclude digest hash and version information.
