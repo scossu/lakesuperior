@@ -1349,9 +1349,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char luk[KLEN]
             unsigned int dbflags
             unsigned char asm_rng[3]
-            size_t ct
-            size_t pg_offset = 0, src_offset, ret_offset
-            Py_ssize_t j # Needs to be signed for OpenMP
+            size_t ct, pg_offset = 0, src_offset, ret_offset
+            Py_ssize_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
 
         logger.debug(f'lookup 1bound: {idx}, {term}')
@@ -1449,7 +1448,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char asm_rng[3]
             unsigned char term_order[3] # Lookup ordering
             size_t ct, i = 0, pg_offset = 0, ret_offset, src_offset
-            Py_ssize_t j # Needs to be signed for OpenMP
+            Py_ssize_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
             ResultSet ret
 
@@ -1522,7 +1521,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 logger.debug('Got data in 2bound ({}): {}'.format(
                     data_v.mv_size,
                     (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                for j in range(data_v.mv_size // KLEN):
+                for j in prange(data_v.mv_size // KLEN, nogil=True):
                     src_offset = pg_offset + KLEN * j
                     ret_offset = pg_offset + ret.itemsize * j
                     #logger.debug('Page offset: {}'.format(pg_offset))
