@@ -304,7 +304,7 @@ class Ldpr(metaclass=ABCMeta):
         else:
             imr = rdfly.get_imr(
                     self.uid, incl_inbound=False, incl_children=False)
-        return to_isomorphic(imr.as_rdflib())
+        return to_isomorphic(imr.as_rdflib().graph)
 
 
     @property
@@ -696,7 +696,7 @@ class Ldpr(metaclass=ABCMeta):
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
         pre_gr = self.imr
-        post_rdfgr = Graph(uri=self.uri)
+        post_rdfgr = Graph(identifier=self.uri)
         post_rdfgr += self.imr
 
         post_rdfgr.update(qry_str)
