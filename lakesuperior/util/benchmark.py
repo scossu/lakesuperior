@@ -15,6 +15,7 @@ Benchmark script to measure write performance.
 '''
 
 default_n = 10000
+#webroot = 'http://localhost:8080/rest'
 webroot = 'http://localhost:5000/ldp'
 container_uri = webroot + '/pomegranate'
 
@@ -41,15 +42,13 @@ def run():
         requests.delete(container_uri, headers={'prefer': 'no-tombstone'})
     requests.put(container_uri)
 
-    start = arrow.utcnow()
-    ckpt = start
-
     print('Inserting {} children.'.format(n))
 
     # URI used to establish an in-repo relationship.
     ref = container_uri
     size = 200 # Size of graph.
 
+    wclock_start = arrow.utcnow()
     try:
         for i in range(1, n + 1):
             url = '{}/{}'.format(container_uri, uuid4()) if method == 'put' \
@@ -68,20 +67,30 @@ def run():
                             .format(uuid4())}
 
             #import pdb; pdb.set_trace()
+            # Start timing after generating the data.
+            ckpt = arrow.utcnow()
+            if i == 1:
+                tcounter = ckpt - ckpt
+                prev_tcounter = tcounter
+
             rsp = requests.request(method, url, data=data, headers=headers)
+            tdelta = arrow.utcnow() - ckpt
+            tcounter += tdelta
+
             rsp.raise_for_status()
             ref = rsp.headers['location']
             if i % 10 == 0:
-                now = arrow.utcnow()
-                tdelta = now - ckpt
-                ckpt = now
-                print('Record: {}\tTime elapsed: {}'.format(i, tdelta))
+                print(
+                    f'Record: {i}\tTime elapsed: {tcounter}\t'
+                    f'Per resource: {(tcounter - prev_tcounter) / 10}')
+                prev_tcounter = tcounter
     except KeyboardInterrupt:
         print('Interrupted after {} iterations.'.format(i))
 
-    tdelta = arrow.utcnow() - start
-    print('Total elapsed time: {}'.format(tdelta))
-    print('Average time per resource: {}'.format(tdelta.total_seconds()/i))
+    wclock = arrow.utcnow() - wclock_start
+    print(f'Total elapsed time: {wclock}')
+    print(f'Total time spent ingesting resources: {tcounter}')
+    print(f'Average time per resource: {tcounter.total_seconds()/i}')
 
 if __name__ == '__main__':
     run()

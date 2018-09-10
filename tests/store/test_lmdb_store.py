@@ -18,7 +18,11 @@ def store():
     This store has a different life cycle than the one used for tests in higher
     levels of the stack.
     """
-    store = LmdbStore('/tmp/test_lmdbstore')
+    env_path = '/tmp/test_lmdbstore'
+    # If a previous test segfaulted, a corrupt database may be still around
+    rmtree(env_path, ignore_errors=True)
+    print(f'Removed store at {env_path}')
+    store = LmdbStore(env_path)
     yield store
     store.close()
     store.destroy()
@@ -77,7 +81,7 @@ class TestStoreInit:
 
         try:
             with store.txn_ctx():
-                raise RuntimeError
+                raise RuntimeError()
         except RuntimeError:
             assert not store.is_txn_open
 
@@ -91,7 +95,7 @@ class TestStoreInit:
                 store.add((
                     URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
                     URIRef('urn:nogo:o')))
-                raise RuntimeError # This should roll back the transaction.
+                raise RuntimeError() # This should roll back the transaction.
         except RuntimeError:
             pass
 

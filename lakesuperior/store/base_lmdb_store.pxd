@@ -5,7 +5,6 @@ from lakesuperior.cy_include cimport cylmdb as lmdb
 cdef:
     int rc
     size_t i
-    bint is_txn_open
 
     lmdb.MDB_val key_v, data_v
     lmdb.MDB_dbi dbi
@@ -15,12 +14,14 @@ cdef:
 
 cdef class BaseLmdbStore:
     cdef:
+        readonly bint is_txn_open
         public bint _open
         unsigned int _readers
         bytes dbpath
         lmdb.MDB_dbi *dbis
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
+        lmdb.MDB_cursor **curs
 
         void _clear_stale_readers(self) except *
         void _cur_close(self, lmdb.MDB_cursor *cur) except *

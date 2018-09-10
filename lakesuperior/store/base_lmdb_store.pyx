@@ -227,28 +227,47 @@ cdef class BaseLmdbStore:
 
     cdef void _init_dbis(self, create=True) except *:
         """
-        Initialize databases.
+        Initialize databases and cursors.
         """
-        cdef lmdb.MDB_txn *txn
+        cdef:
+            size_t i
+            lmdb.MDB_txn *txn
+            lmdb.MDB_dbi dbi
 
+        # At least one slot (for environments without a database)
         self.dbis = <lmdb.MDB_dbi *>PyMem_Malloc(
-                len(self.dbi_labels) * sizeof(lmdb.MDB_dbi))
+                max(len(self.dbi_labels), 1) * sizeof(lmdb.MDB_dbi))
+        if not self.dbis:
+            raise MemoryError()
+
+        # DBIs seem to start from 2. We want to map cursor pointers in the
+        # array to DBIs, so we need an extra slot.
+        self.curs = <lmdb.MDB_cursor **>PyMem_Malloc(
+                (len(self.dbi_labels) + 2) * sizeof(lmdb.MDB_cursor*))
+        if not self.curs:
+            raise MemoryError()
 
         create_flag = lmdb.MDB_CREATE if create is True else 0
         txn_flags = 0 if create else lmdb.MDB_RDONLY
         rc = lmdb.mdb_txn_begin(self.dbenv, NULL, txn_flags, &txn)
+        logger.info(f'Creating DBs.')
         try:
             if len(self.dbi_labels):
-                for dbidx, dblabel in enumerate(self.dbi_labels):
+                for i, dblabel in enumerate(self.dbi_labels):
                     flags = self.dbi_flags.get(dblabel, 0) | create_flag
-                    rc = lmdb.mdb_dbi_open(
-                            txn, dblabel.encode(), flags, &self.dbis[dbidx])
-                    #logger.debug('Created DB {}: {}'.format(
-                    #    dblabel, self.dbis[dbidx]))
+                    _check(lmdb.mdb_dbi_open(
+                            txn, dblabel.encode(), flags, self.dbis + i))
+                    dbi = self.dbis[i]
+                    logger.info(f'Created DB {dblabel}: {dbi}')
+                    # Open and close cursor to initialize the memory slot.
+                    _check(lmdb.mdb_cursor_open(
+                        txn, dbi, self.curs + dbi))
+                    #lmdb.mdb_cursor_close(self.curs[dbi])
             else:
-                rc = lmdb.mdb_dbi_open(txn, NULL, 0, &self.dbis[0])
+                _check(lmdb.mdb_dbi_open(txn, NULL, 0, self.dbis))
+                _check(lmdb.mdb_cursor_open(txn, self.dbis[0], self.curs))
+                #lmdb.mdb_cursor_close(self.curs[self.dbis[0]])
 
-            _check(rc, 'Error opening database: {}')
             _check(lmdb.mdb_txn_commit(txn))
         except:
             lmdb.mdb_txn_abort(txn)
@@ -266,6 +285,7 @@ cdef class BaseLmdbStore:
             self._clear_stale_readers()
 
             PyMem_Free(self.dbis)
+            PyMem_Free(self.curs)
             lmdb.mdb_env_close(self.dbenv)
 
         self._open = False
@@ -506,7 +526,7 @@ cdef class BaseLmdbStore:
         """
         cdef:
             lmdb.MDB_stat stat
-            lmdb.mdb_size_t entries
+            size_t entries
 
         lmdb.mdb_env_stat(self.dbenv, &stat)
         env_stats = <dict>stat
@@ -629,7 +649,7 @@ cdef class BaseLmdbStore:
 
 
     cdef lmdb.MDB_dbi get_dbi(
-            self, unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL):
+            self, unsigned char *dblabel=NULL, lmdb.MDB_txn *txn=NULL):
         """
         Return a DB handle by database name.
         """
@@ -638,17 +658,21 @@ cdef class BaseLmdbStore:
         if txn is NULL:
             txn = self.txn
 
+        if dblabel is NULL:
+            logger.debug('Getting DBI without label.')
         dbidx = (
-                0 if dblabel is b''
+                0 if dblabel is NULL
                 else self.dbi_labels.index(dblabel.decode()))
+        logger.debug(
+                f'Got DBI {self.dbis[dbidx]} with label {dblabel} '
+                f'and index #{dbidx}')
 
         return self.dbis[dbidx]
 
 
     cdef lmdb.MDB_cursor *_cur_open(
-            self, unsigned char *dblabel='', lmdb.MDB_txn *txn=NULL) except *:
+            self, unsigned char *dblabel=NULL, lmdb.MDB_txn *txn=NULL) except *:
         cdef:
-            lmdb.MDB_cursor *cur
             lmdb.MDB_dbi dbi
 
         if txn is NULL:
@@ -656,12 +680,22 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(dblabel, txn=txn)
 
-        #logger.info('Opening cursor for DB {} (DBI {})...'.format(dblabel, dbi))
-        rc = lmdb.mdb_cursor_open(txn, dbi, &cur)
-        _check(rc, 'Error opening cursor: {}'.format(dblabel))
-        #logger.info('...opened @ {:x}.'.format(<unsigned long>cur))
+        logger.debug(f'Opening cursor for DB {dblabel} (DBI {dbi})...')
+        #try:
+        #    # FIXME Either reuse the cursor, if it works, or remove this code.
+        #    _check(lmdb.mdb_cursor_renew(txn, self.curs[dbi]))
+        #    logger.debug(f'Repurposed existing cursor for DBI {dbi}.')
+        #except LmdbError as e:
+        #    _check(
+        #            lmdb.mdb_cursor_open(txn, dbi, self.curs + dbi),
+        #            f'Error opening cursor: {dblabel}')
+        #    logger.debug(f'Created brand new cursor for DBI {dbi}.')
+        _check(
+                lmdb.mdb_cursor_open(txn, dbi, self.curs + dbi),
+                f'Error opening cursor: {dblabel}')
+        logger.debug('...opened @ {:x}.'.format(<unsigned long>self.curs[dbi]))
 
-        return cur
+        return self.curs[dbi]
 
 
     cdef void _cur_close(self, lmdb.MDB_cursor *cur) except *:

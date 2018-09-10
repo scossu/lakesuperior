@@ -38,11 +38,13 @@ extensions = [
         ],
         include_dirs = [
             path.join(lakesuperior.basedir, 'cy_include'),
-            path.join(lakesuperior.basedir, 'include'),
+        #    '/usr/include',
+        #    path.join(lakesuperior.basedir, 'include'),
         #    path.join(lakesuperior.basedir, 'lib'),
         ],
         library_dirs = [
-            path.join(lakesuperior.basedir, 'lib'),
+        #    '/usr/lib',
+        #    path.join(lakesuperior.basedir, 'lib'),
         ],
         libraries = ['lmdb']
     ),
@@ -63,15 +65,17 @@ extensions = [
     #    libraries = ['lmdb']
     #),
     Extension(
-        'lakesuperior.store.ldp_rs.lmdb_triplestore',
+        '*',
         [path.join(
-            lakesuperior.basedir, 'store', 'ldp_rs', 'lmdb_triplestore.pyx')],
+            lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx')],
         include_dirs = [
-            path.join(lakesuperior.basedir, 'include'),
+        #    '/usr/include',
+        #    path.join(lakesuperior.basedir, 'include'),
         #    path.join(lakesuperior.basedir, 'store'),
         ],
         library_dirs = [
-            path.join(lakesuperior.basedir, 'lib'),
+        #    '/usr/lib',
+        #    path.join(lakesuperior.basedir, 'lib'),
         ],
         libraries = ['lmdb']
     ),

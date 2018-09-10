@@ -103,6 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# Pytest
+.pytest_cache/
+
 # Default LAKEsuperior data directories
 /data
 /lakesuperior/store/base_lmdb_store.c
