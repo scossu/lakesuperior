@@ -663,9 +663,9 @@ cdef class BaseLmdbStore:
         dbidx = (
                 0 if dblabel is NULL
                 else self.dbi_labels.index(dblabel.decode()))
-        logger.debug(
-                f'Got DBI {self.dbis[dbidx]} with label {dblabel} '
-                f'and index #{dbidx}')
+        #logger.debug(
+        #        f'Got DBI {self.dbis[dbidx]} with label {dblabel} '
+        #        f'and index #{dbidx}')
 
         return self.dbis[dbidx]
 

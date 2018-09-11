@@ -1056,14 +1056,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
         rset = self.triple_keys(triple_pattern, context)
 
-        logger.debug('Triple keys found: {}'.format(rset.data[:rset.size]))
+        #logger.debug('Triple keys found: {}'.format(rset.data[:rset.size]))
 
         cur = self._cur_open('spo:c')
         try:
             key_v.mv_size = TRP_KLEN
             for i in range(rset.ct):
-                logger.debug('Checking contexts for triples: {}'.format(
-                    (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
+                #logger.debug('Checking contexts for triples: {}'.format(
+                #    (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
                 key_v.mv_data = rset.data + i * TRP_KLEN
                 # Get contexts associated with each triple.
                 contexts = []
@@ -1078,8 +1078,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     except KeyNotFoundError:
                         break
 
-                logger.debug('Triple keys before yield: {}: {}.'.format(
-                    (<TripleKey>key_v.mv_data)[:TRP_KLEN], tuple(contexts)))
+                #logger.debug('Triple keys before yield: {}: {}.'.format(
+                #    (<TripleKey>key_v.mv_data)[:TRP_KLEN], tuple(contexts)))
                 yield self.from_key(
                         <TripleKey>key_v.mv_data, TRP_KLEN), tuple(contexts)
                 #logger.debug('After yield.')
@@ -1176,8 +1176,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
                     while True:
                         logger.debug(f'Data offset: {pg_offset} Page size: {data_v.mv_size} bytes')
-                        logger.debug('Data page: {}'.format(
-                                (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                        #logger.debug('Data page: {}'.format(
+                        #        (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                         memcpy(ret.data + pg_offset, data_v.mv_data, data_v.mv_size)
                         pg_offset += data_v.mv_size
 
@@ -1320,10 +1320,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                                     ret.data + ret.itemsize * i,
                                     key_v.mv_data, TRP_KLEN)
 
-                            rc = lmdb.mdb_cursor_get(
-                                dcur, &key_v, &data_v, lmdb.MDB_NEXT)
                             try:
-                                _check(rc)
+                                _check(lmdb.mdb_cursor_get(
+                                    dcur, &key_v, &data_v, lmdb.MDB_NEXT_NODUP))
                             except KeyNotFoundError:
                                 break
 
@@ -1349,7 +1348,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char luk[KLEN]
             unsigned int dbflags
             unsigned char asm_rng[3]
-            size_t ct, pg_offset = 0, src_offset, ret_offset
+            size_t ct, ret_offset = 0, src_pos, ret_pos
             Py_ssize_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
 
@@ -1375,6 +1374,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Allocate memory for results.
             ret = ResultSet(ct, TRP_KLEN)
             logger.debug(f'Entries for {self.lookup_indices[idx]}: {ct}')
+            logger.debug(f'Allocated {ret.size} bytes of data.')
             #logger.debug('First row: {}'.format(
             #        (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
 
@@ -1390,24 +1390,25 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
-                logger.debug('pg_offset: {}'.format(pg_offset))
-                logger.debug(
-                        'Got data in 1bound ({}): {}'.format(
-                            data_v.mv_size,
-                            (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
+                logger.debug('ret_offset: {}'.format(ret_offset))
+                logger.debug(f'Page size: {data_v.mv_size}')
+                #logger.debug(
+                #        'Got data in 1bound ({}): {}'.format(
+                #            data_v.mv_size,
+                #            (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                 for j in prange(data_v.mv_size // DBL_KLEN, nogil=True):
-                    src_offset = pg_offset + DBL_KLEN * j
-                    ret_offset = pg_offset + ret.itemsize * j
-                    memcpy(ret.data + ret_offset + asm_rng[0], luk, KLEN)
-                    memcpy(ret.data + ret_offset + asm_rng[1],
-                            data_v.mv_data + src_offset, KLEN)
-                    memcpy(ret.data + ret_offset + asm_rng[2],
-                            data_v.mv_data + src_offset + KLEN, KLEN)
+                    src_pos = DBL_KLEN * j
+                    ret_pos = (ret_offset + ret.itemsize * j)
+                    memcpy(ret.data + ret_pos + asm_rng[0], luk, KLEN)
+                    memcpy(ret.data + ret_pos + asm_rng[1],
+                            data_v.mv_data + src_pos, KLEN)
+                    memcpy(ret.data + ret_pos + asm_rng[2],
+                            data_v.mv_data + src_pos + KLEN, KLEN)
 
                 # Increment MUST be done before MDB_NEXT_MULTIPLE otherwise
                 # data_v.mv_size will be overwritten with the *next* page size
                 # and cause corruption in the output data.
-                pg_offset += data_v.mv_size
+                ret_offset += data_v.mv_size // DBL_KLEN * ret.itemsize
 
                 try:
                     # Get results by the page.
@@ -1419,10 +1420,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     #if ret_offset + ret.itemsize < ret.size:
                     #    raise RuntimeError(
                     #        'Retrieved less values than expected: {} of {}.'
-                    #        .format(pg_offset, ret.size))
+                    #        .format(src_offset, ret.size))
                     return ret
 
-            logger.debug('Assembled data in 1bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
+            #logger.debug('Assembled data in 1bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
         finally:
             self._cur_close(icur)
 
@@ -1531,7 +1532,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     memcpy(ret.data + ret_offset + asm_rng[2], data_v.mv_data + src_offset, KLEN)
                     #logger.debug('Assembled triple: {}'.format((ret.data + ret_offset)[: TRP_KLEN]))
 
-                logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, (ret.data + pg_offset)[: ret.size]))
+                #logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, (ret.data + pg_offset)[: ret.size]))
                 pg_offset += data_v.mv_size
 
                 try:

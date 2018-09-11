@@ -10,9 +10,9 @@ Hardware
 ‘Rather Snappy’ Laptop
 ^^^^^^^^^^^^^^^^^^^^^^
 
--  Dell Precison M3800 Laptop
--  4x Intel(R) Core(TM) i7-4712HQ CPU @ 2.30GHz
--  12Gb RAM
+-  Dell Latitude 7490 Laptop
+-  8x Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+-  16Gb RAM
 -  SSD
 
 ‘Ole Workhorse’ server
@@ -27,8 +27,8 @@ Software
 
 -  Arch Linux OS
 -  glibc 2.26-11
--  python 3.5.4
--  lmdb 0.9.21-1
+-  python 3.7.0
+-  lmdb 0.9.22
 
 Benchmark script
 ~~~~~~~~~~~~~~~~
@@ -63,34 +63,49 @@ Results
 FCREPO/Modeshape 4.7.5
 ^^^^^^^^^^^^^^^^^^^^^^
 
-15’45" running time
+6'40" running time (only time spent sending requests, not creating the graph)
 
-0.094" per resource (100%—reference point)
+0.040" per resource (100%—reference point)
 
 3.4M triples total in repo at the end of the process
 
-Retrieval of parent resource (~10000 triples), pipe to /dev/null: 3.64"
+Retrieval of parent resource (~10000 triples), pipe to /dev/null: 6.22"
 (100%)
 
 Peak memory usage: 2.47Gb
 
-Database size: 3.3 Gb
+Database size: 3.7 Gb
 
 LAKEsuperior Alpha 6, LMDB Back End
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-25’ running time
+13’24" running time
 
-0.152" per resource (161%)
+0.080" per resource (200%)
 
-*Some gaps every ~40-50 requests, probably disk flush*
-
-Retrieval of parent resource (10K triples), pipe to /dev/null: 2.13"
-(58%)
+Retrieval of parent resource (10K triples), pipe to /dev/null: 2.214"
+(35%%)
 
 Peak memory usage: ~650 Mb (3 idle workers, 1 active)
 
 Database size: 523 Mb (16%)
+
+LAKEsuperior experimental branch, Cython + LMDB C-API
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+12'37" running time (only time spent sending requests, not creating the graph)
+
+0.075" per resource (168.7%)
+
+Retrieval of parent resource (10K triples), pipe to /dev/null: 2.22"
+(35%)
+
+Peak memory usage: ~600 Mb
+
+Database size: 523 Mb (16%)
+
+Performance is only marginally better in spite of the optimization efforts.
+Most of the performance penalties are still caused by the RDF parser.
 
 .. _ole-workhorse-server-1:
 
@@ -126,8 +141,11 @@ Comparison of results between the laptop and the server demonstrates
 that both read and write performance gaps are identical in the two
 environments. Disk speed severely affects the numbers.
 
-**Note:** As you can guess, these are only very partial and specific
+**Note:** As it may be obvious, these are only very partial and specific
 results. They should not be taken as a thorough performance assessment.
 Such an assessment may be impossible and pointless to make given the
 very different nature of the storage models, which may behave radically
 differently depending on many variables.
+
+Also, this benchmark does not count all the collateral efficienciy advantages
+of the 
