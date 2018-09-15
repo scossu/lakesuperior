@@ -21,7 +21,6 @@ def store():
     env_path = '/tmp/test_lmdbstore'
     # If a previous test segfaulted, a corrupt database may be still around
     rmtree(env_path, ignore_errors=True)
-    print(f'Removed store at {env_path}')
     store = LmdbStore(env_path)
     yield store
     store.close()
@@ -242,6 +241,108 @@ class TestBasicOps:
 
 
 @pytest.mark.usefixtures('store')
+class TestMultiPageLookup:
+    '''
+    Tests looking up results retrieved in multiple pages.
+    '''
+    @pytest.fixture
+    def data(self):
+        """
+        1000 triples.
+
+        With 2048-sized pages, even 2-bound indices with 5-byte values such as
+        sp:o should yield more than one page (2048 bytes // 5 = 409 values).
+        """
+        return {
+            (
+                URIRef('urn:test_mp:s1'),
+                URIRef(f'urn:test_mp:p{i // 10}'),
+                URIRef(f'urn:test_mp:o{i}'))
+            for i in range(1000)
+        }
+
+    def test_init(self, store, data):
+        """
+        Insert initial data and verify store length.
+        """
+        with store.txn_ctx(True):
+            for trp in data:
+                store.add(trp)
+
+        with store.txn_ctx():
+            assert len(store) == 1000
+
+
+    def test_mp_lookup_0bound(self, store):
+        """
+        Lookup all triples in a multi-page setup.
+        """
+        with store.txn_ctx(True):
+            res = store.triples((None, None, None))
+            res_set = set(res)
+
+        assert len(res_set) == 1000
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p99'),
+                URIRef('urn:test_mp:o999')) in _clean(res_set)
+
+
+    def test_mp_lookup_1bound(self, store):
+        """
+        Lookup 1-bound triples in a multi-page setup.
+        """
+        with store.txn_ctx(True):
+            res1 = store.triples((URIRef('urn:test_mp:s1'), None, None))
+            res_set1 = set(res1)
+            res2 = store.triples((None, URIRef('urn:test_mp:p69'), None))
+            res_set2 = set(res2)
+            res3 = store.triples((None, None, URIRef('urn:test_mp:o699')))
+            res_set3 = set(res3)
+
+        assert len(res_set1) == 1000
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p99'),
+                URIRef('urn:test_mp:o999')) in _clean(res_set1)
+
+        assert len(res_set2) == 10
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p69'),
+                URIRef('urn:test_mp:o699')) in _clean(res_set2)
+
+        assert len(res_set3) == 1
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p69'),
+                URIRef('urn:test_mp:o699')) in _clean(res_set3)
+
+
+    def test_mp_lookup_2bound(self, store):
+        """
+        Lookup 2-bound triples in a multi-page setup.
+        """
+        with store.txn_ctx(True):
+            res1 = store.triples((URIRef('urn:test_mp:s1'),
+                URIRef('urn:test_mp:p96'), None))
+            res_set1 = set(res1)
+
+            res2 = store.triples((URIRef('urn:test_mp:s1'),
+                None, URIRef('urn:test_mp:o966')))
+            res_set2 = set(res2)
+
+            res3 = store.triples((None,
+                URIRef('urn:test_mp:p96'), URIRef('urn:test_mp:o966')))
+            res_set3 = set(res3)
+
+        assert len(res_set1) == 10
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p96'),
+                URIRef('urn:test_mp:o966')) in _clean(res_set1)
+
+        assert len(res_set2) == 1
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p96'),
+                URIRef('urn:test_mp:o966')) in _clean(res_set2)
+
+        assert len(res_set3) == 1
+        assert (URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p96'),
+                URIRef('urn:test_mp:o966')) in _clean(res_set3)
+
+
+
+@pytest.mark.usefixtures('store')
 class TestRemoveMulti:
     '''
     Tests for proper removal of multiple combinations of triple and context.
@@ -276,6 +377,7 @@ class TestRemoveMulti:
             store.add(data['spo2'], data['c3'])
             store.add(data['spo3'], data['c3'])
 
+        with store.txn_ctx():
             assert len(store) == 9
             assert len(set(store.triples((None, None, None)))) == 3
             assert len(set(store.triples((None, None, None), data['c1']))) == 3
@@ -290,6 +392,7 @@ class TestRemoveMulti:
         with store.txn_ctx(True):
             store.remove((None, None, None), data['c1'])
 
+        with store.txn_ctx():
             assert len(store) == 6
             assert len(set(store.triples((None, None, None)))) == 3
             assert len(set(store.triples((None, None, None), data['c1']))) == 0
