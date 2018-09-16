@@ -16,6 +16,7 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
+from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph
 
 
 logger = logging.getLogger(__name__)
@@ -187,7 +188,7 @@ def get_version(uid, ver_uid):
 
 
 @transaction(True)
-def create(parent, slug, **kwargs):
+def create(parent, slug=None, **kwargs):
     r"""
     Mint a new UID and create a resource.
 
@@ -268,8 +269,8 @@ def update_delta(uid, remove_trp, add_trp):
         add, as 3-tuples of RDFLib terms.
     """
     rsrc = LdpFactory.from_stored(uid)
-    remove_trp = rsrc.check_mgd_terms(remove_trp)
-    add_trp = rsrc.check_mgd_terms(add_trp)
+    remove_trp = rsrc.check_mgd_terms(SimpleGraph(remove_trp))
+    add_trp = rsrc.check_mgd_terms(SimpleGraph(add_trp))
 
     return rsrc.modify(RES_UPDATED, remove_trp, add_trp)
 

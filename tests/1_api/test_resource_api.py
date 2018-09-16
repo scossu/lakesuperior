@@ -475,7 +475,6 @@ class TestAdvancedDelete:
             for j in range(i):
                 rsrc_api.create_or_replace('{}/child{}/grandchild{}'.format(
                     uid, i, j))
-        import pdb; pdb.set_trace()
         rsrc_api.delete(uid, False)
         with pytest.raises(ResourceNotExistsError):
             rsrc_api.get(uid)
@@ -497,6 +496,8 @@ class TestAdvancedDelete:
                         uid, i, j))
 
 
+    @pytest.mark.skip(reason='TODO This function can be reenabled after an '
+            'asynchronus checksum queue is implemented.')
     def test_checksum(self):
         """
         Verify that a checksum is created and updated appropriately.

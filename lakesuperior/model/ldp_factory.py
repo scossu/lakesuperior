@@ -100,8 +100,9 @@ class LdpFactory:
         """
         uri = nsc['fcres'][uid]
         if rdf_data:
-            graph = Graph().parse(
-                data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid])
+            data = set(Graph().parse(
+                data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid]))
+        elif graph:
             data = set(graph)
         else:
             data = set()

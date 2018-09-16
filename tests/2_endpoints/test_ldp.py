@@ -660,7 +660,6 @@ class TestPrefHeader:
         return {
             'path' : parent_path,
             'response' : self.client.get(parent_path),
-            'subject' : URIRef(g.webroot + '/test_parent')
         }
 
 
@@ -719,9 +718,10 @@ class TestPrefHeader:
         """
         verify the "embed children" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         #minimal_resp = self.client.get(parent_path, headers={
         #    'Prefer' : 'return=minimal',
@@ -757,9 +757,10 @@ class TestPrefHeader:
         """
         verify the "return children" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         incl_children_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; include={}'\
@@ -818,9 +819,10 @@ class TestPrefHeader:
         """
         verify the "server managed triples" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         incl_srv_mgd_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; include={}'\
@@ -881,6 +883,7 @@ class TestDigest:
     """
     Test digest and ETag handling.
     """
+    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
     def test_digest_post(self):
         """
         Test ``Digest`` and ``ETag`` headers on resource POST.
@@ -895,6 +898,7 @@ class TestDigest:
                 resp.headers['Digest'].replace('SHA256=', ''))
 
 
+    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
     def test_digest_put(self):
         """
         Test ``Digest`` and ``ETag`` headers on resource PUT.
@@ -918,6 +922,7 @@ class TestDigest:
                 resp_get.headers['Digest'].replace('SHA256=', ''))
 
 
+    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
     def test_digest_patch(self):
         """
         Verify that the digest and ETag change on resource change.
@@ -1004,8 +1009,10 @@ class TestVersion:
         assert v1_uri != dup_uri
 
 
-    # @TODO Reverting from version and resurrecting is not fully functional.
-    def _disabled_test_revert_version(self):
+    @pytest.mark.skip(
+            reason='TODO Reverting from version and resurrecting is not fully '
+            'functional.')
+    def test_revert_version(self):
         """
         Take a version snapshot, update a resource, and then revert to the
         previous vresion.

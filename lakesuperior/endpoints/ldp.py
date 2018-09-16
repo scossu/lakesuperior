@@ -234,11 +234,8 @@ def post_resource(parent_uid):
     Add a new resource in a new URI.
     """
     rsp_headers = std_headers
-    try:
-        slug = request.headers['Slug']
-        logger.debug('Slug: {}'.format(slug))
-    except KeyError:
-        slug = None
+    slug = request.headers.get('Slug')
+    logger.debug('Slug: {}'.format(slug))
 
     handling, disposition = set_post_put_params()
     stream, mimetype = _bistream_from_req()

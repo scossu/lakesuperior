@@ -43,6 +43,12 @@ For smaller repositories it should be safe to set this value to 4, which
 could improve performance since keys make up the vast majority of record
 exchange between the store and the application. However it is sensible not
 to expose this value as a configuration option.
+
+TODO: Explore the option to use size_t (8 bits, or in some architectures,
+4 bits). If the overhead of handling 8
+vs. 5 bytes is not huge (and maybe counterbalanced by x86_64 arch optimizations
+for 8-byte words) it may be worth using those instead of char[5] to simplify
+the code significantly.
 """
 
 DEF DBL_KLEN = KLEN * 2
@@ -259,6 +265,8 @@ cdef class SimpleGraph:
             if not lookup:
                 self.data = set()
             else:
+                if store is None:
+                    raise ValueError('Store not specified for triple lookup.')
                 self._data_from_lookup(lookup, store)
 
 
@@ -291,7 +299,8 @@ cdef class SimpleGraph:
         return self.data == other
 
     def __repr__(self):
-        return repr(self.data)
+        return (f'<{self.__class__.__name__} @{hex(id(self))} '
+            f'length={len(self.data)}>')
 
     def __str__(self):
         return str(self.data)
@@ -344,7 +353,7 @@ cdef class SimpleGraph:
     def __getitem__(self, item):
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
-            return self._lookup(s, p, o)
+            return self._slice(s, p, o)
         else:
             raise TypeError(f'Wrong slice format: {item}.')
 
@@ -364,13 +373,16 @@ cdef class SimpleGraph:
     cpdef void remove_triples(self, pattern) except *:
         """
         Remove triples by pattern.
+
+        The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
         """
         s, p, o = pattern
-        for match in self._lookup(s, p, o):
+        for match in self.lookup(s, p, o):
+            logger.debug(f'Removing from graph: {match}.')
             self.data.remove(match)
 
 
-    cpdef as_rdflib(self):
+    cpdef object as_rdflib(self):
         """
         :rtype: rdflib.Graph
         """
@@ -381,7 +393,12 @@ cdef class SimpleGraph:
         return gr
 
 
-    cdef _lookup(self, s, p, o):
+    cdef _slice(self, s, p, o):
+        """
+        Return terms filtered by other terms.
+
+        This behaves like the rdflib.Graph slicing policy.
+        """
         if s is None and p is None and o is None:
             return self.data
         elif s is None and p is None:
@@ -399,6 +416,30 @@ cdef class SimpleGraph:
         else:
             # all given
             return (s,p,o) in self.data
+
+
+    cpdef lookup(self, s, p, o):
+        """
+        Look up triples by a pattern.
+        """
+        logger.debug(f'Looking up in graph: {s}, {p}, {o}.')
+        if s is None and p is None and o is None:
+            return self.data
+        elif s is None and p is None:
+            return {r for r in self.data if r[2] == o}
+        elif s is None and o is None:
+            return {r for r in self.data if r[1] == p}
+        elif p is None and o is None:
+            return {r for r in self.data if r[0] == s}
+        elif s is None:
+            return {r for r in self.data if r[1] == p and r[2] == o}
+        elif p is None:
+            return {r for r in self.data if r[0] == s and r[2] == o}
+        elif o is None:
+            return {r for r in self.data if r[0] == s and r[1] == p}
+        else:
+            # all given
+            return (s,p,o) if (s, p, o) in self.data else set()
 
 
     cpdef set terms(self, str type):
@@ -446,8 +487,25 @@ cdef class Imr(SimpleGraph):
         self.uri = uri
 
 
-    def __str__(self):
-        return f'<{self.__class__.__name__} uri={self.uri}, data={self.data}>'
+    @property
+    def identifier(self):
+        """
+        IMR URI. For compatibility with RDFLib Resource.
+        """
+        return self.uri
+
+
+    @property
+    def graph(self):
+        """
+        Return a SimpleGraph with the same data.
+        """
+        return SimpleGraph(self.data)
+
+
+    def __repr__(self):
+        return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
+            f'length={len(self.data)}>')
 
     @use_data
     def __sub__(self, other):
@@ -469,7 +527,7 @@ cdef class Imr(SimpleGraph):
     def __getitem__(self, item):
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
-            return self._lookup(s, p, o)
+            return self._slice(s, p, o)
 
         elif isinstance(item, Node):
             # If a Node is given, return all values for that predicate.
@@ -836,9 +894,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 #logger.debug('Removing triples in all contexts.')
                 # Loop over all SPO matching the triple pattern.
                 while i < match_set.ct:
-                    memcpy(
-                            spok, match_set.data + match_set.itemsize * i,
-                            TRP_KLEN)
+                    spok = match_set.data + match_set.itemsize * i
                     spok_v.mv_data = spok
                     # Loop over all context associations for this SPO.
                     try:
@@ -849,6 +905,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         continue
                     else:
                         ck = <Key>ck_v.mv_data
+                        logger.debug(f'Removing {spok[: TRP_KLEN]} from main.')
                         while True:
 
                             # Delete c:spo association.
@@ -925,44 +982,72 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         dbl_key_v.mv_size = DBL_KLEN
 
         #logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
+        if op == IDX_OP_REMOVE:
+            logger.debug(f'Remove {spok[ : TRP_KLEN]} from indices.')
+        else:
+            logger.debug(f'Add {spok[ : TRP_KLEN]} to indices.')
+
         while i < 3:
             cur1 = self._cur_open(self.lookup_indices[i]) # s:po, p:so, o:sp
-            cur2 = self._cur_open(self.lookup_indices[i + 3])# sp:o, ps:o, os:p
+            cur2 = self._cur_open(self.lookup_indices[i + 3])# po:s, so:p, sp:o
             try:
                 key_v.mv_data = keys[i]
                 dbl_key_v.mv_data = dbl_keys[i]
 
+                # Removal op indexing.
                 if op == IDX_OP_REMOVE:
-                    #logger.debug('Index remove operation.')
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 cur1, &key_v, &dbl_key_v, lmdb.MDB_GET_BOTH))
+                        logger.debug(f'Removed: {keys[i][: KLEN]}, '
+                                f'{dbl_keys[i][: DBL_KLEN]}')
                     except KeyNotFoundError:
+                        logger.debug(f'Not found in index: {keys[i][: KLEN]}, '
+                                f'{dbl_keys[i][: DBL_KLEN]}')
                         pass
                     else:
                         _check(lmdb.mdb_cursor_del(cur1, 0))
 
+                    # Restore pointers after delete.
+                    key_v.mv_data = keys[i]
+                    dbl_key_v.mv_data = dbl_keys[i]
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 cur2, &dbl_key_v, &key_v, lmdb.MDB_GET_BOTH))
+                        logger.debug(f'Removed: {dbl_keys[i][: DBL_KLEN]}, '
+                                f'{keys[i][: KLEN]}')
                     except KeyNotFoundError:
+                        logger.debug(f'Not found in index: '
+                                f'{dbl_keys[i][: DBL_KLEN]}, '
+                                f'{keys[i][: KLEN]}')
                         pass
                     else:
                         _check(lmdb.mdb_cursor_del(cur2, 0))
+
+                # Addition op indexing.
                 elif op == IDX_OP_ADD:
-                    #logger.debug('Index add operation.')
+                    logger.debug('Adding to index `{}`: {}, {}'.format(
+                        self.lookup_indices[i],
+                        (<unsigned char *>key_v.mv_data)[ : key_v.mv_size],
+                        (<unsigned char *>dbl_key_v.mv_data)[ : dbl_key_v.mv_size]))
+
                     try:
                         _check(lmdb.mdb_cursor_put(
                                 cur1, &key_v, &dbl_key_v, lmdb.MDB_NODUPDATA))
                     except KeyExistsError:
-                        # Do not raise on MDB_KEYEXIST error code.
+                        logger.debug(f'Key {keys[i][: KLEN]} exists already.')
                         pass
+
+                    logger.debug('Adding to index `{}`: {}, {}'.format(
+                        self.lookup_indices[i + 3],
+                        (<unsigned char *>dbl_key_v.mv_data)[ : dbl_key_v.mv_size],
+                        (<unsigned char *>key_v.mv_data)[ : key_v.mv_size]))
 
                     try:
                         _check(lmdb.mdb_cursor_put(
                                 cur2, &dbl_key_v, &key_v, lmdb.MDB_NODUPDATA))
                     except KeyExistsError:
-                        # Do not raise on MDB_KEYEXIST error code.
+                        logger.debug(f'Double key {dbl_keys[i][: DBL_KLEN]} exists already.')
                         pass
                 else:
                     raise ValueError(
@@ -986,6 +1071,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Deleting context: {}'.format(gr_uri))
         #logger.debug('Pickled context: {}'.format(self._pickle(gr_uri)))
 
+        # Gather information on the graph prior to deletion.
+        try:
+            self._to_key(gr_uri, &ck)
+        except KeyNotFoundError:
+            return
+
         # Remove all triples and indices associated with the graph.
         self._remove((None, None, None), gr_uri)
         # Remove the graph if it is in triples.
@@ -995,7 +1086,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Clean up all terms related to the graph.
         pk_c = self._pickle(gr_uri)
         _hash(pk_c, len(pk_c), &chash)
-        self._to_key(gr_uri, &ck)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -1314,8 +1404,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             return ResultSet(0, TRP_KLEN)
 
                         _check(lmdb.mdb_cursor_get(
-                                dcur, &key_v, NULL, lmdb.MDB_FIRST))
+                                dcur, &key_v, &data_v, lmdb.MDB_FIRST))
                         while True:
+                            logger.debug(f'i in 0bound: {i}')
                             memcpy(
                                     ret.data + ret.itemsize * i,
                                     key_v.mv_data, TRP_KLEN)
@@ -1327,7 +1418,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                                 break
 
                             i += 1
+                        # Size is guessed from all entries. Unique keys will be
+                        # much less than that.
+                        ret.resize(i + 1)
 
+                        logger.debug('Assembled data: {}'.format(ret.data[:ret.size]))
                         return ret
                     finally:
                         self._cur_close(dcur)
@@ -1388,7 +1483,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             logger.debug('luk: {}'.format(luk))
 
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
-            _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
+            _check(lmdb.mdb_cursor_get(
+                icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
                 logger.debug('ret_offset: {}'.format(ret_offset))
                 logger.debug(f'Page size: {data_v.mv_size}')
@@ -1448,7 +1544,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned int dbflags
             unsigned char asm_rng[3]
             unsigned char term_order[3] # Lookup ordering
-            size_t ct, i = 0, pg_offset = 0, ret_offset, src_offset
+            size_t ct, i = 0, ret_offset = 0, ret_pos, src_pos
             Py_ssize_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
             ResultSet ret
@@ -1522,18 +1618,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 logger.debug('Got data in 2bound ({}): {}'.format(
                     data_v.mv_size,
                     (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                for j in prange(data_v.mv_size // KLEN, nogil=True):
-                    src_offset = pg_offset + KLEN * j
-                    ret_offset = pg_offset + ret.itemsize * j
+                for j in range(data_v.mv_size // KLEN):
+                    src_pos = KLEN * j
+                    ret_pos = (ret_offset + ret.itemsize * j)
                     #logger.debug('Page offset: {}'.format(pg_offset))
                     #logger.debug('Ret offset: {}'.format(ret_offset))
-                    memcpy(ret.data + ret_offset + asm_rng[0], luk, KLEN)
-                    memcpy(ret.data + ret_offset + asm_rng[1], luk + KLEN, KLEN)
-                    memcpy(ret.data + ret_offset + asm_rng[2], data_v.mv_data + src_offset, KLEN)
+                    memcpy(ret.data + ret_pos + asm_rng[0], luk, KLEN)
+                    memcpy(ret.data + ret_pos + asm_rng[1], luk + KLEN, KLEN)
+                    memcpy(ret.data + ret_pos + asm_rng[2],
+                            data_v.mv_data + src_pos, KLEN)
                     #logger.debug('Assembled triple: {}'.format((ret.data + ret_offset)[: TRP_KLEN]))
 
-                #logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, (ret.data + pg_offset)[: ret.size]))
-                pg_offset += data_v.mv_size
+                ret_offset += data_v.mv_size // KLEN * ret.itemsize
 
                 try:
                     # Get results by the page.
@@ -1546,9 +1642,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     #    raise RuntimeError(
                     #        'Retrieved less values than expected: {} of {}.'
                     #        .format(pg_offset, ret.size))
+                    logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
                     return ret
         finally:
-            #pass
             self._cur_close(icur)
 
 

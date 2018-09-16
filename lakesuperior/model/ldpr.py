@@ -183,7 +183,7 @@ class Ldpr(metaclass=ABCMeta):
         >>> rsrc = rsrc_api.get('/')
         >>> rsrc.imr.identifier
         rdflib.term.URIRef('info:fcres/')
-        >>> rsrc.imr.value(rsrc.imr.identifier, nsc['fcrepo'].lastModified)
+        >>> rsrc.imr.value(nsc['fcrepo'].lastModified)
         rdflib.term.Literal(
             '2018-04-03T05:20:33.774746+00:00',
             datatype=rdflib.term.URIRef(
@@ -250,8 +250,8 @@ class Ldpr(metaclass=ABCMeta):
         """
         Set resource metadata.
         """
-        if not isinstance(rsrc, Resource):
-            raise TypeError('Provided metadata is not a Resource object.')
+        if not isinstance(rsrc, Imr):
+            raise TypeError('Provided metadata is not an Imr object.')
         self._metadata = rsrc
 
 
@@ -332,7 +332,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 self._version_info = rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
-                self._version_info = Graph(identifier=self.uri)
+                self._version_info = Imr(uri=self.uri)
 
         return self._version_info
 
@@ -340,13 +340,15 @@ class Ldpr(metaclass=ABCMeta):
     @property
     def version_uids(self):
         """
-        Return a generator of version UIDs (relative to their parent resource).
+        Return a set of version UIDs relative to their parent resource.
         """
-        gen = self.version_info[
-            self.uri:
-            nsc['fcrepo'].hasVersion / nsc['fcrepo'].hasVersionLabel:]
+        uids = set()
+        for vuri in self.version_info[nsc['fcrepo'].hasVersion]:
+            for vlabel in self.version_info[
+                    vuri : nsc['fcrepo'].hasVersionLabel]:
+                uids.add(str(vlabel))
 
-        return {str(uid) for uid in gen}
+        return uids
 
 
     @property
@@ -400,13 +402,12 @@ class Ldpr(metaclass=ABCMeta):
         """
         out_headers = defaultdict(list)
 
-        digest = self.metadata.value(self.uri, nsc['premis'].hasMessageDigest)
+        digest = self.metadata.value(nsc['premis'].hasMessageDigest)
         if digest:
             etag = digest.identifier.split(':')[-1]
             out_headers['ETag'] = 'W/"{}"'.format(etag),
 
-        last_updated_term = self.metadata.value(
-            self.uri, nsc['fcrepo'].lastModified)
+        last_updated_term = self.metadata.value(nsc['fcrepo'].lastModified)
         if last_updated_term:
             out_headers['Last-Modified'] = arrow.get(last_updated_term)\
                 .format('ddd, D MMM YYYY HH:mm:ss Z')
@@ -498,7 +499,7 @@ class Ldpr(metaclass=ABCMeta):
 
         # Cut inbound relationships
         if inbound:
-            for ib_rsrc_uri in self.imr.subjects(None, self.uri):
+            for ib_rsrc_uri in self.imr[ : : self.uri]:
                 remove_trp = {(ib_rsrc_uri, None, self.uri)}
                 ib_rsrc = Ldpr(ib_rsrc_uri)
                 # To preserve inbound links in history, create a snapshot
@@ -622,16 +623,17 @@ class Ldpr(metaclass=ABCMeta):
         """
         Check whether server-managed terms are in a RDF payload.
 
-        :param rdflib.Graph gr: The graph to validate.
+        :param SimpleGraph gr: The graph to validate.
         """
         offending_subjects = gr.terms('s') & srv_mgd_subjects
         if offending_subjects:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
+                gr_set = set(gr)
                 for s in offending_subjects:
                     logger.info('Removing offending subj: {}'.format(s))
-                    for t in gr:
+                    for t in gr_set:
                         if t[0] == s:
                             gr.remove(t)
 
@@ -641,9 +643,10 @@ class Ldpr(metaclass=ABCMeta):
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
+                gr_set = set(gr)
                 for p in offending_predicates:
                     logger.info('Removing offending pred: {}'.format(p))
-                    for t in gr:
+                    for t in gr_set:
                         if t[1] == p:
                             gr.remove(t)
 
@@ -694,15 +697,16 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = self.imr
+        pre_gr = self.imr.graph
         post_rdfgr = Graph(identifier=self.uri)
-        post_rdfgr += self.imr
+        post_rdfgr += pre_gr
 
         post_rdfgr.update(qry_str)
-        post_gr = Imr(post_rdfgr.identifier, data=set(post_rdfgr))
+        post_gr = SimpleGraph(data=set(post_rdfgr))
 
-        remove_gr = self.check_mgd_terms(pre_gr - post_gr)
-        add_gr = self.check_mgd_terms(post_gr - pre_gr)
+        # FIXME Fix and  use SimpleGraph's native subtraction operation.
+        remove_gr = self.check_mgd_terms(SimpleGraph(pre_gr.data - post_gr.data))
+        add_gr = self.check_mgd_terms(SimpleGraph(post_gr.data - pre_gr.data))
 
         return remove_gr, add_gr
 
@@ -785,7 +789,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         try:
             rsrc_type = tuple(str(t) for t in self.types)
-            actor = self.metadata.value(self.uri, nsc['fcrepo'].createdBy)
+            actor = self.metadata.value(nsc['fcrepo'].createdBy)
         except (ResourceNotExistsError, TombstoneError):
             rsrc_type = ()
             actor = None
@@ -811,7 +815,8 @@ class Ldpr(metaclass=ABCMeta):
            :class:`lakesuperior.exceptions.RefIntViolationError` is raised.
            Otherwise, the violation is simply logged.
         """
-        for trp in self.provided_imr.data:
+        remove_set = set()
+        for trp in self.provided_imr:
             o = trp[2]
             if(
                     isinstance(o, URIRef) and
@@ -822,10 +827,15 @@ class Ldpr(metaclass=ABCMeta):
                     if config == 'strict':
                         raise RefIntViolationError(obj_uid)
                     else:
-                        logger.info(
-                            'Removing link to non-existent repo resource: {}'
-                            .format(obj_uid))
-                        self.provided_imr.remove((None, None, o))
+                        # Gather invalid object to sanitize.
+                        remove_set.add(o)
+
+        # Remove invalid triples.
+        for obj in remove_set:
+            logger.info(
+                'Removing link to non-existent repo resource: {}'
+                .format(obj))
+            self.provided_imr.remove_triples((None, None, obj))
 
 
     def _add_srv_mgd_triples(self, create=False):
@@ -846,11 +856,11 @@ class Ldpr(metaclass=ABCMeta):
                 self.uri, nsc['fcrepo'].createdBy, self.DEFAULT_USER))
         else:
             self.provided_imr.set((
-                self.uri, nsc['fcrepo'].created, self.metadata.value(
-                    self.uri, nsc['fcrepo'].created)))
+                self.uri, nsc['fcrepo'].created,
+                self.metadata.value(nsc['fcrepo'].created)))
             self.provided_imr.set((
-                self.uri, nsc['fcrepo'].createdBy, self.metadata.value(
-                    self.uri, nsc['fcrepo'].createdBy)))
+                self.uri, nsc['fcrepo'].createdBy,
+                self.metadata.value(nsc['fcrepo'].createdBy)))
 
         self.provided_imr.set((
             self.uri, nsc['fcrepo'].lastModified, thread_env.timestamp_term))
@@ -937,8 +947,8 @@ class Ldpr(metaclass=ABCMeta):
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
             from lakesuperior.model.ldp_factory import LdpFactory
 
-            s = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_RSRC_URI)
-            p = cont_rsrc.metadata.value(cont_rsrc.uri, self.MBR_REL_URI)
+            s = cont_rsrc.metadata.value(self.MBR_RSRC_URI)
+            p = cont_rsrc.metadata.value(self.MBR_REL_URI)
 
             if nsc['ldp'].DirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is a direct container.')
@@ -947,9 +957,8 @@ class Ldpr(metaclass=ABCMeta):
 
             elif nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is an indirect container.')
-                cont_rel_uri = cont_rsrc.metadata.value(
-                    cont_rsrc.uri, self.INS_CNT_REL_URI)
-                o = self.provided_imr.value(self.uri, cont_rel_uri)
+                cont_rel_uri = cont_rsrc.metadata.value(self.INS_CNT_REL_URI)
+                o = self.provided_imr.value(cont_rel_uri)
                 logger.debug('Target URI: {}'.format(o))
                 logger.debug('Creating IC triples.')
 

@@ -107,6 +107,8 @@ class RsrcCentricLayout:
             # These are placed in a separate graph for optimization purposes.
             'p': {
                 nsc['ldp'].contains,
+                # NOTE the term below is opinionated. It may be handled
+                # differently in the future.
                 nsc['pcdm'].hasMember,
             }
         },
@@ -205,7 +207,7 @@ class RsrcCentricLayout:
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store
         if getattr(store, 'is_txn_open', False):
-            logger.warn('store txn is open.')
+            logger.warning('store txn is open.')
             store.abort()
         store.close()
         store.destroy()
@@ -228,7 +230,7 @@ class RsrcCentricLayout:
         # Clear and initialize metadata store.
         md_store = env.app_globals.md_store
         if getattr(md_store, 'is_txn_open', False):
-            logger.warn('Metadata store txn is open.')
+            logger.warning('Metadata store txn is open.')
             md_store.abort()
         md_store.close_env()
         md_store.destroy()
@@ -363,26 +365,31 @@ class RsrcCentricLayout:
         Get all metadata about a resource's versions.
 
         :param string uid: Resource UID.
-        :rtype: rdflib.Graph
+        :rtype: SimpleGraph
         """
         # **Note:** This pretty much bends the ontology—it replaces the graph
         # URI with the subject URI. But the concepts of data and metadata in
         # Fedora are quite fluid anyways...
 
         # Result graph.
-        vmeta = Imr(uri=nsc['fcres'][uid], lookup=(
+        imr = SimpleGraph(lookup=(
             (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None),
                 nsc['fcadmin'][uid]), store=self.store)
 
+        vmeta = Imr(uri=nsc['fcres'][uid])
+
         #Get version graphs proper.
-        for vtrp in vmeta:
+        for vtrp in imr:
             # Add the hasVersion triple to the result graph.
-            vmeta_uris = self.ds.graph(HIST_GR_URI).subjects(
-                    nsc['foaf'].primaryTopic, vtrp[2])
+            vmeta.add(vtrp)
+            vmeta_gr = SimpleGraph(
+                lookup=((
+                    None, nsc['foaf'].primaryTopic, vtrp[2]), HIST_GR_URI),
+                store=self.store)
             # Get triples in the meta graph filtering out undesired triples.
-            for vmuri in vmeta_uris:
-                for trp in self.ds.graph(HIST_GR_URI).triples(
-                        (vmuri, None, None)):
+            for vmtrp in vmeta_gr:
+                for trp in SimpleGraph(lookup=((
+                        vmtrp[0], None, None), HIST_GR_URI), store=self.store):
                     if (
                             (trp[1] != nsc['rdf'].type
                             or trp[2] not in self.ignore_vmeta_types)
@@ -426,22 +433,35 @@ class RsrcCentricLayout:
         :rtype: Iterator(rdflib.URIRef)
         :return: Subjects of descendant resources.
         """
-        ds = self.ds
+        #import pdb; pdb.set_trace()
+        #ds = self.ds
         subj_uri = nsc['fcres'][uid]
         ctx_uri = nsc['fcstruct'][uid]
-        def _recurse(dset, s, p, c):
-            new_dset = set(ds.graph(c)[s : p])
+        cont_p = nsc['ldp'].contains
+        def _recurse(dset, s, c):
+            new_dset = SimpleGraph(
+                    lookup=((s, cont_p, None), c), store=self.store)[s : cont_p]
+            #new_dset = set(ds.graph(c)[s : cont_p])
             for ss in new_dset:
                 dset.add(ss)
                 cc = URIRef(ss.replace(nsc['fcres'], nsc['fcstruct']))
-                if set(ds.graph(cc)[ss : p]):
-                    _recurse(dset, ss, p, cc)
+                sub_dset = self.store.triples((ss, cont_p, None), cc)
+                #if set(ds.graph(cc)[ss : cont_p]):
+                try:
+                    next(sub_dset)
+                except StopIteration:
+                    pass
+                else:
+                    _recurse(dset, ss, cc)
             return dset
 
-        return (
-            _recurse(set(), subj_uri, nsc['ldp'].contains, ctx_uri)
-            if recurse
-            else ds.graph(ctx_uri)[subj_uri : nsc['ldp'].contains : ])
+        if recurse:
+            return _recurse(set(), subj_uri, ctx_uri)
+        else:
+            #return ds.graph(ctx_uri)[subj_uri : cont_p : ])
+            return SimpleGraph(
+                    lookup=((subj_uri, cont_p, None), ctx_uri),
+                    store=self.store)[subj_uri : cont_p]
 
 
     def get_last_version_uid(self, uid):
@@ -637,7 +657,7 @@ class RsrcCentricLayout:
                     and not obj.endswith('fcr:versions')
                     and not self.ask_rsrc_exists(self.uri_to_uid(
                         urldefrag(obj).url))):
-                logger.warn('Object not found: {}'.format(obj))
+                logger.warning('Object not found: {}'.format(obj))
                 for trp in self.store.triples((None, None, obj)):
                     yield trp
             if i % 100 == 0:
@@ -660,9 +680,8 @@ class RsrcCentricLayout:
             raise TombstoneError(uid, ts)
         elif imr.value(nsc['fcsystem'].tombstone):
             raise TombstoneError(
-                self.uri_to_uid(
-                    imr.value(nsc['fcsystem'].tombstone),
-                    imr.value(nsc['fcrepo'].created)))
+                    self.uri_to_uid(imr.value(nsc['fcsystem'].tombstone)),
+                    imr.value(nsc['fcrepo'].created))
 
 
     def _map_graph_uri(self, t, uid):

@@ -82,7 +82,7 @@ class LdpNr(Ldpr):
 
         :rtype: str
         """
-        cksum_term = self.imr.value(self.uri, nsc['premis'].hasMessageDigest)
+        cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term.replace('urn:sha1:',''))
         return nonrdfly.__class__.local_path(
                 nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
@@ -112,7 +112,7 @@ class LdpNr(Ldpr):
 
     ## PROTECTED METHODS ##
 
-    def _add_srv_mgd_triples(self, create=False):
+    def _add_srv_mgd_triples(self, *args, **kwargs):
         """
         Add all metadata for the RDF representation of the LDP-NR.
 
@@ -121,7 +121,7 @@ class LdpNr(Ldpr):
         :param defaultdict disposition: The ``Content-Disposition`` header
             content, parsed through ``parse_rfc7240``.
         """
-        super()._add_srv_mgd_triples(create)
+        super()._add_srv_mgd_triples(*args, **kwargs)
 
         # File size.
         logger.debug('Data stream size: {}'.format(self.size))

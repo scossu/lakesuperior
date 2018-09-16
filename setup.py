@@ -145,7 +145,6 @@ setup(
         'click-log',
         'gevent',
         'gunicorn',
-        #'lmdb',
         'rdflib',
         'rdflib-jsonld',
         'requests',

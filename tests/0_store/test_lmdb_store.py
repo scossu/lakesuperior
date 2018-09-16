@@ -16,16 +16,33 @@ def store():
     Test LMDB store.
 
     This store has a different life cycle than the one used for tests in higher
-    levels of the stack.
+    levels of the stack and is not bootstrapped (i.e. starts completely empty).
     """
     env_path = '/tmp/test_lmdbstore'
-    # If a previous test segfaulted, a corrupt database may be still around
+    # Remove previous test DBs
     rmtree(env_path, ignore_errors=True)
     store = LmdbStore(env_path)
     yield store
     store.close()
-    store.destroy()
+    # Leave store around for post-test inspection.
+    #store.destroy()
 
+
+@pytest.fixture
+def bogus_trp():
+    """
+    1000 bogus triples.
+
+    With 2048-sized pages, even 2-bound indices with 5-byte values such as
+    sp:o should yield more than one page (2048 bytes // 5 = 409 values).
+    """
+    return {
+        (
+            URIRef('urn:test_mp:s1'),
+            URIRef(f'urn:test_mp:p{i // 10}'),
+            URIRef(f'urn:test_mp:o{i}'))
+        for i in range(1000)
+    }
 
 def _clean(res):
     return {r[0] for r in res}
@@ -240,33 +257,101 @@ class TestBasicOps:
 
 
 
-@pytest.mark.usefixtures('store')
-class TestMultiPageLookup:
+@pytest.mark.usefixtures('store', 'bogus_trp')
+class TestEntryCount:
     '''
-    Tests looking up results retrieved in multiple pages.
+    Count number of entries in databases.
     '''
+
     @pytest.fixture
-    def data(self):
+    def indices(self):
         """
-        1000 triples.
-
-        With 2048-sized pages, even 2-bound indices with 5-byte values such as
-        sp:o should yield more than one page (2048 bytes // 5 = 409 values).
+        List of index labels.
         """
-        return {
-            (
-                URIRef('urn:test_mp:s1'),
-                URIRef(f'urn:test_mp:p{i // 10}'),
-                URIRef(f'urn:test_mp:o{i}'))
-            for i in range(1000)
-        }
+        return [
+            's:po',
+            'p:so',
+            'o:sp',
+            'po:s',
+            'so:p',
+            'sp:o',
+            'spo:c',
+            'c:spo',
+        ]
 
-    def test_init(self, store, data):
+
+    def test_init(self, store, bogus_trp):
         """
         Insert initial data and verify store length.
         """
         with store.txn_ctx(True):
-            for trp in data:
+            for trp in bogus_trp:
+                store.add(trp)
+
+        with store.txn_ctx():
+            assert len(store) == 1000
+
+
+    def test_entries_full(self, store, indices):
+        """
+        Count entries for the full data set.
+        """
+        with store.txn_ctx():
+            stat = store.stats()
+
+        for idxlabel in indices:
+            assert stat['db_stats'][idxlabel]['ms_entries'] == 1000
+
+        # 1 subject, 100 predicates, 1000 objects, 1 context
+        assert stat['db_stats']['t:st']['ms_entries'] == 1102
+        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+
+
+    def test_entries_partial(self, store, indices):
+        """
+        Delete some triples and verify numbers.
+        """
+        with store.txn_ctx(True):
+            store.remove((URIRef('urn:test_mp:s1'), URIRef('urn:test_mp:p0'), None))
+
+        with store.txn_ctx():
+            stat = store.stats()
+
+        assert stat['db_stats']['t:st']['ms_entries'] == 1102
+        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+
+
+    def test_entries_empty(self, store, indices):
+        """
+        Delete all remainng triples and verify that indices are empty.
+        """
+        with store.txn_ctx(True):
+            store.remove((None, None, None))
+
+        with store.txn_ctx():
+            stat = store.stats()
+
+        for idxlabel in indices:
+            assert stat['db_stats'][idxlabel]['ms_entries'] == 0
+
+        assert stat['db_stats']['t:st']['ms_entries'] == 1102
+        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+
+
+
+
+
+@pytest.mark.usefixtures('store', 'bogus_trp')
+class TestMultiPageLookup:
+    '''
+    Tests looking up results retrieved in multiple pages.
+    '''
+    def test_init(self, store, bogus_trp):
+        """
+        Insert initial data and verify store length.
+        """
+        with store.txn_ctx(True):
+            for trp in bogus_trp:
                 store.add(trp)
 
         with store.txn_ctx():
