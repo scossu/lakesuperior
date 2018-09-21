@@ -1,5 +1,3 @@
-# cython: language_level = 3
-
 cdef:
     #unsigned char *pack_data
     unsigned char term_type

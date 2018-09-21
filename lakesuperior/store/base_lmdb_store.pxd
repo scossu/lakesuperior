@@ -1,5 +1,3 @@
-# cython: language_level = 3
-
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
 cdef:

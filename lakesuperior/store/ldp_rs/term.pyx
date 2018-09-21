@@ -1,8 +1,3 @@
-# cython: language_level = 3
-# cython: boundschecking = False
-# cython: wraparound = False
-# cython: profile = True
-
 from rdflib import URIRef, BNode, Literal
 
 #from cpython.mem cimport PyMem_Malloc, PyMem_Free

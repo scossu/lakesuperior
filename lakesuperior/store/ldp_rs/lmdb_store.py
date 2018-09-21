@@ -120,10 +120,10 @@ class LmdbStore(LmdbTriplestore, Store):
         Remove triples by a pattern.
 
         :param tuple triple_pattern: 3-tuple of
-        either RDF terms or None, indicating the triple(s) to be removed.
-        ``None`` is used as a wildcard.
+            either RDF terms or None, indicating the triple(s) to be removed.
+            ``None`` is used as a wildcard.
         :param context: Context to remove the triples from. If None (the
-        default) the matching triples are removed from all contexts.
+            default) the matching triples are removed from all contexts.
         :type context: rdflib.term.Identifier or None
         """
         #logger.debug('Removing triples by pattern: {} on context: {}'.format(
