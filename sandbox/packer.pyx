@@ -1,5 +1,3 @@
-# cython: language_level = 3
-
 from lakesuperior.cy_include cimport cytpl as tpl
 from libc.stdlib cimport malloc, free
 
