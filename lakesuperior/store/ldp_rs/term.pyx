@@ -76,4 +76,3 @@ cdef deserialize(unsigned char *data, size_t data_size):
             raise IOError(f'Unknown structure pack format: {fmt}')
     finally:
         free(fmt)
-

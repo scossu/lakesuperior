@@ -24,4 +24,3 @@ cdef:
 
     int serialize(term, unsigned char **pack_data, size_t *pack_size) except -1
     deserialize(unsigned char *data, size_t size)
-

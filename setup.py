@@ -67,7 +67,7 @@ extensions = [
         #    '/usr/lib',
         #    path.join(lakesuperior.basedir, 'lib'),
         #],
-        #libraries = ['lmdb', 'tpl']
+        libraries = ['crypto']
     ),
     # For testing.
     Extension(

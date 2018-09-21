@@ -78,6 +78,10 @@ DEF IDX_OP_ADD = '_idx_add'
 DEF IDX_OP_REMOVE = '_idx_remove'
 
 
+cdef extern from '<openssl/sha.h>':
+    unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md)
+
+
 ctypedef unsigned char Key[KLEN]
 ctypedef unsigned char DoubleKey[DBL_KLEN]
 ctypedef unsigned char TripleKey[TRP_KLEN]
@@ -119,10 +123,10 @@ lookup_ordering_2bound = [
 ]
 
 
-cdef inline void _hash(const unsigned char *s, size_t size, Hash *ch):
+cdef inline void _hash(
+        const unsigned char *message, size_t message_size, Hash digest):
     """Get the hash value of a serialized object."""
-    htmp = hashlib.new(TERM_HASH_ALGO, s[: size]).digest()
-    ch[0] = <unsigned char *>htmp
+    SHA1(message, message_size, digest)
 
 
 logger = logging.getLogger(__name__)
@@ -284,7 +288,7 @@ cdef class SimpleGraph:
 
         for i in range(keyset.ct):
             spok = keyset.data + i * TRP_KLEN
-            self.data.add(store.from_key(spok, TRP_KLEN))
+            self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
 
     # Basic set operations.
 
@@ -712,7 +716,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             for i, term in enumerate((s, p, o, c)):
                 serialize(term, &pk_t, &term_size)
-                _hash(pk_t, term_size, &thash)
+                _hash(pk_t, term_size, thash)
                 try:
                     key_v.mv_data = &thash
                     key_v.mv_size = HLEN
@@ -822,7 +826,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *pk_cur
             lmdb.MDB_cursor *ck_cur
 
-        _hash(pk_c, pk_size, &c_hash)
+        _hash(pk_c, pk_size, c_hash)
         #logger.debug('Adding a graph.')
         if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
@@ -1116,7 +1120,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Clean up all terms related to the graph.
         serialize(gr_uri, &pk_c, &c_size)
-        _hash(pk_c, c_size, &chash)
+        _hash(pk_c, c_size, chash)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -1141,9 +1145,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :rtype: Iterator(rdflib.Graph)
         """
         for ctx_uri in self.all_contexts(triple):
-            yield Graph(
-                    identifier=self.from_key(ctx_uri, len(ctx_uri))[0],
-                    store=self)
+            yield Graph(identifier=self.from_key(ctx_uri), store=self)
 
 
     def triples(self, triple_pattern, context=None):
@@ -1191,7 +1193,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # This shall never be MDB_NOTFOUND.
                 _check(lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET))
                 while True:
-                    c_uri = self.from_key(<Key>data_v.mv_data, KLEN)[0]
+                    c_uri = self.from_key(<Key>data_v.mv_data)
                     contexts.append(Graph(identifier=c_uri, store=self))
                     try:
                         _check(lmdb.mdb_cursor_get(
@@ -1201,8 +1203,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 #logger.debug('Triple keys before yield: {}: {}.'.format(
                 #    (<TripleKey>key_v.mv_data)[:TRP_KLEN], tuple(contexts)))
-                yield self.from_key(
-                        <TripleKey>key_v.mv_data, TRP_KLEN), tuple(contexts)
+                yield self.from_trp_key(
+                    (<TripleKey>key_v.mv_data)[: TRP_KLEN]), tuple(contexts)
                 #logger.debug('After yield.')
         finally:
             self._cur_close(cur)
@@ -1297,7 +1299,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     _check(lmdb.mdb_cursor_get(
                         icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
                     while True:
-                        logger.debug(f'Data offset: {pg_offset} Page size: {data_v.mv_size} bytes')
+                        #logger.debug(f'Data offset: {pg_offset} Page size: {data_v.mv_size} bytes')
                         #logger.debug('Data page: {}'.format(
                         #        (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
                         memcpy(ret.data + pg_offset, data_v.mv_data, data_v.mv_size)
@@ -1454,7 +1456,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         # much less than that.
                         ret.resize(i + 1)
 
-                        logger.debug('Assembled data: {}'.format(ret.data[:ret.size]))
+                        #logger.debug('Assembled data: {}'.format(ret.data[:ret.size]))
                         return ret
                     finally:
                         self._cur_close(dcur)
@@ -1650,7 +1652,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 logger.debug('Got data in 2bound ({}): {}'.format(
                     data_v.mv_size,
                     (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                for j in range(data_v.mv_size // KLEN):
+                for j in prange(data_v.mv_size // KLEN, nogil=True):
                     src_pos = KLEN * j
                     ret_pos = (ret_offset + ret.itemsize * j)
                     #logger.debug('Page offset: {}'.format(pg_offset))
@@ -1674,7 +1676,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     #    raise RuntimeError(
                     #        'Retrieved less values than expected: {} of {}.'
                     #        .format(pg_offset, ret.size))
-                    logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
+                    #logger.debug('Assembled data in 2bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
                     return ret
         finally:
             self._cur_close(icur)
@@ -1726,7 +1728,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         for key in self._all_term_keys(term_type).to_tuple():
             #logger.debug('Yielding: {}'.format(key))
-            yield self.from_key(key, KLEN)[0]
+            yield self.from_key(key)
 
 
     cpdef tuple all_namespaces(self):
@@ -1834,32 +1836,37 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cdef tuple from_key(self, unsigned char *key, size_t size):
+    cdef object from_key(self, Key key):
         """
         Convert a single or multiple key into one or more terms.
 
         :param Key key: The key to be converted.
         """
         cdef:
-            size_t i
+            unsigned char *pk
 
-        ret = []
-        #logger.debug('Find term from key: {}'.format(key[: size]))
-        for i in range(0, size, KLEN):
-            key_v.mv_data = key + i
-            key_v.mv_size = KLEN
+        key_v.mv_data = key
+        key_v.mv_size = KLEN
 
-            _check(
-                    lmdb.mdb_get(
-                        self.txn, self.get_dbi('t:st'), &key_v, &data_v),
-                    'Error getting data for key \'{}\'.'.format(key))
+        _check(
+                lmdb.mdb_get(self.txn, self.get_dbi('t:st'), &key_v, &data_v),
+                'Error getting data for key \'{}\'.'.format(key))
 
-            py_term = deserialize(
-                    <unsigned char *>data_v.mv_data, data_v.mv_size)
-            ret.append(py_term)
-        #logger.debug('Ret: {}'.format(ret))
+        return deserialize(
+                <unsigned char *>data_v.mv_data, data_v.mv_size)
 
-        return tuple(ret)
+
+    cdef tuple from_trp_key(self, TripleKey key):
+        """
+        Convert a single or multiple key into one or more terms.
+
+        :param Key key: The key to be converted.
+        """
+        #logger.debug(f'From triple key: {key[: TRP_KLEN]}')
+        return (
+                self.from_key(key),
+                self.from_key(key + KLEN),
+                self.from_key(key + DBL_KLEN))
 
 
     cdef inline void _to_key(self, term, Key *key) except *:
@@ -1881,7 +1888,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         serialize(term, &pk_t, &term_size)
         #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
-        _hash(pk_t, term_size, &thash)
+        _hash(pk_t, term_size, thash)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash
         key_v.mv_size = HLEN
