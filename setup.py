@@ -28,19 +28,21 @@ readme_fpath = path.join(path.dirname(lakesuperior.basedir), 'README.rst')
 with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
+# Extensions directory.
+ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
+
 extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
+            path.join(ext_dir, 'lib', 'mdb.c'),
+            path.join(ext_dir, 'lib', 'midl.c'),
             path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx'),
-        #    path.join(lakesuperior.basedir, 'lib', 'mdb.c'),
-        #    path.join(lakesuperior.basedir, 'lib', 'midl.c'),
         ],
         include_dirs = [
+            #'/usr/include',
             path.join(lakesuperior.basedir, 'cy_include'),
-        #    '/usr/include',
-        #    path.join(lakesuperior.basedir, 'include'),
-        #    path.join(lakesuperior.basedir, 'lib'),
+            path.join(ext_dir, 'include'),
         ],
         library_dirs = [
         #    '/usr/lib',
@@ -48,36 +50,42 @@ extensions = [
         ],
         libraries = ['lmdb']
     ),
-    #Extension(
-    #    'lakesuperior.sandbox.nested_txn_poc',
-    #    [
-    #        path.join(lakesuperior.basedir, 'sandbox', 'nested_txn_poc.pyx'),
-    #    ],
-    #    include_dirs = [
-    #        path.join(lakesuperior.basedir, 'cy_include'),
-    #        path.join(lakesuperior.basedir, 'include'),
-    #    ],
-    #    library_dirs = [
-    #        path.join(lakesuperior.basedir, 'lib'),
-    #    ],
-    #    extra_compile_args=['-fopenmp'],
-    #    extra_link_args=['-fopenmp'],
-    #    libraries = ['lmdb']
-    #),
     Extension(
         '*',
-        [path.join(
-            lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx')],
-        include_dirs = [
-        #    '/usr/include',
-        #    path.join(lakesuperior.basedir, 'include'),
-        #    path.join(lakesuperior.basedir, 'store'),
+        [
+            path.join(ext_dir, 'lib', 'tpl.c'),
+            path.join(ext_dir, 'lib', 'mdb.c'),
+            path.join(lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx'),
         ],
-        library_dirs = [
+        include_dirs = [
+            #'/usr/include',
+            path.join(lakesuperior.basedir, 'cy_include'),
+            path.join(ext_dir, 'include'),
+        ],
+        #library_dirs = [
         #    '/usr/lib',
         #    path.join(lakesuperior.basedir, 'lib'),
+        #],
+        libraries = ['lmdb', 'tpl']
+    ),
+    # For testing.
+    Extension(
+        '*',
+        [
+            #path.join(ext_dir, 'lib', 'tpl.c'),
+            path.join(
+                path.dirname(lakesuperior.basedir), 'sandbox', '*.pyx'),
         ],
-        libraries = ['lmdb']
+        include_dirs = [
+            #'/usr/include',
+            path.join(lakesuperior.basedir, 'cy_include'),
+            path.join(ext_dir, 'include'),
+        ],
+        #library_dirs = [
+        #    '/usr/lib',
+        #    path.join(path.dirname(lakesuperior.basedir), 'ext', 'lib'),
+        #],
+        libraries = ['lmdb', 'tpl']
     ),
 ]
 
@@ -96,7 +104,7 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions, force=False),
+    ext_modules = cythonize(extensions, force=False, annotate=True),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

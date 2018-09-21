@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from functools import wraps
 
 from rdflib import Graph
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.term import Node
 
 from lakesuperior.store.base_lmdb_store import (
@@ -25,6 +26,8 @@ from libc.string cimport memcmp, memcpy, strchr
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
+from lakesuperior.store.ldp_rs.term cimport serialize, deserialize
+
 
 DEF KLEN = 5
 """
@@ -575,9 +578,6 @@ cdef class Imr(SimpleGraph):
 
 cdef class LmdbTriplestore(BaseLmdbStore):
 
-    _pickle = pickle.dumps
-    _unpickle = pickle.loads
-
     dbi_labels = [
         # Main data
         # Term key to serialized term content
@@ -676,11 +676,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Triple and graph methods.
 
-    cpdef void _add(
-            self, bytes pk_s,
-            bytes pk_p,
-            bytes pk_o,
-            bytes pk_c) except *:
+    cpdef add(self, triple, context=None, quoted=False):
         """
         Add a triple and start indexing.
 
@@ -691,7 +687,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param bool quoted: Not used.
         """
         cdef:
-            #const unsigned char[:] *pk_terms = [pk_s, pk_p, pk_o, pk_c]
             lmdb.MDB_cursor *icur
             lmdb.MDB_val spo_v, c_v, null_v
             unsigned char i
@@ -701,15 +696,23 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # See https://github.com/cython/cython/issues/2517
             unsigned char spock[QUAD_KLEN]
             unsigned char nkey[KLEN]
-            unsigned int term_sizes[4]
+            size_t term_size
 
+        c = self._normalize_context(context)
+        if c is None:
+            c = RDFLIB_DEFAULT_GRAPH_URI
+
+        # TODO: figure out how the RDFLib dispatcher is inherited
+        # (and if there is a use for it in a first place)
+        #Store.add(self, triple, context)
+
+        s, p, o = triple
         #logger.debug('Trying to add a triple.')
-        term_sizes = [len(pk_s), len(pk_p), len(pk_o), len(pk_c)]
-
         icur = self._cur_open('th:t')
         try:
-            for i, pk_t in enumerate((pk_s, pk_p, pk_o, pk_c)):
-                _hash(pk_t, term_sizes[i], &thash)
+            for i, term in enumerate((s, p, o, c)):
+                serialize(term, &pk_t, &term_size)
+                _hash(pk_t, term_size, &thash)
                 try:
                     key_v.mv_data = &thash
                     key_v.mv_size = HLEN
@@ -721,7 +724,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # If term is not found, add it...
                     #logger.debug('Hash {} not found. Adding to DB.'.format(
                     #        thash[: HLEN]))
-                    self._append(pk_t, term_sizes[i], &nkey, dblabel=b't:st')
+                    self._append(pk_t, term_size, &nkey, dblabel=b't:st')
                     memcpy(spock + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
@@ -775,15 +778,41 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._index_triple(IDX_OP_ADD, spock[: TRP_KLEN])
 
 
+    cpdef add_graph(self, graph):
+        """
+        Add a graph to the database.
+
+        This creates an empty graph by associating the graph URI with the
+        pickled `None` value. This prevents from removing the graph when all
+        triples are removed.
+
+        This may be called by read-only operations:
+        https://github.com/RDFLib/rdflib/blob/master/rdflib/graph.py#L1623
+        In which case it needs to open a write transaction. This is not ideal
+        but the only way to handle datasets in RDFLib.
+
+        :param rdflib.URIRef graph: URI of the named graph to add.
+        """
+        cdef:
+            unsigned char *pk_c
+            size_t pk_size
+
+        if isinstance(graph, Graph):
+            graph = graph.identifier
+
+        serialize(graph, &pk_c, &pk_size)
+        self._add_graph(pk_c, pk_size)
+
+
     cpdef void _add_graph(
-            self, unsigned char *pk_c, Py_ssize_t pk_size) except *:
+            self, unsigned char *pk_c, size_t pk_size) except *:
         """
         Add a graph.
 
         :param pk_c: Pickled context URIRef object.
         :type pk_c: const unsigned char *
         :param pk_size: Size of pickled string.
-        :type pk_size: Py_ssize_t
+        :type pk_size: size_t
         """
         cdef:
             unsigned char c_hash[HLEN]
@@ -1066,10 +1095,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned char chash[HLEN]
             unsigned char ck[KLEN]
+            unsigned char *pk_c
+            size_t c_size
             lmdb.MDB_val ck_v, chash_v
 
         #logger.debug('Deleting context: {}'.format(gr_uri))
-        #logger.debug('Pickled context: {}'.format(self._pickle(gr_uri)))
+        #logger.debug('Pickled context: {}'.format(serialize(gr_uri)))
 
         # Gather information on the graph prior to deletion.
         try:
@@ -1084,8 +1115,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._remove((None, None, gr_uri))
 
         # Clean up all terms related to the graph.
-        pk_c = self._pickle(gr_uri)
-        _hash(pk_c, len(pk_c), &chash)
+        serialize(gr_uri, &pk_c, &c_size)
+        _hash(pk_c, c_size, &chash)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -1194,13 +1225,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char tk[KLEN]
             unsigned char ck[KLEN]
             unsigned char spok[TRP_KLEN]
-            size_t ct = 0, flt_j = 0, i = 0, j = 0, pg_offset = 0
+            unsigned char *pk_c
+            size_t ct = 0, flt_j = 0, i = 0, j = 0, pg_offset = 0, c_size
             lmdb.MDB_cursor *icur
             lmdb.MDB_val key_v, data_v
             ResultSet flt_res, ret
 
         if context is not None:
-            pk_c = self._pickle(context)
+            serialize(context, &pk_c, &c_size)
             try:
                 self._to_key(context, &ck)
             except KeyNotFoundError:
@@ -1444,7 +1476,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned int dbflags
             unsigned char asm_rng[3]
             size_t ct, ret_offset = 0, src_pos, ret_pos
-            Py_ssize_t j # Must be signed for older OpenMP versions
+            size_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
 
         logger.debug(f'lookup 1bound: {idx}, {term}')
@@ -1545,7 +1577,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char asm_rng[3]
             unsigned char term_order[3] # Lookup ordering
             size_t ct, i = 0, ret_offset = 0, ret_pos, src_pos
-            Py_ssize_t j # Must be signed for older OpenMP versions
+            size_t j # Must be signed for older OpenMP versions
             lmdb.MDB_cursor *icur
             ResultSet ret
 
@@ -1822,8 +1854,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         self.txn, self.get_dbi('t:st'), &key_v, &data_v),
                     'Error getting data for key \'{}\'.'.format(key))
 
-            pk = bytes((<unsigned char *>data_v.mv_data)[: data_v.mv_size])
-            py_term = pickle.loads(pk)
+            py_term = deserialize(
+                    <unsigned char *>data_v.mv_data, data_v.mv_size)
             ret.append(py_term)
         #logger.debug('Ret: {}'.format(ret))
 
@@ -1842,10 +1874,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :rtype: memoryview or None
         :return: Keys stored for the term(s) or None if not found.
         """
-        cdef Hash thash
-        pk_t = self._pickle(term)
-        #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, len(pk_t)))
-        _hash(pk_t, len(pk_t), &thash)
+        cdef:
+            unsigned char *pk_t
+            size_t term_size
+            Hash thash
+
+        serialize(term, &pk_t, &term_size)
+        #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
+        _hash(pk_t, term_size, &thash)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash
         key_v.mv_size = HLEN

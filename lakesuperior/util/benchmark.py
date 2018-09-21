@@ -15,8 +15,9 @@ Benchmark script to measure write performance.
 '''
 
 default_n = 10000
-#webroot = 'http://localhost:8080/rest'
-webroot = 'http://localhost:5000/ldp'
+webroot = 'http://localhost:8080/rest'
+#webroot = 'http://localhost:8000/ldp'
+#webroot = 'http://localhost:5000/ldp'
 container_uri = webroot + '/pomegranate'
 
 def run():

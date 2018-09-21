@@ -115,30 +115,6 @@ class LmdbStore(LmdbTriplestore, Store):
 
     # RDFLib triple methods.
 
-    def add(self, triple, context=None, quoted=False):
-        """
-        Add a triple and start indexing.
-
-        :param tuple(rdflib.Identifier) triple: Tuple of three identifiers.
-        :param context: Context identifier. ``None`` inserts in the default
-            graph.
-        :type context: rdflib.Identifier or None
-        :param bool quoted: Not used.
-        """
-        context = self._normalize_context(context)
-        if context is None:
-            context = RDFLIB_DEFAULT_GRAPH_URI
-
-        # TODO: figure out how the RDFLib dispatcher is inherited
-        # (and if there is a use for it in a first place)
-        #Store.add(self, triple, context)
-
-        pk_s, pk_p, pk_o = [self._pickle(t) for t in triple]
-        pk_c = self._pickle(context)
-
-        self._add(pk_s, pk_p, pk_o, pk_c)
-
-
     def remove(self, triple_pattern, context=None):
         """
         Remove triples by a pattern.
@@ -209,27 +185,6 @@ class LmdbStore(LmdbTriplestore, Store):
         """
         for pfx, ns in self.all_namespaces():
             yield (pfx, Namespace(ns))
-
-
-    def add_graph(self, graph):
-        """
-        Add a graph to the database.
-
-        This creates an empty graph by associating the graph URI with the
-        pickled `None` value. This prevents from removing the graph when all
-        triples are removed.
-
-        This may be called by read-only operations:
-        https://github.com/RDFLib/rdflib/blob/master/rdflib/graph.py#L1623
-        In which case it needs to open a write transaction. This is not ideal
-        but the only way to handle datasets in RDFLib.
-
-        :param rdflib.URIRef graph: URI of the named graph to add.
-        """
-        if isinstance(graph, Graph):
-            graph = graph.identifier
-        pk_c = self._pickle(graph)
-        self._add_graph(pk_c, len(pk_c))
 
 
     def remove_graph(self, graph):

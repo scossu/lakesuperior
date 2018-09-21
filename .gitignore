@@ -110,4 +110,4 @@ venv.bak/
 /data
 /lakesuperior/store/base_lmdb_store.c
 /lakesuperior/store/ldp_rs/lmdb_triplestore.c
-
+!ext/lib

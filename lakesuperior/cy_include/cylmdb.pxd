@@ -1,9 +1,4 @@
-# distutils: library_dirs = ../lib
-# distutils: libraries = lmdb
-
 from libc.stdint cimport uint64_t
-#from posix.types cimport (blkcnt_t, blksize_t, dev_t, gid_t, ino_t, mode_t,
-#                          nlink_t, off_t, time_t, uid_t)
 from posix.types cimport mode_t
 
 cdef extern from '<sys/types.h>':
