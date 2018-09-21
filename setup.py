@@ -63,6 +63,8 @@ extensions = [
             path.join(lakesuperior.basedir, 'cy_include'),
             path.join(ext_dir, 'include'),
         ],
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp'],
         #library_dirs = [
         #    '/usr/lib',
         #    path.join(lakesuperior.basedir, 'lib'),
@@ -105,7 +107,12 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions),
+    ext_modules = cythonize(extensions, compiler_directives={
+        'language_level': 3,
+        'boundscheck': False,
+        'wraparound': False,
+        'profile': True,
+    }),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

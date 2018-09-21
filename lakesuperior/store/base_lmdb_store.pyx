@@ -1,8 +1,3 @@
-# cython: language_level = 3
-# cython: boundschecking = False
-# cython: wraparound = False
-# cython: profile = True
-
 import logging
 import os
 import threading
