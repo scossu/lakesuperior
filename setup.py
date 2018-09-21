@@ -48,13 +48,14 @@ extensions = [
         #    '/usr/lib',
         #    path.join(lakesuperior.basedir, 'lib'),
         ],
-        libraries = ['lmdb']
+        #libraries = ['lmdb']
     ),
     Extension(
         '*',
         [
             path.join(ext_dir, 'lib', 'tpl.c'),
             path.join(ext_dir, 'lib', 'mdb.c'),
+            path.join(ext_dir, 'lib', 'midl.c'),
             path.join(lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx'),
         ],
         include_dirs = [
@@ -66,7 +67,7 @@ extensions = [
         #    '/usr/lib',
         #    path.join(lakesuperior.basedir, 'lib'),
         #],
-        libraries = ['lmdb', 'tpl']
+        #libraries = ['lmdb', 'tpl']
     ),
     # For testing.
     Extension(
@@ -85,7 +86,7 @@ extensions = [
         #    '/usr/lib',
         #    path.join(path.dirname(lakesuperior.basedir), 'ext', 'lib'),
         #],
-        libraries = ['lmdb', 'tpl']
+        #libraries = ['lmdb', 'tpl']
     ),
 ]
 
@@ -104,7 +105,7 @@ setup(
     #author_email='',  # Optional
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions, force=False, annotate=True),
+    ext_modules = cythonize(extensions),
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
