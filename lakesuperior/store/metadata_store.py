@@ -15,9 +15,14 @@ class MetadataStore(BaseLmdbStore):
     resource URIs.
     """
 
-    dbi_labels = ['checksums']
+    dbi_labels = [
+        'checksums',
+        'event_queue'
+    ]
     """
-    At the moment only ``checksums`` is implemented. It is a registry of
+    Currently implemented:
+
+    - ``checksums``: registry of
     LDP resource graphs, indicated in the key by their UID, and their
     cryptographic hashes.
     """

@@ -202,7 +202,7 @@ class RsrcCentricLayout:
         """
         Delete all graphs and insert the basic triples.
         """
-        from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
+        from lakesuperior.store.metadata_store import MetadataStore
 
         logger.info('Deleting all data from the graph store.')
         store = self.ds.store

@@ -66,7 +66,7 @@ class AppGlobals:
         #logger.info('Non-RDF layout: {}'.format(nonrdfly_mod_name))
 
         # Initialize metadata store.
-        from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
+        from lakesuperior.store.metadata_store import MetadataStore
 
         # Set up messaging.
         self._messenger  = Messenger(app_conf['messaging'])
@@ -119,23 +119,23 @@ class AppGlobals:
 
     @property
     def nonrdfly(self):
-        return self._nonrdfly
         """
         Current non-RDF (binary contents) layout.
 
         This is an instance of
         :class:`~lakesuperior.store.ldp_nr.base_non_rdf_layout.BaseNonRdfLayout`.
         """
+        return self._nonrdfly
 
     @property
     def md_store(self):
-        return self._md_store
         """
         Metadata store (LMDB).
 
         This is an instance of
-        :class:`~lakesuperior.store.ldp_nr.metadata_store.MetadataStore`.
+        :class:`~lakesuperior.store.metadata_store.MetadataStore`.
         """
+        return self._md_store
 
     @property
     def messenger(self):
