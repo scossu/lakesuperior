@@ -16,6 +16,7 @@ from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 from cython.parallel import parallel, prange
+from libc.stdlib cimport free
 from libc.string cimport memcmp, memcpy, strchr
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
@@ -623,7 +624,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         'spo:c': lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED,
     }
 
-    flags = lmdb.MDB_NORDAHEAD
+    flags = 0
 
     options = {
         'map_size': 1024 ** 4 # 1Tb.
@@ -724,6 +725,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     #logger.debug('Hash {} not found. Adding to DB.'.format(
                     #        thash[: HLEN]))
                     self._append(pk_t, term_size, &nkey, dblabel=b't:st')
+                    free(pk_t)
                     memcpy(spock + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
@@ -801,6 +803,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         serialize(graph, &pk_c, &pk_size)
         self._add_graph(pk_c, pk_size)
+        free(pk_c)
 
 
     cpdef void _add_graph(
@@ -1116,6 +1119,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Clean up all terms related to the graph.
         serialize(gr_uri, &pk_c, &c_size)
         _hash(pk_c, c_size, chash)
+        free(pk_c)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -1222,14 +1226,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             unsigned char tk[KLEN]
             unsigned char ck[KLEN]
             unsigned char spok[TRP_KLEN]
-            unsigned char *pk_c
+            #unsigned char *pk_c
             size_t ct = 0, flt_j = 0, i = 0, j = 0, pg_offset = 0, c_size
             lmdb.MDB_cursor *icur
             lmdb.MDB_val key_v, data_v
             ResultSet flt_res, ret
 
         if context is not None:
-            serialize(context, &pk_c, &c_size)
+            #serialize(context, &pk_c, &c_size)
             try:
                 self._to_key(context, &ck)
             except KeyNotFoundError:
@@ -1884,6 +1888,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         serialize(term, &pk_t, &term_size)
         #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
         _hash(pk_t, term_size, thash)
+        free(pk_t)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash
         key_v.mv_size = HLEN
