@@ -15,7 +15,7 @@ cdef class BaseLmdbStore:
         readonly bint is_txn_open
         public bint _open
         unsigned int _readers
-        bytes dbpath
+        readonly str env_path
         lmdb.MDB_dbi *dbis
         lmdb.MDB_env *dbenv
         lmdb.MDB_txn *txn
@@ -28,7 +28,7 @@ cdef class BaseLmdbStore:
         void _txn_commit(self) except *
         void _txn_abort(self) except *
         inline bint _key_exists(
-            self, const unsigned char *key, unsigned char klen,
+            self, unsigned char *key, unsigned char klen,
             unsigned char *dblabel=*) except -1
 
         size_t _txn_id(self) except -1

@@ -17,8 +17,5 @@ cdef:
         unsigned char *datatype
         unsigned char *lang
 
-    IdentifierTerm id_t
-    LiteralTerm lit_t
-
     int serialize(term, unsigned char **pack_data, size_t *pack_size) except -1
     deserialize(unsigned char *data, size_t size)

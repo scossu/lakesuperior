@@ -84,11 +84,20 @@ cdef class BaseLmdbStore:
     :rtype: dict or None
     """
 
-    flags = 0
+    env_flags = 0
     """
     LMDB environment flags.
 
-    These are used with ``mdb_env_open``.
+    See `mdb_env_open
+    <http://www.lmdb.tech/doc/group__mdb.html#ga32a193c6bf4d7d5c5d579e71f22e9340>`_
+    """
+
+    env_perms = 0o640
+    """
+    The UNIX permissions to set on created environment files and semaphores.
+
+    See `mdb_env_open
+    <http://www.lmdb.tech/doc/group__mdb.html#ga32a193c6bf4d7d5c5d579e71f22e9340>`_
     """
 
     options = {}
@@ -176,34 +185,41 @@ cdef class BaseLmdbStore:
                             self.env_path, e))
 
         # Create environment handle.
-        rc = lmdb.mdb_env_create(&self.dbenv)
-        _check(rc, 'Error creating DB environment handle: {}')
+        _check(
+                lmdb.mdb_env_create(&self.dbenv),
+                'Error creating DB environment handle: {}')
+        logger.debug('Created DBenv @ {:x}'.format(<unsigned long>self.dbenv))
 
         # Set map size.
-        rc = lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
-                'map_size', 1024 ** 3))
-        _check(rc, 'Error setting map size: {}')
+        _check(
+                lmdb.mdb_env_set_mapsize(self.dbenv, self.options.get(
+                    'map_size', 1024 ** 3)),
+                'Error setting map size: {}')
 
         # Set max databases.
         max_dbs = self.options.get('max_dbs', len(self.dbi_labels))
-        rc = lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs)
-        _check(rc, 'Error setting max. databases: {}')
+        _check(
+                lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs),
+                'Error setting max. databases: {}')
 
         # Set max readers.
         self._readers = self.options.get(
                 'max_spare_txns', wsgi.workers * self.readers_mult)
-        rc = lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers)
+        _check(
+                lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers),
+                'Error setting max. readers: {}')
         logger.debug('Max. readers: {}'.format(self._readers))
-        _check(rc, 'Error setting max. readers: {}')
 
         # Clear stale readers.
         self._clear_stale_readers()
 
         # Open DB environment.
-        rc = lmdb.mdb_env_open(
-                self.dbenv, self.env_path.encode(), self.flags, 0o640)
-        _check(rc, 'Error opening the database environment: {}.'.format(
-                self.env_path))
+        logger.debug('DBenv address: {:x}'.format(<unsigned long>self.dbenv))
+        _check(
+                lmdb.mdb_env_open(
+                    self.dbenv, self.env_path.encode(),
+                    self.env_flags, self.env_perms),
+                f'Error opening the database environment: {self.env_path}.')
 
         self._init_dbis(create)
         self._open = True
@@ -270,7 +286,9 @@ cdef class BaseLmdbStore:
 
 
     cpdef void close_env(self, bint commit_pending_transaction=False) except *:
+        logger.debug('Cleaning up store env.')
         if self.is_open:
+            logger.debug('Closing store env.')
             if self.is_txn_open is True:
                 if commit_pending_transaction:
                     self._txn_commit()
@@ -394,7 +412,7 @@ cdef class BaseLmdbStore:
 
 
     cdef inline bint _key_exists(
-            self, const unsigned char *key, unsigned char klen,
+            self, unsigned char *key, unsigned char klen,
             unsigned char *dblabel=b'') except -1:
         """
         Return whether a key exists in a database.
