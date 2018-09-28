@@ -33,9 +33,9 @@ Key features
 -  Very stable persistence layer based on
    `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
    ACID-compliant writes guarantee consistency of data.
--  Term-based search (*planned*) and SPARQL Query API + UI
+-  Term-based search and SPARQL Query API + UI
 -  No performance penalty for storing many resources under the same
-   container
+   container, or having one resource link to many URIs
 -  Extensible provenance metadata tracking
 -  Multi-modal access: HTTP (REST), command line interface and native Python
    API.
