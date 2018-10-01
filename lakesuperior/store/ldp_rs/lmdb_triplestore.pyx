@@ -569,7 +569,6 @@ cdef class Imr(SimpleGraph):
         """
         gr = Graph()
         for trp in self.data:
-            #logger.debug(f'Adding triple to Imr: {trp}')
             gr.add(trp)
 
         return gr.resource(identifier=self.uri)

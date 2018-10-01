@@ -14,7 +14,6 @@ from lakesuperior.exceptions import (
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.store.ldp_rs.metadata_store import MetadataStore
 from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph, Imr
 
 
@@ -496,35 +495,35 @@ class TestAdvancedDelete:
                         uid, i, j))
 
 
-    @pytest.mark.skip(reason='TODO This function can be reenabled after an '
-            'asynchronus checksum queue is implemented.')
-    def test_checksum(self):
-        """
-        Verify that a checksum is created and updated appropriately.
-        """
-        root_cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
-        uid = '/test_checksum'
-        rsrc_api.create_or_replace(uid)
+    #@pytest.mark.skip(reason='TODO This function can be reenabled after an '
+    #        'asynchronus checksum queue is implemented.')
+    #def test_checksum(self):
+    #    """
+    #    Verify that a checksum is created and updated appropriately.
+    #    """
+    #    root_cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
+    #    uid = '/test_checksum'
+    #    rsrc_api.create_or_replace(uid)
 
-        root_cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
-        cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
+    #    root_cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
+    #    cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
-        assert len(cksum1)
-        assert root_cksum1 != root_cksum2
+    #    assert len(cksum1)
+    #    assert root_cksum1 != root_cksum2
 
-        rsrc_api.update(
-                uid,
-                'DELETE {} INSERT {<> a <http://ex.org/ns#Hello> .} WHERE {}')
+    #    rsrc_api.update(
+    #            uid,
+    #            'DELETE {} INSERT {<> a <http://ex.org/ns#Hello> .} WHERE {}')
 
-        cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
+    #    cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
-        assert cksum1 != cksum2
+    #    assert cksum1 != cksum2
 
-        rsrc_api.delete(uid)
+    #    rsrc_api.delete(uid)
 
-        cksum3 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
+    #    cksum3 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
 
-        assert cksum3 is None
+    #    assert cksum3 is None
 
 
 

@@ -271,7 +271,6 @@ def post_resource(parent_uid):
                 .format(uri)
 
     rsp_headers.update(hdr)
-    rsp_headers.update(_digest_headers(nsc['fcres'][uid]))
 
     return uri, 201, rsp_headers
 
@@ -326,7 +325,6 @@ def put_resource(uid):
     else:
         rsp_code = 204
         rsp_body = ''
-    rsp_headers.update(_digest_headers(nsc['fcres'][uid]))
 
     return rsp_body, rsp_code, rsp_headers
 
@@ -629,20 +627,15 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
 
     digest = rsrc.metadata.value(rsrc.uri, nsc['premis'].hasMessageDigest)
     # Only add ETag and digest if output is not RDF.
-    if digest and out_fmt == 'non_rdf':
+    if digest:
         digest_components = digest.split(':')
         cksum_hex = digest_components[-1]
         cksum = bytearray.fromhex(cksum_hex)
         digest_algo = digest_components[-2]
-        etag_str = (
-                'W/"{}"'.format(cksum_hex)
-                if nsc['ldp'].RDFSource in rsrc.ldp_types
-                else cksum_hex)
-        rsp_headers['ETag'] = etag_str,
+        etag_str = cksum_hex
+        rsp_headers['ETag'] = etag_str
         rsp_headers['Digest'] = '{}={}'.format(
                 digest_algo.upper(), b64encode(cksum).decode('ascii'))
-    else:
-        rsp_headers.update(_digest_headers(rsrc.uri))
 
 
     last_updated_term = rsrc.metadata.value(nsc['fcrepo'].lastModified)
@@ -658,20 +651,4 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
         rsp_headers['Content-Type'] = mimetype
 
     return rsp_headers
-
-
-def _digest_headers(uri):
-    """
-    Get an LDP-RS resource digest and create header tags.
-
-    The ``Digest`` and ``ETag`` headers are created.
-    """
-    headers = {}
-    digest = env.app_globals.md_store.get_checksum(uri)
-    if digest:
-        headers['Digest'] = 'SHA256={}'.format(
-                b64encode(digest).decode('ascii'))
-        headers['ETag'] = 'W/{}'.format(digest.hex())
-
-    return headers
 
