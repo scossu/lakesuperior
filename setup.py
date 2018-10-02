@@ -40,15 +40,9 @@ extensions = [
             path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx'),
         ],
         include_dirs = [
-            #'/usr/include',
             path.join(lakesuperior.basedir, 'cy_include'),
             path.join(ext_dir, 'include'),
         ],
-        library_dirs = [
-        #    '/usr/lib',
-        #    path.join(lakesuperior.basedir, 'lib'),
-        ],
-        #libraries = ['lmdb']
     ),
     Extension(
         '*',
@@ -59,16 +53,11 @@ extensions = [
             path.join(lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx'),
         ],
         include_dirs = [
-            #'/usr/include',
             path.join(lakesuperior.basedir, 'cy_include'),
             path.join(ext_dir, 'include'),
         ],
         extra_compile_args=['-fopenmp'],
         extra_link_args=['-fopenmp'],
-        #library_dirs = [
-        #    '/usr/lib',
-        #    path.join(lakesuperior.basedir, 'lib'),
-        #],
         libraries = ['crypto']
     ),
     # For testing.
@@ -84,11 +73,6 @@ extensions = [
             path.join(lakesuperior.basedir, 'cy_include'),
             path.join(ext_dir, 'include'),
         ],
-        #library_dirs = [
-        #    '/usr/lib',
-        #    path.join(path.dirname(lakesuperior.basedir), 'ext', 'lib'),
-        #],
-        #libraries = ['lmdb', 'tpl']
     ),
 ]
 
@@ -144,7 +128,7 @@ setup(
 
     keywords='repository linked-data',
 
-    python_requires='~=3.5',
+    python_requires='~=3.6',
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 

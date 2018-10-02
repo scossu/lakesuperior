@@ -387,6 +387,7 @@ cdef class SimpleGraph:
 
     cpdef object as_rdflib(self):
         """
+        Return the data set as an RDFLib Graph.
         :rtype: rdflib.Graph
         """
         gr = Graph()
@@ -494,6 +495,8 @@ cdef class Imr(SimpleGraph):
     def identifier(self):
         """
         IMR URI. For compatibility with RDFLib Resource.
+
+        :rtype: string
         """
         return self.uri
 
@@ -502,6 +505,8 @@ cdef class Imr(SimpleGraph):
     def graph(self):
         """
         Return a SimpleGraph with the same data.
+
+        :rtype: SimpleGraph
         """
         return SimpleGraph(self.data)
 
@@ -565,6 +570,8 @@ cdef class Imr(SimpleGraph):
 
     cpdef as_rdflib(self):
         """
+        Return the IMR as a RDFLib Resource.
+
         :rtype: rdflib.Resource
         """
         gr = Graph()
@@ -576,6 +583,17 @@ cdef class Imr(SimpleGraph):
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):
+
+    """
+    Low-level storage layer.
+
+    This class extends the RDFLib-compatible :py:class:`BaseLmdbStore` and maps
+    triples and contexts to key-value records in LMDB.
+
+    This class uses the original LMDB C API rather than the Python bindings,
+    because several data manipulations happen after retrieval from the store,
+    which are more efficiently performed at the C level.
+    """
 
     dbi_labels = [
         # Main data
@@ -811,7 +829,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Add a graph.
 
         :param pk_c: Pickled context URIRef object.
-        :type pk_c: const unsigned char *
+        :type pk_c: unsigned char*
         :param pk_size: Size of pickled string.
         :type pk_size: size_t
         """

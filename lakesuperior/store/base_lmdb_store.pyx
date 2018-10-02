@@ -519,13 +519,6 @@ cdef class BaseLmdbStore:
             pass
 
 
-    #cpdef get_all_pairs(self, db=None):
-    #    """
-    #    Get all the non-duplicate key-value pairs in a database.
-    #    """
-    #    pass
-
-
     cpdef dict stats(self, new_txn=True):
         """Gather statistics about the database."""
         return self._stats()
