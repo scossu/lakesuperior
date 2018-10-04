@@ -15,7 +15,7 @@ GUnicorn reads configuration options from this file by importing it::
 
 This module reads the ``gunicorn.yml`` configuration and overrides defaults
 set here. Only some of the GUnicorn optionscan be changed: others have to be
-set to specific values in order for LAKEsuperior to work properly.
+set to specific values in order for Lakesuperior to work properly.
 """
 
 __all__ = [

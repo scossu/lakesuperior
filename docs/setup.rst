@@ -4,7 +4,7 @@ Installation & Configuration
 Quick Install: Running in Docker
 --------------------------------
 
-You can run LAKEsuperior in Docker for a hands-off quickstart.
+You can run Lakesuperior in Docker for a hands-off quickstart.
 
 `Docker <http://docker.com/>`__ is a containerization platform that
 allows you to run services in lightweight virtual machine environments
@@ -14,12 +14,12 @@ your host machine.
 1. Install the correct `Docker Community
    Edition <https://www.docker.com/community-edition>`__ for your
    operating system.
-2. Clone the LAKEsuperior git repository:
+2. Clone the Lakesuperior git repository:
    ``git clone https://github.com/scossu/lakesuperior.git``
 3. ``cd`` into repo folder
 4. Run ``docker-compose up``
 
-LAKEsuperior should now be available at ``http://localhost:8000/``.
+Lakesuperior should now be available at ``http://localhost:8000/``.
 
 The provided Docker configuration includes persistent storage as a
 self-container Docker volume, meaning your data will persist between

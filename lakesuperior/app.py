@@ -23,7 +23,7 @@ def create_app(app_conf):
     app.config.update(app_conf)
 
     pid = multiprocessing.current_process().pid
-    logger.info('Starting LAKEsuperior HTTP server with PID: {}.'.format(pid))
+    logger.info('Starting Lakesuperior HTTP server with PID: {}.'.format(pid))
 
     app.register_blueprint(main)
     app.register_blueprint(ldp, url_prefix='/ldp', url_defaults={

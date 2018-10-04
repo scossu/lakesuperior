@@ -185,10 +185,10 @@ def cleanup():
 @click_log.simple_verbosity_option(logger)
 def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     """
-    Migrate an LDP repository to LAKEsuperior.
+    Migrate an LDP repository to Lakesuperior.
 
     This utility creates a fully functional LAKEshore repository from an
-    existing repository. The source repo can be LAKEsuperior or
+    existing repository. The source repo can be Lakesuperior or
     another LDP-compatible implementation.
 
     A folder will be created in the location indicated by ``dest``. If the

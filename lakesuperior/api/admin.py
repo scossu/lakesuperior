@@ -31,7 +31,7 @@ def stats():
 
 def migrate(src, dest, start_pts=None, list_file=None, **kwargs):
     """
-    Migrate an LDP repository to a new LAKEsuperior instance.
+    Migrate an LDP repository to a new Lakesuperior instance.
 
     See :py:meth:`Migrator.__init__`.
     """

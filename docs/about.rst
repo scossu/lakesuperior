@@ -1,7 +1,7 @@
-About LAKEsuperior
+About Lakesuperior
 ==================
 
-LAKEsuperior is an alternative `Fedora
+Lakesuperior is an alternative `Fedora
 Repository <http://fedorarepository.org>`__ implementation.
 
 Fedora is a mature repository software system historically adopted by
@@ -12,7 +12,7 @@ any type of binary files and their metadata in Linked Data format.
 Guiding Principles
 ------------------
 
-LAKEsuperior aims at being an uncomplicated, efficient Fedora 4
+Lakesuperior aims at being an uncomplicated, efficient Fedora 4
 implementation.
 
 Its main goals are:
@@ -54,28 +54,28 @@ divergences with the official Fedora4 implementation.
 Target Audience
 ---------------
 
-LAKEsuperior is for anybody who cares about preserving data in the long
+Lakesuperior is for anybody who cares about preserving data in the long
 term.
 
-Less vaguely, LAKEsuperior is targeted at who needs to store large
+Less vaguely, Lakesuperior is targeted at who needs to store large
 quantities of highly linked metadata and documents.
 
 Its Python/C environment and API make it particularly well suited for
 academic and scientific environments who would be able to embed it in a
 Python application as a library or extend it via plug-ins.
 
-LAKEsuperior is able to be exposed to the Web as a `Linked Data
+Lakesuperior is able to be exposed to the Web as a `Linked Data
 Platform <https://www.w3.org/TR/ldp-primer/>`__ server. It also acts as
 a SPARQL query (read-only) endpoint, however it is not meant to be used
 as a full-fledged triplestore at the moment.
 
-In its current status, LAKEsuperior is aimed at developers and hands-on
+In its current status, Lakesuperior is aimed at developers and hands-on
 managers who are interested in evaluating this project.
 
 Status and development
 ----------------------
 
-LAKEsuperior is in **alpha** status. Please see the `project
+Lakesuperior is in **alpha** status. Please see the `project
 issues <https://github.com/scossu/lakesuperior/issues>`__ list for a
 rudimentary road map.
 

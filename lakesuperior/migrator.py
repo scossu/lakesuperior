@@ -137,7 +137,7 @@ class Migrator:
         """
         Migrate the database.
 
-        This method creates a fully functional and configured LAKEsuperior
+        This method creates a fully functional and configured Lakesuperior
         data set contained in a folder from an LDP repository.
 
         :param start_pts: List of starting points to retrieve

@@ -1,7 +1,7 @@
 Resource Discovery & Query
 ==========================
 
-LAKEsuperior offers several way to programmatically discover resources and
+Lakesuperior offers several way to programmatically discover resources and
 data.
 
 LDP Traversal
@@ -20,12 +20,12 @@ SPARQL Query
 ------------
 
 A `SPARQL <https://www.w3.org/TR/sparql11-query/>`__ endpoint is available in
-LAKEsuperior both as an API and a Web UI.
+Lakesuperior both as an API and a Web UI.
 
 .. figure:: assets/lsup_sparql_query_ui.png
-   :alt: LAKEsuperior SPARQL Query Window
+   :alt: Lakesuperior SPARQL Query Window
 
-   LAKEsuperior SPARQL Query Window
+   Lakesuperior SPARQL Query Window
 
 The UI is based on `YASGUI <http://about.yasgui.org/>`__.
 
@@ -57,7 +57,7 @@ query in a graph with more than a few thousands resources::
 
 What the RDFLib implementation does is going over every single graph in the
 repository and perform the ``?s ?p ?o`` query on each of them. Since
-LAKEsuperior creates several graphs per resource, this can run for a very long
+Lakesuperior creates several graphs per resource, this can run for a very long
 time in any decently sized data set.
 
 The solution to this is either to omit the graph query, or use a term search,
@@ -67,9 +67,9 @@ Term Search
 -----------
 
 .. figure:: assets/lsup_term_search.png
-   :alt: LAKEsuperior Term Search Window
+   :alt: Lakesuperior Term Search Window
 
-   LAKEsuperior Term Search Window
+   Lakesuperior Term Search Window
 
 This feature provides a discovery tool focused on resource subjects and based
 on individual term match and comparison. It tends to be more manageable than

@@ -2,7 +2,7 @@ Divergencies between lakesuperior and FCREPO4
 =============================================
 
 This is a (vastly incomplete) list of discrepancies between the current
-FCREPO4 implementation and LAKEsuperior. More will be added as more
+FCREPO4 implementation and Lakesuperior. More will be added as more
 clients will use it.
 
 Not yet implemented (but in the plans)
@@ -59,7 +59,7 @@ If a client requests a tombstone resource in FCREPO4 with a method other
 than DELETE, the server will return ``405 Method Not Allowed``
 regardless of whether the tombstone exists or not.
 
-LAKEsuperior will return ``405`` only if the tombstone actually exists,
+Lakesuperior will return ``405`` only if the tombstone actually exists,
 ``404`` otherwise.
 
 Web UI
@@ -67,7 +67,7 @@ Web UI
 
 FCREPO4 includes a web UI for simple CRUD operations.
 
-Such a UI is not in the immediate LAKEsuperior development plans.
+Such a UI is not in the immediate Lakesuperior development plans.
 However, a basic UI is available for read-only interaction: LDP resource
 browsing, SPARQL query and other search facilities, and administrative
 tools. Some of the latter *may* involve write operations, such as
@@ -87,7 +87,7 @@ minted identifier. E.g.
 results in ``/rest/8c/9a/07/4e/8c9a074e-dda3-5256-ea30-eec2dd4fcf61``
 being created.
 
-The same request in LAKEsuperior would create
+The same request in Lakesuperior would create
 ``/rest/8c9a074e-dda3-5256-ea30-eec2dd4fcf61`` (obviously the
 identifiers will be different).
 
@@ -100,7 +100,7 @@ Allow PUT requests with empty body on existing resources
 FCREPO4 returns a ``409 Conflict`` if a PUT request with no payload is sent
 to an existing resource.
 
-LAKEsuperior allows to perform this operation, which would result in deleting
+Lakesuperior allows to perform this operation, which would result in deleting
 all the user-provided properties in that resource.
 
 If the original resource is an LDP-NR, however, the operation will raise a
@@ -124,8 +124,8 @@ containment triple is established between the closest LDPC and the
 created resource, e.g. if ``a`` exists, a
 ``</a> ldp:contains </a/b/c/d>`` triple is created.
 
-LAKEsuperior does not employ Pairtrees. In the example above
-LAKEsuperior would create a fully qualified LDPC for each missing
+Lakesuperior does not employ Pairtrees. In the example above
+Lakesuperior would create a fully qualified LDPC for each missing
 segment, which can be POSTed and PUT to. Containment triples are created
 between each link in the path, i.e. ``</a> ldp:contains </a/b>``,
 ``</a/b> ldp:contains </a/b/c>`` etc. This may potentially break clients
@@ -133,11 +133,11 @@ relying on the direct containment model.
 
 The rationale behind this change is that Pairtrees are the byproduct of
 a limitation imposed by Modeshape and introduce complexity in the
-software stack and confusion for the client. LAKEsuperior aligns with
+software stack and confusion for the client. Lakesuperior aligns with
 the more intuitive UNIX filesystem model, where each segment of a path
 is a “folder” or container (except for the leaf nodes that can be either
 folders or files). In any case, clients are discouraged from generating
-deep paths in LAKEsuperior without a specific purpose because these
+deep paths in Lakesuperior without a specific purpose because these
 resources create unnecessary data.
 
 Non-mandatory, non-authoritative slug in version POST
@@ -146,7 +146,7 @@ Non-mandatory, non-authoritative slug in version POST
 FCREPO4 requires a ``Slug`` header to POST to ``fcr:versions`` to create
 a new version.
 
-LAKEsuperior adheres to the more general FCREPO POST rule and if no slug
+Lakesuperior adheres to the more general FCREPO POST rule and if no slug
 is provided, an automatic ID is generated instead. The ID is a UUID4.
 
 Note that internally this ID is not called “label” but “uid” since it is
@@ -155,20 +155,20 @@ predicate, however ambiguous in this context, will be kept until the
 adoption of Memento, which will change the retrieval mechanisms.
 
 Another notable difference is that if a POST is issued on the same resource
-``fcr:versions`` location using a version ID that already exists, LAKEsuperior
+``fcr:versions`` location using a version ID that already exists, Lakesuperior
 will just mint a random identifier rather than returning an error.
 
 Deprecation track
 -----------------
 
-LAKEsuperior offers some “legacy” options to replicate the FCREPO4
+Lakesuperior offers some “legacy” options to replicate the FCREPO4
 behavior, however encourages new development to use a different approach
 for some types of interaction.
 
 Endpoints
 ~~~~~~~~~
 
-The FCREPO root endpoint is ``/rest``. The LAKEsuperior root endpoint is
+The FCREPO root endpoint is ``/rest``. The Lakesuperior root endpoint is
 ``/ldp``.
 
 This should not pose a problem if a client does not have ``rest``
@@ -183,7 +183,7 @@ Fedora version 5.x, etc.
 Automatic LDP class assignment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Since LAKEsuperior rejects client-provided server-managed triples, and
+Since Lakesuperior rejects client-provided server-managed triples, and
 since the LDP types are among them, the LDP container type is inferred
 from the provided properties: if the ``ldp:hasMemberRelation`` and
 ``ldp:membershipResource`` properties are provided, the resource is a
@@ -203,7 +203,7 @@ PUT request, unless the ``Prefer`` header is set to
 ``handling=lenient; received="minimal"``, in which case the RDF payload
 must not have any server-managed triples.
 
-LAKEsuperior works under the assumption that client should never provide
+Lakesuperior works under the assumption that client should never provide
 server-managed triples. It automatically handles PUT requests sent to
 existing resources by returning a 412 if any server managed triples are
 included in the payload. This is the same as setting ``Prefer`` to
@@ -225,7 +225,7 @@ LDP-NR content and metadata
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 FCREPO4 relies on the ``/fcr:metadata`` identifier to retrieve RDF
-metadata about an LDP-NR. LAKEsuperior supports this as a legacy option,
+metadata about an LDP-NR. Lakesuperior supports this as a legacy option,
 but encourages the use of content negotiation to do the same while
 offering explicit endpoints for RDF and non-RDF content retrieval.
 
@@ -242,7 +242,7 @@ The two optionsabove return an HTTP error if requested for a LDP-RS.
 “Include” and “Omit” options for children
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-LAKEsuperior offers an additional ``Prefer`` header option to exclude
+Lakesuperior offers an additional ``Prefer`` header option to exclude
 all references to child resources (i.e. by removing all the
 ``ldp:contains`` triples) while leaving the other server-managed triples
 when retrieving a resource:
@@ -261,7 +261,7 @@ Soft-delete and purge
 In FCREPO4 a deleted resource leaves a tombstone deleting all traces of
 the previous resource.
 
-In LAKEsuperior, a normal DELETE creates a new version snapshot of the
+In Lakesuperior, a normal DELETE creates a new version snapshot of the
 resource and puts a tombstone in its place. The resource versions are
 still available in the ``fcr:versions`` location. The resource can be
 “resurrected” by issuing a POST to its tombstone. This will result in a
