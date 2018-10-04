@@ -495,37 +495,6 @@ class TestAdvancedDelete:
                         uid, i, j))
 
 
-    #@pytest.mark.skip(reason='TODO This function can be reenabled after an '
-    #        'asynchronus checksum queue is implemented.')
-    #def test_checksum(self):
-    #    """
-    #    Verify that a checksum is created and updated appropriately.
-    #    """
-    #    root_cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
-    #    uid = '/test_checksum'
-    #    rsrc_api.create_or_replace(uid)
-
-    #    root_cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres']['/'])
-    #    cksum1 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
-
-    #    assert len(cksum1)
-    #    assert root_cksum1 != root_cksum2
-
-    #    rsrc_api.update(
-    #            uid,
-    #            'DELETE {} INSERT {<> a <http://ex.org/ns#Hello> .} WHERE {}')
-
-    #    cksum2 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
-
-    #    assert cksum1 != cksum2
-
-    #    rsrc_api.delete(uid)
-
-    #    cksum3 = env.app_globals.md_store.get_checksum(nsc['fcres'][uid])
-
-    #    assert cksum3 is None
-
-
 
 @pytest.mark.usefixtures('db')
 class TestResourceVersioning:
