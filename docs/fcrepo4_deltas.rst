@@ -8,8 +8,7 @@ clients will use it.
 Not yet implemented (but in the plans)
 --------------------------------------
 
--  Various headers handling
--  Versioning (incomplete)
+-  Various headers handling (partial)
 -  AuthN/Z
 -  Fixity check
 -  Blank nodes
@@ -19,6 +18,25 @@ Potentially breaking changes
 
 The following divergences may lead into incompatibilities with some
 clients.
+
+ETags
+~~~~~
+
+"Weak" ETags for LDP-RSs (i.e. RDF graphs) are not implemented. Given the
+possible many interpretations of how any kind of checksum for an LDP resource
+should be calculated (see `discussion
+<https://groups.google.com/d/topic/fedora-tech/8pemDHNvbvc/discussion>`__), and
+also given the relatively high computation cost necessary to determine whether
+to send a ``304 Not Modified`` vs. a ``200 OK`` for an LDP-RS request, this
+feature has been considered impractical to implement with the limited resources
+available at the moment.
+
+As a consequence, LDP-RS requests will never return a ``304`` and will never
+include an ``ETag`` header. Clients should not rely on that header for
+non-binary resources.
+
+That said, calculating RDF chacksums is still an academically interesting topic
+and may be valuable for practical purposes such as metadata preservation.
 
 Atomicity
 ~~~~~~~~~

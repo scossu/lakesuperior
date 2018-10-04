@@ -33,24 +33,23 @@ Key features
 -  Very stable persistence layer based on
    `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
    ACID-compliant writes guarantee consistency of data.
--  Term-based search (*planned*) and SPARQL Query API + UI
+-  Term-based search and SPARQL Query API + UI
 -  No performance penalty for storing many resources under the same
-   container; no
-   `kudzu <https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml>`__
+   container; no `kudzu
+   <https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml>`__
    pairtree segmentation [#]_ 
 -  Extensible :doc:`provenance metadata <model>` tracking
 -  :doc:`Multi-modal access <architecture>`: HTTP
    (REST), command line interface and native Python API.
--  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
+-  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick [#]_.
 
 Implementation of the official `Fedora API
 specs <https://fedora.info/spec/>`__ (Fedora 5.x and beyond) is not
 foreseen in the short term, however it would be a natural evolution of
 this project if it gains support.
 
-Please make sure you read the :doc:`Delta
-document <fcrepo4_deltas>` for divergences with the
-official Fedora4 implementation.
+Please make sure you read the :doc:`Delta document <fcrepo4_deltas>` for
+divergences with the official Fedora4 implementation.
 
 Target Audience
 ---------------
@@ -84,3 +83,5 @@ rudimentary road map.
 
 .. [#] However if your client splits pairtrees upstream, such as Hyrax does,
    that obviously needs to change to get rid of the path segments.
+
+.. [#] Your mileage may vary depending on the variety of your triples.
