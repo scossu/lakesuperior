@@ -11,7 +11,7 @@ matrix:
       sudo: true
 
 install:
-  - pip install -q cython
+  #- pip install -q cython
   - pip install -e .
 script:
   - python setup.py test

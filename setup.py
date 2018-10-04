@@ -13,9 +13,17 @@ from codecs import open
 from glob import glob
 from os import path
 
-from Cython.Build import cythonize
-
 import lakesuperior
+
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    USE_CYTHON = False
+    print('Not using Cython.')
+else:
+    USE_CYTHON = True
+    print('Using Cython.')
+
 
 # ``pytest_runner`` is referenced in ``setup_requires``.
 # See https://github.com/pytest-dev/pytest-runner#conditional-requirement
@@ -31,50 +39,69 @@ with open(readme_fpath, encoding='utf-8') as f:
 # Extensions directory.
 ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
 
+include_dirs = [
+    path.join(ext_dir, 'include'),
+]
+if USE_CYTHON:
+    include_dirs.append(path.join(lakesuperior.basedir, 'cy_include'))
+    ext = 'pyx'
+else:
+    ext = 'c'
+
 extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
             path.join(ext_dir, 'lib', 'mdb.c'),
             path.join(ext_dir, 'lib', 'midl.c'),
-            path.join(lakesuperior.basedir, 'store', 'base_lmdb_store.pyx'),
+            path.join(lakesuperior.basedir, 'store', f'base_lmdb_store.{ext}'),
         ],
-        include_dirs = [
-            path.join(lakesuperior.basedir, 'cy_include'),
-            path.join(ext_dir, 'include'),
-        ],
+        include_dirs=include_dirs,
     ),
     Extension(
-        '*',
+        'lakesuperior.store.ldp_rs.term',
         [
             path.join(ext_dir, 'lib', 'tpl.c'),
-            path.join(ext_dir, 'lib', 'mdb.c'),
-            path.join(ext_dir, 'lib', 'midl.c'),
-            path.join(lakesuperior.basedir, 'store', 'ldp_rs', '*.pyx'),
+            path.join(lakesuperior.basedir, 'store', 'ldp_rs', f'term.{ext}'),
         ],
-        include_dirs = [
-            path.join(lakesuperior.basedir, 'cy_include'),
-            path.join(ext_dir, 'include'),
-        ],
+        include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
         extra_link_args=['-fopenmp'],
-        libraries = ['crypto']
+        libraries=['crypto']
+    ),
+    Extension(
+        'lakesuperior.store.ldp_rs.lmdb_triplestore',
+        [
+            path.join(ext_dir, 'lib', 'mdb.c'),
+            path.join(ext_dir, 'lib', 'midl.c'),
+            path.join(
+                lakesuperior.basedir, 'store', 'ldp_rs',
+                f'lmdb_triplestore.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp'],
+        libraries=['crypto']
     ),
     # For testing.
-    Extension(
-        '*',
-        [
-            #path.join(ext_dir, 'lib', 'tpl.c'),
-            path.join(
-                path.dirname(lakesuperior.basedir), 'sandbox', '*.pyx'),
-        ],
-        include_dirs = [
-            #'/usr/include',
-            path.join(lakesuperior.basedir, 'cy_include'),
-            path.join(ext_dir, 'include'),
-        ],
-    ),
+    #Extension(
+    #    '*',
+    #    [
+    #        #path.join(ext_dir, 'lib', 'tpl.c'),
+    #        path.join(
+    #            path.dirname(lakesuperior.basedir), 'sandbox', f'*.{ext}'),
+    #    ],
+    #    include_dirs=include_dirs,
+    #),
 ]
+
+if USE_CYTHON:
+    extensions = cythonize(extensions, compiler_directives={
+        'language_level': 3,
+        'boundscheck': False,
+        'wraparound': False,
+        'profile': True,
+    })
 
 
 setup(
@@ -88,15 +115,10 @@ setup(
     url='https://lakesuperior.readthedocs.io',
 
     author='Stefano Cossu <@scossu>',
-    #author_email='',  # Optional
+    #author_email='',
     license='Apache License Version 2.0',
 
-    ext_modules = cythonize(extensions, compiler_directives={
-        'language_level': 3,
-        'boundscheck': False,
-        'wraparound': False,
-        'profile': True,
-    }),
+    ext_modules=extensions,
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -155,8 +177,6 @@ setup(
 
     setup_requires=[
         'setuptools>=18.0',
-        # Pin version to avoid C code generation discrepancies across distros.
-        'Cython==0.28.4',
     ] + pytest_runner,
     tests_require=[
         'Pillow',
@@ -173,7 +193,6 @@ setup(
 
     entry_points={
         'console_scripts': [
-            #'fcrepo=lakesuperior.wsgi:run',
             'lsup-admin=lakesuperior.lsup_admin:admin',
             'lsup-benchmark=lakesuperior.util.benchmark:run',
             'lsup-profiler=lakesuperior.profiler:run',
@@ -181,16 +200,7 @@ setup(
         ],
     },
 
-    # List additional URLs that are relevant to your project as a dict.
-    #
-    # This field corresponds to the "Project-URL" metadata fields:
-    # https://packaging.python.org/specifications/core-metadata/#project-url-multiple-use
-    #
-    # Examples listed include a pattern for specifying where the package tracks
-    # issues, where the source is hosted, where to say thanks to the package
-    # maintainers, and where to support the project financially. The key is
-    # what's used to render the link text on PyPI.
-    project_urls={  # Optional
+    project_urls={
         'Source Code': 'https://github.com/scossu/lakesuperior/',
         'Documentation': 'https://lakesuperior.readthedocs.io',
         'Discussion': 'https://groups.google.com/forum/#!forum/lakesuperior',
