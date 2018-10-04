@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:java="http://www.yworks.com/xml/yfiles-common/1.0/java" xmlns:sys="http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0" xmlns:x="http://www.yworks.com/xml/yfiles-common/markup/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:y="http://www.yworks.com/xml/graphml" xmlns:yed="http://www.yworks.com/xml/yed/3" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd">
-  <!--Created by yEd 3.17.2-->
+  <!--Created by yEd 3.18.1.1-->
   <key attr.name="Description" attr.type="string" for="graph" id="d0"/>
   <key for="port" id="d1" yfiles.type="portgraphics"/>
   <key for="port" id="d2" yfiles.type="portgeometry"/>
@@ -13,27 +13,27 @@
   <key attr.name="description" attr.type="string" for="edge" id="d9"/>
   <key for="edge" id="d10" yfiles.type="edgegraphics"/>
   <graph edgedefault="directed" id="G">
-    <data key="d0" xml:space="preserve"/>
+    <data key="d0"/>
     <node id="n0" yfiles.foldertype="group">
-      <data key="d4" xml:space="preserve"/>
+      <data key="d4"/>
       <data key="d6">
         <y:ProxyAutoBoundsNode>
           <y:Realizers active="0">
             <y:GroupNode>
-              <y:Geometry height="839.8125" width="681.0" x="194.5" y="-65.875"/>
+              <y:Geometry height="847.65625" width="605.0" x="232.5" y="-79.84375"/>
               <y:Fill hasColor="false" transparent="false"/>
               <y:BorderStyle hasColor="false" type="dashed" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="node_width" borderDistance="0.0" fontFamily="Droid Sans" fontSize="24" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="681.0" x="0.0" xml:space="preserve" y="0.0">LAKEsuperior Architecture</y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="node_width" borderDistance="0.0" fontFamily="Droid Sans" fontSize="24" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="605.0" x="0.0" y="0.0">Lakesuperior Application Architecture</y:NodeLabel>
               <y:Shape type="roundrectangle"/>
               <y:State closed="false" closedHeight="50.0" closedWidth="50.0" innerGraphDisplayEnabled="false"/>
               <y:Insets bottom="15" bottomF="15.0" left="15" leftF="15.0" right="15" rightF="15.0" top="15" topF="15.0"/>
-              <y:BorderInsets bottom="0" bottomF="0.0" left="38" leftF="38.0" right="38" rightF="38.0" top="0" topF="0.0"/>
+              <y:BorderInsets bottom="0" bottomF="0.0" left="0" leftF="0.0" right="0" rightF="0.0" top="0" topF="0.0"/>
             </y:GroupNode>
             <y:GroupNode>
               <y:Geometry height="50.0" width="50.0" x="0.0" y="60.0"/>
               <y:Fill color="#F5F5F5" transparent="false"/>
               <y:BorderStyle color="#000000" type="dashed" width="1.0"/>
-              <y:NodeLabel alignment="right" autoSizePolicy="node_width" backgroundColor="#EBEBEB" borderDistance="0.0" fontFamily="Dialog" fontSize="15" fontStyle="plain" hasLineColor="false" height="21.4609375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="200.94091796875" x="-75.470458984375" xml:space="preserve" y="0.0">LAKEsuperior Architecture</y:NodeLabel>
+              <y:NodeLabel alignment="right" autoSizePolicy="node_width" backgroundColor="#EBEBEB" borderDistance="0.0" fontFamily="Dialog" fontSize="15" fontStyle="plain" hasLineColor="false" height="21.4609375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="287.0517578125" x="-118.52587890625" y="0.0">Lakesuperior Application Architecture</y:NodeLabel>
               <y:Shape type="roundrectangle"/>
               <y:State closed="true" closedHeight="50.0" closedWidth="50.0" innerGraphDisplayEnabled="false"/>
               <y:Insets bottom="5" bottomF="5.0" left="5" leftF="5.0" right="5" rightF="5.0" top="5" topF="5.0"/>
@@ -46,34 +46,46 @@
         <node id="n0::n0">
           <data key="d6">
             <y:GenericNode configuration="com.yworks.flowchart.dataBase">
-              <y:Geometry height="73.0" width="115.26315789473685" x="612.8684210526316" y="685.9375"/>
+              <y:Geometry height="73.0" width="115.26315789473685" x="612.8684210526316" y="679.8125"/>
               <y:Fill color="#EFE7F7" color2="#CDB7E3" transparent="false"/>
               <y:BorderStyle color="#472766" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="55.134765625" x="30.06419613486844" xml:space="preserve" y="30.09375">Metadata
-Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="1.1102230246251565E-16" nodeRatioY="0.34974315068493156" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="74.763671875" x="20.24974300986844" y="30.09375">Key/Value
+Store (LMDB)<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="1.1102230246251565E-16" nodeRatioY="0.34974315068493156" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
             </y:GenericNode>
           </data>
         </node>
         <node id="n0::n1">
           <data key="d6">
             <y:GenericNode configuration="com.yworks.flowchart.dataBase">
-              <y:Geometry height="73.0" width="115.26315789473685" x="339.86842105263156" y="685.9375"/>
+              <y:Geometry height="73.0" width="115.26315789473685" x="339.86842105263156" y="679.8125"/>
               <y:Fill color="#EFE7F7" color2="#CDB7E3" transparent="false"/>
               <y:BorderStyle color="#472766" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="60.4609375" x="27.40111019736844" xml:space="preserve" y="27.515625">Filesystem<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="60.4609375" x="27.40111019736844" y="27.515625">Filesystem<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
             </y:GenericNode>
           </data>
         </node>
         <node id="n0::n2" yfiles.foldertype="group">
-          <data key="d4" xml:space="preserve"/>
+          <data key="d4"/>
           <data key="d6">
             <y:ProxyAutoBoundsNode>
               <y:Realizers active="0">
                 <y:GroupNode>
                   <y:Geometry height="173.625" width="575.0" x="247.5" y="245.875"/>
-                  <y:Fill color="#B2E5FF" color2="#DFF4FF" transparent="false"/>
-                  <y:BorderStyle color="#215A77" type="line" width="1.0"/>
-                  <y:NodeLabel alignment="center" autoSizePolicy="node_width" borderDistance="0.0" fontFamily="Droid Sans" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="22.625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="575.0" x="0.0" xml:space="preserve" y="0.0">Python API</y:NodeLabel>
+                  <y:Fill color="#B2FFD5" color2="#DFFFED" transparent="false"/>
+                  <y:BorderStyle color="#217747" type="line" width="1.0"/>
+                  <y:NodeLabel alignment="center" autoSizePolicy="node_width" borderDistance="0.0" fontFamily="Droid Sans" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="22.625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="575.0" x="0.0" y="0.0">Python API</y:NodeLabel>
                   <y:Shape type="roundrectangle"/>
                   <y:State closed="false" closedHeight="50.0" closedWidth="50.0" innerGraphDisplayEnabled="false"/>
                   <y:Insets bottom="15" bottomF="15.0" left="15" leftF="15.0" right="15" rightF="15.0" top="15" topF="15.0"/>
@@ -83,7 +95,7 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
                   <y:Geometry height="50.0" width="50.0" x="0.0" y="60.0"/>
                   <y:Fill color="#F5F5F5" transparent="false"/>
                   <y:BorderStyle color="#000000" type="dashed" width="1.0"/>
-                  <y:NodeLabel alignment="right" autoSizePolicy="node_width" backgroundColor="#EBEBEB" borderDistance="0.0" fontFamily="Dialog" fontSize="15" fontStyle="plain" hasLineColor="false" height="21.4609375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="84.4931640625" x="-17.24658203125" xml:space="preserve" y="0.0">Python API</y:NodeLabel>
+                  <y:NodeLabel alignment="right" autoSizePolicy="node_width" backgroundColor="#EBEBEB" borderDistance="0.0" fontFamily="Dialog" fontSize="15" fontStyle="plain" hasLineColor="false" height="21.4609375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="84.4931640625" x="-17.24658203125" y="0.0">Python API</y:NodeLabel>
                   <y:Shape type="roundrectangle"/>
                   <y:State closed="true" closedHeight="50.0" closedWidth="50.0" innerGraphDisplayEnabled="false"/>
                   <y:Insets bottom="5" bottomF="5.0" left="5" leftF="5.0" right="5" rightF="5.0" top="5" topF="5.0"/>
@@ -97,11 +109,18 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
               <data key="d6">
                 <y:ShapeNode>
                   <y:Geometry height="121.0" width="143.0" x="262.5" y="283.5"/>
-                  <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
-                  <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="79.94921875" x="31.525390625" xml:space="preserve" y="8.0">Resource API</y:NodeLabel>
-                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="98.44140625" x="22.279296875" xml:space="preserve" y="44.53125">• CRUD resources
-• Versioning<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+                  <y:Fill color="#C9FF7F" color2="#E9FFCB" transparent="false"/>
+                  <y:BorderStyle color="#4A6920" raised="false" type="line" width="1.0"/>
+                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="115.861328125" x="13.5693359375" y="8.0">Resource Life Cycle</y:NodeLabel>
+                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="45.90625" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="121.76171875" x="10.619140625" y="34.53125">• Create, read, update
+• Soft + hard delete
+• Versioning<y:LabelModel>
+                      <y:SmartNodeLabelModel distance="4.0"/>
+                    </y:LabelModel>
+                    <y:ModelParameter>
+                      <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="-0.5" nodeRatioX="0.0" nodeRatioY="-0.21461776859504134" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                    </y:ModelParameter>
+                  </y:NodeLabel>
                   <y:Shape type="roundrectangle"/>
                 </y:ShapeNode>
               </data>
@@ -110,11 +129,19 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
               <data key="d6">
                 <y:ShapeNode>
                   <y:Geometry height="121.0" width="143.0" x="664.5" y="283.5"/>
-                  <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
-                  <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="62.0078125" x="40.49609375" xml:space="preserve" y="8.0">Query API</y:NodeLabel>
-                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="88.234375" x="27.3828125" xml:space="preserve" y="44.53125">• Term search
-• SPARQL query<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+                  <y:Fill color="#C9FF7F" color2="#E9FFCB" transparent="false"/>
+                  <y:BorderStyle color="#4A6920" raised="false" type="line" width="1.0"/>
+                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="113.904296875" x="14.5478515625" y="8.0">Search &amp; Discovery</y:NodeLabel>
+                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="59.875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="115.0" x="14.0" y="38.16250000000002">• Term search
+• SPARQL query
+• High-performance
+   discovery methods<y:LabelModel>
+                      <y:SmartNodeLabelModel distance="4.0"/>
+                    </y:LabelModel>
+                    <y:ModelParameter>
+                      <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.06280991735537211" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                    </y:ModelParameter>
+                  </y:NodeLabel>
                   <y:Shape type="roundrectangle"/>
                 </y:ShapeNode>
               </data>
@@ -123,15 +150,20 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
               <data key="d6">
                 <y:ShapeNode>
                   <y:Geometry height="121.0" width="181.0" x="444.5" y="283.5"/>
-                  <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
-                  <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="64.345703125" x="58.3271484375" xml:space="preserve" y="8.0">Admin API</y:NodeLabel>
-                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="87.8125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="140.611328125" x="20.1943359375" xml:space="preserve" y="28.420817669172948">• Bootstrap
-• Stats
+                  <y:Fill color="#C9FF7F" color2="#E9FFCB" transparent="false"/>
+                  <y:BorderStyle color="#4A6920" raised="false" type="line" width="1.0"/>
+                  <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="92.03125" x="44.484375" y="8.0">Admin Services</y:NodeLabel>
+                  <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="73.84375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="147.35546875" x="16.822265625" y="35.40519266917295">• Bootstrap
 • Health checks
    (fixity, consistency, etc.)
-• Backup &amp; restore
-• Import &amp; export<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.09774436090225569" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+• Migration &amp; Backup tools
+• Statistics<y:LabelModel>
+                      <y:SmartNodeLabelModel distance="4.0"/>
+                    </y:LabelModel>
+                    <y:ModelParameter>
+                      <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.09774436090225569" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                    </y:ModelParameter>
+                  </y:NodeLabel>
                   <y:Shape type="roundrectangle"/>
                 </y:ShapeNode>
               </data>
@@ -141,11 +173,12 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
         <node id="n0::n3">
           <data key="d6">
             <y:ImageNode>
-              <y:Geometry height="48.0" width="48.0" x="391.0" y="17.0"/>
+              <y:Geometry height="48.0" width="48.0" x="314.0" y="17.0"/>
               <y:Fill color="#CCCCFF" transparent="false"/>
               <y:BorderStyle color="#000000" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="81.4375" x="-16.71875" xml:space="preserve" y="-35.9375">Python Clients
-&amp; Plug-ins</y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="45.90625" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="111.091796875" x="-31.5458984375" y="-49.90625">Python Applications
+&amp; Plug-ins
+(import as a library)</y:NodeLabel>
               <y:Image alphaImage="true" refid="1"/>
             </y:ImageNode>
           </data>
@@ -156,7 +189,8 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
               <y:Geometry height="48.0" width="48.0" x="511.0" y="17.0"/>
               <y:Fill color="#CCCCFF" transparent="false"/>
               <y:BorderStyle color="#000000" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="21.197265625" x="13.4013671875" xml:space="preserve" y="-21.96875">CLI</y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="61.62109375" x="-6.810546875" y="-35.9375">Repository
+Admin</y:NodeLabel>
               <y:Image alphaImage="true" refid="2"/>
             </y:ImageNode>
           </data>
@@ -164,14 +198,20 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
         <node id="n0::n5">
           <data key="d6">
             <y:ShapeNode>
-              <y:Geometry height="98.0" width="181.0" x="590.5" y="98.4375"/>
-              <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
+              <y:Geometry height="98.0" width="181.0" x="641.5" y="106.4375"/>
+              <y:Fill color="#FFD27F" color2="#FFECCB" transparent="false"/>
               <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="53.916015625" x="63.5419921875" xml:space="preserve" y="8.0">REST API</y:NodeLabel>
-              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="59.875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="148.94921875" x="16.025390625" xml:space="preserve" y="26.28087349397589">• Map HTTP / LDP requests
-   to Python API methods
-• Localize / globalize URIs
-• Serialize / deserialize RDF<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="53.916015625" x="63.5419921875" y="8.0">REST API</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="59.875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="152.8984375" x="14.05078125" y="26.28087349397589">• Translate LDP requests
+   into Python API methods
+• Localize &amp; globalize URIs
+• Serialize &amp; deserialize RDF<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
               <y:Shape type="roundrectangle"/>
             </y:ShapeNode>
           </data>
@@ -179,10 +219,10 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
         <node id="n0::n6">
           <data key="d6">
             <y:ImageNode>
-              <y:Geometry height="48.0" width="48.0" x="657.0" y="17.0"/>
+              <y:Geometry height="48.0" width="48.0" x="708.0" y="17.0"/>
               <y:Fill color="#CCCCFF" transparent="false"/>
               <y:BorderStyle color="#000000" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="65.904296875" x="-8.9521484375" xml:space="preserve" y="-21.96875">HTTP Client</y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="65.904296875" x="-8.9521484375" y="-21.96875">HTTP Client</y:NodeLabel>
               <y:Image alphaImage="true" refid="3"/>
             </y:ImageNode>
           </data>
@@ -190,12 +230,18 @@ Store<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mode
         <node id="n0::n7">
           <data key="d6">
             <y:ShapeNode>
-              <y:Geometry height="68.0" width="181.0" x="307.0" y="489.9375"/>
-              <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
-              <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="123.14453125" x="28.927734375" xml:space="preserve" y="8.0">LDP-NR Store Layout</y:NodeLabel>
-              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="153.162109375" x="13.9189453125" xml:space="preserve" y="27.844126506024054">Handle non-RDF (binary)
-resource and filesystem I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:Geometry height="68.0" width="181.0" x="307.0" y="460.9375"/>
+              <y:Fill color="#7FF2FF" color2="#CBF9FF" transparent="false"/>
+              <y:BorderStyle color="#206169" raised="false" type="line" width="1.0"/>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="117.783203125" x="31.6083984375" y="8.0">Binary Store Layout</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="158.576171875" x="11.2119140625" y="27.844126506024054">Handle non-RDF (binary)
+resources and filesystem I/O<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
               <y:Shape type="roundrectangle"/>
             </y:ShapeNode>
           </data>
@@ -203,12 +249,18 @@ resource and filesystem I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/>
         <node id="n0::n8">
           <data key="d6">
             <y:ShapeNode>
-              <y:Geometry height="68.0" width="181.0" x="580.0" y="489.9375"/>
-              <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
-              <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="120.033203125" x="30.4833984375" xml:space="preserve" y="8.0">LDP-RS Store Layout</y:NodeLabel>
-              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="142.275390625" x="19.3623046875" xml:space="preserve" y="27.844126506024054">Arrange RDF data into
-triples and named graphs<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:Geometry height="68.0" width="181.0" x="580.0" y="460.9375"/>
+              <y:Fill color="#7FF2FF" color2="#CBF9FF" transparent="false"/>
+              <y:BorderStyle color="#206169" raised="false" type="line" width="1.0"/>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="102.87109375" x="39.064453125" y="8.0">RDF Store Layout</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="142.275390625" x="19.3623046875" y="27.844126506024054">Arrange RDF data into
+triples and named graphs<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
               <y:Shape type="roundrectangle"/>
             </y:ShapeNode>
           </data>
@@ -216,12 +268,37 @@ triples and named graphs<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y
         <node id="n0::n9">
           <data key="d6">
             <y:ShapeNode>
-              <y:Geometry height="68.0" width="181.0" x="580.0" y="587.9375"/>
-              <y:Fill color="#7FFFC2" color2="#CBFFE6" transparent="false"/>
+              <y:Geometry height="68.0" width="181.0" x="580.0" y="570.375"/>
+              <y:Fill color="#99BDFF" color2="#CBDEFF" transparent="false"/>
+              <y:BorderStyle color="#203A69" raised="false" type="line" width="1.0"/>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="143.734375" x="18.6328125" y="8.0">Graph Store Abstraction</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="137.76953125" x="21.615234375" y="27.844126506024054">Map graph operations to
+Key/Value store I/O<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
+              <y:Shape type="roundrectangle"/>
+            </y:ShapeNode>
+          </data>
+        </node>
+        <node id="n0::n10">
+          <data key="d6">
+            <y:ShapeNode>
+              <y:Geometry height="98.0" width="143.0" x="463.5" y="106.4375"/>
+              <y:Fill color="#FFD27F" color2="#FFECCB" transparent="false"/>
               <y:BorderStyle color="#206946" raised="false" type="line" width="1.0"/>
-              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="143.734375" x="18.6328125" xml:space="preserve" y="8.0">Graph Store Abstraction</y:NodeLabel>
-              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="137.76953125" x="21.615234375" xml:space="preserve" y="27.844126506024054">Map graph operations to
-Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.37914156626506024" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+              <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="8.0" fontFamily="Droid Sans" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="22.73828125" x="60.130859375" y="8.0">CLI</y:NodeLabel>
+              <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Droid Sans" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="112.240234375" x="15.3798828125" y="33.03125">Expose admin  tools
+to command line<y:LabelModel>
+                  <y:SmartNodeLabelModel distance="4.0"/>
+                </y:LabelModel>
+                <y:ModelParameter>
+                  <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="0.0" nodeRatioY="0.1629464285714286" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+                </y:ModelParameter>
+              </y:NodeLabel>
               <y:Shape type="roundrectangle"/>
             </y:ShapeNode>
           </data>
@@ -234,7 +311,7 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-69.6912841796875">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-81.10418701171875">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -249,10 +326,10 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
     <edge id="n0::e1" source="n0::n8" target="n0::n2">
       <data key="d10">
         <y:BezierEdge>
-          <y:Path sx="11.0" sy="-1.9375" tx="0.0" ty="0.0"/>
+          <y:Path sx="0.0" sy="0.0" tx="135.5" ty="63.112499999999955"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="4.276489062528299" y="-42.90852457234479">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.688629150390625">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -267,10 +344,10 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
     <edge id="n0::e2" source="n0::n7" target="n0::n2">
       <data key="d10">
         <y:BezierEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
+          <y:Path sx="0.0" sy="0.0" tx="-137.5" ty="50.112499999999955"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="56.47958955609175" y="-31.947523976898083">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.743499755859375">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -285,10 +362,10 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
     <edge id="n0::e3" source="n0::n2" target="n0::n3">
       <data key="d10">
         <y:BezierEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="24.005859375"/>
+          <y:Path sx="-197.0" sy="-74.88750000000005" tx="0.0" ty="24.005859375"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="-13.350302498914743" y="-100.65607130441714">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-92.45407104492188">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -303,10 +380,10 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
     <edge id="n0::e4" source="n0::n2" target="n0::n5">
       <data key="d10">
         <y:BezierEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
+          <y:Path sx="197.0" sy="-67.88750000000005" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="50.783456064816846" y="-20.50756735622815">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.713577270507812">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -318,13 +395,13 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
         </y:BezierEdge>
       </data>
     </edge>
-    <edge id="n0::e5" source="n0::n2" target="n0::n4">
+    <edge id="n0::e5" source="n0::n2" target="n0::n10">
       <data key="d10">
         <y:BezierEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="14.974609375"/>
+          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-92.40565490722656">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.68048095703125">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -342,7 +419,7 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="20.021484375"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-18.72998046875">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.712783813476562">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -432,7 +509,7 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-16.9775390625">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.70654296875">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -450,7 +527,43 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#4D6991" type="line" width="1.0"/>
           <y:Arrows source="none" target="delta"/>
-          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-20.670654296875">
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-26.34259033203125">
+            <y:LabelModel>
+              <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="right" ratio="0.5" segment="0"/>
+            </y:ModelParameter>
+            <y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/>
+          </y:EdgeLabel>
+        </y:BezierEdge>
+      </data>
+    </edge>
+    <edge id="n0::e13" source="n0::n10" target="n0::n10">
+      <data key="d10">
+        <y:BezierEdge>
+          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
+          <y:LineStyle color="#4D6991" type="line" width="1.0"/>
+          <y:Arrows source="none" target="delta"/>
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="-71.5" y="-49.0">
+            <y:LabelModel>
+              <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="right" ratio="0.5" segment="0"/>
+            </y:ModelParameter>
+            <y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/>
+          </y:EdgeLabel>
+        </y:BezierEdge>
+      </data>
+    </edge>
+    <edge id="n0::e14" source="n0::n10" target="n0::n4">
+      <data key="d10">
+        <y:BezierEdge>
+          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="14.974609375"/>
+          <y:LineStyle color="#4D6991" type="line" width="1.0"/>
+          <y:Arrows source="none" target="delta"/>
+          <y:EdgeLabel alignment="center" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="4.0" x="28.0" y="-22.715789794921875">
             <y:LabelModel>
               <y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/>
             </y:LabelModel>
@@ -465,50 +578,43 @@ Key/Value store I/O<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:Labe
   </graph>
   <data key="d7">
     <y:Resources>
-      <y:Resource id="1" type="java.awt.image.BufferedImage" xml:space="preserve">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAADOUlEQVR4Xu3aWahNURwG8C/z+GAK&#13;
-eTAm8sAbMl2RTCmUKFMJCfFCERlfKHPyiAdeDEWmx0s8KIWMieIB0RUpupm/76wzrLP3Oufsve+5&#13;
-ax91v/q97P/ad691zp7WOhdoelrTSFpJB+k83aIH9Iye0n2qp3N0gFbTKKScXjCd+UB/E3pMc5BC&#13;
-htN7hDuU1H54zm0UDv4J5tR4Ym1LYhU8pR8KB9W30De7vRVdtGpxfaR28JA6FA56rLiEKVYtiUnw&#13;
-kJkoHFB3HDtLrFoSi+Ahs1E44B/aQD1pMr21akkshofYA6i2lgFESR09j0GnWbCjpXgZQNw0ItzR&#13;
-Uqo2gIG0ic7QNbrRBL8R7mgpGsCwwP5yifbSYFRIRzqOeAetJg1gjGN7TiMtQ4m0p5sI7+RTpQHI&#13;
-L5oARw4h3Ni3KAMQvZ4XpT/9QLihb1EHIONhZYujQRoW0jjHdhdNnvKpdzRIw2ha4Njukj+NNCX8&#13;
-5mjg2zuYvpxw1Fx0MXemzH03WEzDCupOXxy1UsZSs77bRKW5tXLaUStnuXbSakKw4MNPmNULfYDK&#13;
-bkebSrZpx42OQlR6zGsSMgRmThBVD2oLk6F0BeG/HUXmm1vvKFTSQNO1M8wKxVraQTtjOEJ3EO9t&#13;
-NegwxZ4GfqYRMBecppTBuk96wcNER6EcnTJd6aGj5tsaypyTwUIpj7QDc9RRS4M+/EzeOIou22Ee&#13;
-Ht8dNd/0at0J2Zx1NHCZB/MSFdyeBk208lnqaOCiO88sx/Y06OaTTxdEe4RrALXw5NZ6rGaPRdmM&#13;
-cMOgWhnAVjiiN8HLCDe21cIA7qHMIrAe77voK8I7SpoD0BP7AswDtGI6wEzttJCrDufoV5m4A5hr&#13;
-7Z+UVr1zy/hNjv5gsJPlTINZzYuiNzwk7gDiqNrKXLm0DADm51ctW2oebG//LwZwndrApBu9smpe&#13;
-BjAV4U7FobuSHXsqOT9Qa5boVqoljWDHolqH4py0apqaeol90LgaaAbMA0m/Dec+jKvwGM3I7iLc&#13;
-uaReUB94jiYTmplpeSTYoaj0eqC1IF3MqWUQ7aOXCHewlNcwi7Na0aipDIBZYd4Dc53oXw/kVHab&#13;
-FgQ04KrlH3FVdlkA86qWAAAAAElFTkSuQmCC</y:Resource>
-      <y:Resource id="2" type="java.awt.image.BufferedImage" xml:space="preserve">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAA5UlEQVR4Xu2YywrCQBAE96J+vYLE&#13;
-7/TxBTqbU89uGkYCYRqmoA5bdoJ63NaKoiiKQpyzeTdf5lfEj7mYF3P98uNAxf4jpP750XfbiGpO&#13;
-Qc0pqOkPBLY5sjPpwwjbHNmZ9GGEbY7szClkFXF9HGYVcX0cZhVxnY0QtknR2QhhmxSdjRC2SdHx&#13;
-oOgU1JyCmv4AZOuI27AHsnXEbdgD2TriNnhQdApqTkFNfwD+7Xtg7wz10CjQ98DeGeqhUaDvgb0z&#13;
-1Ps1HQYl+6Vce2x8oOLVXC9I+x1jv6YbB1l9mjfz1IqiKIpCmR8gyWIDqr6GJQAAAABJRU5ErkJg&#13;
-gg==</y:Resource>
-      <y:Resource id="3" type="java.awt.image.BufferedImage" xml:space="preserve">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAEjklEQVR4Xu2YScgdRRDHS6MGIq4x&#13;
-UfGmIiiGHJII0YQcFFHw4IIgeBINuBwMEYLeEjGBGBHUuCCK+0E8uIKiHsRAVAzqQQXXi/uC+4K7&#13;
-9XvT7dRU97zpft9LvLw//OD7uqtmeub11NIiM8000zS0l7JCuUZ5SvlQ+VH5M8DfHyhPKlcHW3z+&#13;
-dx2pbFG+VP6pBB98ucYe1yHKHcofki6sFq5xu3Kw7CGdp3wv6UI825WTAqcpa5VblPcytsA1z5Xd&#13;
-qHnSvHV/4z6+UG4eeaY6TvlaUh+4TZp7TVXzlWckvdkQ3+Cc0RpJbS1PS3PPqYi34Rf/i3KjNFuD&#13;
-iHKWco+ziewjXRF9ng1zlr/d/zzE3sFnTvLb5nVpPuKczlf+ktb2/e70aPEbJV38u8rxystu/NaR&#13;
-1xzEB2svuFNZ0LEQWS3Nloi6SVr7e804vwTfhF/8r8oJwWZ/5RU3P/GHzVu20YZE5N/8ujBHKNyq&#13;
-XK68EMbg7mBHrH/JjFuuCjZRhymfhjn4TiYMsXbrkE2XdadHb93vW89byoXSXZDlTclHnJXS3YrV&#13;
-W4k3ZpPUtu70SDuknf9duU953oyV8JvyqLJUUpEzoh1rOaI7PV6k+Oj8g3Jgd3qkj6WZf1uaDzDq&#13;
-4jBeyqvKopFnV4cqP0lrd113ul9Eiq+kdeRhclovzTbLPdzjki40x3PKAcEnpxuktSUxFhWAxHV7&#13;
-k2O700W6SNLFeh5R9osOPSI6WZ/l3em8KImjA9ujVvtKmvg8nwS7Er0jrd8GN5cV9Xx0IKbX6GRJ&#13;
-k5GHyHVXdCiQjYZszUHRjESHS9xcThdIE+93SbrYHOzrGl0hra/P7FnRPUUHap1xorvyCxzispFn&#13;
-uc6U1pfEOiiSVnSglu/TYqlvaLA/CucKnSJd/0H1PQCxepNyujQf4KnGrpQ7pV7VD2C30JVm/H4z&#13;
-TnPO9+EXOA6y9dFSr+otRNFmHWIeeFB5LYxTp1xr7EqgxZxE9iOmHR0Ub9fe+HNlVZijwfgojFMl&#13;
-+kWOI1fvlMiG0cfcXFa5yMIbf1g5RzlDmo7M2wyxRCYTzU68RlEi86WEh47M1y/UQ3RjfScOQNW5&#13;
-MDoU6kTpXqOolKBgonDyC7BQ4+c0VAORhdmSlAcPyPCvQt8dffErKubQZklvbqHzyonwii+nEd4n&#13;
-BzVRX0HHr/WztLbF5TTyDY3n0tY0K7osOriHJPX1UD/lxGldtCEEVzU0iDbO3ywSe90h0eh4Xw9B&#13;
-w4uoZ9tVurNq0Uj3hUpOEkoOZddI6ut58T/rRpQo7Pc4z3Y8qGNRIY40/A0j1xu7PpG8vF+OmKGJ&#13;
-bm+4ubPD3MTqWwQZe5zYs99K6peDbMub94vvO1utEh+kbXIsxxg7KxJebPpLoLH3Ry9PyJSOFhEH&#13;
-rbmHYIzTAysy9dB50RAsfmqHu1H8EvasJkKspsuiAT9cyrdNH7SxU3vzObE9+hZpS/FaiDZz/mBL&#13;
-RYjl1yDB+IXUwjW41sShci4i0pDibdwu5bPgW51hd4cosqgUKXep2alKaYYoR4C/GWMOG2yLC7OZ&#13;
-ZpqpX/8CMj4N1UAQhFcAAAAASUVORK5CYII=</y:Resource>
+      <y:Resource id="1" type="java.awt.image.BufferedImage">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAACyUlEQVR42u2ZS0hVQRzGD2ZlVotK&#13;
+sXDRSyJpYTuN1AojzCSwIBLSgsiIEtsUFIa9NgnaC2lpLmrTTSjKXFrUIggs8kUY6EKjSIzAiDTt&#13;
+G/gujAcfM2duc+bCHfhtzpyZ+b5zzpyZ/388z7wsADngBGgEEfAKvAe9oAd0gg7wCDSAk2CrF3JJ&#13;
+p5ivYCogXWB/GOKzwRcD4X7qbRt4LQ0+wk+j29BElS3xmdKg4i2s4fUk0Gpg4BtYZMPATmnQu766&#13;
+IsO3sMOGgRJpwIivrsLQQLkNA6XSgJOgBqSBXWDI0MAR2wZiTcKA6iTu02DSNQO65XcYBtaDc+AB&#13;
+aAPtBvzVNLB5hj6egOtg43zCl4AmzUFjPQfy5qgXb/PobOIXg5chCVc1IJgABTMZuBmyeFUDU9ye&#13;
+TytrwZ84MiDIlw1ccEC84DDYrnhvo2ygwxEDueCQ4r2dckg45oD4YWq5p3i/mMxLPf53XXj6x8FK&#13;
+8EOjzbb/vbdRpYFfQ4tmu2MeswlhiB5n9qKU4q8G6KNWNDxrIKKdQUgWYwJVVoGFFL4JPDN5c9UB&#13;
+Gn4HxVKG4jSoA5c1uA3eaO5W/dwKEgaOgi2ccJGQ547Y4HmFAeLW5eCDA5P/lMdvUrXBR342dxz5&#13;
+9RZGF7NBxQaXuHj8ckC82FqnRg08VGx0gJsoF55+m7wXqlRsJP48+xwxUCEbWKa4hBc7snKPMHqc&#13;
+Vs7HkYGLsx1UPI0DA+/mSgKL5f0K+OmgAbFiP+YCOm9JYWhXQsFR0gMYKPP1EYQiKY1vPbW4h9k8&#13;
+FTISudGEATV6mbYcjkcDL0Ay+1oBPts2sNvQQJmvPzmUPGjrgHvCwMAZX3/NUl2WrZx/s4EBEY7u&#13;
+5YJUJT2M5zYPLURE9jaGf59PYLXtk5dURmbjhtuDFk7m0MoGcAP0awgfYHI227XzsHXMMF/jPGkl&#13;
+93mtnIZjVv4BcVV2Wd1qBnAAAAAASUVORK5CYII=</y:Resource>
+      <y:Resource id="2" type="java.awt.image.BufferedImage">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAm0lEQVR42u2YSwqAMAwFs1FPryB6&#13;
+Tj8n0BTqRuhC/OXBDLxN6SIjjYSYAQAAiFN7es/s2USyegZPY7n4TTRJQurLn7OYcPFHEAglUKJ0&#13;
+58tzBCQEQr/1kjACkQQi9wACEgKMEgg8OAtFO7/cxAj8IUATI/DjX+gOr4wSCHwlsAq//7SUs1FY&#13;
+oLW8IB3ymk6l8MnTeSp28wAAIM0OIMliA92UJeAAAAAASUVORK5CYII=</y:Resource>
+      <y:Resource id="3" type="java.awt.image.BufferedImage">iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAD30lEQVR42u1ZTUhUURSeKSsoUvsf&#13;
+aVcRKIWLHCEzXCRh0CKNIHAVFZQuigLRXUUOVCLoaEYk/S+iRf4MFNUiCvqhyBYl5DRuyjILyyaT&#13;
+1Kxz4QwcLve+d+6dV04wBz4Y3jvn3nPuO3/3jM+XpjSlyQvyA4KAOkAE0A+IAyYR4ncM0A2oRV5/&#13;
+KiieAwgBhgC/DTGEsjnTofgCwBnAhIXiMsQabYDsf6X8dsAIQ7EWQCGiFLAXEAZENfxizYq/qfhM&#13;
+PHXuyX4ENGvWWg34rJE7jXt5SnMAtyzcY1izXomL3E3c07OTl5X/AWhE1xAZZSvgvEaZDEXGuq3g&#13;
+m1IYMcMLA2S36cEgVtEOwC/C+0ah/BGF8n2AXMBj6XmrFwFLF3wImCvxbESXSFAT4b9AnmdgTMjK&#13;
+jwHykGce4In0viKZVEmzTUxx8gdJKjwBqALcIzLtpF480rjYYWnNxYD35P1X2xRLXUdU03WKQJxy&#13;
+CcZXgEpJIYqXmoyzXnJFY1fKkYrUKQXPA/J+HHARcNcwS/0E3ADkK9YPS8UuYGJAiAh/A2QqeN7h&#13;
++14MwATtNjTiKWCJYv2FgO+E77hJY/aJCIY0fIfQzVTGdTKVvwOY76BLg1QYWQ1gUNpklUX87GIo&#13;
+fx0w22WdPEmmgLN5HRHotVB+FqNqDyAfh14TuRqOQIQINBkqX6QoRqqKe84yG3ZyBPqJwB4G/07M&#13;
+98+Yft9geCjVDpVdSXEiUOrCW2vR4O03NGCL1HK70iQRKHTgW2pxoRH8yw0N2CDJWxsgcvVRwGYM&#13;
+wE0Wp3/WIikYG0Bd6AB5fok878b4MFFeVOsVFgYYu1BMEkjUgSuA5/hc9CnHDA1osWwqaRBHOQLd&#13;
+0saDgGJ8Jy4Yb0mXaGJAvgf3kQ6OgCqziBO/BigHlOGNzNT/11oa0GdayIIuivQo+pdMvI1FHeRE&#13;
+17nIUPk1Nq2EHxsnJyMqLXugKXRJ0R5cZnyVRsmV2dO8ehdFqhz6oHqcRnDcasChoRNfa9SmnVZd&#13;
+aGTsY0wyxA3uKsOIIs0abVIKDpgGT6vDpu3MNXIZBtQq5Iql62rYJvqzHVLlGHMoW8Iw4L6iRRmU&#13;
+hmNZtpOJCoeNTzLkW5ixkKjQIru9kN5tS3Y2pFMi5iInfPYL04BqPHlZ+WavRosRzcYrNTLl5NLP&#13;
+vdjLo5cur0aLieGuyogITg8olTHmRW7o8nK4S79EWLHZKN6yxAV8mYHb6NDk5cnr3EOnZDwJxYe9&#13;
+CFiTFBvGApPsX0zjuFaWbxoogCV+0ELxDygb8KUA+bFTrMGePYqXoQnECD7rQJ4CX4r8zZqmNP3v&#13;
+9AcyPg3VUb1ulgAAAABJRU5ErkJggg==</y:Resource>
     </y:Resources>
   </data>
 </graphml>
