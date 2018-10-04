@@ -1,9 +1,9 @@
 Command Line Reference
 ======================
 
-LAKEsuperior comes with some command-line tools aimed at several purposes.
+Lakesuperior comes with some command-line tools aimed at several purposes.
 
-If LAKEsuperior is installed via ``pip``, all tools can be invoked as normal
+If Lakesuperior is installed via ``pip``, all tools can be invoked as normal
 commands (i.e. they are in the virtualenv ``PATH``). 
 
 The tools are currently not directly available on Docker instances (*TODO add
@@ -16,7 +16,7 @@ This is the main server command. It has no parameters. The command spawns
 Gunicorn workers (as many as set up in the configuration) and can be sent in
 the background, or started via init script.
 
-The tool must be run in the same virtual environment LAKEsuperior
+The tool must be run in the same virtual environment Lakesuperior
 was installed in (if it was)—i.e.::
 
     source <virtualenv root>/bin/activate
@@ -44,7 +44,7 @@ self-documented, so this is just a redundant overview::
       check_fixity  [STUB] Check fixity of a resource.
       check_refint  Check referential integrity.
       cleanup       [STUB] Clean up orphan database items.
-      migrate       Migrate an LDP repository to LAKEsuperior.
+      migrate       Migrate an LDP repository to Lakesuperior.
       stats         Print repository statistics.
 
 All entries marked ``[STUB]`` are not yet implemented, however the
@@ -65,7 +65,7 @@ The command has no options but prompts the user for a few settings
 interactively (N.B. this may change in favor of parameters).
 
 The benchmark tool is able to create RDF sources, or non-RDF, or an equal mix
-of them, via POST or PUT, in the currently running LAKEsuperior server. It
+of them, via POST or PUT, in the currently running Lakesuperior server. It
 runs single-threaded.
 
 The RDF sources are randomly generated graphs of consistent size and

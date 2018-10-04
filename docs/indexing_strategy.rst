@@ -1,11 +1,11 @@
-LMDB Store design for RDFLib
-============================
+RDF Store & Index Design
+========================
 
 This is a log of subsequent strategies employed to store triples in
 LMDB.
 
-Strategy #5a is the one currently used. The rest is kept for historic
-reasons and academic curiosity (and also because it was too much work to
+Strategy #4a is the one currently used. The rest is kept for historic
+reasons and academic curiosity (and also because this took too much work to
 just wipe out of memory).
 
 Storage approach
@@ -57,7 +57,22 @@ Example lookup
 Keys and Triples (should actually be quads but this is a simplified
 version):
 
-A: s1 p1 o1 B: s1 p2 o2 C: s2 p3 o1 D: s2 p3 o3
+- A:
+  - s1
+  - p1
+  - o1
+- B:
+  - s1
+  - p2
+  - o2
+- C:
+  - s2
+  - p3
+  - o1
+- D:
+  - s2
+  - p3
+  - o3
 
 Indices:
 
@@ -277,8 +292,7 @@ Advantages
 Disadvantages
 ~~~~~~~~~~~~~
 
--  Possibly slower retrieval for queries with 2 bound terms (run
-   metrics)
+-  Slower retrieval for queries with 2 bound terms
 
 Further optimization
 ~~~~~~~~~~~~~~~~~~~~
@@ -298,9 +312,7 @@ Strategy #5a
 ------------
 
 This is a slightly different implementation of #5 that somewhat
-simplifies and perhaps speeds up things a bit. It is the currently
-employed solution.
-
+simplifies and perhaps speeds up things a bit.
 The indexing and lookup strtegy is the same; but instead of using a
 separator byte for splitting compound keys, the logic relies on the fact
 that keys have a fixed length and are sliced instead. This *should*
@@ -309,3 +321,17 @@ result in faster key manipulation, also because in most cases
 memory.
 
 Index storage is 90 bytes per triple.
+
+Strategy #4a
+------------
+
+This is a variation of Strategy 4 using fixed-size keys. It is the currently
+employed solution starting with alpha18.
+
+After using #5a up to alpha17, it was apparent that 2-bound queries were quite
+penalized in queries which return few results. All the keys for a 1-bound
+lookup had to be retrieved and iterated over to verify that they contained the
+second ("filter") term. This approach, instead, only looks up the relevant
+keys and composes the results. It is slower on writes and nearly doubles the
+size of the indices, but it makes reads faster and more memory-efficient.
+

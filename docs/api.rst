@@ -4,7 +4,7 @@ API Documentation
 Main Interface
 --------------
 
-The LAKEsuperior API modules of most interest for a client are:
+The Lakesuperior API modules of most interest for a client are:
 
 - :mod:`lakesuperior.api.resource`
 - :mod:`lakesupeiror.api.query`

@@ -1,10 +1,10 @@
-LAKEsuperior Content Model Rationale
+Lakesuperior Content Model Rationale
 ====================================
 
 Internal and Public URIs; Identifiers
 -------------------------------------
 
-Resource URIs are stored internally in LAKEsuperior as domain-agnostic
+Resource URIs are stored internally in Lakesuperior as domain-agnostic
 URIs with the scheme ``info:fcres<resource UID>``. This allows resources
 to be portable across systems. E.g. a resource with an internal URI of
 ``info:fcres/a/b/c``, when accessed via the
@@ -33,13 +33,13 @@ accessed via the ``uid`` and ``uri`` properties respectively:
 Store Layout
 ------------
 
-One of the key concepts in LAKEsuperior is the store layout. This is a
+One of the key concepts in Lakesuperior is the store layout. This is a
 module built with a specific purpose in mind, i.e. allowing fine-grained
 recording of provenance metadata while providing reasonable performance.
 
 Store layout modules could be replaceable (work needs to be done to
 develop an interface to allow that). The default (and only at the
-moment) layout shipped with LAKEsuperior is the :mod:`resource-centric
+moment) layout shipped with Lakesuperior is the :mod:`resource-centric
 layout <lakesuperior.store.ldp_rs.rsrc_centric_layout>`. This
 layout implements a so-called `graph-per-aspect
 pattern <http://patterns.dataincubator.org/book/graph-per-aspect.html>`__

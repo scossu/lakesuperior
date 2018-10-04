@@ -1,14 +1,14 @@
-Contributing to LAKEsuperior
+Contributing to Lakesuperior
 ============================
 
-LAKEsuperior has been so far a single person’s off-hours project (with much
+Lakesuperior has been so far a single person’s off-hours project (with much
 very valuable input from several sides). In order to turn into anything close
 to a Beta release and eventually to a production-ready implementation, it
 needs some community love.
 
 Contributions are welcome in all forms, including ideas, issue reports,
 or even just spinning up the software and providing some feedback.
-LAKEsuperior is meant to live as a community project.
+Lakesuperior is meant to live as a community project.
 
 .. _dev_setup:
 

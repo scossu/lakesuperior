@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from os import chdir, environ, getcwd, path
@@ -7,6 +8,7 @@ import yaml
 
 import lakesuperior
 
+logger = logging.getLogger(__name__)
 
 default_config_dir = environ.get(
         'FCREPO_CONFIG_DIR',
@@ -76,6 +78,11 @@ def parse_config(config_dir=None):
         if 'filename' in handler:
             handler['filename'] = path.realpath(handler['filename'])
     chdir(oldwd)
+
+    logger.info('Graph store location: {}'.format(
+        _config['application']['store']['ldp_rs']['location']))
+    logger.info('Binary store location: {}'.format(
+        _config['application']['store']['ldp_nr']['location']))
 
     return _config
 

@@ -4,7 +4,6 @@ from lakesuperior import env
 from lakesuperior.config_parser import parse_config
 from lakesuperior.migrator import Migrator
 from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 __doc__ = """
 Admin API.
@@ -23,8 +22,8 @@ def stats():
     :return: Store statistics, resource statistics.
     """
     import lakesuperior.env_setup
-    repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
-    with TxnManager(env.app_globals.rdf_store) as txn:
+    with env.app_globals.rdf_store.txn_ctx():
+        repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
         repo_stats['store_stats'] = env.app_globals.rdf_store.stats()
 
     return repo_stats
@@ -32,7 +31,7 @@ def stats():
 
 def migrate(src, dest, start_pts=None, list_file=None, **kwargs):
     """
-    Migrate an LDP repository to a new LAKEsuperior instance.
+    Migrate an LDP repository to a new Lakesuperior instance.
 
     See :py:meth:`Migrator.__init__`.
     """
@@ -53,5 +52,5 @@ def integrity_check():
     At the moment this is limited to referential integrity. Other checks can
     be added and triggered by different argument flags.
     """
-    with TxnManager(env.app_globals.rdfly.store):
+    with env.app_globals.rdfly.store.txn_ctx():
         return set(env.app_globals.rdfly.find_refint_violations())

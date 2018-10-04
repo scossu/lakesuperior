@@ -1,5 +1,6 @@
 include README.rst
 include LICENSE
+include fcrepo
 graft lakesuperior/data/bootstrap
 graft lakesuperior/endpoints/templates
 graft lakesuperior/etc.defaults
