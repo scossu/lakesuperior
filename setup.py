@@ -1,5 +1,5 @@
 """
-LAKEsuperior setup script.
+Lakesuperior setup script.
 
 Proudly ripped from https://github.com/pypa/sampleproject/blob/master/setup.py
 """
@@ -19,10 +19,10 @@ try:
     from Cython.Build import cythonize
 except ImportError:
     USE_CYTHON = False
-    print('Not using Cython.')
+    print('Not using Cython to compile extensions.')
 else:
     USE_CYTHON = True
-    print('Using Cython.')
+    print('Using Cython to compile extensions.')
 
 
 # ``pytest_runner`` is referenced in ``setup_requires``.

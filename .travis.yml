@@ -1,8 +1,5 @@
 sudo: false
 language: python
-#before_install:
-#  - sudo apt-get update
-#  - sudo apt-get install -y liblmdb-dev
 matrix:
     include:
     - python: 3.6
@@ -11,7 +8,6 @@ matrix:
       sudo: true
 
 install:
-  #- pip install -q cython
   - pip install -e .
 script:
   - python setup.py test
