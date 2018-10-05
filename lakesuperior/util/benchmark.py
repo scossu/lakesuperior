@@ -1,11 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import sys
-sys.path.append('.')
 
 from uuid import uuid4
 
 import arrow
+import click
 import requests
+
+from matplotlib import pyplot as plt
 
 from lakesuperior.util.generators import (
         random_image, random_graph, random_utf8_string)
@@ -14,49 +17,82 @@ __doc__ = '''
 Benchmark script to measure write performance.
 '''
 
-default_n = 10000
-#webroot = 'http://localhost:8080/rest'
-webroot = 'http://localhost:8000/ldp'
-#webroot = 'http://localhost:5000/ldp'
-container_uri = webroot + '/pomegranate'
+def_endpoint = 'http://localhost:8000/ldp'
+def_ct = 10000
+def_parent = '/pomegranate'
+def_gr_size = 200
 
-def run():
-    sys.stdout.write('How many children? [{}] >'.format(default_n))
-    choice = input().lower()
-    n = int(choice) if choice else default_n
 
-    sys.stdout.write('Delete container? [n] >')
-    choice = input().lower()
-    del_cont = choice or 'n'
+@click.command()
+@click.option(
+    '--endpoint', '-e', default=def_endpoint,
+    help=f'LDP endpoint. Default: {def_endpoint}')
+@click.option(
+    '--count', '-c', default=def_ct,
+    help='Number of resources to ingest. Default: {def_ct}')
+@click.option(
+    '--parent', '-p', default=def_parent,
+    help='Path to the container resource under which the new resources will be '
+        'created. It must begin with a slash (`/`) character. '
+        f'Default: {def_parent}')
+@click.option(
+    '--delete-container', '-d', is_flag=True,
+    help='Delete container resource and its children if already existing. By '
+    'default, the container is not deleted and new resources are added to it.')
+@click.option(
+    '--method', '-m', default='put',
+    help='HTTP method to use. Case insensitive. Either PUT '
+    f'or POST. Default: PUT')
+@click.option(
+    '--graph-size', '-s', default=def_gr_size,
+    help=f'Number of triples in each graph. Default: {def_gr_size}')
+@click.option(
+    '--resource-type', '-t', default='r',
+    help='Type of resources to ingest. One of `r` (only LDP-RS, i.e. RDF), '
+    '`n` (only  LDP-NR, i.e. binaries), or `b` (50/50% of both). '
+    'Default: r')
+@click.option(
+    '--graph', '-g', is_flag=True, help='Plot a graph of ingest timings. '
+    'The graph figure is displayed on screen with basic manipulation and save '
+    'options.')
 
-    sys.stdout.write('POST or PUT? [PUT] >')
-    choice = input().lower()
-    if choice and choice.lower() not in ('post', 'put'):
-        raise ValueError('Not a valid verb.')
-    method = choice.lower() or 'put'
+def run(
+        endpoint, count, parent, method, delete_container,
+        graph_size, resource_type, graph):
 
-    sys.stdout.write('RDF Sources (r), Non-RDF (n), or Both 50/50 (b)? [r] >')
-    choice = input().lower()
-    res_type = choice or 'r'
+    container_uri = endpoint + parent
 
-    if del_cont  == 'y':
+    method = method.lower()
+    if method not in ('post', 'put'):
+        raise ValueError(f'HTTP method not supported: {method}')
+
+    if delete_container:
         requests.delete(container_uri, headers={'prefer': 'no-tombstone'})
     requests.put(container_uri)
 
-    print('Inserting {} children.'.format(n))
+    print(f'Inserting {count} children under {container_uri}.')
 
-    # URI used to establish an in-repo relationship.
+    # URI used to establish an in-repo relationship. This is set to
+    # the most recently created resource in each loop.
     ref = container_uri
-    size = 200 # Size of graph.
 
     wclock_start = arrow.utcnow()
+    if graph:
+        print('Results will be plotted.')
+        # Plot coordinates: X is request count, Y is request timing.
+        px = []
+        py = []
+        plt.xlabel('Requests')
+        plt.ylabel('ms per request')
+        plt.title('FCREPO Benchmark')
+
     try:
-        for i in range(1, n + 1):
+        for i in range(1, count + 1):
             url = '{}/{}'.format(container_uri, uuid4()) if method == 'put' \
                     else container_uri
 
-            if res_type == 'r' or (res_type == 'b' and i % 2 == 0):
-                data = random_graph(size, ref).serialize(format='ttl')
+            if resource_type == 'r' or (resource_type == 'b' and i % 2 == 0):
+                data = random_graph(graph_size, ref).serialize(format='ttl')
                 headers = {'content-type': 'text/turtle'}
             else:
                 img = random_image(name=uuid4(), ts=16, ims=512)
@@ -81,10 +117,17 @@ def run():
             rsp.raise_for_status()
             ref = rsp.headers['location']
             if i % 10 == 0:
+                avg10 = (tcounter - prev_tcounter) / 10
                 print(
                     f'Record: {i}\tTime elapsed: {tcounter}\t'
-                    f'Per resource: {(tcounter - prev_tcounter) / 10}')
+                    f'Per resource: {avg10}')
                 prev_tcounter = tcounter
+
+                if graph:
+                    px.append(i)
+                    # Divide by 1000 for µs → ms
+                    py.append(avg10.microseconds // 1000)
+
     except KeyboardInterrupt:
         print('Interrupted after {} iterations.'.format(i))
 
@@ -92,6 +135,21 @@ def run():
     print(f'Total elapsed time: {wclock}')
     print(f'Total time spent ingesting resources: {tcounter}')
     print(f'Average time per resource: {tcounter.total_seconds()/i}')
+
+    if graph:
+        if resource_type == 'r':
+            type_label = 'LDP-RS'
+        elif resource_type == 'n':
+            type_label = 'LDP-NR'
+        else:
+            type_label = 'LDP-RS + LDP-NR'
+        label = (
+            f'{container_uri}; {method.upper()}; {graph_size} trp/graph; '
+            f'{type_label}')
+        plt.plot(px, py, label=label)
+        plt.legend()
+        plt.show()
+
 
 if __name__ == '__main__':
     run()
