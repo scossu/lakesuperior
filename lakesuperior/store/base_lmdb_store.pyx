@@ -519,7 +519,7 @@ cdef class BaseLmdbStore:
             pass
 
 
-    cpdef dict stats(self, new_txn=True):
+    cpdef dict stats(self):
         """Gather statistics about the database."""
         return self._stats()
 

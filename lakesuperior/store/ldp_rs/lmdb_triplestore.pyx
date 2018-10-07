@@ -1,9 +1,5 @@
-import hashlib
 import logging
-import os
-import pickle
 
-from collections.abc import Sequence
 from functools import wraps
 
 from rdflib import Graph
@@ -15,9 +11,9 @@ from lakesuperior.store.base_lmdb_store import (
 from lakesuperior.store.base_lmdb_store cimport _check
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
-from cython.parallel import parallel, prange
+from cython.parallel import prange
 from libc.stdlib cimport free
-from libc.string cimport memcmp, memcpy, strchr
+from libc.string cimport memcpy
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
@@ -176,6 +172,12 @@ cdef class ResultSet:
 
 
     def __dealloc__(self):
+        """
+        Free the memory.
+
+        This is called when the Python instance is garbage collected, which
+        makes it handy to safely pass a ResultSet instance across functions.
+        """
         #logger.debug(
         #    'Releasing {0} ({1}x{2}) bytes of ResultSet @ {3:x}...'.format(
         #        self.size, self.ct, self.itemsize,
@@ -185,6 +187,17 @@ cdef class ResultSet:
 
 
     cdef void resize(self, size_t ct) except *:
+        """
+        Resize the result set. Uses ``PyMem_Realloc``.
+
+        Note that resizing to a smaller size does not copy or reallocate the
+        data, resizing to a larger size does.
+
+        Also, note that only the number of items can be changed, the item size
+        cannot.
+
+        :param size_t ct: Number of items in the result set.
+        """
         cdef unsigned char *tmp
         self.ct = ct
         self.size = self.itemsize * self.ct
@@ -206,6 +219,8 @@ cdef class ResultSet:
     def to_tuple(self):
         """
         Return the data set as a Python tuple.
+
+        :rtype: tuple
         """
         return tuple(
                 self.data[i: i + self.itemsize]
@@ -213,20 +228,32 @@ cdef class ResultSet:
 
 
     def get_item_obj(self, i):
+        """
+        Get an item at a given index position.
+
+        :rtype: bytes
+        """
         return self.get_item(i)[: self.itemsize]
 
 
     cdef unsigned char *get_item(self, i):
         """
-        Get an item at a given index position.
+        Get an item at a given index position. Cython-level method.
 
         The item size is known by the ``itemsize`` property of the object.
+
+        :rtype: unsigned char*
         """
         return self.data + self.itemsize * i
 
 
 
 def use_data(fn):
+    """
+    Decorator to indicate that a set operation between two SimpleGraph
+    instances should use the ``data`` property of the second term. The second
+    term can also be a simple set.
+    """
     @wraps(fn)
     def _wrapper(self, other):
         if isinstance(other, SimpleGraph):
@@ -240,6 +267,8 @@ cdef class SimpleGraph:
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
         the same funny but functional slicing notation.
+
+    An instance of this class can be converted to a ``rdflib.Graph`` instance.
     """
 
     cdef:
@@ -275,6 +304,13 @@ cdef class SimpleGraph:
 
     cdef void _data_from_lookup(
             self, tuple lookup, LmdbTriplestore store) except *:
+        """
+        Look up triples in the triplestore and load them into ``data``.
+
+        :param tuple lookup: 3-tuple of RDFlib terms or ``None``.
+        :param LmdbTriplestore store: Reference to a LMDB triplestore. This
+            is normally set to ``lakesuperior.env.app_globals.rdf_store``.
+        """
         cdef:
             size_t i
             unsigned char spok[TRP_KLEN]
@@ -289,71 +325,107 @@ cdef class SimpleGraph:
     # Basic set operations.
 
     def add(self, dataset):
+        """ Set union. """
         self.data.add(dataset)
 
     def remove(self, item):
+        """
+        Remove one item from the graph.
+
+        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
+            wildcards are not accepted.
+        """
         self.data.remove(item)
 
     def __len__(self):
+        """ Number of triples in the graph. """
         return len(self.data)
 
     @use_data
     def __eq__(self, other):
+        """ Equality operator between ``SimpleGraph`` instances. """
         return self.data == other
 
     def __repr__(self):
+        """
+        String representation of the graph.
+
+        It provides the number of triples in the graph and memory address of
+            the instance.
+        """
         return (f'<{self.__class__.__name__} @{hex(id(self))} '
             f'length={len(self.data)}>')
 
     def __str__(self):
+        """ String dump of the graph triples. """
         return str(self.data)
 
     @use_data
     def __sub__(self, other):
+        """ Set subtraction. """
         return self.data - other
 
     @use_data
     def __isub__(self, other):
+        """ In-place set subtraction. """
         self.data -= other
         return self
 
     @use_data
     def __and__(self, other):
+        """ Set intersection. """
         return self.data & other
 
     @use_data
     def __iand__(self, other):
+        """ In-place set intersection. """
         self.data &= other
         return self
 
     @use_data
     def __or__(self, other):
+        """ Set union. """
         return self.data | other
 
     @use_data
     def __ior__(self, other):
+        """ In-place set union. """
         self.data |= other
         return self
 
     @use_data
     def __xor__(self, other):
+        """ Set exclusive intersection (XOR). """
         return self.data ^ other
 
     @use_data
     def __ixor__(self, other):
+        """ In-place set exclusive intersection (XOR). """
         self.data ^= other
         return self
 
     def __contains__(self, item):
+        """
+        Whether the graph contains a triple.
+
+        :rtype: boolean
+        """
         return item in self.data
 
     def __iter__(self):
+        """ Graph iterator. It iterates over the set triples. """
         return self.data.__iter__()
 
 
     # Slicing.
 
     def __getitem__(self, item):
+        """
+        Slicing function.
+
+        It behaves similarly to `RDFLib graph slicing
+        <https://rdflib.readthedocs.io/en/stable/utilities.html#slicing-graphs>`__
+        """
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
@@ -388,6 +460,7 @@ cdef class SimpleGraph:
     cpdef object as_rdflib(self):
         """
         Return the data set as an RDFLib Graph.
+
         :rtype: rdflib.Graph
         """
         gr = Graph()
@@ -464,6 +537,9 @@ cdef class Imr(SimpleGraph):
     This is an extension of :py:class:`~SimpleGraph` that adds a subject URI to
     the data set and some convenience methods.
 
+    An instance of this class can be converted to a ``rdflib.Resource``
+    instance.
+
     Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
     will create a new ``Imr`` instance with the same subject URI.
     """
@@ -512,27 +588,49 @@ cdef class Imr(SimpleGraph):
 
 
     def __repr__(self):
+        """
+        String representation of an Imr.
+
+        This includes the subject URI, number of triples contained and the
+        memory address of the instance.
+        """
         return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
             f'length={len(self.data)}>')
 
     @use_data
     def __sub__(self, other):
+        """
+        Set difference. This creates a new Imr with the same subject URI.
+        """
         return self.__class__(uri=self.uri, data=self.data - other)
 
     @use_data
     def __and__(self, other):
+        """
+        Set intersection. This creates a new Imr with the same subject URI.
+        """
         return self.__class__(uri=self.uri, data=self.data & other)
 
     @use_data
     def __or__(self, other):
+        """
+        Set union. This creates a new Imr with the same subject URI.
+        """
         return self.__class__(uri=self.uri, data=self.data | other)
 
     @use_data
     def __xor__(self, other):
+        """
+        Set exclusive OR (XOR). This creates a new Imr with the same subject
+        URI.
+        """
         return self.__class__(uri=self.uri, data=self.data ^ other)
 
 
     def __getitem__(self, item):
+        """
+        Supports slicing notation.
+        """
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
@@ -583,7 +681,6 @@ cdef class Imr(SimpleGraph):
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):
-
     """
     Low-level storage layer.
 
@@ -650,8 +747,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # DB management methods.
 
-    cpdef dict stats(self, new_txn=True):
-        """Gather statistics about the database."""
+    cpdef dict stats(self):
+        """
+        Gather statistics about the database."""
         st = self._stats()
         st['num_triples'] = st['db_stats']['spo:c']['ms_entries']
 

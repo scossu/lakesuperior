@@ -808,7 +808,6 @@ struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__d
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_close_env;
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_destroy;
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data;
-struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats;
 
 /* "lakesuperior/store/base_lmdb_store.pxd":10
  *     lmdb.MDB_dbi dbi
@@ -951,24 +950,12 @@ struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_de
  *     #cpdef get_dup_data(self, unsigned char *key, db=*)
  *     #cpdef get_all_pairs(self, db=*)
  *     cpdef bytes get_data(self, key, dblabel=*)             # <<<<<<<<<<<<<<
- *     cpdef dict stats(self, new_txn=*)
+ *     cpdef dict stats(self)
  *     cpdef int txn_id(self)
  */
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data {
   int __pyx_n;
   PyObject *dblabel;
-};
-
-/* "lakesuperior/store/base_lmdb_store.pxd":62
- *     #cpdef get_all_pairs(self, db=*)
- *     cpdef bytes get_data(self, key, dblabel=*)
- *     cpdef dict stats(self, new_txn=*)             # <<<<<<<<<<<<<<
- *     cpdef int txn_id(self)
- *     #cpdef str reader_list(self)
- */
-struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats {
-  int __pyx_n;
-  PyObject *new_txn;
 };
 
 /* "lakesuperior/store/base_lmdb_store.pxd":13
@@ -1036,7 +1023,7 @@ struct __pyx_vtabstruct_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore {
   void (*close_env)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_close_env *__pyx_optional_args);
   void (*destroy)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_destroy *__pyx_optional_args);
   PyObject *(*get_data)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, PyObject *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data *__pyx_optional_args);
-  PyObject *(*stats)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats *__pyx_optional_args);
+  PyObject *(*stats)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch);
   int (*txn_id)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch);
 };
 static struct __pyx_vtabstruct_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_vtabptr_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore;
@@ -1759,7 +1746,7 @@ static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__put
 static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_key, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data *__pyx_optional_args); /* proto*/
 static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__get_data(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, unsigned char *__pyx_v_key, CYTHON_UNUSED size_t __pyx_v_klen, struct MDB_val *__pyx_v_rv, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__get_data *__pyx_optional_args); /* proto*/
 static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__delete(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, unsigned char *__pyx_v_key, size_t __pyx_v_klen, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__delete *__pyx_optional_args); /* proto*/
-static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats *__pyx_optional_args); /* proto*/
+static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, int __pyx_skip_dispatch); /* proto*/
 static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto*/
 static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__txn_begin(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__txn_begin *__pyx_optional_args); /* proto*/
 static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__txn_commit(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto*/
@@ -2130,7 +2117,7 @@ static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStor
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_23put(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_key, PyObject *__pyx_v_data, PyObject *__pyx_v_dblabel, PyObject *__pyx_v_flags); /* proto */
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_25get_data(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_key, PyObject *__pyx_v_dblabel); /* proto */
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_27delete(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_key, PyObject *__pyx_v_dblabel); /* proto */
-static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_new_txn); /* proto */
+static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_31txn_id(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_11is_txn_open___get__(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_5_open___get__(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self); /* proto */
@@ -8755,14 +8742,13 @@ static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__del
 /* "lakesuperior/store/base_lmdb_store.pyx":522
  * 
  * 
- *     cpdef dict stats(self, new_txn=True):             # <<<<<<<<<<<<<<
+ *     cpdef dict stats(self):             # <<<<<<<<<<<<<<
  *         """Gather statistics about the database."""
  *         return self._stats()
  */
 
-static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats *__pyx_optional_args) {
-  PyObject *__pyx_v_new_txn = ((PyObject *)Py_True);
+static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, int __pyx_skip_dispatch) {
   PyObject *__pyx_r = NULL;
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
@@ -8770,14 +8756,8 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
-  PyObject *__pyx_t_5 = NULL;
   __Pyx_RefNannySetupContext("stats", 0);
   __Pyx_TraceCall("stats", __pyx_f[0], 522, 0, __PYX_ERR(0, 522, __pyx_L1_error));
-  if (__pyx_optional_args) {
-    if (__pyx_optional_args->__pyx_n > 0) {
-      __pyx_v_new_txn = __pyx_optional_args->new_txn;
-    }
-  }
   /* Check if called by wrapper */
   if (unlikely(__pyx_skip_dispatch)) ;
   /* Check if overridden in Python */
@@ -8797,38 +8777,13 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
           __Pyx_DECREF_SET(__pyx_t_3, function);
         }
       }
-      if (!__pyx_t_4) {
-        __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_new_txn); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_2);
+      if (__pyx_t_4) {
+        __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       } else {
-        #if CYTHON_FAST_PYCALL
-        if (PyFunction_Check(__pyx_t_3)) {
-          PyObject *__pyx_temp[2] = {__pyx_t_4, __pyx_v_new_txn};
-          __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
-          __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __Pyx_GOTREF(__pyx_t_2);
-        } else
-        #endif
-        #if CYTHON_FAST_PYCCALL
-        if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
-          PyObject *__pyx_temp[2] = {__pyx_t_4, __pyx_v_new_txn};
-          __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
-          __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __Pyx_GOTREF(__pyx_t_2);
-        } else
-        #endif
-        {
-          __pyx_t_5 = PyTuple_New(1+1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 522, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_5);
-          __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_4); __pyx_t_4 = NULL;
-          __Pyx_INCREF(__pyx_v_new_txn);
-          __Pyx_GIVEREF(__pyx_v_new_txn);
-          PyTuple_SET_ITEM(__pyx_t_5, 0+1, __pyx_v_new_txn);
-          __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-        }
+        __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 522, __pyx_L1_error)
       }
+      __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       if (!(likely(PyDict_CheckExact(__pyx_t_2))||((__pyx_t_2) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "dict", Py_TYPE(__pyx_t_2)->tp_name), 0))) __PYX_ERR(0, 522, __pyx_L1_error)
       __pyx_r = ((PyObject*)__pyx_t_2);
@@ -8840,7 +8795,7 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
   }
 
   /* "lakesuperior/store/base_lmdb_store.pyx":524
- *     cpdef dict stats(self, new_txn=True):
+ *     cpdef dict stats(self):
  *         """Gather statistics about the database."""
  *         return self._stats()             # <<<<<<<<<<<<<<
  * 
@@ -8856,7 +8811,7 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
   /* "lakesuperior/store/base_lmdb_store.pyx":522
  * 
  * 
- *     cpdef dict stats(self, new_txn=True):             # <<<<<<<<<<<<<<
+ *     cpdef dict stats(self):             # <<<<<<<<<<<<<<
  *         """Gather statistics about the database."""
  *         return self._stats()
  */
@@ -8867,7 +8822,6 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
   __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_5);
   __Pyx_AddTraceback("lakesuperior.store.base_lmdb_store.BaseLmdbStore.stats", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   __pyx_L0:;
@@ -8878,74 +8832,28 @@ static PyObject *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
 static char __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats[] = "Gather statistics about the database.";
-static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
-  PyObject *__pyx_v_new_txn = 0;
+static PyObject *__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("stats (wrapper)", 0);
-  {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_new_txn,0};
-    PyObject* values[1] = {0};
-    values[0] = ((PyObject *)Py_True);
-    if (unlikely(__pyx_kwds)) {
-      Py_ssize_t kw_args;
-      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
-      switch (pos_args) {
-        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
-        CYTHON_FALLTHROUGH;
-        case  0: break;
-        default: goto __pyx_L5_argtuple_error;
-      }
-      kw_args = PyDict_Size(__pyx_kwds);
-      switch (pos_args) {
-        case  0:
-        if (kw_args > 0) {
-          PyObject* value = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_new_txn);
-          if (value) { values[0] = value; kw_args--; }
-        }
-      }
-      if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "stats") < 0)) __PYX_ERR(0, 522, __pyx_L3_error)
-      }
-    } else {
-      switch (PyTuple_GET_SIZE(__pyx_args)) {
-        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
-        CYTHON_FALLTHROUGH;
-        case  0: break;
-        default: goto __pyx_L5_argtuple_error;
-      }
-    }
-    __pyx_v_new_txn = values[0];
-  }
-  goto __pyx_L4_argument_unpacking_done;
-  __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("stats", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 522, __pyx_L3_error)
-  __pyx_L3_error:;
-  __Pyx_AddTraceback("lakesuperior.store.base_lmdb_store.BaseLmdbStore.stats", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __Pyx_RefNannyFinishContext();
-  return NULL;
-  __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(((struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *)__pyx_v_self), __pyx_v_new_txn);
+  __pyx_r = __pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(((struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, PyObject *__pyx_v_new_txn) {
+static PyObject *__pyx_pf_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
-  struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats __pyx_t_2;
   __Pyx_RefNannySetupContext("stats", 0);
   __Pyx_TraceCall("stats (wrapper)", __pyx_f[0], 522, 0, __PYX_ERR(0, 522, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2.__pyx_n = 1;
-  __pyx_t_2.new_txn = __pyx_v_new_txn;
-  __pyx_t_1 = __pyx_vtabptr_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore->stats(__pyx_v_self, 1, &__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 522, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats(__pyx_v_self, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 522, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11720,7 +11628,7 @@ static PyMethodDef __pyx_methods_12lakesuperior_5store_15base_lmdb_store_BaseLmd
   {"put", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_24put, METH_VARARGS|METH_KEYWORDS, __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_23put},
   {"get_data", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_26get_data, METH_VARARGS|METH_KEYWORDS, __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_25get_data},
   {"delete", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_28delete, METH_VARARGS|METH_KEYWORDS, __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_27delete},
-  {"stats", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats, METH_VARARGS|METH_KEYWORDS, __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats},
+  {"stats", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_30stats, METH_NOARGS, __pyx_doc_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_29stats},
   {"txn_id", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_32txn_id, METH_NOARGS, 0},
   {"__reduce_cython__", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_34__reduce_cython__, METH_NOARGS, 0},
   {"__setstate_cython__", (PyCFunction)__pyx_pw_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_36__setstate_cython__, METH_O, 0},
@@ -12349,7 +12257,7 @@ static int __Pyx_modinit_type_init_code(void) {
   __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.close_env = (void (*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_close_env *__pyx_optional_args))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_close_env;
   __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.destroy = (void (*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_destroy *__pyx_optional_args))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_destroy;
   __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.get_data = (PyObject *(*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, PyObject *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data *__pyx_optional_args))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_get_data;
-  __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.stats = (PyObject *(*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats *__pyx_optional_args))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats;
+  __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.stats = (PyObject *(*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_stats;
   __pyx_vtable_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.txn_id = (int (*)(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *, int __pyx_skip_dispatch))__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_txn_id;
   if (PyType_Ready(&__pyx_type_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore) < 0) __PYX_ERR(0, 49, __pyx_L1_error)
   __pyx_type_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore.tp_print = 0;

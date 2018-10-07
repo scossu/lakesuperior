@@ -59,6 +59,6 @@ cdef class BaseLmdbStore:
     #cpdef get_dup_data(self, unsigned char *key, db=*)
     #cpdef get_all_pairs(self, db=*)
     cpdef bytes get_data(self, key, dblabel=*)
-    cpdef dict stats(self, new_txn=*)
+    cpdef dict stats(self)
     cpdef int txn_id(self)
     #cpdef str reader_list(self)
