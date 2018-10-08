@@ -308,7 +308,6 @@ class TestLdp:
         """
         POST a resource with binary payload and verify checksums.
         """
-        import pdb; pdb.set_trace()
         rnd_img['content'].seek(0)
         resp = self.client.post('/ldp/', data=rnd_img['content'],
                 headers={
