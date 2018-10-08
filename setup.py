@@ -36,8 +36,10 @@ readme_fpath = path.join(path.dirname(lakesuperior.basedir), 'README.rst')
 with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
-# Extensions directory.
-ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
+# Extensions directory. Readthedocs requires it to be relative to the path
+# of this script.
+ext_dir = 'ext'
+#ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
 
 include_dirs = [
     path.join(ext_dir, 'include'),
