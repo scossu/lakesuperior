@@ -59,7 +59,7 @@ extensions = [
             path.join(lakesuperior.basedir, 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
-    ),path.join('.', 'ext')
+    ),
     Extension(
         'lakesuperior.store.ldp_rs.term',
         [
