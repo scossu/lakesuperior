@@ -41,6 +41,7 @@ Indices and tables
    :maxdepth: 2
    :caption: Technical Documents
 
+    Release Notes <release_notes>
     API Documentation <api>
     Architecture <architecture>
     Performance Benchmarks <performance>
