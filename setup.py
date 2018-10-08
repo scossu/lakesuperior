@@ -36,10 +36,8 @@ readme_fpath = path.join(path.dirname(lakesuperior.basedir), 'README.rst')
 with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
-# Extensions directory. Readthedocs requires it to be relative to the path
-# of this script.
-ext_dir = 'ext'
-#ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
+# Extensions directory.
+ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
 
 include_dirs = [
     path.join(ext_dir, 'include'),
@@ -54,7 +52,7 @@ extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
-            'ext/lib/mdb.c',
+            path.join(ext_dir, 'lib', 'mdb.c'),
             path.join(ext_dir, 'lib', 'midl.c'),
             path.join(lakesuperior.basedir, 'store', f'base_lmdb_store.{ext}'),
         ],
@@ -74,7 +72,7 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
-            'ext/lib/mdb.c',
+            path.join(ext_dir, 'lib', 'mdb.c'),
             path.join(ext_dir, 'lib', 'midl.c'),
             path.join(
                 lakesuperior.basedir, 'store', 'ldp_rs',
@@ -187,7 +185,7 @@ setup(
         'pytest-flask',
     ],
 
-    include_package_data=True,
+    #include_package_data=True,
     #extras_require={},
     #package_data={
     #},
