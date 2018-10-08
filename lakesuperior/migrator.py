@@ -201,21 +201,19 @@ class Migrator:
         try:
             rsp = requests.head(uri, auth=self.auth)
             rsp.raise_for_status()
-        except:
-            logger.warn('Error retrieving resource {}: {}'.format(uri, rsp.status_code))
-            return
-        if rsp:
-            if not self.skip_errors:
-                rsp.raise_for_status()
-            elif rsp.status_code > 399:
-                print('Error retrieving resource {} headers: {} {}'.format(
-                    uri, rsp.status_code, rsp.text))
+        except Exception as e:
+            if self.skip_errors:
+                logger.error(f'Error retrieving resource header: {e}')
+                return
+            else:
+                raise
 
         # Determine LDP type.
         ldp_type = 'ldp_nr'
         try:
-            for link in requests.utils.parse_header_links(
-                    rsp.headers.get('link', auth=self.auth)):
+            links_rsp = rsp.headers.get('link', auth=self.auth)
+            links_rsp.raise_for_status()
+            for link in requests.utils.parse_header_links(links_rsp):
                 if (
                         link.get('rel') == 'type'
                         and (
@@ -235,15 +233,13 @@ class Migrator:
                 uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
         try:
             get_rsp = requests.get(get_uri, auth=self.auth)
+            get_rsp.raise_for_status()
         except:
-            logger.warn('Error retrieving resource {}'.format(get_uri))
-            return
-        if get_rsp:
-            if not self.skip_errors:
-                get_rsp.raise_for_status()
-            elif get_rsp.status_code > 399:
-                print('Error retrieving resource {} body: {} {}'.format(
-                    uri, get_rsp.status_code, get_rsp.text))
+            if self.skip_errors:
+                logger.error(f'Error retrieving resource body: {e}')
+                return
+            else:
+                raise
 
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
@@ -259,12 +255,15 @@ class Migrator:
             if self.zero_binaries:
                 data = b''
             else:
-                bin_rsp = requests.get(uri, auth=self.auth)
-                if not self.skip_errors:
+                try:
+                    bin_rsp = requests.get(uri, auth=self.auth)
                     bin_rsp.raise_for_status()
-                elif bin_rsp.status_code > 399:
-                    print('Error retrieving resource {} body: {} {}'.format(
-                        uri, bin_rsp.status_code, bin_rsp.text))
+                except Exception as e:
+                    if self.skip_errors:
+                        logger.error(f'Error retrieving binary contents: {e}')
+                        return
+                    else:
+                        raise
                 data = bin_rsp.content
             #import pdb; pdb.set_trace()
             uuid = str(gr.value(
