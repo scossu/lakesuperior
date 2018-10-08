@@ -2,6 +2,14 @@
 Release Notes
 =============
 
+1.0 Alpha 19 HOTFIX
+-------------------
+
+*October 10, 2018*
+
+A hotfix relase was necessary to adjust settings for the source to build
+correctly on Read The Docs and Docker Hub, and to package correctly on PyPI.
+
 1.0 Alpha 18
 ------------
 
