@@ -54,12 +54,12 @@ extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
-            path.join(ext_dir, 'lib', 'mdb.c'),
+            'ext/lib/mdb.c',
             path.join(ext_dir, 'lib', 'midl.c'),
             path.join(lakesuperior.basedir, 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
-    ),
+    ),path.join('.', 'ext')
     Extension(
         'lakesuperior.store.ldp_rs.term',
         [
@@ -74,7 +74,7 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
-            path.join(ext_dir, 'lib', 'mdb.c'),
+            'ext/lib/mdb.c',
             path.join(ext_dir, 'lib', 'midl.c'),
             path.join(
                 lakesuperior.basedir, 'store', 'ldp_rs',
