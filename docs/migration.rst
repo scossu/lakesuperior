@@ -1,7 +1,7 @@
 Migration, Backup & Restore
 ===========================
 
-All LAKEsuperior data is by default fully contained in a folder. This
+All Lakesuperior data is by default fully contained in a folder. This
 means that only the data, configurations and code folders are needed for
 it to run. No Postgres, Redis, or such. Data and configuration folders
 can be moved around as needed.
@@ -10,7 +10,7 @@ Migration Tool
 --------------
 
 Migration is the process of importing and converting data from a
-different Fedora or LDP implementation into a new LAKEsuperior instance.
+different Fedora or LDP implementation into a new Lakesuperior instance.
 This process uses the HTTP/LDP API of the original repository. A
 command-line utility is available as part of the ``lsup-admin`` suite to
 assist in such operation.
@@ -33,7 +33,7 @@ triples, i.e. no consistency checks are made.
 
 This script will create a full dataset in the specified destination
 folder, complete with a default configuration that allows to start the
-LAKEsuperior server immediately after the migration is complete.
+Lakesuperior server immediately after the migration is complete.
 
 Two approaches to migration are possible:
 

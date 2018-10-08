@@ -255,32 +255,6 @@ class Toolbox:
         return parsed_hdr
 
 
-    def rdf_cksum(self, gr):
-        '''
-        Generate a checksum for a graph.
-
-        What this method does is ordering the graph by subject, predicate,
-        object, then creating a pickle string and a checksum of it.
-
-        N.B. The context of the triples is ignored, so isomorphic graphs would
-        have the same checksum regardless of the context(s) they are found in.
-
-        @TODO This can be later reworked to use a custom hashing algorithm.
-
-        :param rdflib.Graph: gr The graph to be hashed.
-
-        :rtype: str
-        :return: SHA1 checksum.
-        '''
-        # Remove the messageDigest property, which very likely reflects the
-        # previous state of the resource.
-        gr.remove((Variable('s'), nsc['premis'].messageDigest, Variable('o')))
-
-        ord_gr = sorted(list(gr), key=lambda x : (x[0], x[1], x[2]))
-        hash = sha1(pickle.dumps(ord_gr)).hexdigest()
-
-        return hash
-
     def split_uuid(self, uuid):
         '''
         Split a UID into pairtree segments. This mimics FCREPO4 behavior.

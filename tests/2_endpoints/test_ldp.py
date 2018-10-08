@@ -2,6 +2,7 @@ import pdb
 import pytest
 import uuid
 
+from base64 import b64encode
 from hashlib import sha1
 
 from flask import g
@@ -615,7 +616,7 @@ class TestMimeType:
         self.client.get('/ldp')
         gr = Graph()
         gr.add((
-            URIRef(g.webroot + '/test_mimetype'), 
+            URIRef(g.webroot + '/test_mimetype'),
             nsc['dcterms'].title, Literal('Test MIME type.')))
         test_list = {
             'application/n-triples',
@@ -659,7 +660,6 @@ class TestPrefHeader:
         return {
             'path' : parent_path,
             'response' : self.client.get(parent_path),
-            'subject' : URIRef(g.webroot + '/test_parent')
         }
 
 
@@ -718,9 +718,10 @@ class TestPrefHeader:
         """
         verify the "embed children" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         #minimal_resp = self.client.get(parent_path, headers={
         #    'Prefer' : 'return=minimal',
@@ -756,9 +757,10 @@ class TestPrefHeader:
         """
         verify the "return children" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         incl_children_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; include={}'\
@@ -817,9 +819,10 @@ class TestPrefHeader:
         """
         verify the "server managed triples" prefer header.
         """
+        self.client.get('/ldp')
         parent_path = cont_structure['path']
         cont_resp = cont_structure['response']
-        cont_subject = cont_structure['subject']
+        cont_subject = URIRef(g.webroot + '/test_parent')
 
         incl_srv_mgd_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; include={}'\
@@ -872,6 +875,70 @@ class TestPrefHeader:
         child_resp = self.client.get('/ldp/test_delete_no_tstone01/a')
         assert child_resp.status_code == 404
 
+
+
+#@pytest.mark.usefixtures('client_class')
+#@pytest.mark.usefixtures('db')
+#class TestDigest:
+#    """
+#    Test digest and ETag handling.
+#    """
+#    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
+#    def test_digest_post(self):
+#        """
+#        Test ``Digest`` and ``ETag`` headers on resource POST.
+#        """
+#        resp = self.client.post('/ldp/')
+#        assert 'Digest' in resp.headers
+#        assert 'ETag' in resp.headers
+#        assert (
+#                b64encode(bytes.fromhex(
+#                    resp.headers['ETag'].replace('W/', '')
+#                    )).decode('ascii') ==
+#                resp.headers['Digest'].replace('SHA256=', ''))
+#
+#
+#    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
+#    def test_digest_put(self):
+#        """
+#        Test ``Digest`` and ``ETag`` headers on resource PUT.
+#        """
+#        resp_put = self.client.put('/ldp/test_digest_put')
+#        assert 'Digest' in resp_put.headers
+#        assert 'ETag' in resp_put.headers
+#        assert (
+#                b64encode(bytes.fromhex(
+#                    resp_put.headers['ETag'].replace('W/', '')
+#                    )).decode('ascii') ==
+#                resp_put.headers['Digest'].replace('SHA256=', ''))
+#
+#        resp_get = self.client.get('/ldp/test_digest_put')
+#        assert 'Digest' in resp_get.headers
+#        assert 'ETag' in resp_get.headers
+#        assert (
+#                b64encode(bytes.fromhex(
+#                    resp_get.headers['ETag'].replace('W/', '')
+#                    )).decode('ascii') ==
+#                resp_get.headers['Digest'].replace('SHA256=', ''))
+#
+#
+#    @pytest.mark.skip(reason='TODO Need to implement async digest queue')
+#    def test_digest_patch(self):
+#        """
+#        Verify that the digest and ETag change on resource change.
+#        """
+#        path = '/ldp/test_digest_patch'
+#        self.client.put(path)
+#        rsp1 = self.client.get(path)
+#
+#        self.client.patch(
+#                path, data=b'DELETE {} INSERT {<> a <http://ex.org/Test> .} '
+#                b'WHERE {}',
+#                headers={'Content-Type': 'application/sparql-update'})
+#        rsp2 = self.client.get(path)
+#
+#        assert rsp1.headers['ETag'] != rsp2.headers['ETag']
+#        assert rsp1.headers['Digest'] != rsp2.headers['Digest']
 
 
 @pytest.mark.usefixtures('client_class')
@@ -942,8 +1009,10 @@ class TestVersion:
         assert v1_uri != dup_uri
 
 
-    # @TODO Reverting from version and resurrecting is not fully functional.
-    def _disabled_test_revert_version(self):
+    @pytest.mark.skip(
+            reason='TODO Reverting from version and resurrecting is not fully '
+            'functional.')
+    def test_revert_version(self):
         """
         Take a version snapshot, update a resource, and then revert to the
         previous vresion.

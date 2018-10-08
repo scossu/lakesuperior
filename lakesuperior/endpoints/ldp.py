@@ -1,6 +1,7 @@
 import logging
 import pdb
 
+from base64 import b64encode
 from collections import defaultdict
 from io import BytesIO
 from pprint import pformat
@@ -13,6 +14,7 @@ from flask import (
         request, send_file)
 from rdflib import Graph, plugin, parser#, serializer
 
+from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
@@ -24,7 +26,6 @@ from lakesuperior.model.ldp_factory import LdpFactory
 from lakesuperior.model.ldp_nr import LdpNr
 from lakesuperior.model.ldp_rs import LdpRs
 from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 from lakesuperior.toolbox import Toolbox
 
 
@@ -159,7 +160,7 @@ def get_resource(uid, out_fmt=None):
                     'rdf'
                     if isinstance(rsrc, LdpRs) or rdf_mimetype is not None
                     else 'non_rdf')
-        out_headers.update(_headers_from_metadata(rsrc))
+        out_headers.update(_headers_from_metadata(rsrc, out_fmt))
         uri = g.tbox.uid_to_uri(uid)
         if out_fmt == 'rdf':
             if locals().get('rdf_mimetype', None) is None:
@@ -176,12 +177,9 @@ def get_resource(uid, out_fmt=None):
             rsp = make_response(send_file(
                     rsrc.local_path, as_attachment=True,
                     attachment_filename=rsrc.filename,
-                    mimetype=rsrc.mimetype))
-            logger.debug('Out headers: {}'.format(out_headers))
+                    mimetype=rsrc.mimetype), 200, out_headers)
             rsp.headers.add('Link',
                     '<{}/fcr:metadata>; rel="describedby"'.format(uri))
-            for link in out_headers['Link']:
-                rsp.headers.add('Link', link)
             return rsp
 
 
@@ -235,12 +233,9 @@ def post_resource(parent_uid):
 
     Add a new resource in a new URI.
     """
-    out_headers = std_headers
-    try:
-        slug = request.headers['Slug']
-        logger.debug('Slug: {}'.format(slug))
-    except KeyError:
-        slug = None
+    rsp_headers = std_headers
+    slug = request.headers.get('Slug')
+    logger.debug('Slug: {}'.format(slug))
 
     handling, disposition = set_post_put_params()
     stream, mimetype = _bistream_from_req()
@@ -275,9 +270,9 @@ def post_resource(parent_uid):
         hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
                 .format(uri)
 
-    out_headers.update(hdr)
+    rsp_headers.update(hdr)
 
-    return uri, 201, out_headers
+    return uri, 201, rsp_headers
 
 
 @ldp.route('/<path:uid>', methods=['PUT'], strict_slashes=False)
@@ -330,6 +325,7 @@ def put_resource(uid):
     else:
         rsp_code = 204
         rsp_body = ''
+
     return rsp_body, rsp_code, rsp_headers
 
 
@@ -620,36 +616,39 @@ def parse_repr_options(retr_opts):
     return imr_options
 
 
-def _headers_from_metadata(rsrc):
+def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
     """
     Create a dict of headers from a metadata graph.
 
     :param lakesuperior.model.ldpr.Ldpr rsrc: Resource to extract metadata
         from.
     """
-    out_headers = defaultdict(list)
+    rsp_headers = defaultdict(list)
 
-    digest = rsrc.metadata.value(nsc['premis'].hasMessageDigest)
+    digest = rsrc.metadata.value(rsrc.uri, nsc['premis'].hasMessageDigest)
+    # Only add ETag and digest if output is not RDF.
     if digest:
-        etag = digest.identifier.split(':')[-1]
-        etag_str = (
-                'W/"{}"'.format(etag)
-                if nsc['ldp'].RDFSource in rsrc.ldp_types
-                else etag)
-        out_headers['ETag'] = etag_str,
+        digest_components = digest.split(':')
+        cksum_hex = digest_components[-1]
+        cksum = bytearray.fromhex(cksum_hex)
+        digest_algo = digest_components[-2]
+        etag_str = cksum_hex
+        rsp_headers['ETag'] = etag_str
+        rsp_headers['Digest'] = '{}={}'.format(
+                digest_algo.upper(), b64encode(cksum).decode('ascii'))
+
 
     last_updated_term = rsrc.metadata.value(nsc['fcrepo'].lastModified)
     if last_updated_term:
-        out_headers['Last-Modified'] = arrow.get(last_updated_term)\
+        rsp_headers['Last-Modified'] = arrow.get(last_updated_term)\
             .format('ddd, D MMM YYYY HH:mm:ss Z')
 
     for t in rsrc.ldp_types:
-        out_headers['Link'].append(
-                '{};rel="type"'.format(t.n3()))
+        rsp_headers['Link'].append('{};rel="type"'.format(t.n3()))
 
     mimetype = rsrc.metadata.value(nsc['ebucore'].hasMimeType)
     if mimetype:
-        out_headers['Content-Type'] = mimetype
+        rsp_headers['Content-Type'] = mimetype
 
-    return out_headers
+    return rsp_headers
 

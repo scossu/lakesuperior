@@ -2,6 +2,7 @@ import logging
 
 from collections import deque
 from importlib import import_module
+from os import path
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 
@@ -64,6 +65,9 @@ class AppGlobals:
         nonrdfly_cls = getattr(nonrdfly_mod, self.camelcase(nonrdfly_mod_name))
         #logger.info('Non-RDF layout: {}'.format(nonrdfly_mod_name))
 
+        ## Initialize metadata store.
+        #from lakesuperior.store.metadata_store import MetadataStore
+
         # Set up messaging.
         self._messenger  = Messenger(app_conf['messaging'])
 
@@ -71,6 +75,8 @@ class AppGlobals:
         self._config = config
         self._rdfly = rdfly_cls(app_conf['store']['ldp_rs'])
         self._nonrdfly = nonrdfly_cls(app_conf['store']['ldp_nr'])
+        #self._md_store = MetadataStore(path.join(
+        #        app_conf['data_dir'], 'metadata'), create=True)
         self._changelog = deque()
 
 
@@ -113,13 +119,23 @@ class AppGlobals:
 
     @property
     def nonrdfly(self):
-        return self._nonrdfly
         """
         Current non-RDF (binary contents) layout.
 
         This is an instance of
         :class:`~lakesuperior.store.ldp_nr.base_non_rdf_layout.BaseNonRdfLayout`.
         """
+        return self._nonrdfly
+
+    #@property
+    #def md_store(self):
+    #    """
+    #    Metadata store (LMDB).
+
+    #    This is an instance of
+    #    :class:`~lakesuperior.store.metadata_store.MetadataStore`.
+    #    """
+    #    return self._md_store
 
     @property
     def messenger(self):

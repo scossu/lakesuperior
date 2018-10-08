@@ -13,7 +13,6 @@ from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
 from lakesuperior.globals import AppGlobals
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
 
 __doc__="""
 Utility to perform core maintenance tasks via console command-line.
@@ -59,10 +58,8 @@ def bootstrap():
         click.echo('Aborting.')
         sys.exit(1)
 
-    click.echo('Initializing graph store at {}'.format(rdfly.store.path))
-    with TxnManager(env.app_globals.rdf_store, write=True) as txn:
-        rdfly.bootstrap()
-        rdfly.store.close()
+    click.echo('Initializing graph store at {}'.format(rdfly.store.env_path))
+    rdfly.bootstrap()
     click.echo('Graph store initialized.')
 
     click.echo('Initializing binary store at {}'.format(nonrdfly.root))
@@ -188,10 +185,10 @@ def cleanup():
 @click_log.simple_verbosity_option(logger)
 def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     """
-    Migrate an LDP repository to LAKEsuperior.
+    Migrate an LDP repository to Lakesuperior.
 
     This utility creates a fully functional LAKEshore repository from an
-    existing repository. The source repo can be LAKEsuperior or
+    existing repository. The source repo can be Lakesuperior or
     another LDP-compatible implementation.
 
     A folder will be created in the location indicated by ``dest``. If the

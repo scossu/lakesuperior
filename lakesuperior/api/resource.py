@@ -16,7 +16,7 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.store.ldp_rs.lmdb_store import TxnManager
+from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph
 
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def transaction(write=False):
             thread_env.timestamp = arrow.utcnow()
             thread_env.timestamp_term = Literal(
                     thread_env.timestamp, datatype=XSD.dateTime)
-            with TxnManager(env.app_globals.rdf_store, write=write) as txn:
+            with env.app_globals.rdf_store.txn_ctx(write):
                 ret = fn(*args, **kwargs)
             if len(env.app_globals.changelog):
                 job = Thread(target=_process_queue)
@@ -188,7 +188,7 @@ def get_version(uid, ver_uid):
 
 
 @transaction(True)
-def create(parent, slug, **kwargs):
+def create(parent, slug=None, **kwargs):
     r"""
     Mint a new UID and create a resource.
 
@@ -269,8 +269,8 @@ def update_delta(uid, remove_trp, add_trp):
         add, as 3-tuples of RDFLib terms.
     """
     rsrc = LdpFactory.from_stored(uid)
-    remove_trp = rsrc.check_mgd_terms(remove_trp)
-    add_trp = rsrc.check_mgd_terms(add_trp)
+    remove_trp = rsrc.check_mgd_terms(SimpleGraph(remove_trp))
+    add_trp = rsrc.check_mgd_terms(SimpleGraph(add_trp))
 
     return rsrc.modify(RES_UPDATED, remove_trp, add_trp)
 
@@ -304,7 +304,7 @@ def delete(uid, soft=True, inbound=True):
     # to break them.
     refint = env.app_globals.rdfly.config['referential_integrity']
     inbound = True if refint else inbound
-    repr_opts = {'incl_inbound' : True} if refint else {}
+    repr_opts = {'incl_inbound' : True} if inbound else {}
 
     rsrc = LdpFactory.from_stored(uid, repr_opts, strict=soft)
     if soft:

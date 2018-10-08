@@ -1,9 +1,9 @@
-LAKEsuperior
+Lakesuperior
 ============
 
 |build status|
 
-LAKEsuperior is an alternative `Fedora
+Lakesuperior is an alternative `Fedora
 Repository <http://fedorarepository.org>`__ implementation.
 
 Fedora is a mature repository software system historically adopted by
@@ -21,7 +21,7 @@ Indices and tables
    :maxdepth: 2
    :caption: Getting Started
 
-    About LAKEsuperior <about>
+    About Lakesuperior <about>
     Installation and Configuration <setup>
     Sample Usage <usage>
     Getting Help <help>
@@ -41,6 +41,7 @@ Indices and tables
    :maxdepth: 2
    :caption: Technical Documents
 
+    Release Notes <release_notes>
     API Documentation <api>
     Architecture <architecture>
     Performance Benchmarks <performance>
