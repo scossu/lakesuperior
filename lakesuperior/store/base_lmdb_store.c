@@ -3,7 +3,9 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
-        "depends": [],
+        "depends": [
+            "/home/scossu/code/lsup/src/ext/include/lmdb.h"
+        ],
         "include_dirs": [
             "/home/scossu/code/lsup/src/ext/include",
             "/home/scossu/code/lsup/src/lakesuperior/cy_include"
@@ -1757,13 +1759,13 @@ static MDB_dbi __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore_g
 static MDB_cursor *__pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__cur_open(struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__cur_open *__pyx_optional_args); /* proto*/
 static void __pyx_f_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__cur_close(CYTHON_UNUSED struct __pyx_obj_12lakesuperior_5store_15base_lmdb_store_BaseLmdbStore *__pyx_v_self, MDB_cursor *__pyx_v_cur); /* proto*/
 
-/* Module declarations from 'lakesuperior.cy_include' */
-
 /* Module declarations from 'libc.stdint' */
 
 /* Module declarations from 'posix.types' */
 
 /* Module declarations from 'lakesuperior.cy_include.cylmdb' */
+
+/* Module declarations from 'lakesuperior.cy_include' */
 
 /* Module declarations from 'libc' */
 
