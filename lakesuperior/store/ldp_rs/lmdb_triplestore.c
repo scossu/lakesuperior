@@ -3,7 +3,9 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
-        "depends": [],
+        "depends": [
+            "/home/scossu/code/lsup/src/ext/include/lmdb.h"
+        ],
         "extra_compile_args": [
             "-fopenmp"
         ],
@@ -2305,8 +2307,6 @@ static CYTHON_INLINE void __pyx_f_12lakesuperior_5store_6ldp_rs_16lmdb_triplesto
 static CYTHON_INLINE void __pyx_f_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_15LmdbTriplestore__to_triple_key(struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *__pyx_v_self, PyObject *__pyx_v_terms, __pyx_t_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_TripleKey *__pyx_v_tkey); /* proto*/
 static void __pyx_f_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_15LmdbTriplestore__append(struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *__pyx_v_self, unsigned char *__pyx_v_value, size_t __pyx_v_vlen, __pyx_t_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_Key *__pyx_v_nkey, struct __pyx_opt_args_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_15LmdbTriplestore__append *__pyx_optional_args); /* proto*/
 static void __pyx_f_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_15LmdbTriplestore__next_key(CYTHON_UNUSED struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *__pyx_v_self, unsigned char *__pyx_v_key, __pyx_t_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_Key *__pyx_v_nkey); /* proto*/
-
-/* Module declarations from 'lakesuperior.cy_include' */
 
 /* Module declarations from 'libc.stdint' */
 

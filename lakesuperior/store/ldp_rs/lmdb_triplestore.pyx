@@ -15,7 +15,7 @@ from cython.parallel import prange
 from libc.stdlib cimport free
 from libc.string cimport memcpy
 
-from lakesuperior.cy_include cimport cylmdb as lmdb
+cimport lakesuperior.cy_include.cylmdb as lmdb
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
 from lakesuperior.store.ldp_rs.term cimport serialize, deserialize

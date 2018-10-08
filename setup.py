@@ -110,7 +110,6 @@ setup(
 
     description='A Linked Data Platform repository sever.',
     long_description=long_description,
-    long_description_content_type='text/x-rst; charset=UTF-8',
 
     url='https://lakesuperior.readthedocs.io',
 
