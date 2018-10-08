@@ -163,6 +163,10 @@ def cleanup():
 @click.argument('src')
 @click.argument('dest')
 @click.option(
+    '--auth', '-a',
+    help='Colon-separated credentials for HTTP Basic authentication on the '
+    'source repository. E.g. `user:password`.')
+@click.option(
     '--start', '-s', show_default=True,
     help='Starting point for looking for resources in the repository.\n'
     'The default `/` value starts at the root, i.e. migrates the whole '
@@ -183,7 +187,7 @@ def cleanup():
     'quitting. Other exceptions caused by the application will terminate the '
     'process as usual.')
 @click_log.simple_verbosity_option(logger)
-def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
+def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
     """
     Migrate an LDP repository to Lakesuperior.
 
@@ -199,8 +203,9 @@ def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     """
     logger.info('Migrating {} into a new repository on {}.'.format(
             src, dest))
+    src_auth = tuple(auth.split(':')) if auth else None
     entries = admin_api.migrate(
-            src, dest, start_pts=start, list_file=list_file,
+        src, dest, src_auth=src_auth, start_pts=start, list_file=list_file,
             zero_binaries=zero_binaries, skip_errors=skip_errors)
     logger.info('Migrated {} resources.'.format(entries))
     logger.info("""Migration complete. To start the new repository, from the
