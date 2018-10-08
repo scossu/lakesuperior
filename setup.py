@@ -37,7 +37,8 @@ with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
 # Extensions directory.
-ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
+#ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
+ext_dir = 'ext'
 
 include_dirs = [
     path.join(ext_dir, 'include'),
@@ -54,7 +55,7 @@ extensions = [
         [
             path.join(ext_dir, 'lib', 'mdb.c'),
             path.join(ext_dir, 'lib', 'midl.c'),
-            path.join(lakesuperior.basedir, 'store', f'base_lmdb_store.{ext}'),
+            path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
     ),
@@ -62,7 +63,7 @@ extensions = [
         'lakesuperior.store.ldp_rs.term',
         [
             path.join(ext_dir, 'lib', 'tpl.c'),
-            path.join(lakesuperior.basedir, 'store', 'ldp_rs', f'term.{ext}'),
+            path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
         ],
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
@@ -75,8 +76,7 @@ extensions = [
             path.join(ext_dir, 'lib', 'mdb.c'),
             path.join(ext_dir, 'lib', 'midl.c'),
             path.join(
-                lakesuperior.basedir, 'store', 'ldp_rs',
-                f'lmdb_triplestore.{ext}'),
+                'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
         ],
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
