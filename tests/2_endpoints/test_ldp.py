@@ -176,6 +176,46 @@ class TestLdp:
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
 
+    def test_get_ldp_nr(self, rnd_img):
+        """
+        PUT a resource with binary payload and test various retieval methods.
+        """
+        uid = '/ldpnr03'
+        path = '/ldp' + uid
+        content = b'This is some exciting content.'
+        resp = self.client.put(path, data=content,
+                headers={
+                    'Content-Type': 'text/plain',
+                    'Content-Disposition' : 'attachment; filename=exciting.txt'})
+        assert resp.status_code == 201
+        uri = g.webroot + uid
+
+        # Content retrieval methods.
+        resp_bin1 = self.client.get(path)
+        assert resp_bin1.status_code == 200
+        assert resp_bin1.data == content
+
+        resp_bin2 = self.client.get(path, headers={'accept' : 'text/plain'})
+        assert resp_bin2.status_code == 200
+        assert resp_bin2.data == content
+
+        resp_bin3 = self.client.get(path + '/fcr:content')
+        assert resp_bin3.status_code == 200
+        assert resp_bin3.data == content
+
+        # Metadata retrieval methods.
+        resp_md1 = self.client.get(path, headers={'accept' : 'text/turtle'})
+        assert resp_md1.status_code == 200
+        gr1 = Graph().parse(data=resp_md1.data, format='text/turtle')
+        assert gr1[ URIRef(uri) : nsc['rdf'].type : nsc['ldp'].Resource]
+
+        resp_md2 = self.client.get(path + '/fcr:metadata')
+        assert resp_md2.status_code == 200
+        gr2 = Graph().parse(data=resp_md2.data, format='text/turtle')
+        assert isomorphic(gr1, gr2)
+
+
+
     def test_put_mismatched_ldp_rs(self, rnd_img):
         """
         Verify MIME type / LDP mismatch.
@@ -268,17 +308,18 @@ class TestLdp:
         """
         POST a resource with binary payload and verify checksums.
         """
+        import pdb; pdb.set_trace()
         rnd_img['content'].seek(0)
         resp = self.client.post('/ldp/', data=rnd_img['content'],
                 headers={
-                    'slug': 'ldpnr03',
+                    'slug': 'ldpnr04',
                     'Content-Type': 'image/png',
                     'Content-Disposition' : 'attachment; filename={}'.format(
                     rnd_img['filename'])})
         assert resp.status_code == 201
 
         resp = self.client.get(
-                '/ldp/ldpnr03', headers={'accept' : 'image/png'})
+                '/ldp/ldpnr04', headers={'accept' : 'image/png'})
         assert resp.status_code == 200
         assert sha1(resp.data).hexdigest() == rnd_img['hash']
 
