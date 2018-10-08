@@ -199,6 +199,8 @@ setup(
         ],
     },
 
+    scripts=['bin/fcrepo'],
+
     project_urls={
         'Source Code': 'https://github.com/scossu/lakesuperior/',
         'Documentation': 'https://lakesuperior.readthedocs.io',
