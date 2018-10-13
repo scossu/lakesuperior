@@ -250,7 +250,7 @@ def post_resource(parent_uid):
         rdf_data = rdf_fmt = None
 
     try:
-        uid = rsrc_api.create(
+        rsrc = rsrc_api.create(
             parent_uid, slug, stream=stream, mimetype=mimetype,
             rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
             disposition=disposition)
@@ -263,8 +263,8 @@ def post_resource(parent_uid):
     except ServerManagedTermError as e:
         return str(e), 412
 
-    uri = g.tbox.uid_to_uri(uid)
     hdr = {'Location' : uri}
+    uri = g.tbox.uid_to_uri(rsrc.uid)
 
     if mimetype and rdf_fmt is None:
         hdr['Link'] = '<{0}/fcr:metadata>; rel="describedby"; anchor="{0}"'\
@@ -302,7 +302,7 @@ def put_resource(uid):
         rdf_data = rdf_fmt = None
 
     try:
-        evt = rsrc_api.create_or_replace(
+        evt, rsrc = rsrc_api.create_or_replace(
             uid, stream=stream, mimetype=mimetype,
             rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
             disposition=disposition)

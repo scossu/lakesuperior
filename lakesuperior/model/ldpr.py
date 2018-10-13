@@ -130,6 +130,19 @@ class Ldpr(metaclass=ABCMeta):
     }
     """RDF types that don't get versioned."""
 
+    _cached_attrs = (
+        '_imr',
+        '_metadata',
+        '_version_info',
+        '_is_stored',
+        '_types',
+        '_ldp_types',
+    )
+    """
+    Attributes cached from the store.
+
+    These are used by setters and can be cleared with :py:meth:`_clear_cache`.
+    """
 
     ## MAGIC METHODS ##
 
@@ -142,7 +155,7 @@ class Ldpr(metaclass=ABCMeta):
         in which case it will be converted.
         :param dict repr_opts: Options used to retrieve the IMR. See
         `parse_rfc7240` for format details.
-        :param str provd_rdf: RDF data provided by the client in
+        :param str provided_imr: RDF data provided by the client in
         operations such as `PUT` or `POST`, serialized as a string. This sets
         the `provided_imr` property.
         """
@@ -388,6 +401,9 @@ class Ldpr(metaclass=ABCMeta):
         identical, are wrappers for this method.
 
         :param boolean create_only: Whether this is a create-only operation.
+        :rtype: str
+
+        :return: Event type: whether the resource was created or updated.
         """
         create = create_only or not self.is_stored
 
@@ -408,7 +424,7 @@ class Ldpr(metaclass=ABCMeta):
 
         self.modify(ev_type, remove_trp, add_trp)
 
-        self.imr = add_trp
+        #self.imr = add_trp
 
         return ev_type
 
@@ -699,19 +715,27 @@ class Ldpr(metaclass=ABCMeta):
         """
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
-        # Reset IMR buffer.
-        if hasattr(self, '_imr'):
-            delattr(self, '_imr')
-            try:
-                self.imr
-            except (ResourceNotExistsError, TombstoneError):
-                pass
+        self._clear_cache()
 
         if (
                 ev_type is not None and
                 env.app_globals.config['application'].get('messaging')):
-            logger.debug('Enqueuing message for {}'.format(self.uid))
+            logger.debug(f'Enqueuing message for {self.uid}')
             self._enqueue_msg(ev_type, remove_trp, add_trp)
+
+
+    def _clear_cache(self):
+        """
+        Clear stale model attributes.
+
+        This method removes class members populated with data pulled from the
+        store that may have become stale after a resource update.
+        """
+        for attr in self._cached_attrs:
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
 
 
     def _enqueue_msg(self, ev_type, remove_trp=None, add_trp=None):
@@ -727,7 +751,7 @@ class Ldpr(metaclass=ABCMeta):
             rsrc_type = tuple(str(t) for t in self.types)
             actor = self.metadata.value(nsc['fcrepo'].createdBy)
         except (ResourceNotExistsError, TombstoneError):
-            rsrc_type = ()
+            rsrc_type = set()
             actor = None
             for t in add_trp:
                 if t[1] == RDF.type:

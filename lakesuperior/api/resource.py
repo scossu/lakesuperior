@@ -203,8 +203,10 @@ def create(parent, slug=None, **kwargs):
       :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
       method.
 
-    :rtype: str
-    :return: UID of the new resource.
+    :rtype: tuple(str, lakesuperior.model.ldpr.Ldpr)
+    :return: A tuple of:
+        1. Event type (str): whether the resource was created or updated.
+        2. Resource (lakesuperior.model.ldpr.Ldpr): The new or updated resource.
     """
     uid = LdpFactory.mint_uid(parent, slug)
     logger.debug('Minted UID for new resource: {}'.format(uid))
@@ -212,7 +214,7 @@ def create(parent, slug=None, **kwargs):
 
     rsrc.create_or_replace(create_only=True)
 
-    return uid
+    return rsrc
 
 
 @transaction(True)
@@ -225,10 +227,13 @@ def create_or_replace(uid, **kwargs):
         :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
         method.
 
-    :rtype: str
-    :return: Event type: whether the resource was created or updated.
+    :rtype: tuple(str, lakesuperior.model.ldpr.Ldpr)
+    :return: A tuple of:
+        1. Event type (str): whether the resource was created or updated.
+        2. Resource (lakesuperior.model.ldpr.Ldpr): The new or updated resource.
     """
-    return LdpFactory.from_provided(uid, **kwargs).create_or_replace()
+    rsrc = LdpFactory.from_provided(uid, **kwargs)
+    return rsrc.create_or_replace(), rsrc
 
 
 @transaction(True)

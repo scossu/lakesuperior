@@ -105,7 +105,7 @@ class TestResourceCRUD:
         gr = Graph().parse(
             data='<> a <http://ex.org/type#A> .', format='turtle',
             publicID=uri)
-        evt = rsrc_api.create_or_replace(uid, graph=gr)
+        evt, _ = rsrc_api.create_or_replace(uid, graph=gr)
 
         rsrc = rsrc_api.get(uid)
         assert rsrc.imr[
@@ -133,7 +133,7 @@ class TestResourceCRUD:
         gr1 = Graph().parse(
             data='<> a <http://ex.org/type#A> .', format='turtle',
             publicID=uri)
-        evt = rsrc_api.create_or_replace(uid, graph=gr1)
+        evt, _ = rsrc_api.create_or_replace(uid, graph=gr1)
         assert evt == RES_CREATED
 
         rsrc = rsrc_api.get(uid)
@@ -146,7 +146,7 @@ class TestResourceCRUD:
             data='<> a <http://ex.org/type#B> .', format='turtle',
             publicID=uri)
         #pdb.set_trace()
-        evt = rsrc_api.create_or_replace(uid, graph=gr2)
+        evt, _ = rsrc_api.create_or_replace(uid, graph=gr2)
         assert evt == RES_UPDATED
 
         rsrc = rsrc_api.get(uid)
@@ -292,10 +292,9 @@ class TestResourceCRUD:
         Create an LDP Direct Container via POST.
         """
         rsrc_api.create_or_replace('/member')
-        dc_uid = rsrc_api.create(
+        dc_rsrc = rsrc_api.create(
                 '/', 'test_dc_post', rdf_data=dc_rdf, rdf_fmt='turtle')
 
-        dc_rsrc = rsrc_api.get(dc_uid)
         member_rsrc = rsrc_api.get('/member')
 
         assert nsc['ldp'].Container in dc_rsrc.ldp_types
@@ -307,10 +306,9 @@ class TestResourceCRUD:
         Create an LDP Direct Container via PUT.
         """
         dc_uid = '/test_dc_put01'
-        rsrc_api.create_or_replace(
+        _, dc_rsrc = rsrc_api.create_or_replace(
                 dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
 
-        dc_rsrc = rsrc_api.get(dc_uid)
         member_rsrc = rsrc_api.get('/member')
 
         assert nsc['ldp'].Container in dc_rsrc.ldp_types
@@ -322,11 +320,10 @@ class TestResourceCRUD:
         Add members to a direct container and verify special properties.
         """
         dc_uid = '/test_dc_put02'
-        rsrc_api.create_or_replace(
+        _, dc_rsrc = rsrc_api.create_or_replace(
                 dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
 
-        dc_rsrc = rsrc_api.get(dc_uid)
-        child_uid = rsrc_api.create(dc_uid, None)
+        child_uid = rsrc_api.create(dc_uid, None).uid
         member_rsrc = rsrc_api.get('/member')
 
         assert member_rsrc.imr[

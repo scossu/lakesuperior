@@ -316,11 +316,12 @@ cdef class SimpleGraph:
             unsigned char spok[TRP_KLEN]
 
         self.data = set()
-        keyset = store.triple_keys(*lookup)
+        with store.txn_ctx():
+            keyset = store.triple_keys(*lookup)
+            for i in range(keyset.ct):
+                spok = keyset.data + i * TRP_KLEN
+                self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
 
-        for i in range(keyset.ct):
-            spok = keyset.data + i * TRP_KLEN
-            self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
 
     # Basic set operations.
 
