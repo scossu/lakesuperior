@@ -1,9 +1,9 @@
 import pdb
 import pytest
-import uuid
 
 from base64 import b64encode
 from hashlib import sha1
+from uuid import uuid4
 
 from flask import g
 from rdflib import Graph
@@ -17,7 +17,7 @@ from lakesuperior.model.ldpr import Ldpr
 
 @pytest.fixture(scope='module')
 def random_uuid():
-    return str(uuid.uuid4())
+    return str(uuid4())
 
 
 @pytest.mark.usefixtures('client_class')
@@ -222,7 +222,7 @@ class TestLdp:
         PUT a LDP-RS, then PUT a LDP-NR on the same location and verify it
         fails.
         """
-        path = '/ldp/' + str(uuid.uuid4())
+        path = '/ldp/' + str(uuid4())
 
         rnd_img['content'].seek(0)
         ldp_nr_resp = self.client.put(path, data=rnd_img['content'],
@@ -245,7 +245,7 @@ class TestLdp:
         PUT a LDP-NR, then PUT a LDP-RS on the same location and verify it
         fails.
         """
-        path = '/ldp/' + str(uuid.uuid4())
+        path = '/ldp/' + str(uuid4())
 
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
             ldp_rs_resp = self.client.put(path, data=f,
@@ -343,7 +343,7 @@ class TestLdp:
         """
         Verify that a POST to a non-existing parent results in a 404.
         """
-        assert self.client.post('/ldp/{}'.format(uuid.uuid4()))\
+        assert self.client.post('/ldp/{}'.format(uuid4()))\
                 .status_code == 404
 
 
@@ -677,6 +677,329 @@ class TestMimeType:
             assert (
                     URIRef(g.webroot + '/test_mimetype'),
                     nsc['dcterms'].title, Literal('Test MIME type.')) in rsp_gr
+
+
+
+@pytest.mark.usefixtures('client_class')
+@pytest.mark.usefixtures('db')
+class TestDigestHeaders:
+    """
+    Test Digest and ETag headers.
+    """
+
+    def test_etag_digest(self):
+        """
+        Verify ETag and Digest headers on creation.
+
+        The headers must correspond to the SHA1 checksum of the binary content.
+        """
+        uid = '/test_etag1'
+        path = '/ldp' + uid
+        content = uuid4().bytes
+        content_cksum = sha1(content)
+
+        put_rsp = self.client.put(
+            path, data=content, headers={'content-type': 'text/plain'})
+
+        assert content_cksum.hexdigest() in \
+            put_rsp.headers.get('etag').split(',')
+        assert put_rsp.headers.get('digest') == \
+            'SHA1=' + b64encode(content_cksum.digest()).decode()
+
+        get_rsp = self.client.get(path)
+
+        assert content_cksum.hexdigest() in \
+            put_rsp.headers.get('etag').split(',')
+        assert get_rsp.headers.get('digest') == \
+            'SHA1=' + b64encode(content_cksum.digest()).decode()
+
+
+
+
+    def test_etag_ident(self):
+        """
+        Verify that two resources with the same content yield identical ETags.
+        """
+        path1 = f'/ldp/{uuid4()}'
+        path2 = f'/ldp/{uuid4()}'
+
+        content = uuid4().bytes
+        content_cksum = sha1(content)
+
+        self.client.put(
+            path1, data=content, headers={'content-type': 'text/plain'})
+        self.client.put(
+            path2, data=content, headers={'content-type': 'text/plain'})
+
+        get_rsp1 = self.client.get(path1)
+        get_rsp2 = self.client.get(path2)
+
+        assert get_rsp1.headers.get('etag') == get_rsp2.headers.get('etag')
+        assert get_rsp1.headers.get('digest') == get_rsp2.headers.get('digest')
+
+
+    def test_etag_diff(self):
+        """
+        Verify that two resources with different content yield different ETags.
+        """
+        path1 = f'/ldp/{uuid4()}'
+        path2 = f'/ldp/{uuid4()}'
+
+        content1 = b'some interesting content.'
+        content_cksum1 = sha1(content1)
+        content2 = b'Some great content.'
+        content_cksum2 = sha1(content2)
+
+        self.client.put(
+            path1, data=content1, headers={'content-type': 'text/plain'})
+        self.client.put(
+            path2, data=content2, headers={'content-type': 'text/plain'})
+
+        get_rsp1 = self.client.get(path1)
+        get_rsp2 = self.client.get(path2)
+
+        assert get_rsp1.headers.get('etag') != get_rsp2.headers.get('etag')
+        assert get_rsp1.headers.get('digest') != get_rsp2.headers.get('digest')
+
+
+    def test_etag_update(self):
+        """
+        Verify that ETag and digest change when the resource is updated.
+
+        The headers should NOT change if the same binary content is
+        re-submitted.
+        """
+        path = f'/ldp/{uuid4()}'
+        content1 = uuid4().bytes
+        content_cksum1 = sha1(content1)
+        content2 = uuid4().bytes
+        content_cksum2 = sha1(content2)
+
+        self.client.put(
+            path, data=content1, headers={'content-type': 'text/plain'})
+        get_rsp = self.client.get(path)
+
+        assert content_cksum1.hexdigest() == \
+            get_rsp.headers.get('etag').strip('"')
+        assert get_rsp.headers.get('digest') == \
+            'SHA1=' + b64encode(content_cksum1.digest()).decode()
+
+        put_rsp = self.client.put(
+            path, data=content2, headers={'content-type': 'text/plain'})
+
+        assert content_cksum2.hexdigest() == \
+            put_rsp.headers.get('etag').strip('"')
+        assert put_rsp.headers.get('digest') == \
+            'SHA1=' + b64encode(content_cksum2.digest()).decode()
+
+        get_rsp = self.client.get(path)
+
+        assert content_cksum2.hexdigest() == \
+            get_rsp.headers.get('etag').strip('"')
+        assert get_rsp.headers.get('digest') == \
+            'SHA1=' + b64encode(content_cksum2.digest()).decode()
+
+
+    def test_etag_rdf(self):
+        """
+        Verify that LDP-RS resources don't get an ETag.
+
+        TODO This is by design for now; when a reliable hashing method
+        for a graph is devised, this test should change.
+        """
+        path = '/ldp/test_etag_rdf1'
+
+        put_rsp = self.client.put(path)
+        assert not put_rsp.headers.get('etag')
+        assert not put_rsp.headers.get('digest')
+
+        get_rsp = self.client.get(path)
+        assert not get_rsp.headers.get('etag')
+        assert not get_rsp.headers.get('digest')
+
+
+    def test_if_match_get(self):
+        """
+        Test the If-Match header on GET requests.
+
+        Test providing single and multiple ETags.
+        """
+        path = '/ldp/test_if_match1'
+        content = uuid4().bytes
+        content_cksum = sha1(content).hexdigest()
+        bogus_cksum = uuid4().hex
+
+        self.client.put(
+            path, data=content, headers={'content-type': 'text/plain'})
+
+        get_rsp1 = self.client.get(path, headers={
+            'if-match': f'"{content_cksum}"'})
+        assert get_rsp1.status_code == 200
+
+        get_rsp2 = self.client.get(path, headers={
+            'if-match': f'"{bogus_cksum}"'})
+        assert get_rsp2.status_code == 412
+
+        get_rsp3 = self.client.get(path, headers={
+            'if-match': f'"{content_cksum}", "{bogus_cksum}"'})
+        assert get_rsp3.status_code == 200
+
+
+    def test_if_match_put(self):
+        """
+        Test the If-Match header on PUT requests.
+
+        Test providing single and multiple ETags.
+        """
+        path = '/ldp/test_if_match1'
+        content = uuid4().bytes
+        content_cksum = sha1(content).hexdigest()
+        bogus_cksum = uuid4().hex
+
+        get_rsp = self.client.get(path)
+        old_cksum = get_rsp.headers.get('etag')
+
+        put_rsp1 = self.client.put(path, data=content, headers={
+            'if-match': f'"{content_cksum}"'})
+        assert put_rsp1.status_code == 412
+
+        put_rsp2 = self.client.put(path, data=content, headers={
+            'if-match': f'"{content_cksum}", "{bogus_cksum}"'})
+        assert put_rsp2.status_code == 412
+
+        put_rsp3 = self.client.put(path, data=content, headers={
+            'if-match': f'"{old_cksum}", "{bogus_cksum}"'})
+        assert put_rsp3.status_code == 204
+
+        # Now contents have changed.
+        put_rsp4 = self.client.put(path, data=content, headers={
+            'if-match': f'"{old_cksum}"'})
+        assert put_rsp4.status_code == 412
+
+        put_rsp5 = self.client.put(path, data=content, headers={
+            'if-match': f'"{content_cksum}"'})
+        assert put_rsp5.status_code == 204
+
+        # Exactly the same content was uploaded, so the ETag should not have
+        # changed.
+        put_rsp6 = self.client.put(path, data=content, headers={
+            'if-match': f'"{content_cksum}"'})
+        assert put_rsp6.status_code == 204
+
+        # Catch-all: Proceed if resource exists at the given location.
+        put_rsp7 = self.client.put(path, data=content, headers={
+            'if-match': '*'})
+        assert put_rsp7.status_code == 204
+
+        # This is wrong syntax. It will not update because the literal asterisk
+        # won't match.
+        put_rsp8 = self.client.put(path, data=content, headers={
+            'if-match': '"*"'})
+        assert put_rsp8.status_code == 412
+
+        self.client.delete(path, headers={'Prefer': 'no-tombstone'})
+
+        put_rsp9 = self.client.put(path, data=content, headers={
+            'if-match': '*'})
+        assert put_rsp9.status_code == 412
+
+
+    def test_if_none_match_get(self):
+        """
+        Test the If-None-Match header on GET requests.
+
+        Test providing single and multiple ETags.
+        """
+        path = '/ldp/test_if_none_match1'
+        content = uuid4().bytes
+        content_cksum = sha1(content).hexdigest()
+        bogus_cksum = uuid4().hex
+
+        self.client.put(
+            path, data=content, headers={'content-type': 'text/plain'})
+
+        get_rsp1 = self.client.get(path, headers={
+            'if-none-match': f'"{content_cksum}"'})
+        assert get_rsp1.status_code == 304
+
+        get_rsp2 = self.client.get(path, headers={
+            'if-none-match': f'"{bogus_cksum}"'})
+        assert get_rsp2.status_code == 200
+
+        get_rsp3 = self.client.get(path, headers={
+            'if-none-match': f'"{content_cksum}", "{bogus_cksum}"'})
+        assert get_rsp3.status_code == 304
+
+
+    def test_if_none_match_put(self):
+        """
+        Test the If-None-Match header on PUT requests.
+
+        Test providing single and multiple ETags.
+
+        Uses a previously created resource.
+        """
+        path = '/ldp/test_if_none_match1'
+        content = uuid4().bytes
+        content_cksum = sha1(content).hexdigest()
+        bogus_cksum = uuid4().hex
+
+        get_rsp = self.client.get(path)
+        old_cksum = get_rsp.headers.get('etag')
+
+        put_rsp1 = self.client.put(path, data=content, headers={
+            'if-none-match': f'"{old_cksum}"'})
+        assert put_rsp1.status_code == 412
+
+        put_rsp2 = self.client.put(path, data=content, headers={
+            'if-none-match': f'"{old_cksum}", "{bogus_cksum}"'})
+        assert put_rsp2.status_code == 412
+
+        put_rsp3 = self.client.put(path, data=content, headers={
+            'if-none-match': f'"{bogus_cksum}"'})
+        assert put_rsp3.status_code == 204
+
+        # Now contents have changed.
+        put_rsp4 = self.client.put(path, data=content, headers={
+            'if-none-match': f'"{content_cksum}"'})
+        assert put_rsp4.status_code == 412
+
+        put_rsp5 = self.client.put(path, data=content, headers={
+            'if-none-match': f'"{old_cksum}"'})
+        assert put_rsp5.status_code == 204
+
+        # Catch-all: fail if any resource exists at the given location.
+        put_rsp6 = self.client.put(path, data=content, headers={
+            'if-none-match': '*'})
+        assert put_rsp6.status_code == 412
+
+        self.client.delete(path, headers={'Prefer': 'no-tombstone'})
+
+        put_rsp7 = self.client.put(path, data=content, headers={
+            'if-none-match': '*'})
+        assert put_rsp7.status_code == 201
+
+        # This is wrong syntax. It will update because the literal asterisk
+        # won't match.
+        put_rsp8 = self.client.put(path, data=content, headers={
+            'if-none-match': '"*"'})
+        assert put_rsp8.status_code == 204
+
+
+    @pytest.mark.skip(reason='Not yet implemented.')
+    def test_if_modified_since(self):
+        """
+        Test various uses of the If-Modified-Since header.
+        """
+        pass
+
+
+    @pytest.mark.skip(reason='Not yet implemented.')
+    def test_if_unmodified_since(self):
+        """
+        Test various uses of the If-Unmodified-Since header.
+        """
+        pass
 
 
 

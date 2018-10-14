@@ -269,7 +269,7 @@ cdef class BaseLmdbStore:
                     _check(lmdb.mdb_dbi_open(
                             txn, dblabel.encode(), flags, self.dbis + i))
                     dbi = self.dbis[i]
-                    logger.info(f'Created DB {dblabel}: {dbi}')
+                    logger.debug(f'Created DB {dblabel}: {dbi}')
                     # Open and close cursor to initialize the memory slot.
                     _check(lmdb.mdb_cursor_open(
                         txn, dbi, self.curs + dbi))
