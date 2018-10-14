@@ -138,8 +138,7 @@ def get_resource(uid, out_fmt=None):
         ``\*/fcr:metadata`` and ``\*/fcr:content`` endpoints. The default is
         False.
     """
-    logger.info('UID: {}'.format(uid))
-    out_headers = std_headers
+    out_headers = std_headers.copy()
     repr_options = defaultdict(dict)
     if 'prefer' in request.headers:
         prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
@@ -233,7 +232,7 @@ def post_resource(parent_uid):
 
     Add a new resource in a new URI.
     """
-    rsp_headers = std_headers
+    rsp_headers = std_headers.copy()
     slug = request.headers.get('Slug')
     logger.debug('Slug: {}'.format(slug))
 
@@ -320,8 +319,7 @@ def put_resource(uid):
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = uri
         if mimetype and not rdf_data:
-            rsp_headers['Link'] = (
-                    '<{0}/fcr:metadata>; rel="describedby"'.format(uri))
+            rsp_headers['Link'] = f'<{uri}/fcr:metadata>; rel="describedby"'
     else:
         rsp_code = 204
         rsp_body = ''
@@ -379,7 +377,7 @@ def delete_resource(uid):
     must be deleted as well, or the ``Prefer:no-tombstone`` header can be used.
     The latter will forget (completely delete) the resource immediately.
     """
-    headers = std_headers
+    headers = std_headers.copy()
 
     if 'prefer' in request.headers:
         prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
