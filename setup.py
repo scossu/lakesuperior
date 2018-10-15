@@ -16,7 +16,7 @@ from os import path
 import lakesuperior
 
 # Use this version to build C files from .pyx sources.
-CYTHON_VERSION='0.28.4'
+CYTHON_VERSION='0.29'
 
 try:
     import Cython
