@@ -15,14 +15,17 @@ from os import path
 
 import lakesuperior
 
+# Use this version to build C files from .pyx sources.
+CYTHON_VERSION='0.28.4'
+
 try:
+    import Cython
     from Cython.Build import cythonize
 except ImportError:
     USE_CYTHON = False
-    print('Not using Cython to compile extensions.')
 else:
-    USE_CYTHON = True
-    print('Using Cython to compile extensions.')
+    if Cython.__version__ == CYTHON_VERSION:
+        USE_CYTHON = True
 
 
 # ``pytest_runner`` is referenced in ``setup_requires``.
@@ -44,9 +47,11 @@ include_dirs = [
     path.join(ext_dir, 'include'),
 ]
 if USE_CYTHON:
+    print(f'Using Cython {CYTHON_VERSION} to generate C extensions.')
     include_dirs.append(path.join(lakesuperior.basedir, 'cy_include'))
     ext = 'pyx'
 else:
+    print(f'Cython {CYTHON_VERSION} not found. Using provided C extensions.')
     ext = 'c'
 
 extensions = [

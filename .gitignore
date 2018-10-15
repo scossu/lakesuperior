@@ -106,8 +106,10 @@ venv.bak/
 # Pytest
 .pytest_cache/
 
-# Default LAKEsuperior data directories
+# Default Lakesuperior data directories
 /data
-#/lakesuperior/store/base_lmdb_store.c
-#/lakesuperior/store/ldp_rs/lmdb_triplestore.c
+
+# Cython business.
+/lakesuperior/store/*.c
+/lakesuperior/store/ldp_rs/*.c
 !ext/lib
