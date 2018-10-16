@@ -497,7 +497,7 @@ def patch_version(uid, ver_uid):
     :param str ver_uid: Version UID.
     """
     try:
-        rsrc_api.revert_to_version(uid, rsrc_uid)
+        rsrc_api.revert_to_version(uid, ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:

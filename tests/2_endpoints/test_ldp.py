@@ -1372,9 +1372,6 @@ class TestVersion:
         assert v1_uri != dup_uri
 
 
-    @pytest.mark.skip(
-            reason='TODO Reverting from version and resurrecting is not fully '
-            'functional.')
     def test_revert_version(self):
         """
         Take a version snapshot, update a resource, and then revert to the
