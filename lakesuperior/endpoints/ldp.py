@@ -782,20 +782,20 @@ def _condition_hdr_match(uid, headers, safe=True):
             }
 
         lastmod_str = rsrc_meta.value(nsc['fcrepo'].lastModified)
-        lastmod_date = arrow.get(lastmod_str)
+        lastmod_ts = arrow.get(lastmod_str)
 
-        mod_since_date = parse_date(headers.get('if-modified-since'))
         # If date is not in a RFC 5322 format
-        # (https://tools.ietf.org/html/rfc5322#section-3.3) it evaluates to
-        # None.
+        # (https://tools.ietf.org/html/rfc5322#section-3.3) parse_date
+        # evaluates to None.
+        mod_since_date = parse_date(headers.get('if-modified-since'))
         if mod_since_date:
             cond_hdr = 'if-modified-since'
-            ret[cond_hdr] = lastmod_ts > mod_since_date
+            ret[cond_hdr] = lastmod_ts > arrow.get(mod_since_date)
 
         unmod_since_date = parse_date(headers.get('if-unmodified-since'))
         if unmod_since_date:
             cond_hdr = 'if-unmodified-since'
-            ret[cond_hdr] = lastmod_ts < unmod_since_date
+            ret[cond_hdr] = lastmod_ts < arrow.get(unmod_since_date)
 
     return ret
 

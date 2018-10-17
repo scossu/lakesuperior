@@ -2,8 +2,12 @@ import pdb
 import pytest
 
 from base64 import b64encode
+from datetime import timedelta
 from hashlib import sha1
 from uuid import uuid4
+from werkzeug.http import http_date
+
+import arrow
 
 from flask import g
 from rdflib import Graph
@@ -681,7 +685,6 @@ class TestMimeType:
 
 
 @pytest.mark.usefixtures('client_class')
-@pytest.mark.usefixtures('db')
 class TestDigestHeaders:
     """
     Test Digest and ETag headers.
@@ -712,8 +715,6 @@ class TestDigestHeaders:
             put_rsp.headers.get('etag').split(',')
         assert get_rsp.headers.get('digest') == \
             'SHA1=' + b64encode(content_cksum.digest()).decode()
-
-
 
 
     def test_etag_ident(self):
@@ -818,6 +819,13 @@ class TestDigestHeaders:
         assert not get_rsp.headers.get('digest')
 
 
+
+@pytest.mark.usefixtures('client_class')
+class TestETagCondHeaders:
+    """
+    Test Digest and ETag headers.
+    """
+
     def test_if_match_get(self):
         """
         Test the If-Match header on GET requests.
@@ -832,17 +840,17 @@ class TestDigestHeaders:
         self.client.put(
             path, data=content, headers={'content-type': 'text/plain'})
 
-        get_rsp1 = self.client.get(path, headers={
+        get_rsp = self.client.get(path, headers={
             'if-match': f'"{content_cksum}"'})
-        assert get_rsp1.status_code == 200
+        assert get_rsp.status_code == 200
 
-        get_rsp2 = self.client.get(path, headers={
+        get_rsp = self.client.get(path, headers={
             'if-match': f'"{bogus_cksum}"'})
-        assert get_rsp2.status_code == 412
+        assert get_rsp.status_code == 412
 
-        get_rsp3 = self.client.get(path, headers={
+        get_rsp = self.client.get(path, headers={
             'if-match': f'"{content_cksum}", "{bogus_cksum}"'})
-        assert get_rsp3.status_code == 200
+        assert get_rsp.status_code == 200
 
 
     def test_if_match_put(self):
@@ -859,49 +867,57 @@ class TestDigestHeaders:
         get_rsp = self.client.get(path)
         old_cksum = get_rsp.headers.get('etag')
 
-        put_rsp1 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{content_cksum}"'})
-        assert put_rsp1.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp2 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{content_cksum}", "{bogus_cksum}"'})
-        assert put_rsp2.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp3 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{old_cksum}", "{bogus_cksum}"'})
-        assert put_rsp3.status_code == 204
+        assert put_rsp.status_code == 204
 
         # Now contents have changed.
-        put_rsp4 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{old_cksum}"'})
-        assert put_rsp4.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp5 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{content_cksum}"'})
-        assert put_rsp5.status_code == 204
+        assert put_rsp.status_code == 204
 
         # Exactly the same content was uploaded, so the ETag should not have
         # changed.
-        put_rsp6 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': f'"{content_cksum}"'})
-        assert put_rsp6.status_code == 204
+        assert put_rsp.status_code == 204
 
         # Catch-all: Proceed if resource exists at the given location.
-        put_rsp7 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': '*'})
-        assert put_rsp7.status_code == 204
+        assert put_rsp.status_code == 204
 
         # This is wrong syntax. It will not update because the literal asterisk
         # won't match.
-        put_rsp8 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': '"*"'})
-        assert put_rsp8.status_code == 412
+        assert put_rsp.status_code == 412
 
-        self.client.delete(path, headers={'Prefer': 'no-tombstone'})
+        # Test delete.
+        del_rsp = self.client.delete(path, headers={
+            'if-match': f'"{old_cksum}"', 'Prefer': 'no-tombstone'})
+        assert del_rsp.status_code == 412
 
-        put_rsp9 = self.client.put(path, data=content, headers={
+        del_rsp = self.client.delete(path, headers={
+            'if-match': f'"{content_cksum}"', 'Prefer': 'no-tombstone'})
+        assert del_rsp.status_code == 204
+
+
+        put_rsp = self.client.put(path, data=content, headers={
             'if-match': '*'})
-        assert put_rsp9.status_code == 412
+        assert put_rsp.status_code == 412
 
 
     def test_if_none_match_get(self):
@@ -930,6 +946,15 @@ class TestDigestHeaders:
             'if-none-match': f'"{content_cksum}", "{bogus_cksum}"'})
         assert get_rsp3.status_code == 304
 
+        # 404 has precedence on ETag handling.
+        get_rsp = self.client.get('/ldp/bogus', headers={
+            'if-none-match': f'"{bogus_cksum}"'})
+        assert get_rsp.status_code == 404
+
+        get_rsp = self.client.get('/ldp/bogus', headers={
+            'if-none-match': f'"{content_cksum}"'})
+        assert get_rsp.status_code == 404
+
 
     def test_if_none_match_put(self):
         """
@@ -947,64 +972,280 @@ class TestDigestHeaders:
         get_rsp = self.client.get(path)
         old_cksum = get_rsp.headers.get('etag')
 
-        put_rsp1 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': f'"{old_cksum}"'})
-        assert put_rsp1.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp2 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': f'"{old_cksum}", "{bogus_cksum}"'})
-        assert put_rsp2.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp3 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': f'"{bogus_cksum}"'})
-        assert put_rsp3.status_code == 204
+        assert put_rsp.status_code == 204
 
         # Now contents have changed.
-        put_rsp4 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': f'"{content_cksum}"'})
-        assert put_rsp4.status_code == 412
+        assert put_rsp.status_code == 412
 
-        put_rsp5 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': f'"{old_cksum}"'})
-        assert put_rsp5.status_code == 204
+        assert put_rsp.status_code == 204
 
         # Catch-all: fail if any resource exists at the given location.
-        put_rsp6 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': '*'})
-        assert put_rsp6.status_code == 412
+        assert put_rsp.status_code == 412
 
-        self.client.delete(path, headers={'Prefer': 'no-tombstone'})
+        # Test delete.
+        del_rsp = self.client.delete(path, headers={
+            'if-none-match': f'"{content_cksum}"', 'Prefer': 'no-tombstone'})
+        assert del_rsp.status_code == 412
 
-        put_rsp7 = self.client.put(path, data=content, headers={
+        del_rsp = self.client.delete(path, headers={
+            'if-none-match': f'"{bogus_cksum}"', 'Prefer': 'no-tombstone'})
+        assert del_rsp.status_code == 204
+
+
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': '*'})
-        assert put_rsp7.status_code == 201
+        assert put_rsp.status_code == 201
 
         # This is wrong syntax. It will update because the literal asterisk
         # won't match.
-        put_rsp8 = self.client.put(path, data=content, headers={
+        put_rsp = self.client.put(path, data=content, headers={
             'if-none-match': '"*"'})
-        assert put_rsp8.status_code == 204
+        assert put_rsp.status_code == 204
 
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_if_modified_since(self):
+    def test_etag_notfound(self):
         """
-        Test various uses of the If-Modified-Since header.
+        Verify that 404 and 410 have precedence on ETag handling.
         """
-        pass
+        path = f'/ldp/{uuid4()}'
+        bogus_cksum = uuid4().hex
 
+        get_rsp = self.client.get(path, headers={
+            'if-match': f'"{bogus_cksum}"'})
+        assert get_rsp.status_code == 404
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_if_unmodified_since(self):
-        """
-        Test various uses of the If-Unmodified-Since header.
-        """
-        pass
+        get_rsp = self.client.get(path, headers={
+            'if-match': '*'})
+        assert get_rsp.status_code == 404
+
+        get_rsp = self.client.get(path, headers={
+            'if-none-match': f'"{bogus_cksum}"'})
+        assert get_rsp.status_code == 404
+
+        self.client.put(path)
+        self.client.delete(path)
+
+        get_rsp = self.client.get(path, headers={
+            'if-match': f'"{bogus_cksum}"'})
+        assert get_rsp.status_code == 410
+
+        get_rsp = self.client.get(path, headers={
+            'if-none-match': f'"{bogus_cksum}"'})
+        assert get_rsp.status_code == 410
+
+        get_rsp = self.client.get(path, headers={
+            'if-match': '*'})
+        assert get_rsp.status_code == 410
 
 
 
 @pytest.mark.usefixtures('client_class')
-@pytest.mark.usefixtures('db')
+class TestModifyTimeCondHeaders:
+    """
+    Test time-related conditional headers.
+    """
+
+    @pytest.fixture(scope='class')
+    def timeframe(self):
+        """
+        Times used in these tests: UTC midnight of today, yesterday, tomorrow.
+        """
+        today = arrow.utcnow().floor('day')
+        yesterday = today.shift(days=-1)
+        tomorrow = today.shift(days=1)
+
+        path = f'/ldp/{uuid4()}'
+        self.client.put(path)
+
+        return path, today, yesterday, tomorrow
+
+
+    def test_nothing(self):
+        """
+        For some reason, without this the fixture won't initialize properly.
+        """
+        self.client.get('/')
+
+
+    def test_if_modified_since(self, timeframe):
+        """
+        Test various uses of the If-Modified-Since header.
+        """
+        path, today, yesterday, tomorrow = timeframe
+
+        assert self.client.head(
+            path, headers={'if-modified-since': http_date(today.timestamp)}
+        ).status_code == 200
+
+        assert self.client.get(
+            path, headers={'if-modified-since': http_date(today.timestamp)}
+        ).status_code == 200
+
+        assert self.client.head(
+            path, headers={'if-modified-since': http_date(yesterday.timestamp)}
+        ).status_code == 200
+
+        assert self.client.get(
+            path, headers={'if-modified-since': http_date(yesterday.timestamp)}
+        ).status_code == 200
+
+        assert self.client.head(
+            path, headers={'if-modified-since': http_date(tomorrow.timestamp)}
+        ).status_code == 304
+
+        assert self.client.get(
+            path, headers={'if-modified-since': http_date(tomorrow.timestamp)}
+        ).status_code == 304
+
+
+    def test_if_unmodified_since(self, timeframe):
+        """
+        Test various uses of the If-Unmodified-Since header.
+        """
+        path, today, yesterday, tomorrow = timeframe
+
+        assert self.client.head(
+            path, headers={'if-unmodified-since': http_date(today.timestamp)}
+        ).status_code == 304
+
+        assert self.client.get(
+            path, headers={'if-unmodified-since': http_date(today.timestamp)}
+        ).status_code == 304
+
+        assert self.client.head(
+            path, headers={'if-unmodified-since': http_date(yesterday.timestamp)}
+        ).status_code == 304
+
+        assert self.client.get(
+            path, headers={'if-unmodified-since': http_date(yesterday.timestamp)}
+        ).status_code == 304
+
+        assert self.client.head(
+            path, headers={'if-unmodified-since': http_date(tomorrow.timestamp)}
+        ).status_code == 200
+
+        assert self.client.get(
+            path, headers={'if-unmodified-since': http_date(tomorrow.timestamp)}
+        ).status_code == 200
+
+
+    def test_time_range(self, timeframe):
+        """
+        Test conditions inside and outside of a time range.
+        """
+        path, today, yesterday, tomorrow = timeframe
+
+        # Send me the resource if it has been modified between yesterday
+        # and tomorrow.
+        assert self.client.get(path, headers={
+            'if-modified-since': http_date(yesterday.timestamp),
+            'if-unmodified-since': http_date(tomorrow.timestamp),
+        }).status_code == 200
+
+        # Send me the resource if it has been modified between today
+        # and tomorrow.
+        assert self.client.get(path, headers={
+            'if-modified-since': http_date(today.timestamp),
+            'if-unmodified-since': http_date(tomorrow.timestamp),
+        }).status_code == 200
+
+        # Send me the resource if it has been modified between yesterday
+        # and today.
+        assert self.client.get(path, headers={
+            'if-modified-since': http_date(yesterday.timestamp),
+            'if-unmodified-since': http_date(today.timestamp),
+        }).status_code == 304
+
+        # Send me the resource if it has been modified between two days ago
+        # and yesterday.
+        assert self.client.get(path, headers={
+            'if-modified-since': http_date(yesterday.shift(days=-1).timestamp),
+            'if-unmodified-since': http_date(yesterday.timestamp),
+        }).status_code == 304
+
+        # Send me the resource if it has been modified between tomorrow
+        # and two days from today.
+        assert self.client.get(path, headers={
+            'if-modified-since': http_date(tomorrow.timestamp),
+            'if-unmodified-since': http_date(tomorrow.shift(days=1).timestamp),
+        }).status_code == 304
+
+
+    def test_time_etag_combo(self, timeframe):
+        """
+        Test evaluation priorities among ETag and time headers.
+        """
+        _, today, yesterday, tomorrow = timeframe
+
+        path = f'/ldp/{uuid4()}'
+        content = uuid4().bytes
+        content_cksum = sha1(content).hexdigest()
+        bogus_cksum = uuid4().hex
+
+        self.client.put(
+            path, data=content, headers={'content-type': 'text/plain'})
+
+        # Negative ETag match wins.
+        assert self.client.get(path, headers={
+            'if-match': f'"{bogus_cksum}"',
+            'if-modified-since': http_date(yesterday.timestamp),
+        }).status_code == 412
+
+        assert self.client.get(path, headers={
+            'if-match': f'"{bogus_cksum}"',
+            'if-unmodified-since': http_date(tomorrow.timestamp),
+        }).status_code == 412
+
+        assert self.client.get(path, headers={
+            'if-none-match': f'"{content_cksum}"',
+            'if-modified-since': http_date(yesterday.timestamp),
+        }).status_code == 304
+
+        assert self.client.get(path, headers={
+            'if-none-match': f'"{content_cksum}"',
+            'if-unmodified-since': http_date(tomorrow.timestamp),
+        }).status_code == 304
+
+        # Positive ETag match wins.
+        assert self.client.get(path, headers={
+            'if-match': f'"{content_cksum}"',
+            'if-unmodified-since': http_date(yesterday.timestamp),
+        }).status_code == 200
+
+        assert self.client.get(path, headers={
+            'if-match': f'"{content_cksum}"',
+            'if-modified-since': http_date(tomorrow.timestamp),
+        }).status_code == 200
+
+        assert self.client.get(path, headers={
+            'if-none-match': f'"{bogus_cksum}"',
+            'if-unmodified-since': http_date(yesterday.timestamp),
+        }).status_code == 200
+
+        assert self.client.get(path, headers={
+            'if-none-match': f'"{bogus_cksum}"',
+            'if-modified-since': http_date(tomorrow.timestamp),
+        }).status_code == 200
+
+
+
+@pytest.mark.usefixtures('client_class')
 class TestPrefHeader:
     """
     Test various combinations of `Prefer` header.
