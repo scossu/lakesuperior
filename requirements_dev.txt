@@ -1,5 +1,5 @@
 CoilMQ>=1.0.1
-Cython==0.28.4
+Cython==0.29
 Flask>=0.12.2
 HiYaPyCo>=0.4.11
 Pillow>=4.3.0
