@@ -1246,6 +1246,86 @@ class TestModifyTimeCondHeaders:
 
 
 @pytest.mark.usefixtures('client_class')
+class TestRange:
+    """
+    Test byte range retrieval.
+
+    This should not need too deep testing since it's functionality implemented
+    in Werkzeug/Flask.
+    """
+    @pytest.fixture(scope='class')
+    def bytestream(self):
+        """
+        Create a sample bytestream with predictable (8x8 bytes) content.
+        """
+        return b''.join([bytes([n] * 8) for n in range(8)])
+
+
+    def test_get_range(self, bytestream):
+        """
+        Get different ranges of the bitstream.
+        """
+        path = '/ldp/test_range'
+        self.client.put(path, data=bytestream)
+
+        # First 8 bytes.
+        assert self.client.get(
+            path, headers={'range': 'bytes=0-7'}).data == b'\x00' * 8
+
+        # Last 4 bytes of first block, first 4 of second block.
+        assert self.client.get(
+            path, headers={'range': 'bytes=4-11'}
+        ).data == b'\x00' * 4 + b'\x01' * 4
+
+        # Last 8 bytes.
+        assert self.client.get(
+            path, headers={'range': 'bytes=56-'}).data == b'\x07' * 8
+
+
+    def test_fail_ranges(self, bytestream):
+        """
+        Test malformed or unsupported ranges.
+        """
+        path = '/ldp/test_range'
+
+        # TODO This shall be a 206 when multiple ranges are supported.
+        fail_rsp = self.client.get(path, headers={'range': 'bytes=0-1, 7-8'})
+        assert fail_rsp.status_code == 501
+
+        # Bad ranges will be ignored.
+        for rng in ((10, 4), ('', 3), (3600, 6400)):
+            bad_rsp = self.client.get(
+                path, headers={'range': 'bytes={rng[0]}-{rng[1]}'})
+            assert bad_rsp.status_code == 200
+            assert bad_rsp.data == bytestream
+            assert int(bad_rsp.headers['content-length']) == len(bytestream)
+
+
+    def test_range_rsp_headers(self, bytestream):
+        """
+        Test various headers for a ranged response.
+        """
+        path = '/ldp/test_range'
+        start_b = 0
+        end_b = 7
+
+        full_rsp = self.client.get(path)
+        part_rsp = self.client.get(path, headers={
+            'range': f'bytes={start_b}-{end_b}'})
+
+        for hdr_name in ['etag', 'digest', 'content-type']:
+            assert part_rsp.headers[hdr_name] == full_rsp.headers[hdr_name]
+
+        for hdr in part_rsp.headers['link']:
+            assert hdr in full_rsp.headers['link']
+
+        assert int(part_rsp.headers['content-length']) == end_b - start_b + 1
+        assert part_rsp.headers['content-range'] == \
+                f'bytes {start_b}-{end_b} / {len(bytestream)}'
+
+
+
+@pytest.mark.usefixtures('client_class')
 class TestPrefHeader:
     """
     Test various combinations of `Prefer` header.

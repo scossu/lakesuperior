@@ -43,13 +43,13 @@ class LdpNr(Ldpr):
         else:
             self.workflow = self.WRKF_OUTBOUND
 
-        if not mimetype:
+        if mimetype:
+            self.mimetype = mimetype
+        else:
             self.mimetype = (
-                    self.metadata.value(self.uri, nsc['ebucore'].hasMimeType)
+                    str(self.metadata.value(nsc['ebucore'].hasMimeType))
                     if self.is_stored
                     else 'application/octet-stream')
-        else:
-            self.mimetype = mimetype
 
         self.disposition = disposition
 
@@ -61,7 +61,7 @@ class LdpNr(Ldpr):
 
         :rtype: str
         """
-        return self.imr.value(self.uri, nsc['ebucore'].filename)
+        return self.metadata.value(nsc['ebucore'].filename)
 
 
     @property
@@ -76,14 +76,24 @@ class LdpNr(Ldpr):
 
 
     @property
+    def content_size(self):
+        """
+        Byte size of the binary content.
+
+        :rtype: int
+        """
+        return int(self.metadata.value(nsc['premis'].hasSize))
+
+
+    @property
     def local_path(self):
         """
         Path on disk of the binary content.
 
         :rtype: str
         """
-        cksum_term = self.imr.value(nsc['premis'].hasMessageDigest)
-        cksum = str(cksum_term.replace('urn:sha1:',''))
+        cksum_term = self.metadata.value(nsc['premis'].hasMessageDigest)
+        cksum = str(cksum_term).replace('urn:sha1:','')
         return nonrdfly.__class__.local_path(
                 nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
 

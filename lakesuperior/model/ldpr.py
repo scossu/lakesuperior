@@ -168,6 +168,9 @@ class Ldpr(metaclass=ABCMeta):
 
         self.provided_imr = provided_imr
 
+        # This gets overridden by LDP-NR.
+        self.mimetype = None
+
         # Disable all internal checks e.g. for raw I/O.
 
 

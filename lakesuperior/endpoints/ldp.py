@@ -188,15 +188,21 @@ def get_resource(uid, out_fmt=None):
             return ('{} has no binary content.'.format(rsrc.uid), 404)
 
         logger.debug('Streaming out binary content.')
-        rsp = make_response(send_file(
-                rsrc.local_path, as_attachment=True,
-                attachment_filename=rsrc.filename,
-                mimetype=rsrc.mimetype), 200, out_headers)
-        # This seems necessary to prevent Flask from setting an additional ETag.
+        if request.range and request.range.units == 'bytes':
+            # Stream partial response.
+            # This is only true if the header is well-formed. Thanks, Werkzeug.
+            rsp = _parse_range_header(request.range.ranges, rsrc, out_headers)
+        else:
+            rsp = make_response(send_file(
+                    rsrc.local_path, as_attachment=True,
+                    attachment_filename=rsrc.filename,
+                    mimetype=rsrc.mimetype), 200, out_headers)
+
+        # This seems necessary to prevent Flask from setting an
+        # additional ETag.
         if 'ETag' in out_headers:
             rsp.set_etag(out_headers['ETag'])
-        rsp.headers.add('Link',
-                '<{}/fcr:metadata>; rel="describedby"'.format(uri))
+        rsp.headers.add('Link', f'<{uri}/fcr:metadata>; rel="describedby"')
         return rsp
 
 
@@ -675,9 +681,8 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
     for t in rsrc.ldp_types:
         rsp_headers['Link'].append('{};rel="type"'.format(t.n3()))
 
-    mimetype = rsrc.metadata.value(nsc['ebucore'].hasMimeType)
-    if mimetype:
-        rsp_headers['Content-Type'] = mimetype
+    if rsrc.mimetype:
+        rsp_headers['Content-Type'] = rsrc.mimetype
 
     return rsp_headers
 
@@ -846,3 +851,34 @@ def _process_cond_headers(uid, headers, safe=True):
             elif not cond_match.get('if-unmodified-since', True):
                 return '', 412
 
+
+def _parse_range_header(ranges, rsrc, headers):
+    """
+    Parse a ``Range`` header and return the appropriate response.
+    """
+    if len(ranges) == 1:
+        # Single range.
+        rng = ranges[0]
+        logger.debug('Streaming contiguous partial content.')
+        with open(rsrc.local_path, 'rb') as fh:
+            size = None if rng[1] is None else rng[1] - rng[0]
+            hdr_endbyte = (
+                    rsrc.content_size - 1 if rng[1] is None else rng[1] - 1)
+            fh.seek(rng[0])
+            out = fh.read(size)
+        headers['Content-Range'] = \
+                f'bytes {rng[0]}-{hdr_endbyte} / {rsrc.content_size}'
+
+    else:
+        return make_response('Multiple ranges are not yet supported.', 501)
+
+        # TODO Format the response as multipart/byteranges:
+        # https://tools.ietf.org/html/rfc7233#section-4.1
+        #out = []
+        #with open(rsrc.local_path, 'rb') as fh:
+        #    for rng in rng_header.ranges:
+        #        fh.seek(rng[0])
+        #        size = None if rng[1] is None else rng[1] - rng[0]
+        #        out.extend(fh.read(size))
+
+    return make_response(out, 206, headers)
