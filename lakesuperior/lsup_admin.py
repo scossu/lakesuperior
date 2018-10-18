@@ -191,7 +191,7 @@ def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
     """
     Migrate an LDP repository to Lakesuperior.
 
-    This utility creates a fully functional LAKEshore repository from an
+    This utility creates a fully functional Lakesuperior repository from an
     existing repository. The source repo can be Lakesuperior or
     another LDP-compatible implementation.
 
@@ -208,13 +208,16 @@ def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
         src, dest, src_auth=src_auth, start_pts=start, list_file=list_file,
             zero_binaries=zero_binaries, skip_errors=skip_errors)
     logger.info('Migrated {} resources.'.format(entries))
-    logger.info("""Migration complete. To start the new repository, from the
-    directory you launched this script run:
+    logger.info(f'''
+    Migration complete. A new Lakesuperior environment has been created in
+    {dest}. To start the new repository, run:
 
-    FCREPO_CONFIG_DIR="{}/etc" ./fcrepo
+    FCREPO_CONFIG_DIR="{dest}/etc" fcrepo
+
+    from the directory you launched this script in.
 
     Make sure that the default port is not being used by another repository.
-    """.format(dest))
+    ''')
 
 
 admin.add_command(bootstrap)
