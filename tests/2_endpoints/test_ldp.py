@@ -3,7 +3,7 @@ import pytest
 
 from base64 import b64encode
 from datetime import timedelta
-from hashlib import sha1
+from hashlib import sha1, sha256, blake2b
 from uuid import uuid4
 from werkzeug.http import http_date
 
@@ -808,7 +808,7 @@ class TestDigestHeaders:
         TODO This is by design for now; when a reliable hashing method
         for a graph is devised, this test should change.
         """
-        path = '/ldp/test_etag_rdf1'
+        path = f'/ldp/{uuid4()}'
 
         put_rsp = self.client.put(path)
         assert not put_rsp.headers.get('etag')
@@ -817,6 +817,60 @@ class TestDigestHeaders:
         get_rsp = self.client.get(path)
         assert not get_rsp.headers.get('etag')
         assert not get_rsp.headers.get('digest')
+
+
+    def test_digest_put(self):
+        """
+        Test the ``Digest`` header with PUT to verify content integrity.
+        """
+        path1 = f'/ldp/{uuid4()}'
+        path2 = f'/ldp/{uuid4()}'
+        path3 = f'/ldp/{uuid4()}'
+        content = uuid4().bytes
+        content_sha1 = sha1(content).hexdigest()
+        content_sha256 = sha256(content).hexdigest()
+        content_blake2b = blake2b(content).hexdigest()
+
+        assert self.client.put(path1, data=content, headers={
+                'digest': 'sha1=abcd'}).status_code == 409
+
+        assert self.client.put(path1, data=content, headers={
+                'digest': f'sha1={content_sha1}'}).status_code == 201
+
+        assert self.client.put(path2, data=content, headers={
+                'digest': f'SHA1={content_sha1}'}).status_code == 201
+
+        assert self.client.put(path3, data=content, headers={
+                'digest': f'SHA256={content_sha256}'}).status_code == 201
+
+        assert self.client.put(path3, data=content, headers={
+                'digest': f'blake2b={content_blake2b}'}).status_code == 204
+
+
+    def test_digest_post(self):
+        """
+        Test the ``Digest`` header with POST to verify content integrity.
+        """
+        path = '/ldp'
+        content = uuid4().bytes
+        content_sha1 = sha1(content).hexdigest()
+        content_sha256 = sha256(content).hexdigest()
+        content_blake2b = blake2b(content).hexdigest()
+
+        assert self.client.post(path, data=content, headers={
+                'digest': 'sha1=abcd'}).status_code == 409
+
+        assert self.client.post(path, data=content, headers={
+                'digest': f'sha1={content_sha1}'}).status_code == 201
+
+        assert self.client.post(path, data=content, headers={
+                'digest': f'SHA1={content_sha1}'}).status_code == 201
+
+        assert self.client.post(path, data=content, headers={
+                'digest': f'SHA256={content_sha256}'}).status_code == 201
+
+        assert self.client.post(path, data=content, headers={
+                'digest': f'blake2b={content_blake2b}'}).status_code == 201
 
 
 

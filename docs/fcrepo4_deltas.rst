@@ -8,10 +8,11 @@ clients will use it.
 Not yet implemented (but in the plans)
 --------------------------------------
 
--  Various headers handling (partial)
--  AuthN/Z
--  Fixity check
--  Blank nodes
+- Various headers handling (partial)
+- AuthN and WebAC-based authZ
+- Fixity check
+- Blank nodes (at least partly working, but untested)
+- Multiple byte ranges for the ``Range`` request header
 
 Potentially breaking changes
 ----------------------------
@@ -61,6 +62,16 @@ regardless of whether the tombstone exists or not.
 
 Lakesuperior will return ``405`` only if the tombstone actually exists,
 ``404`` otherwise.
+
+``Limit`` Header
+~~~~~~~~~~~~~~~~
+
+Lakesuperior does not support the ``Limit`` header which in FCREPO can be used
+to limit the number of "child" resources displayed for a container graph. Since
+this seems to have a mostly cosmetic function in FCREPO to compensate for
+performance limitations (displaying a page with many thousands of children in
+the UI can take minutes), and since Lakesuperior already offers options in the
+``Prefer`` header to not return any children, this option is not implemented.
 
 Web UI
 ~~~~~~
