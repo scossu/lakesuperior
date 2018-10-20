@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import pdb
 
@@ -19,7 +20,8 @@ from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.exceptions import (ResourceNotExistsError, TombstoneError,
+from lakesuperior.exceptions import (
+        ChecksumValidationError, ResourceNotExistsError, TombstoneError,
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
         ResourceExistsError, IncompatibleLdpTypeError)
 from lakesuperior.globals import RES_CREATED
@@ -258,28 +260,29 @@ def post_resource(parent_uid):
     """
     rsp_headers = std_headers.copy()
     slug = request.headers.get('Slug')
-    logger.debug('Slug: {}'.format(slug))
 
-    handling, disposition = set_post_put_params()
+    kwargs = {}
+    kwargs['handling'], kwargs['disposition'] = set_post_put_params()
     stream, mimetype = _bistream_from_req()
 
     if mimetype in rdf_parsable_mimetypes:
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        rdf_data = g.tbox.localize_payload(global_rdf)
-        rdf_fmt = mimetype
-        stream = mimetype = None
+        kwargs['rdf_data'] = g.tbox.localize_payload(global_rdf)
+        kwargs['rdf_fmt'] = mimetype
     else:
-        rdf_data = rdf_fmt = None
+        kwargs['stream'] = stream
+        kwargs['mimetype'] = mimetype
+        # Check digest if requested.
+        if 'digest' in request.headers:
+            kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = \
+                    request.headers['digest'].split('=')
 
     try:
-        rsrc = rsrc_api.create(
-            parent_uid, slug, stream=stream, mimetype=mimetype,
-            rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
-            disposition=disposition)
+        rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
     except ResourceNotExistsError as e:
         return str(e), 404
-    except InvalidResourceError as e:
+    except (InvalidResourceError, ChecksumValidationError) as e:
         return str(e), 409
     except TombstoneError as e:
         return _tombstone_response(e, uid)
@@ -290,7 +293,7 @@ def post_resource(parent_uid):
     rsp_headers.update(_headers_from_metadata(rsrc))
     rsp_headers['Location'] = uri
 
-    if mimetype and rdf_fmt is None:
+    if mimetype and kwargs.get('rdf_fmt') is None:
         rsp_headers['Link'] = (f'<{uri}/fcr:metadata>; rel="describedby"; '
                                f'anchor="{uri}"')
 
@@ -313,24 +316,28 @@ def put_resource(uid):
     if cond_ret:
         return cond_ret
 
-    handling, disposition = set_post_put_params()
+    kwargs = {}
+    kwargs['handling'], kwargs['disposition'] = set_post_put_params()
     stream, mimetype = _bistream_from_req()
 
     if mimetype in rdf_parsable_mimetypes:
         # If the content is RDF, localize in-repo URIs.
         global_rdf = stream.read()
-        rdf_data = g.tbox.localize_payload(global_rdf)
-        rdf_fmt = mimetype
-        stream = mimetype = None
+        kwargs['rdf_data'] = g.tbox.localize_payload(global_rdf)
+        kwargs['rdf_fmt'] = mimetype
     else:
-        rdf_data = rdf_fmt = None
+        kwargs['stream'] = stream
+        kwargs['mimetype'] = mimetype
+        # Check digest if requested.
+        if 'digest' in request.headers:
+            kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = \
+                    request.headers['digest'].split('=')
 
     try:
-        evt, rsrc = rsrc_api.create_or_replace(
-            uid, stream=stream, mimetype=mimetype,
-            rdf_data=rdf_data, rdf_fmt=rdf_fmt, handling=handling,
-            disposition=disposition)
-    except (InvalidResourceError, ResourceExistsError) as e:
+        evt, rsrc = rsrc_api.create_or_replace(uid, **kwargs)
+    except (
+            InvalidResourceError, ChecksumValidationError,
+            ResourceExistsError) as e:
         return str(e), 409
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
@@ -346,7 +353,7 @@ def put_resource(uid):
     if evt == RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = uri
-        if mimetype and not rdf_data:
+        if mimetype and not kwargs.get('rdf_data'):
             rsp_headers['Link'] = f'<{uri}/fcr:metadata>; rel="describedby"'
     else:
         rsp_code = 204

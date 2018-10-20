@@ -15,7 +15,6 @@ from lakesuperior.model.ldp_rs import LdpRs
 nonrdfly = env.app_globals.nonrdfly
 logger = logging.getLogger(__name__)
 
-
 class LdpNr(Ldpr):
     """LDP-NR (Non-RDF Source).
 
@@ -30,7 +29,8 @@ class LdpNr(Ldpr):
     }
 
     def __init__(self, uuid, stream=None, mimetype=None,
-            disposition=None, **kwargs):
+            disposition=None, prov_cksum_algo=None, prov_cksum=None,
+            **kwargs):
         """
         Extends Ldpr.__init__ by adding LDP-NR specific parameters.
         """
@@ -51,6 +51,8 @@ class LdpNr(Ldpr):
                     if self.is_stored
                     else 'application/octet-stream')
 
+        self.prov_cksum_algo = prov_cksum_algo
+        self.prov_cksum = prov_cksum
         self.disposition = disposition
 
 
@@ -92,8 +94,10 @@ class LdpNr(Ldpr):
 
         :rtype: str
         """
+        default_hash_algo = \
+                env.app_globals.config['application']['uuid']['algo']
         cksum_term = self.metadata.value(nsc['premis'].hasMessageDigest)
-        cksum = str(cksum_term).replace('urn:sha1:','')
+        cksum = str(cksum_term).replace(f'urn:{default_hash_algo}:','')
         return nonrdfly.__class__.local_path(
                 nonrdfly.root, cksum, nonrdfly.bl, nonrdfly.bc)
 
@@ -106,7 +110,9 @@ class LdpNr(Ldpr):
             updated.
         """
         # Persist the stream.
-        self.digest, self.size = nonrdfly.persist(self.stream)
+        self.digest, self.size = nonrdfly.persist(
+                self.uid, self.stream, prov_cksum_algo=self.prov_cksum_algo,
+                prov_cksum=self.prov_cksum)
 
         # Try to persist metadata. If it fails, delete the file.
         logger.debug('Persisting LDP-NR triples in {}'.format(self.uri))
