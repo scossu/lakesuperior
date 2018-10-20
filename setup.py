@@ -40,12 +40,11 @@ with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
 # Extensions directory.
-#ext_dir = path.join(path.dirname(lakesuperior.basedir), 'ext')
-ext_dir = 'ext'
+lmdb_src_dir = path.join('ext', 'lmdb', 'libraries', 'liblmdb')
+tpl_src_dir = path.join('ext', 'tpl', 'src')
 
-include_dirs = [
-    path.join(ext_dir, 'include'),
-]
+include_dirs = [lmdb_src_dir, tpl_src_dir]
+
 if USE_CYTHON:
     print(f'Using Cython {CYTHON_VERSION} to generate C extensions.')
     include_dirs.append(path.join(lakesuperior.basedir, 'cy_include'))
@@ -58,8 +57,8 @@ extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
-            path.join(ext_dir, 'lib', 'mdb.c'),
-            path.join(ext_dir, 'lib', 'midl.c'),
+            path.join(lmdb_src_dir, 'mdb.c'),
+            path.join(lmdb_src_dir, 'midl.c'),
             path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -67,7 +66,7 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.term',
         [
-            path.join(ext_dir, 'lib', 'tpl.c'),
+            path.join(tpl_src_dir, 'tpl.c'),
             path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -78,8 +77,8 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
-            path.join(ext_dir, 'lib', 'mdb.c'),
-            path.join(ext_dir, 'lib', 'midl.c'),
+            path.join(lmdb_src_dir, 'mdb.c'),
+            path.join(lmdb_src_dir, 'midl.c'),
             path.join(
                 'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
         ],
@@ -92,7 +91,7 @@ extensions = [
     #Extension(
     #    '*',
     #    [
-    #        #path.join(ext_dir, 'lib', 'tpl.c'),
+    #        #path.join(tpl_src_dir, 'tpl.c'),
     #        path.join(
     #            path.dirname(lakesuperior.basedir), 'sandbox', f'*.{ext}'),
     #    ],

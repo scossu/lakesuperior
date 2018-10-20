@@ -211,9 +211,11 @@ class Migrator:
         # Determine LDP type.
         ldp_type = 'ldp_nr'
         try:
-            links_rsp = rsp.headers.get('link', auth=self.auth)
-            links_rsp.raise_for_status()
-            for link in requests.utils.parse_header_links(links_rsp):
+            links_rsp = rsp.headers.get('link')
+            head_links = (
+                requests.utils.parse_header_links(links_rsp)
+                if links_rsp else None)
+            for link in head_links:
                 if (
                         link.get('rel') == 'type'
                         and (
@@ -269,7 +271,7 @@ class Migrator:
             uuid = str(gr.value(
                 URIRef(iuri), nsc['premis'].hasMessageDigest)).split(':')[-1]
             fpath = self.nonrdfly.local_path(
-                    self.nonrdfly.config['path'], uuid)
+                    self.nonrdfly.config['location'], uuid)
             makedirs(path.dirname(fpath), exist_ok=True)
             with open(fpath, 'wb') as fh:
                 fh.write(data)
