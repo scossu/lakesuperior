@@ -3,6 +3,8 @@ import logging
 from flask import Blueprint, render_template
 
 from lakesuperior.api import admin as admin_api
+from lakesuperior.exceptions import (
+    ChecksumValidationError, ResourceNotExistsError, TombstoneError)
 
 
 # Admin interface and REST API.
@@ -24,15 +26,16 @@ def stats():
         https://stackoverflow.com/a/1094933/3758232
 
         :param int num: Size value in bytes.
-        :param string suffix: Suffix label (defaults to `B`).
+        :param str suffix: Suffix label (defaults to ``b``).
 
-        @return string Formatted size to largest fitting unit.
+        :rtype: str
+        :return: Formatted size to largest fitting unit.
         """
         for unit in ['','K','M','G','T','P','E','Z']:
             if abs(num) < 1024.0:
-                return "{:3.1f} {}{}".format(num, unit, suffix)
+                return f'{num:3.1f} {unit}{suffix}'
             num /= 1024.0
-        return "{:.1f} {}{}".format(num, 'Y', suffix)
+        return f'{num:.1f} Y{suffix}'
 
     repo_stats = admin_api.stats()
 
@@ -48,3 +51,21 @@ def admin_tools():
     @TODO stub.
     """
     return render_template('admin_tools.html')
+
+
+@admin.route('/<path:uid>/fixity', methods=['GET'])
+def fixity_check(uid):
+    """
+    Check the fixity of a resource.
+    """
+    uid = '/' + uid.strip('/')
+    try:
+        admin_api.fixity_check(uid)
+    except ResourceNotExistsError as e:
+        return str(e), 404
+    except TombstoneError as e:
+        return str(e), 410
+    except ChecksumValidationError as e:
+        return str(e), 412
+
+    return f'Checksum for {uid} passed.', 200
