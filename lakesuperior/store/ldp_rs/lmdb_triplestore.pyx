@@ -16,9 +16,12 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
+cimport lakesuperior.cy_include.cytpl as tpl
+
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
-from lakesuperior.store.ldp_rs.term cimport serialize, deserialize
+from lakesuperior.store.ldp_rs.term cimport (
+        HLEN, Hash, deserialize, hash_, serialize)
 
 
 DEF KLEN = 5
@@ -50,13 +53,6 @@ DEF DBL_KLEN = KLEN * 2
 DEF TRP_KLEN = KLEN * 3
 DEF QUAD_KLEN = KLEN * 4
 
-
-DEF TERM_HASH_ALGO = 'sha1'
-""" Term hashing algorithm. SHA1 is the default. """
-
-DEF HLEN = 20
-""" Hash byte length. For SHA1 this is 20. """
-
 DEF KEY_START = b'\x01'
 """
 Lexical sequence start. ``\\x01`` is fine since no special characters are
@@ -70,16 +66,10 @@ DEF IDX_OP_ADD = '_idx_add'
 DEF IDX_OP_REMOVE = '_idx_remove'
 
 
-cdef extern from '<openssl/sha.h>':
-    unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md)
-
-
 ctypedef unsigned char Key[KLEN]
 ctypedef unsigned char DoubleKey[DBL_KLEN]
 ctypedef unsigned char TripleKey[TRP_KLEN]
 ctypedef unsigned char QuadKey[QUAD_KLEN]
-ctypedef unsigned char Hash[HLEN]
-
 
 cdef unsigned char first_key[KLEN]
 memcpy(first_key, FIRST_KEY, KLEN)
@@ -114,11 +104,6 @@ lookup_ordering_2bound = [
     [0, 1, 2], # sp:o
 ]
 
-
-cdef inline void _hash(
-        const unsigned char *message, size_t message_size, Hash digest):
-    """Get the hash value of a serialized object."""
-    SHA1(message, message_size, digest)
 
 
 logger = logging.getLogger(__name__)
@@ -807,7 +792,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_val spo_v, c_v, null_v
             unsigned char i
             unsigned char *pk_t
-            unsigned char thash[HLEN]
+            Hash thash
             # Using Key or TripleKey here breaks Cython. This might be a bug.
             # See https://github.com/cython/cython/issues/2517
             unsigned char spock[QUAD_KLEN]
@@ -828,7 +813,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             for i, term in enumerate((s, p, o, c)):
                 serialize(term, &pk_t, &term_size)
-                _hash(pk_t, term_size, thash)
+                hash_(pk_t, term_size, &thash)
                 try:
                     key_v.mv_data = &thash
                     key_v.mv_size = HLEN
@@ -933,14 +918,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :type pk_size: size_t
         """
         cdef:
-            unsigned char c_hash[HLEN]
+            Hash c_hash
             unsigned char ck[KLEN]
             lmdb.MDB_txn *tmp_txn
             lmdb.MDB_cursor *th_cur
             lmdb.MDB_cursor *pk_cur
             lmdb.MDB_cursor *ck_cur
 
-        _hash(pk_c, pk_size, c_hash)
+        hash_(pk_c, pk_size, &c_hash)
         #logger.debug('Adding a graph.')
         if not self._key_exists(c_hash, HLEN, b'th:t'):
             # Insert context term if not existing.
@@ -1211,7 +1196,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Delete a context.
         """
         cdef:
-            unsigned char chash[HLEN]
+            Hash chash
             unsigned char ck[KLEN]
             unsigned char *pk_c
             size_t c_size
@@ -1234,7 +1219,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Clean up all terms related to the graph.
         serialize(gr_uri, &pk_c, &c_size)
-        _hash(pk_c, c_size, chash)
+        hash_(pk_c, c_size, &chash)
         free(pk_c)
 
         ck_v.mv_size = KLEN
@@ -1988,13 +1973,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Convert a triple, quad or term into a key.
 
-        The key is the checksum of the pickled object, therefore unique for
-        that object. The hashing algorithm is specified in `TERM_HASH_ALGO`.
+        The key is the checksum of the serialized object, therefore unique for
+        that object.
 
-        :param Object obj: Anything that can be pickled.
+        :param rdflib.Term term: An RDFLib term (URIRef, BNode, Literal).
+        :param Key key: Pointer to the key that will be produced.
 
-        :rtype: memoryview or None
-        :return: Keys stored for the term(s) or None if not found.
+        :rtype: void
         """
         cdef:
             unsigned char *pk_t
@@ -2003,7 +1988,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         serialize(term, &pk_t, &term_size)
         #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
-        _hash(pk_t, term_size, thash)
+        hash_(pk_t, term_size, &thash)
         free(pk_t)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash

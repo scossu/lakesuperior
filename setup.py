@@ -42,16 +42,21 @@ with open(readme_fpath, encoding='utf-8') as f:
 # Extensions directory.
 lmdb_src_dir = path.join('ext', 'lmdb', 'libraries', 'liblmdb')
 tpl_src_dir = path.join('ext', 'tpl', 'src')
+spookyhash_src_dir = path.join('ext', 'spookyhash', 'src')
 
-include_dirs = [lmdb_src_dir, tpl_src_dir]
+include_dirs = [lmdb_src_dir, tpl_src_dir, spookyhash_src_dir]
+
+cy_include_dir = path.join('lakesuperior', 'cy_include')
+
 
 if USE_CYTHON:
     print(f'Using Cython {CYTHON_VERSION} to generate C extensions.')
-    include_dirs.append(path.join(lakesuperior.basedir, 'cy_include'))
+    include_dirs.append(cy_include_dir)
     ext = 'pyx'
+    pxdext = 'pxd'
 else:
     print(f'Cython {CYTHON_VERSION} not found. Using provided C extensions.')
-    ext = 'c'
+    ext = pxdext = 'c'
 
 extensions = [
     Extension(
@@ -67,12 +72,12 @@ extensions = [
         'lakesuperior.store.ldp_rs.term',
         [
             path.join(tpl_src_dir, 'tpl.c'),
+            path.join(spookyhash_src_dir, 'spookyhash.c'),
             path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
         ],
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
-        libraries=['crypto']
+        extra_link_args=['-fopenmp']
     ),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
@@ -84,8 +89,7 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp'],
-        libraries=['crypto']
+        extra_link_args=['-fopenmp']
     ),
     # For testing.
     #Extension(
@@ -100,7 +104,7 @@ extensions = [
 ]
 
 if USE_CYTHON:
-    extensions = cythonize(extensions, compiler_directives={
+    extensions = cythonize(extensions, include_path=include_dirs, compiler_directives={
         'language_level': 3,
         'boundscheck': False,
         'wraparound': False,
