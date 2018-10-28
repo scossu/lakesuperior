@@ -1,3 +1,4 @@
+import hashlib
 import pdb
 import pytest
 
@@ -15,8 +16,12 @@ from rdflib.compare import isomorphic
 from rdflib.namespace import RDF
 from rdflib.term import Literal, URIRef
 
+from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldpr import Ldpr
+
+
+digest_algo = env.app_globals.config['application']['uuid']['algo']
 
 
 @pytest.fixture(scope='module')
@@ -694,12 +699,12 @@ class TestDigestHeaders:
         """
         Verify ETag and Digest headers on creation.
 
-        The headers must correspond to the SHA1 checksum of the binary content.
+        The headers must correspond to the checksum of the binary content.
         """
         uid = '/test_etag1'
         path = '/ldp' + uid
         content = uuid4().bytes
-        content_cksum = sha1(content)
+        content_cksum = hashlib.new(digest_algo, content)
 
         put_rsp = self.client.put(
             path, data=content, headers={'content-type': 'text/plain'})
@@ -707,14 +712,14 @@ class TestDigestHeaders:
         assert content_cksum.hexdigest() in \
             put_rsp.headers.get('etag').split(',')
         assert put_rsp.headers.get('digest') == \
-            'SHA1=' + b64encode(content_cksum.digest()).decode()
+            f'{digest_algo.upper()}=' + b64encode(content_cksum.digest()).decode()
 
         get_rsp = self.client.get(path)
 
         assert content_cksum.hexdigest() in \
             put_rsp.headers.get('etag').split(',')
         assert get_rsp.headers.get('digest') == \
-            'SHA1=' + b64encode(content_cksum.digest()).decode()
+            f'{digest_algo.upper()}='  + b64encode(content_cksum.digest()).decode()
 
 
     def test_etag_ident(self):
@@ -725,7 +730,7 @@ class TestDigestHeaders:
         path2 = f'/ldp/{uuid4()}'
 
         content = uuid4().bytes
-        content_cksum = sha1(content)
+        content_cksum = hashlib.new(digest_algo, content)
 
         self.client.put(
             path1, data=content, headers={'content-type': 'text/plain'})
@@ -747,9 +752,9 @@ class TestDigestHeaders:
         path2 = f'/ldp/{uuid4()}'
 
         content1 = b'some interesting content.'
-        content_cksum1 = sha1(content1)
+        content_cksum1 = hashlib.new(digest_algo, content1)
         content2 = b'Some great content.'
-        content_cksum2 = sha1(content2)
+        content_cksum2 = hashlib.new(digest_algo, content2)
 
         self.client.put(
             path1, data=content1, headers={'content-type': 'text/plain'})
@@ -772,9 +777,9 @@ class TestDigestHeaders:
         """
         path = f'/ldp/{uuid4()}'
         content1 = uuid4().bytes
-        content_cksum1 = sha1(content1)
+        content_cksum1 = hashlib.new(digest_algo, content1)
         content2 = uuid4().bytes
-        content_cksum2 = sha1(content2)
+        content_cksum2 = hashlib.new(digest_algo, content2)
 
         self.client.put(
             path, data=content1, headers={'content-type': 'text/plain'})
@@ -783,7 +788,7 @@ class TestDigestHeaders:
         assert content_cksum1.hexdigest() == \
             get_rsp.headers.get('etag').strip('"')
         assert get_rsp.headers.get('digest') == \
-            'SHA1=' + b64encode(content_cksum1.digest()).decode()
+            f'{digest_algo.upper()}=' + b64encode(content_cksum1.digest()).decode()
 
         put_rsp = self.client.put(
             path, data=content2, headers={'content-type': 'text/plain'})
@@ -791,14 +796,14 @@ class TestDigestHeaders:
         assert content_cksum2.hexdigest() == \
             put_rsp.headers.get('etag').strip('"')
         assert put_rsp.headers.get('digest') == \
-            'SHA1=' + b64encode(content_cksum2.digest()).decode()
+            f'{digest_algo.upper()}=' + b64encode(content_cksum2.digest()).decode()
 
         get_rsp = self.client.get(path)
 
         assert content_cksum2.hexdigest() == \
             get_rsp.headers.get('etag').strip('"')
         assert get_rsp.headers.get('digest') == \
-            'SHA1=' + b64encode(content_cksum2.digest()).decode()
+            f'{digest_algo.upper()}=' + b64encode(content_cksum2.digest()).decode()
 
 
     def test_etag_rdf(self):
@@ -888,7 +893,7 @@ class TestETagCondHeaders:
         """
         path = '/ldp/test_if_match1'
         content = uuid4().bytes
-        content_cksum = sha1(content).hexdigest()
+        content_cksum = hashlib.new(digest_algo, content).hexdigest()
         bogus_cksum = uuid4().hex
 
         self.client.put(
@@ -915,7 +920,7 @@ class TestETagCondHeaders:
         """
         path = '/ldp/test_if_match1'
         content = uuid4().bytes
-        content_cksum = sha1(content).hexdigest()
+        content_cksum = hashlib.new(digest_algo, content).hexdigest()
         bogus_cksum = uuid4().hex
 
         get_rsp = self.client.get(path)
@@ -982,7 +987,7 @@ class TestETagCondHeaders:
         """
         path = '/ldp/test_if_none_match1'
         content = uuid4().bytes
-        content_cksum = sha1(content).hexdigest()
+        content_cksum = hashlib.new(digest_algo, content).hexdigest()
         bogus_cksum = uuid4().hex
 
         self.client.put(
@@ -1020,7 +1025,7 @@ class TestETagCondHeaders:
         """
         path = '/ldp/test_if_none_match1'
         content = uuid4().bytes
-        content_cksum = sha1(content).hexdigest()
+        content_cksum = hashlib.new(digest_algo, content).hexdigest()
         bogus_cksum = uuid4().hex
 
         get_rsp = self.client.get(path)
@@ -1249,7 +1254,7 @@ class TestModifyTimeCondHeaders:
 
         path = f'/ldp/{uuid4()}'
         content = uuid4().bytes
-        content_cksum = sha1(content).hexdigest()
+        content_cksum = hashlib.new(digest_algo, content).hexdigest()
         bogus_cksum = uuid4().hex
 
         self.client.put(

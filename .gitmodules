@@ -6,3 +6,6 @@
     path = ext/tpl
     url = https://github.com/troydhanson/tpl.git
     branch = stable
+[submodule "ext/spookyhash"]
+    path = ext/spookyhash
+    url = https://github.com/centaurean/spookyhash.git

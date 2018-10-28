@@ -12,6 +12,7 @@ import arrow
 from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
+from lakesuperior.exceptions import ChecksumValidationError
 from lakesuperior.globals import AppGlobals
 
 __doc__="""
@@ -90,11 +91,20 @@ def stats(human=False):
 
 
 @click.command()
+@click.argument('uid')
 def check_fixity(uid):
     """
-    [STUB] Check fixity of a resource.
+    Check the fixity of a resource.
     """
-    pass
+    import lakesuperior.env_setup
+
+    try:
+        admin_api.fixity_check(uid)
+    except ChecksumValidationError:
+        print(f'Checksum for {uid} failed.')
+        sys.exit(1)
+
+    print(f'Checksum for {uid} passed.')
 
 
 @click.option(

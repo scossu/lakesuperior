@@ -14,6 +14,7 @@ from lakesuperior.model.ldp_rs import LdpRs
 
 nonrdfly = env.app_globals.nonrdfly
 logger = logging.getLogger(__name__)
+default_hash_algo = env.app_globals.config['application']['uuid']['algo']
 
 class LdpNr(Ldpr):
     """LDP-NR (Non-RDF Source).
@@ -94,8 +95,6 @@ class LdpNr(Ldpr):
 
         :rtype: str
         """
-        default_hash_algo = \
-                env.app_globals.config['application']['uuid']['algo']
         cksum_term = self.metadata.value(nsc['premis'].hasMessageDigest)
         cksum = str(cksum_term).replace(f'urn:{default_hash_algo}:','')
         return nonrdfly.__class__.local_path(
@@ -145,7 +144,7 @@ class LdpNr(Ldpr):
             self.uri, nsc['premis'].hasSize, Literal(self.size)))
 
         # Checksum.
-        cksum_term = URIRef('urn:sha1:{}'.format(self.digest))
+        cksum_term = URIRef(f'urn:{default_hash_algo}:{self.digest}')
         self.provided_imr.set((
             self.uri, nsc['premis'].hasMessageDigest, cksum_term))
 

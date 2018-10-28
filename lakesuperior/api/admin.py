@@ -1,7 +1,11 @@
+import hashlib
 import logging
 
 from lakesuperior import env
 from lakesuperior.config_parser import parse_config
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
+from lakesuperior.exceptions import (
+        ChecksumValidationError, IncompatibleLdpTypeError)
 from lakesuperior.migrator import Migrator
 from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout
 
@@ -54,3 +58,39 @@ def integrity_check():
     """
     with env.app_globals.rdfly.store.txn_ctx():
         return set(env.app_globals.rdfly.find_refint_violations())
+
+
+def fixity_check(uid):
+    """
+    Check fixity of a resource.
+
+    This calculates the checksum of a resource and validates it against the
+    checksum stored in its metadata (``premis:hasMessageDigest``).
+
+    :param str uid: UID of the resource to be checked.
+
+    :rtype: None
+
+    :raises: lakesuperior.exceptions.ChecksumValidationError: the cecksums
+        do not match. This indicates corruption.
+    :raises: lakesuperior.exceptions.IncompatibleLdpTypeError: if the
+        resource is not an LDP-NR.
+    """
+    from lakesuperior.api import resource as rsrc_api
+    from lakesuperior.model.ldp_factory import LDP_NR_TYPE
+
+    rsrc = rsrc_api.get(uid)
+    if LDP_NR_TYPE not in rsrc.ldp_types:
+        raise IncompatibleLdpTypeError()
+
+    ref_digest_term = rsrc.metadata.value(nsc['premis'].hasMessageDigest)
+    ref_digest_parts = ref_digest_term.split(':')
+    ref_cksum = ref_digest_parts[-1]
+    ref_cksum_algo = ref_digest_parts[-2]
+
+    calc_cksum = hashlib.new(ref_cksum_algo, rsrc.content.read()).hexdigest()
+
+    if calc_cksum != ref_cksum:
+        raise ChecksumValidationError(uid, ref_cksum, calc_cksum)
+
+    logger.info(f'Fixity check passed for {uid}.')

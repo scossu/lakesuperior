@@ -1,16 +1,42 @@
 from rdflib import URIRef, BNode, Literal
 
 #from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from libc.stdint cimport uint64_t
 from libc.stdlib cimport malloc, free
-#from libc.string cimport memcpy
+from libc.string cimport memcpy
 
+#from lakesuperior.cy_include.cyspookyhash cimport spookyhash_128
 from lakesuperior.cy_include cimport cytpl as tpl
+
 
 DEF LSUP_TERM_TYPE_URIREF = 1
 DEF LSUP_TERM_TYPE_BNODE = 2
 DEF LSUP_TERM_TYPE_LITERAL = 3
 DEF LSUP_PK_FMT_ID = b'S(cs)'
 DEF LSUP_PK_FMT_LIT = b'S(csss)'
+
+
+DEF _SEED_LEN = 8
+DEF _HLEN = 16
+
+HLEN = _HLEN
+SEED_LEN = _SEED_LEN
+
+term_hash_seed = b'\xff\xf2Q\xf2j\x0bG\xc1\x8a}\xca\x92\x98^y\x12'
+"""
+Seed for computing the term hash.
+
+This is a 16-byte string that will be split up into two ``uint64``
+numbers to make up the ``spookyhash_128`` seeds.
+"""
+memcpy(&term_hash_seed1, term_hash_seed, SEED_LEN)
+memcpy(&term_hash_seed2, term_hash_seed + SEED_LEN, SEED_LEN)
+
+# We only need one function from spookyhash. No need for a pxd file.
+cdef extern from 'spookyhash_api.h':
+    void spookyhash_128(
+            const void *input, size_t input_size, uint64_t *hash_1,
+            uint64_t *hash_2)
 
 
 cdef int serialize(
@@ -88,3 +114,21 @@ cdef deserialize(const unsigned char *data, const size_t data_size):
         free(term_lang)
         free(_pk)
         free(fmt)
+
+
+cdef inline void hash_(
+        const unsigned char *message, size_t message_size, Hash *digest):
+    """
+    Get the hash value of a serialized object.
+
+    The hashing algorithm is `SpookyHash
+    <http://burtleburtle.net/bob/hash/spooky.html>`_ which produces 128-bit
+    (16-byte) digests.
+
+    The initial seeds are determined in the application configuration.
+    """
+    cdef Hash_128 seed = [term_hash_seed1, term_hash_seed2]
+
+    spookyhash_128(message, message_size, seed, seed + 1)
+
+    memcpy(digest, seed, sizeof(Hash))
