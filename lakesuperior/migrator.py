@@ -232,11 +232,11 @@ class Migrator:
         # Get the whole RDF document now because we have to know all outbound
         # links.
         get_uri = (
-                uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
+                uri if ldp_type == 'ldp_rs' else f'{uri}/fcr:metadata')
         try:
             get_rsp = requests.get(get_uri, auth=self.auth)
             get_rsp.raise_for_status()
-        except:
+        except Exception as e:
             if self.skip_errors:
                 logger.error(f'Error retrieving resource body: {e}')
                 return
