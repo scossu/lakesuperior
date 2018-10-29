@@ -110,6 +110,7 @@ venv.bak/
 /data
 
 # Cython business.
+/cython_debug
 /lakesuperior/store/*.c
 /lakesuperior/store/ldp_rs/*.c
 !ext/lib

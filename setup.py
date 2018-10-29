@@ -18,6 +18,8 @@ import lakesuperior
 # Use this version to build C files from .pyx sources.
 CYTHON_VERSION='0.29'
 
+KLEN = 5 # TODO Move somewhere else (config?)
+
 try:
     import Cython
     from Cython.Build import cythonize
@@ -80,12 +82,30 @@ extensions = [
         extra_link_args=['-fopenmp']
     ),
     Extension(
+        'lakesuperior.store.ldp_rs.keyset',
+        [
+            path.join('lakesuperior', 'store', 'ldp_rs', f'keyset.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
+    ),
+    Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join(
                 'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp']
+    ),
+    Extension(
+        'lakesuperior.store.ldp_rs.graph',
+        [
+            path.join('lakesuperior', 'store', 'ldp_rs', f'graph.{ext}'),
         ],
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],

@@ -16,7 +16,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.store.ldp_rs.lmdb_triplestore import Imr
+from lakesuperior.store.ldp_rs.graph import Imr
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource

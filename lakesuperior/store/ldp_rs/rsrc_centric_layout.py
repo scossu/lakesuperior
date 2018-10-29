@@ -24,7 +24,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph, Imr
+from lakesuperior.store.ldp_rs.graph import SimpleGraph, Imr
 
 
 META_GR_URI = nsc['fcsystem']['meta']
