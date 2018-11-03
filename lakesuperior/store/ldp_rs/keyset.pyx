@@ -30,6 +30,7 @@ cdef class Keyset:
         self.ct = ct
         self.itemsize = itemsize
         self.size = self.itemsize * self.ct
+        self._cur = 0
 
         #logger.debug('Got malloc sizes: {}, {}'.format(ct, itemsize))
         #logger.debug(
@@ -104,7 +105,17 @@ cdef class Keyset:
 
         :rtype: bytes
         """
+        if i >= self.ct:
+            raise ValueError(f'Index {i} out of range.')
+
         return self.get_item(i)[: self.itemsize]
+
+
+    def tell(self):
+        """
+        Tell the position of the cursor in the keyset.
+        """
+        return _cur
 
 
     cdef unsigned char *get_item(self, i):
@@ -115,8 +126,27 @@ cdef class Keyset:
 
         :rtype: unsigned char*
         """
+        self._cur = i
         return self.data + self.itemsize * i
 
 
+    cdef bint next(self, unsigned char *val):
+        """
+        Return current value and advance the cursor by 1.
 
+        :param unsigned char *val: Addres of value returned. It is void if
+            the end of the buffer was reached.
+
+        :rtype: bint
+        :return: True if a value was found, False if the end of the buffer
+            has been reached.
+        """
+        if _cur >= self.ct:
+            val = NULL
+            return False
+
+        val = self.data + self.itemsize * self._cur
+        self._cur += 1
+
+        return True
 
