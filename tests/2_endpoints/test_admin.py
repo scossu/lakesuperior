@@ -25,7 +25,11 @@ class TestAdminApi:
         self.client.put(
             path, data=content, headers={'content-type': 'text/plain'})
 
-        assert self.client.get(fix_path).status_code == 200
+        rsp = self.client.get(fix_path)
+
+        assert rsp.status_code == 200
+        assert rsp.json['uid'] == f'/{uid}'
+        assert rsp.json['pass'] == True
 
 
     def test_fixity_check_corrupt(self):
@@ -45,7 +49,11 @@ class TestAdminApi:
         with open(rsrc.local_path, 'wb') as fh:
             fh.write(uuid4().bytes)
 
-        assert self.client.get(fix_path).status_code == 412
+        rsp = self.client.get(fix_path)
+
+        assert rsp.status_code == 200
+        assert rsp.json['uid'] == f'/{uid}'
+        assert rsp.json['pass'] == False
 
 
     def test_fixity_check_missing(self):

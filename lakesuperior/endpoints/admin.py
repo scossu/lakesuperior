@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, render_template
+from flask import Blueprint, jsonify, render_template
 
 from lakesuperior.api import admin as admin_api
 from lakesuperior.exceptions import (
@@ -59,6 +59,7 @@ def fixity_check(uid):
     Check the fixity of a resource.
     """
     uid = '/' + uid.strip('/')
+
     try:
         admin_api.fixity_check(uid)
     except ResourceNotExistsError as e:
@@ -66,6 +67,16 @@ def fixity_check(uid):
     except TombstoneError as e:
         return str(e), 410
     except ChecksumValidationError as e:
-        return str(e), 412
+        check_pass = False
+    else:
+        check_pass = True
 
-    return f'Checksum for {uid} passed.', 200
+
+    return (
+        jsonify({
+            'uid': uid,
+            'pass': check_pass,
+        }),
+        200,
+        {'content-type': 'application/json'}
+    )
