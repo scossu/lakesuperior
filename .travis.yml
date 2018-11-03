@@ -12,6 +12,8 @@ install:
   - pip install -e .
 script:
   - python setup.py test
+env:
+  - CFLAGS="-std=c99"
 
 deploy:
     provider: pypi
