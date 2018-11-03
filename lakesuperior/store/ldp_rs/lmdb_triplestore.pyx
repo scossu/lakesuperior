@@ -17,8 +17,8 @@ cimport lakesuperior.cy_include.cytpl as tpl
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.term cimport (
-        HLEN, Hash, deserialize, hash_, serialize)
+from lakesuperior.store.ldp_rs.term cimport deserialize, serialize
+from lakesuperior.util.hash cimport HLEN, Hash128, hash128
 
 
 FIRST_KEY = <bytes>KEY_START * KLEN
@@ -181,7 +181,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_val spo_v, c_v, null_v
             unsigned char i
             unsigned char *pk_t
-            Hash thash
+            Hash128 thash
             # Using Key or TripleKey here breaks Cython. This might be a bug.
             # See https://github.com/cython/cython/issues/2517
             unsigned char spock[QUAD_KLEN]
@@ -202,7 +202,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             for i, term in enumerate((s, p, o, c)):
                 serialize(term, &pk_t, &term_size)
-                hash_(pk_t, term_size, &thash)
+                thash = hash128(pk_t, term_size)
                 try:
                     key_v.mv_data = &thash
                     key_v.mv_size = HLEN
@@ -307,16 +307,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :type pk_size: size_t
         """
         cdef:
-            Hash c_hash
+            Hash128 chash
             unsigned char ck[KLEN]
             lmdb.MDB_txn *tmp_txn
             lmdb.MDB_cursor *th_cur
             lmdb.MDB_cursor *pk_cur
             lmdb.MDB_cursor *ck_cur
 
-        hash_(pk_c, pk_size, &c_hash)
+        chash = hash128(pk_c, pk_size)
         #logger.debug('Adding a graph.')
-        if not self._key_exists(c_hash, HLEN, b'th:t'):
+        if not self._key_exists(chash, HLEN, b'th:t'):
             # Insert context term if not existing.
             if self.is_txn_rw:
                 #logger.debug('Working in existing RW transaction.')
@@ -324,7 +324,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # Main entry.
                 self._append(pk_c, pk_size, &ck, b't:st')
                 # Index.
-                self._put(c_hash, HLEN, ck, KLEN, b'th:t')
+                self._put(chash, HLEN, ck, KLEN, b'th:t')
                 # Add to list of contexts.
                 self._put(ck, KLEN, b'', 0, 'c:')
             else:
@@ -335,7 +335,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self._append(
                             pk_c, pk_size, &ck, dblabel=b't:st', txn=tmp_txn)
                     # Index.
-                    self._put(c_hash, HLEN, ck, KLEN, b'th:t', txn=tmp_txn)
+                    self._put(chash, HLEN, ck, KLEN, b'th:t', txn=tmp_txn)
                     # Add to list of contexts.
                     self._put(ck, KLEN, b'', 0, b'c:', txn=tmp_txn)
                     _check(lmdb.mdb_txn_commit(tmp_txn))
@@ -585,7 +585,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Delete a context.
         """
         cdef:
-            Hash chash
+            Hash128 chash
             unsigned char ck[KLEN]
             unsigned char *pk_c
             size_t c_size
@@ -608,7 +608,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Clean up all terms related to the graph.
         serialize(gr_uri, &pk_c, &c_size)
-        hash_(pk_c, c_size, &chash)
+        chash = hash128(pk_c, c_size)
         free(pk_c)
 
         ck_v.mv_size = KLEN
@@ -1373,11 +1373,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned char *pk_t
             size_t term_size
-            Hash thash
+            Hash128 thash
 
         serialize(term, &pk_t, &term_size)
         #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
-        hash_(pk_t, term_size, &thash)
+        thash = hash128(pk_t, term_size)
         free(pk_t)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = &thash
