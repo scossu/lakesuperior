@@ -5,8 +5,16 @@ from functools import wraps
 from rdflib import Graph
 from rdflib.term import Node
 
+from lakesuperior.cy_include cimport calg
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         TRP_KLEN, LmdbTriplestore)
+from lakesuperior.store.ldp_rs.term import SerializedTriple, serialize_triple
+from lakesuperior.util.hash cimport hash64
+
+
+ctypedef struct SetItem:
+    unsigned char *data
+    size_t size
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +33,26 @@ def use_data(fn):
     return _wrapper
 
 
+cdef unsigned int set_item_hash_fn(calg.SetValue data):
+    """
+    Hash function for the CAlg set implementation.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
+
+    :param SetItem *data: Pointer to a SetItem structure.
+    """
+    return hash64((<SetItem>data).data, (<SetItem>data).size)
+
+
+cdef bint set_item_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+    """
+    Compare function for two CAlg set items.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
+    """
+    pass
+
+
 cdef class SimpleGraph:
     """
     Fast and simple implementation of a graph.
@@ -36,36 +64,53 @@ cdef class SimpleGraph:
     """
 
     cdef:
-        readonly set data
+        calg.Set *_data
 
     def __init__(
-            self, set data=set(), tuple lookup=(), store=None):
+            self, calg.Set *cdata=NULL, Keyset keyset=NULL, set data=set()):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
-        Either ``data``, or both ``lookup`` and ``store``, can be provided.
-        ``lookup`` and ``store`` have precedence. If none of them is specified,
-        an empty graph is initialized.
+        One of ``cdata``, ``keyset``, or ``data`` can be provided. If more than
+        one of these is provided, precedence is given in the mentioned order.
+        If none of them is specified, an empty graph is initialized.
 
         :param rdflib.URIRef uri: The graph URI.
             This will serve as the subject for some queries.
+        :param calg.Set cdata: Initial data as a C ``Set`` struct.
+        :param Keyset keyset: Keyset to create the graph from. Keys will be
+            converted to set elements.
         :param set data: Initial data as a set of 3-tuples of RDFLib terms.
         :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
             E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
-        if data:
-            self.data = set(data)
+        cdef:
+            SerializedTriple strp
+            TripleKey spok
+
+        if cdata is not NULL:
+            self._data = cdata
         else:
-            if not lookup:
-                self.data = set()
+            self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
+            if keyset is not NULL:
+                while keyset.next(spok):
+                    self._data = LmdbStore.from_triple_key
             else:
-                if store is None:
-                    raise ValueError('Store not specified for triple lookup.')
-                trp_ptn = lookup[0]
-                ctx = lookup[1] if len(lookup) > 1 else None
-                self._data_from_lookup(store, trp_ptn, ctx)
+                for trp in data:
+                    strp = serialize_triple(trp)
+                    calg.set_insert(self._data, strp)
+
+
+    @property
+    def data(self):
+        """
+        Triple data as a Python set.
+
+        :rtype: set
+        """
+        return self._data_as_set()
 
 
     cdef void _data_from_lookup(
@@ -81,12 +126,25 @@ cdef class SimpleGraph:
             size_t i
             unsigned char spok[TRP_KLEN]
 
-        self.data = set()
+        self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
         with store.txn_ctx():
             keyset = store.triple_keys(trp_ptn, ctx)
             for i in range(keyset.ct):
                 spok = keyset.data + i * TRP_KLEN
                 self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
+                strp = serialize_triple(trp)
+                calg.set_insert(self._data, strp)
+
+
+    cdef _data_as_set(self):
+        """
+        Convert triple data to a Python set.
+
+        Internally the data are stored as a C struct.
+
+        :rtype: set
+        """
+        pass
 
 
     # Basic set operations.

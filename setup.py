@@ -87,6 +87,15 @@ extensions = [
         extra_link_args=['-fopenmp']
     ),
     Extension(
+        'lakesuperior.store.ldp_rs.triple',
+        [
+            path.join('lakesuperior', 'store', 'ldp_rs', f'triple.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp']
+    ),
+    Extension(
         'lakesuperior.store.ldp_rs.keyset',
         [
             path.join('lakesuperior', 'store', 'ldp_rs', f'keyset.{ext}'),

@@ -1,5 +1,3 @@
-from lakesuperior.cy_include cimport cytpl as tpl
-
 cdef:
     #unsigned char *pack_data
     unsigned char term_type
