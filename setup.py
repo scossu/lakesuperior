@@ -80,7 +80,6 @@ extensions = [
         'lakesuperior.store.ldp_rs.term',
         [
             path.join(tpl_src_dir, 'tpl.c'),
-            path.join(spookyhash_src_dir, 'spookyhash.c'),
             path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -107,6 +106,14 @@ extensions = [
         include_dirs=include_dirs,
         extra_compile_args=['-fopenmp'],
         extra_link_args=['-fopenmp']
+    ),
+    Extension(
+        'lakesuperior.util.hash',
+        [
+            path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join('lakesuperior', 'util', f'hash.{ext}'),
+        ],
+        include_dirs=include_dirs,
     ),
     Extension(
         'lakesuperior.store.ldp_rs.graph',
