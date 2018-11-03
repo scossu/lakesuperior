@@ -5,6 +5,8 @@ include ext/lmdb/libraries/liblmdb/mdb.c
 include ext/lmdb/libraries/liblmdb/lmdb.h
 include ext/lmdb/libraries/liblmdb/midl.c
 include ext/lmdb/libraries/liblmdb/midl.h
+include ext/c-algorithms/src/set.c
+include ext/c-algorithms/src/set.h
 include ext/tpl/src/tpl.c
 include ext/tpl/src/tpl.h
 include ext/spookyhash/src/*.c

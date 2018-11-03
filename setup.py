@@ -42,11 +42,17 @@ with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
 # Extensions directory.
+calg_src_dir = path.join('ext', 'c-algorithms', 'src')
 lmdb_src_dir = path.join('ext', 'lmdb', 'libraries', 'liblmdb')
-tpl_src_dir = path.join('ext', 'tpl', 'src')
 spookyhash_src_dir = path.join('ext', 'spookyhash', 'src')
+tpl_src_dir = path.join('ext', 'tpl', 'src')
 
-include_dirs = [lmdb_src_dir, tpl_src_dir, spookyhash_src_dir]
+include_dirs = [
+    calg_src_dir,
+    lmdb_src_dir,
+    spookyhash_src_dir,
+    tpl_src_dir,
+]
 
 cy_include_dir = path.join('lakesuperior', 'cy_include')
 
@@ -105,6 +111,7 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.graph',
         [
+            path.join(calg_src_dir, 'set.c'),
             path.join('lakesuperior', 'store', 'ldp_rs', f'graph.{ext}'),
         ],
         include_dirs=include_dirs,

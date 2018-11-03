@@ -9,3 +9,6 @@
 [submodule "ext/spookyhash"]
     path = ext/spookyhash
     url = https://github.com/centaurean/spookyhash.git
+[submodule "ext/c-algorithms"]
+    path = ext/c-algorithms
+    url = https://github.com/fragglet/c-algorithms.git
