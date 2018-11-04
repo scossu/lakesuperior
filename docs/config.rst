@@ -1,5 +1,5 @@
 Configuration Reference
 =======================
 
-.. autoyaml:: ../lakesuperior/etc.defaults
+.. autoyaml:: lakesuperior/etc.defaults
 
