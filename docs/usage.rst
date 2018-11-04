@@ -1,7 +1,7 @@
 Sample Usage
 ============
 
-LDP API
+LDP (REST) API
 -------
 
 The following are very basic examples of LDP interaction. For a more complete
@@ -110,6 +110,23 @@ Immediately forget a resource
 
     curl -X DELETE -H'Prefer:no-tombstone' http://localhost:8000/ldp/res1
 
+
+Admin REST API
+--------------
+
+Fixity check
+~~~~~~~~~~~~
+
+Check the fixity of a resource, i.e. if the checksum stored in the metadata
+corresponds to the current checksum of the stored file. This requires a
+checksum calculation and may take a long time depending on the file size and
+the hashing algorithm chosen::
+
+   curl http://localhost:8000/admin/<resource UID>/fixity
+
+The response is a JSON document with two keys: ``uid`` indicating the UID of
+the resource checked; and ``pass`` that can be True or False depending on the
+outcome of the check.
 
 Python API
 ----------
