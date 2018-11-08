@@ -7,8 +7,9 @@ from rdflib.term import Node
 
 from lakesuperior.cy_include cimport calg
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
-        TRP_KLEN, LmdbTriplestore)
-from lakesuperior.store.ldp_rs.term import SerializedTriple, serialize_triple
+        TRP_KLEN, TripleKey, LmdbTriplestore)
+from lakesuperior.store.ldp_rs.keyset cimport Keyset
+from lakesuperior.store.ldp_rs.triple cimport Triple
 from lakesuperior.util.hash cimport hash64
 
 
@@ -66,8 +67,8 @@ cdef class SimpleGraph:
     cdef:
         calg.Set *_data
 
-    def __init__(
-            self, calg.Set *cdata=NULL, Keyset keyset=NULL, set data=set()):
+    def __cinit__(
+            self, calg.Set *cdata=NULL, Keyset keyset=None, set data=set()):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
@@ -87,16 +88,17 @@ cdef class SimpleGraph:
         :param lmdbStore store: the store to look data up.
         """
         cdef:
-            SerializedTriple strp
+            Triple strp
             TripleKey spok
 
         if cdata is not NULL:
             self._data = cdata
         else:
             self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
-            if keyset is not NULL:
+            if keyset is not None:
                 while keyset.next(spok):
-                    self._data = LmdbStore.from_triple_key
+                    self._data = LmdbTriplestore.from_trp_key(
+                    )
             else:
                 for trp in data:
                     strp = serialize_triple(trp)

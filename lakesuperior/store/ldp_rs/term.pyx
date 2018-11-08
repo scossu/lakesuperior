@@ -10,82 +10,85 @@ from lakesuperior.cy_include cimport cytpl as tpl
 DEF LSUP_TERM_TYPE_URIREF = 1
 DEF LSUP_TERM_TYPE_BNODE = 2
 DEF LSUP_TERM_TYPE_LITERAL = 3
-DEF LSUP_PK_FMT_ID = b'S(cs)'
-DEF LSUP_PK_FMT_LIT = b'S(csss)'
+DEF LSUP_TERM_PK_FMT = b'csss'
+DEF LSUP_TERM_STRUCT_PK_FMT = b'S(' + LSUP_TERM_PK_FMT + b')'
 
 
-cdef int serialize(
-        term, unsigned char **pack_data, size_t *pack_size) except -1:
-    cdef:
-        bytes term_data = term.encode()
-        bytes term_datatype
-        bytes term_lang
-        IdentifierTerm id_t
-        LiteralTerm lit_t
+cdef class Term:
+    """
+    RDF term: URI reference, blank node or literal.
+    """
+    def __cinit__(self, const tpl.tpl_bin data):
+        """
+        Initialize a Term from pack data.
 
-    if isinstance(term, Literal):
-        term_datatype = (getattr(term, 'datatype') or '').encode()
-        term_lang = (getattr(term, 'language') or '').encode()
+        :param tpl.tpl_bin data: a TPL binary buffer packed according to the
+            term structure format.
+        """
+        self._pk = tpl.tpl_peek(
+                tpl.TPL_MEM | tpl.TPL_DATAPEEK, data.addr, data.sz,
+                LSUP_TERM_PK_FMT, &self.term_type, &self.data, &self.datatype,
+                &self.lang)
 
-        lit_t.type = LSUP_TERM_TYPE_LITERAL
-        lit_t.data = term_data
-        lit_t.datatype = <unsigned char *>term_datatype
-        lit_t.lang = <unsigned char *>term_lang
 
-        tpl.tpl_jot(tpl.TPL_MEM, pack_data, pack_size, LSUP_PK_FMT_LIT, &lit_t)
-    else:
-        if isinstance(term, URIRef):
-            id_t.type = LSUP_TERM_TYPE_URIREF
-        elif isinstance(term, BNode):
-            id_t.type = LSUP_TERM_TYPE_BNODE
+    def __dealloc__(self):
+        free(self.data)
+        free(self.datatype)
+        free(self.lang)
+        free(self._pk)
+        free(self._fmt)
+
+
+    def to_py_term(self):
+        """
+        Return an RDFLib term.
+        """
+        data = (<bytes>self.data).decode()
+        if self.term_type == LSUP_TERM_TYPE_LITERAL:
+            return Literal(
+                data, datatype=datatype, lang=lang)
         else:
-            raise ValueError(f'Unsupported term type: {type(term)}')
-        id_t.data = term_data
-        tpl.tpl_jot(tpl.TPL_MEM, pack_data, pack_size, LSUP_PK_FMT_ID, &id_t)
-
-
-cdef deserialize(const unsigned char *data, const size_t data_size):
-    cdef:
-        char term_type
-        char *fmt = NULL
-        char *_pk = NULL
-        unsigned char *term_data = NULL
-        unsigned char *term_lang = NULL
-        unsigned char *term_datatype = NULL
-
-    datatype = None
-    lang = None
-
-    fmt = tpl.tpl_peek(tpl.TPL_MEM, data, data_size)
-    try:
-        if fmt == LSUP_PK_FMT_LIT:
-            _pk = tpl.tpl_peek(
-                    tpl.TPL_MEM | tpl.TPL_DATAPEEK, data, data_size, b'csss',
-                    &term_type, &term_data, &term_datatype, &term_lang)
-            if len(term_datatype) > 0:
-                datatype = term_datatype.decode()
-            elif len(term_lang) > 0:
-                lang = term_lang.decode()
-
-            return Literal(term_data.decode(), datatype=datatype, lang=lang)
-
-        elif fmt == LSUP_PK_FMT_ID:
-            _pk = tpl.tpl_peek(
-                    tpl.TPL_MEM | tpl.TPL_DATAPEEK, data, data_size, b'cs',
-                    &term_type, &term_data)
             uri = term_data.decode()
-            if term_type == LSUP_TERM_TYPE_URIREF:
+            if self.term_type == LSUP_TERM_TYPE_URIREF:
                 return URIRef(uri)
-            elif term_type == LSUP_TERM_TYPE_BNODE:
+            elif self.term_type == LSUP_TERM_TYPE_BNODE:
                 return BNode(uri)
             else:
-                raise IOError(f'Unknown term type code: {term_type}')
+                raise IOError(f'Unknown term type code: {self.term_type}')
+
+
+    def to_bytes(self):
+        """
+        Return a Python bytes object of the serialized term.
+        """
+        ser_data = self.serialize()
+        return <bytes>ser_data.data[:ser_data.sz]
+
+
+    cdef tpl.tpl_bin serialize(self):
+            #term_obj, unsigned char **pack_data, size_t *pack_size) except -1:
+        cdef:
+            bytes term_data = term_obj.encode()
+            bytes term_datatype
+            bytes term_lang
+            term_obj term
+
+        if isinstance(term_obj, Literal):
+            term_datatype = (getattr(term_obj, 'datatype') or '').encode()
+            term_lang = (getattr(term_obj, 'language') or '').encode()
+
+            term.type = LSUP_TERM_TYPE_LITERAL
+            term.data = term_data
+            term.datatype = <unsigned char *>term_datatype
+            term.lang = <unsigned char *>term_lang
         else:
-            msg = f'Unknown structure pack format: {fmt}'
-            raise IOError(msg)
-    finally:
-        free(term_data)
-        free(term_datatype)
-        free(term_lang)
-        free(_pk)
-        free(fmt)
+            if isinstance(term_obj, URIRef):
+                term.type = LSUP_TERM_TYPE_URIREF
+            elif isinstance(term_obj, BNode):
+                term.type = LSUP_TERM_TYPE_BNODE
+            else:
+                raise ValueError(f'Unsupported term type: {type(term_obj)}')
+            term.data = term_data
+
+        tpl.tpl_jot(
+            tpl.TPL_MEM, pack_data, pack_size, LSUP_TERM_STRUCT_PK_FMT, &term)

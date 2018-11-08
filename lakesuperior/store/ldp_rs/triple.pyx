@@ -1,15 +1,15 @@
 from lakesuperior.store.ldp_rs cimport term
 
-cdef int serialize(tuple trp, *tpl.tpl_bin data) except -1:
+cdef int serialize(tuple trp, tpl.tpl_bin *data) except -1:
     """
     Serialize a triple expressed as a tuple of RDFlib terms.
 
     :param tuple trp: 3-tuple of RDFlib terms.
 
-    :rtype: SerializedTriple
+    :rtype: Triple
     """
     cdef:
-        SerializedTriple strp
+        Triple strp
         tpl.tpl_bin s, p, o
 
     strp.s = s
@@ -23,9 +23,9 @@ cdef int serialize(tuple trp, *tpl.tpl_bin data) except -1:
     return strp
 
 
-cdef tuple deserialize(SerializedTriple strp):
+cdef tuple deserialize(Triple strp):
     """
-    Deserialize a ``SerializedTriple`` structure into a tuple of terms.
+    Deserialize a ``Triple`` structure into a tuple of terms.
 
     :rtype: tuple
     """

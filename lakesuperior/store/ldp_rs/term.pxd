@@ -1,22 +1,17 @@
-cdef:
-    #unsigned char *pack_data
-    unsigned char term_type
-    unsigned char *pack_fmt
-    unsigned char *term_data
-    unsigned char *term_datatype
-    unsigned char *term_lang
-    #size_t pack_size
+from lakesuperior.cy_include cimport cytpl as tpl
 
-    struct IdentifierTerm:
-        char type
-        unsigned char *data
+cdef class Term:
+    char type
+    char *data
+    char *datatype
+    char *lang
 
-    struct LiteralTerm:
-        char type
-        unsigned char *data
-        unsigned char *datatype
-        unsigned char *lang
+    # Temporary vars that get cleaned up on object deallocation.
+    char *_fmt
+    char *_pk
 
-    int serialize(term, unsigned char **pack_data, size_t *pack_size) except -1
-    deserialize(unsigned char *data, size_t size)
+    tpl.tpl_bin serialize(self)
+    object to_python()
+
+    Term from_buffer(const unsigned char *data, const size_t size)
 
