@@ -5,6 +5,10 @@ from functools import wraps
 from rdflib import Graph
 from rdflib.term import Node
 
+from lakesuperior import env
+
+from libc.string cimport memcmp
+
 from lakesuperior.cy_include cimport calg
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         TRP_KLEN, TripleKey, LmdbTriplestore)
@@ -51,7 +55,13 @@ cdef bint set_item_cmp_fn(calg.SetValue v1, calg.SetValue v2):
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    pass
+    if (<SetItem *>v1)[0].size != (<SetItem *>v2)[0].size:
+        return False
+
+    return memcmp(
+            (<SetItem *>v1)[0].data, (<SetItem *>v2)[0].data,
+            (<SetItem *>v1)[0].size)
+
 
 
 cdef class SimpleGraph:
@@ -59,16 +69,25 @@ cdef class SimpleGraph:
     Fast and simple implementation of a graph.
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
-        the same funny but functional slicing notation.
+    the same funny but functional slicing notation.
 
-    An instance of this class can be converted to a ``rdflib.Graph`` instance.
+    A SimpleGraph can be obtained from a
+    :py:class:`lakesuperior.store.keyset.Keyset` which is convenient bacause
+    a Keyset can be obtained very efficiently from querying a store, then also
+    very efficiently filtered and eventually converted into a set of readable
+    terms.
+
+    An instance of this class can also be converted to and from a
+    ``rdflib.Graph`` instance.
     """
 
     cdef:
         calg.Set *_data
 
+
     def __cinit__(
-            self, calg.Set *cdata=NULL, Keyset keyset=None, set data=set()):
+            self, calg.Set *cdata=NULL, Keyset keyset=None, store=None,
+            set data=set()):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
@@ -81,25 +100,34 @@ cdef class SimpleGraph:
         :param calg.Set cdata: Initial data as a C ``Set`` struct.
         :param Keyset keyset: Keyset to create the graph from. Keys will be
             converted to set elements.
+        :param lakesuperior.store.ldp_rs.LmdbTripleStore store: store to
+            look up the keyset. Only used if ``keyset`` is specified. If not
+            set, the environment store is used.
         :param set data: Initial data as a set of 3-tuples of RDFLib terms.
         :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
             E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
+        self.store = store or env.app_defaults.rdf_store
+
         cdef:
             Triple strp
             TripleKey spok
 
         if cdata is not NULL:
+            # Build data from provided C set.
             self._data = cdata
+
         else:
+            # Initialize empty data set.
             self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
             if keyset is not None:
+                # Populate with provided key set.
                 while keyset.next(spok):
-                    self._data = LmdbTriplestore.from_trp_key(
-                    )
+                    calg.set_insert(self._data, self.store.from_trp_key(spok))
             else:
+                # Populate with provided Python set.
                 for trp in data:
                     strp = serialize_triple(trp)
                     calg.set_insert(self._data, strp)
@@ -141,8 +169,6 @@ cdef class SimpleGraph:
     cdef _data_as_set(self):
         """
         Convert triple data to a Python set.
-
-        Internally the data are stored as a C struct.
 
         :rtype: set
         """

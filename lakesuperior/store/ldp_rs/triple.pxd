@@ -1,9 +1,10 @@
 from lakesuperior.cy_include cimport cytpl as tpl
+from lakesuperior.store.ldp_rs.term cimport Term
 
 ctypedef struct Triple:
-    tpl.tpl_bin s
-    tpl.tpl_bin p
-    tpl.tpl_bin o
+    Term s
+    Term p
+    Term o
 
 
 cdef:

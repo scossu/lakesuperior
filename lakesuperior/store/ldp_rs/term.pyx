@@ -18,15 +18,15 @@ cdef class Term:
     """
     RDF term: URI reference, blank node or literal.
     """
-    def __cinit__(self, const tpl.tpl_bin data):
+    def __cinit__(self, const tpl.tpl_bin *data):
         """
         Initialize a Term from pack data.
 
-        :param tpl.tpl_bin data: a TPL binary buffer packed according to the
-            term structure format.
+        :param tpl.tpl_bin *data: a pointer to a TPL binary buffer packed
+            according to the term structure format.
         """
         self._pk = tpl.tpl_peek(
-                tpl.TPL_MEM | tpl.TPL_DATAPEEK, data.addr, data.sz,
+                tpl.TPL_MEM | tpl.TPL_DATAPEEK, data[0].addr, data[0].sz,
                 LSUP_TERM_PK_FMT, &self.term_type, &self.data, &self.datatype,
                 &self.lang)
 

@@ -13,6 +13,7 @@ from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
 cimport lakesuperior.cy_include.cytpl as tpl
+from lakesuperior.store.ldp_rs.term cimport Term
 
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
@@ -1327,12 +1328,27 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     cdef object from_key(self, Key key):
         """
-        Convert a single or multiple key into one or more terms.
+        Convert a single key into one term.
 
         :param Key key: The key to be converted.
         """
+        ser_term = self.lookup_term(key)
+
+        return deserialize(
+                <unsigned char *>ser_term.mv_data, ser_term.mv_size)
+
+
+    cdef inline lmdb.MDB_val lookup_term(self, Key key):
+        """
+        look up a term by key.
+
+        :param Key key: The key to be looked up.
+
+        :rtype: lmdb.MDB_val
+        :return: LMDB value structure containing the serialized term.
+        """
         cdef:
-            unsigned char *pk
+            lmdb.MDB_val key_v, data_v
 
         key_v.mv_data = key
         key_v.mv_size = KLEN
@@ -1341,15 +1357,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.mdb_get(self.txn, self.get_dbi('t:st'), &key_v, &data_v),
                 'Error getting data for key \'{}\'.'.format(key))
 
-        return deserialize(
-                <unsigned char *>data_v.mv_data, data_v.mv_size)
+        return data_v
 
 
     cdef tuple from_trp_key(self, TripleKey key):
         """
-        Convert a single or multiple key into one or more terms.
+        Convert a triple key into a tuple of 3 terms.
 
-        :param Key key: The key to be converted.
+        :param TripleKey key: The triple key to be converted.
         """
         #logger.debug(f'From triple key: {key[: TRP_KLEN]}')
         return (
