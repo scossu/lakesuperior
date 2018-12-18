@@ -1,15 +1,20 @@
 from lakesuperior.cy_include cimport cytpl as tpl
 
-cdef class Term:
-    cdef:
-        char type
-        char *data
-        char *datatype
-        char *lang
+ctypedef tpl.tpl_bin Buffer
+ctypedef struct Term:
+    char type
+    char *data
+    char *datatype
+    char *lang
 
-        # Temporary vars that get cleaned up on object deallocation.
-        char *_fmt
-        char *_pk
+cdef:
+    # Temporary TPL variable.
+    char *_pk
 
-        tpl.tpl_bin serialize(self)
-
+    int serialize(const Term *term, tpl.tpl_bin *sterm) except -1
+    int deserialize(const Buffer *data, Term *term) except -1
+    int from_rdflib(term_obj, Term *term) except -1
+    Buffer *serialize_from_rdflib(term_obj)
+    object deserialize_to_rdflib(const Buffer *data)
+    object to_rdflib(const Term *term)
+    object to_bytes(const Term *term)

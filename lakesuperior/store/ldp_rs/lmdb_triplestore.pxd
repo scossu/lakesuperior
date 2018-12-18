@@ -1,8 +1,9 @@
 cimport lakesuperior.cy_include.cylmdb as lmdb
-#cimport lakesuperior.cy_include.cytpl as tpl
+cimport lakesuperior.cy_include.cytpl as tpl
 
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
+from lakesuperior.store.ldp_rs.term cimport Buffer
 
 #Fixed length for term keys.
 #
@@ -63,11 +64,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef tuple all_contexts(self, triple=*)
 
     cdef:
-        void _add_graph(
-                self, unsigned char *pk_c, size_t pk_size) except *
+        void _add_graph(self, Buffer *pk_gr) except *
         void _index_triple(self, str op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
         Keyset _all_term_keys(self, term_type)
+        inline int lookup_term(self, Key key, Buffer *data) except -1
         Keyset _lookup(self, tuple triple_pattern)
         Keyset _lookup_1bound(self, unsigned char idx, term)
         Keyset _lookup_2bound(
@@ -77,7 +78,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         inline void _to_key(self, term, Key *key) except *
         inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *
         void _append(
-                self, unsigned char *value, size_t vlen, Key *nkey,
+                self, Buffer *value, Key *nkey,
                 unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,
                 unsigned int flags=*) except *
         void _next_key(self, const Key key, Key *nkey) except *

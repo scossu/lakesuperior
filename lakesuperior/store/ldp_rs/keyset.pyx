@@ -115,7 +115,7 @@ cdef class Keyset:
         """
         Tell the position of the cursor in the keyset.
         """
-        return _cur
+        return self._cur
 
 
     cdef unsigned char *get_item(self, i):
@@ -130,18 +130,18 @@ cdef class Keyset:
         return self.data + self.itemsize * i
 
 
-    cdef bint next(self, unsigned char *val):
+    cdef bint next(self, void *val):
         """
-        Return current value and advance the cursor by 1.
+        Populate the current value and advance the cursor by 1.
 
-        :param unsigned char *val: Addres of value returned. It is void if
+        :param void *val: Addres of value returned. It is NULL if
             the end of the buffer was reached.
 
         :rtype: bint
         :return: True if a value was found, False if the end of the buffer
             has been reached.
         """
-        if _cur >= self.ct:
+        if self._cur >= self.ct:
             val = NULL
             return False
 

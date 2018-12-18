@@ -7,5 +7,5 @@ cdef class Keyset:
 
         void resize(self, size_t ct) except *
         unsigned char *get_item(self, i)
-        bint next(self, unsigned char *val)
+        bint next(self, void *val)
 

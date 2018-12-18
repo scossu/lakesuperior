@@ -1,15 +1,11 @@
 from libc.stdint cimport uint64_t
 from libc.string cimport memcpy
 
-term_hash_seed = b'\xff\xf2Q\xf2j\x0bG\xc1\x8a}\xca\x92\x98^y\x12'
-"""
-Seed for computing the term hash.
+from lakesuperior.store.ldp_rs.term cimport Buffer
 
-This is a 16-byte string that will be split up into two ``uint64``
-numbers to make up the ``spookyhash_128`` seeds.
-"""
-memcpy(&term_hash_seed1, term_hash_seed, SEED_LEN)
-memcpy(&term_hash_seed2, term_hash_seed + SEED_LEN, SEED_LEN)
+
+memcpy(&term_hash_seed1, TERM_HASH_SEED, SEED_LEN)
+memcpy(&term_hash_seed2, TERM_HASH_SEED + SEED_LEN, SEED_LEN)
 
 # We only need a couple of functions from spookyhash. No need for a pxd file.
 cdef extern from 'spookyhash_api.h':
@@ -19,8 +15,7 @@ cdef extern from 'spookyhash_api.h':
     uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
 
 
-cdef inline Hash128 hash128(
-        const unsigned char *message, size_t message_size):
+cdef inline int hash128(const Buffer *message, Hash128 *hash) except -1:
     """
     Get the hash value of a byte string with a defined size.
 
@@ -36,14 +31,13 @@ cdef inline Hash128 hash128(
         DoubleHash64 seed = [term_hash_seed1, term_hash_seed2]
         Hash128 digest
 
-    spookyhash_128(message, message_size, seed, seed + 1)
+    spookyhash_128(message[0].addr, message[0].sz, seed, seed + 1)
 
-    # This casts the 2 contiguous uint64_t's into a char pointer.
-    return <Hash128>seed
+    # This casts the 2 contiguous uint64_t's into a char[16] pointer.
+    hash[0] = <Hash128>seed
 
 
-cdef inline Hash64 hash64(
-        const unsigned char *message, size_t message_size):
+cdef inline int hash64(const Buffer *message, Hash64 *hash) except -1:
     """
     Get a 64-bit (unsigned long) hash value of a byte string.
 
@@ -52,4 +46,4 @@ cdef inline Hash64 hash64(
     """
     cdef uint64_t seed = term_hash_seed1
 
-    return spookyhash_64(message, message_size, seed)
+    hash[0] = spookyhash_64(message[0].addr, message[0].sz, seed)

@@ -7,19 +7,17 @@ from rdflib.term import Node
 
 from lakesuperior import env
 
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memcmp
 
 from lakesuperior.cy_include cimport calg
+from lakesuperior.cy_include cimport cylmdb as lmdb
+from lakesuperior.store.ldp_rs cimport term
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
-        TRP_KLEN, TripleKey, LmdbTriplestore)
+        KLEN, DBL_KLEN, TRP_KLEN, TripleKey, LmdbTriplestore)
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
 from lakesuperior.store.ldp_rs.triple cimport Triple
-from lakesuperior.util.hash cimport hash64
-
-
-ctypedef struct SetItem:
-    unsigned char *data
-    size_t size
+from lakesuperior.util.hash cimport Hash64, hash64
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +44,16 @@ cdef unsigned int set_item_hash_fn(calg.SetValue data):
 
     :param SetItem *data: Pointer to a SetItem structure.
     """
-    return hash64((<SetItem>data).data, (<SetItem>data).size)
+    cdef:
+        Hash64 hash
+        term.Buffer sr_data
+
+    sr_data.addr = (<SetItem>data).data
+    sr_data.sz = (<SetItem>data).size
+
+    hash64(&sr_data, &hash)
+
+    return hash
 
 
 cdef bint set_item_cmp_fn(calg.SetValue v1, calg.SetValue v2):
@@ -81,10 +88,6 @@ cdef class SimpleGraph:
     ``rdflib.Graph`` instance.
     """
 
-    cdef:
-        calg.Set *_data
-
-
     def __cinit__(
             self, calg.Set *cdata=NULL, Keyset keyset=None, store=None,
             set data=set()):
@@ -112,8 +115,9 @@ cdef class SimpleGraph:
         self.store = store or env.app_defaults.rdf_store
 
         cdef:
-            Triple strp
+            size_t i = 0
             TripleKey spok
+            term.Buffer pk_t
 
         if cdata is not NULL:
             # Build data from provided C set.
@@ -123,14 +127,30 @@ cdef class SimpleGraph:
             # Initialize empty data set.
             self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
             if keyset is not None:
-                # Populate with provided key set.
+                # Populate with triples extracted from provided key set.
                 while keyset.next(spok):
-                    calg.set_insert(self._data, self.store.from_trp_key(spok))
+                    self.store.lookup_term(spok[:KLEN], &pk_t)
+                    term.deserialize(&pk_t, self._trp.s)
+
+                    self.store.lookup_term(spok[KLEN:DBL_KLEN], &pk_t)
+                    term.deserialize(&pk_t, self._trp.p)
+
+                    self.store.lookup_term(spok[DBL_KLEN:TRP_KLEN], &pk_t)
+                    term.deserialize(&pk_t, self._trp.o)
+
+                    calg.set_insert(self._data, &self._trp)
             else:
                 # Populate with provided Python set.
-                for trp in data:
-                    strp = serialize_triple(trp)
-                    calg.set_insert(self._data, strp)
+                self._trp = <Triple *>PyMem_Malloc(sizeof(Triple) * len(data))
+                for s, p, o in data:
+                    term.from_rdflib(s, self._trp[i].s)
+                    term.from_rdflib(p, self._trp[i].p)
+                    term.from_rdflib(o, self._trp[i].o)
+                    calg.set_insert(self._data, self._trp)
+
+
+    def __dealloc__(self):
+        PyMem_Free(self._trp)
 
 
     @property
@@ -162,7 +182,7 @@ cdef class SimpleGraph:
             for i in range(keyset.ct):
                 spok = keyset.data + i * TRP_KLEN
                 self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
-                strp = serialize_triple(trp)
+                strp = serialize_triple(self._trp)
                 calg.set_insert(self._data, strp)
 
 
@@ -396,10 +416,7 @@ cdef class Imr(SimpleGraph):
     Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
     will create a new ``Imr`` instance with the same subject URI.
     """
-    cdef:
-        readonly object uri
-
-    def __init__(self, uri, *args, **kwargs):
+    def __init__(self, str uri, *args, **kwargs):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 

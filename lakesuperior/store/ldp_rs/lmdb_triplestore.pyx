@@ -12,13 +12,13 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
-cimport lakesuperior.cy_include.cytpl as tpl
 from lakesuperior.store.ldp_rs.term cimport Term
 
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.term cimport deserialize, serialize
+from lakesuperior.store.ldp_rs.term cimport (
+        Buffer, deserialize_to_rdflib, serialize_from_rdflib)
 from lakesuperior.util.hash cimport HLEN, Hash128, hash128
 
 
@@ -181,13 +181,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *icur
             lmdb.MDB_val spo_v, c_v, null_v
             unsigned char i
-            unsigned char *pk_t
             Hash128 thash
             # Using Key or TripleKey here breaks Cython. This might be a bug.
             # See https://github.com/cython/cython/issues/2517
             unsigned char spock[QUAD_KLEN]
             unsigned char nkey[KLEN]
-            size_t term_size
 
         c = self._normalize_context(context)
         if c is None:
@@ -201,22 +199,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Trying to add a triple.')
         icur = self._cur_open('th:t')
         try:
-            for i, term in enumerate((s, p, o, c)):
-                serialize(term, &pk_t, &term_size)
-                thash = hash128(pk_t, term_size)
+            for i, term_obj in enumerate((s, p, o, c)):
+                pk_t = serialize_from_rdflib(term_obj)
+                hash128(pk_t, &thash)
                 try:
-                    key_v.mv_data = &thash
+                    key_v.mv_data = thash
                     key_v.mv_size = HLEN
                     _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('th:t'), &key_v, &data_v))
                     memcpy(spock + (i * KLEN), data_v.mv_data, KLEN)
                     #logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
                 except KeyNotFoundError:
-                    # If term is not found, add it...
+                    # If term_obj is not found, add it...
                     #logger.debug('Hash {} not found. Adding to DB.'.format(
                     #        thash[: HLEN]))
-                    self._append(pk_t, term_size, &nkey, dblabel=b't:st')
-                    free(pk_t)
+                    self._append(pk_t, &nkey, dblabel=b't:st')
                     memcpy(spock + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
@@ -285,27 +282,22 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         :param rdflib.URIRef graph: URI of the named graph to add.
         """
-        cdef:
-            unsigned char *pk_c
-            size_t pk_size
+        cdef Buffer *_sc
 
         if isinstance(graph, Graph):
             graph = graph.identifier
 
-        serialize(graph, &pk_c, &pk_size)
-        self._add_graph(pk_c, pk_size)
-        free(pk_c)
+        _sc = serialize_from_rdflib(graph)
+        self._add_graph(_sc)
 
 
-    cdef void _add_graph(
-            self, unsigned char *pk_c, size_t pk_size) except *:
+    cdef void _add_graph(self, Buffer *pk_gr) except *:
+
         """
         Add a graph.
 
-        :param pk_c: Pickled context URIRef object.
-        :type pk_c: unsigned char*
-        :param pk_size: Size of pickled string.
-        :type pk_size: size_t
+        :param pk_gr: Pickled context URIRef object.
+        :type pk_gr: Buffer*
         """
         cdef:
             Hash128 chash
@@ -315,7 +307,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *pk_cur
             lmdb.MDB_cursor *ck_cur
 
-        chash = hash128(pk_c, pk_size)
+        hash128(pk_gr, &chash)
         #logger.debug('Adding a graph.')
         if not self._key_exists(chash, HLEN, b'th:t'):
             # Insert context term if not existing.
@@ -323,7 +315,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 #logger.debug('Working in existing RW transaction.')
                 # Use existing R/W transaction.
                 # Main entry.
-                self._append(pk_c, pk_size, &ck, b't:st')
+                self._append(pk_gr, &ck, b't:st')
                 # Index.
                 self._put(chash, HLEN, ck, KLEN, b'th:t')
                 # Add to list of contexts.
@@ -333,8 +325,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 #logger.debug('Opening a temporary RW transaction.')
                 _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &tmp_txn))
                 try:
-                    self._append(
-                            pk_c, pk_size, &ck, dblabel=b't:st', txn=tmp_txn)
+                    self._append(pk_gr, &ck, b't:st', txn=tmp_txn)
                     # Index.
                     self._put(chash, HLEN, ck, KLEN, b'th:t', txn=tmp_txn)
                     # Add to list of contexts.
@@ -588,8 +579,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             Hash128 chash
             unsigned char ck[KLEN]
-            unsigned char *pk_c
-            size_t c_size
             lmdb.MDB_val ck_v, chash_v
 
         #logger.debug('Deleting context: {}'.format(gr_uri))
@@ -608,9 +597,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._remove((None, None, gr_uri))
 
         # Clean up all terms related to the graph.
-        serialize(gr_uri, &pk_c, &c_size)
-        chash = hash128(pk_c, c_size)
-        free(pk_c)
+        pk_c = serialize_from_rdflib(gr_uri)
+        hash128(pk_c, &chash)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -627,7 +615,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Lookup methods.
 
-    # TODO Deprecate RDFLib API?
     def contexts(self, triple=None):
         """
         Get a list of all contexts.
@@ -1332,20 +1319,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         :param Key key: The key to be converted.
         """
-        ser_term = self.lookup_term(key)
+        cdef Buffer pk_t
 
-        return deserialize(
-                <unsigned char *>ser_term.mv_data, ser_term.mv_size)
+        self.lookup_term(key, &pk_t)
+
+        return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline lmdb.MDB_val lookup_term(self, Key key):
+    cdef inline int lookup_term(self, Key key, data) except -1:
         """
         look up a term by key.
 
         :param Key key: The key to be looked up.
-
-        :rtype: lmdb.MDB_val
-        :return: LMDB value structure containing the serialized term.
+        :param Buffer *data: Buffer structure containing the serialized term.
         """
         cdef:
             lmdb.MDB_val key_v, data_v
@@ -1355,10 +1341,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         _check(
                 lmdb.mdb_get(self.txn, self.get_dbi('t:st'), &key_v, &data_v),
-                'Error getting data for key \'{}\'.'.format(key))
+                f'Error getting data for key \'{key}\'.')
 
-        return data_v
+        data[0].addr = data_v.mv_data
+        data[0].sz = data_v.mv_size
 
+        return 0
 
     cdef tuple from_trp_key(self, TripleKey key):
         """
@@ -1386,16 +1374,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :rtype: void
         """
         cdef:
-            unsigned char *pk_t
-            size_t term_size
             Hash128 thash
 
-        serialize(term, &pk_t, &term_size)
-        #logger.debug('Hashing pickle: {} with lentgh: {}'.format(pk_t, term_size))
-        thash = hash128(pk_t, term_size)
-        free(pk_t)
+        pk_t = serialize_from_rdflib(term)
+        hash128(pk_t, &thash)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
-        key_v.mv_data = &thash
+        key_v.mv_data = thash
         key_v.mv_size = HLEN
 
         dbi = self.get_dbi('th:t')
@@ -1425,7 +1409,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef void _append(
-            self, unsigned char *value, size_t vlen, Key *nkey,
+            self, Buffer *value, Key *nkey,
             unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL,
             unsigned int flags=0) except *:
         """
@@ -1459,8 +1443,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         key_v.mv_data = nkey
         key_v.mv_size = KLEN
-        data_v.mv_data = value
-        data_v.mv_size = vlen
+        data_v.mv_data = value[0].addr
+        data_v.mv_size = value[0].sz
         #logger.debug('Appending value {} to db {} with key: {}'.format(
         #    value[: vlen], dblabel.decode(), nkey[0][:KLEN]))
         #logger.debug('data size: {}'.format(data_v.mv_size))
