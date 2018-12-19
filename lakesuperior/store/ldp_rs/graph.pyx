@@ -78,6 +78,10 @@ cdef class SimpleGraph:
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
 
+    Instances of this class hold a set of pointers to
+    :py:class:`~lakesuperior.store.ldp_rs.triple.Triple` structures. No data
+    are copied but care must be taken when freeing the triples pointed to.
+
     A SimpleGraph can be obtained from a
     :py:class:`lakesuperior.store.keyset.Keyset` which is convenient bacause
     a Keyset can be obtained very efficiently from querying a store, then also
@@ -85,7 +89,7 @@ cdef class SimpleGraph:
     terms.
 
     An instance of this class can also be converted to and from a
-    ``rdflib.Graph`` instance.
+    ``rdflib.Graph`` instance. TODO verify that this frees Cython pointers.
     """
 
     def __cinit__(
@@ -120,7 +124,7 @@ cdef class SimpleGraph:
             term.Buffer pk_t
 
         if cdata is not NULL:
-            # Build data from provided C set.
+            # Get data from provided C set.
             self._data = cdata
 
         else:
@@ -150,7 +154,13 @@ cdef class SimpleGraph:
 
 
     def __dealloc__(self):
+        """
+        Free the triple pointer.
+        """
         PyMem_Free(self._trp)
+        # TODO This should free the structs pointed to as well, unless they
+        # were provided as ``cdata`` in the constructor (i.e. they were
+        # generated.externally).
 
 
     @property

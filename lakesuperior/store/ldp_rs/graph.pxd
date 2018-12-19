@@ -13,7 +13,7 @@ cdef:
 cdef class SimpleGraph:
     cdef:
         calg.Set *_data
-        Triple *_trp
+        Triple *_trp # Array of triples that are pointed to by _data.
         LmdbTriplestore store
 
         void _data_from_lookup(
