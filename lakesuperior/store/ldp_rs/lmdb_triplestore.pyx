@@ -19,7 +19,7 @@ from lakesuperior.store.base_lmdb_store cimport (
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
 from lakesuperior.store.ldp_rs.term cimport (
         Buffer, deserialize_to_rdflib, serialize_from_rdflib)
-from lakesuperior.util.hash cimport HLEN, Hash128, hash128
+from lakesuperior.util.hash cimport HLEN_128 as HLEN, Hash128, hash128
 
 
 FIRST_KEY = <bytes>KEY_START * KLEN
