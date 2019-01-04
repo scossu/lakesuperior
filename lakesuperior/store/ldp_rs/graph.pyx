@@ -7,8 +7,8 @@ from rdflib.term import Node
 
 from lakesuperior import env
 
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from libc.string cimport memcmp
+from libc.string cimport memcmp, memcpy
+from libc.stdlib cimport free
 
 from lakesuperior.cy_include cimport calg
 from lakesuperior.cy_include cimport cylmdb as lmdb
@@ -16,9 +16,10 @@ from lakesuperior.store.ldp_rs cimport term
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         KLEN, DBL_KLEN, TRP_KLEN, TripleKey, LmdbTriplestore)
 from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.triple cimport Triple
-from lakesuperior.util.hash cimport Hash64, hash64
+from lakesuperior.store.ldp_rs.triple cimport BufferTriple
+from lakesuperior.util.hash cimport Hash32, hash32
 
+#BUF_PTR_SZ = sizeof(Buffer *)
 
 logger = logging.getLogger(__name__)
 
@@ -36,38 +37,134 @@ def use_data(fn):
     return _wrapper
 
 
-cdef unsigned int set_item_hash_fn(calg.SetValue data):
+cdef unsigned int term_hash_fn(calg.SetValue data):
     """
-    Hash function for the CAlg set implementation.
+    Hash function for sets of terms.
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
 
-    :param SetItem *data: Pointer to a SetItem structure.
+    :param SetValue *data: Pointer to a Buffer structure.
     """
     cdef:
-        Hash64 hash
-        term.Buffer sr_data
+        Hash32 hash
 
-    sr_data.addr = (<SetItem>data).data
-    sr_data.sz = (<SetItem>data).size
-
-    hash64(&sr_data, &hash)
+    hash32(<Buffer *>&data, &hash)
 
     return hash
 
 
-cdef bint set_item_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+cdef unsigned int trp_hash_fn(calg.SetValue btrp):
     """
-    Compare function for two CAlg set items.
+    Hash function for sets of (serialized) triples.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
+
+    This function computes the hash of the concatenated pointer values in the
+    s, p, o members of the triple. The triple structure is treated as a byte
+    string. This is safe in spite of byte-wise struct evaluation being a
+    frowned-upon practice (due to padding issues), because it is assumed that
+    the input value is always the same type of structure.
+
+    :param SetItem *data: Pointer to a BufferTriple structure.
+    """
+    cdef:
+        Buffer data
+        Hash32 hash
+
+    data.addr = &btrp
+    data.sz = sizeof(btrp)
+    hash32(&data, &hash)
+
+    return hash
+
+
+cdef bint buffer_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+    """
+    Compare function for two Buffer objects.
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    if (<SetItem *>v1)[0].size != (<SetItem *>v2)[0].size:
+    # No-cast option.
+    #if v1[0].sz != v2[0].sz:
+    #    return False
+    #return memcmp(v1[0].addr, v2[0].addr, v1[0].sz) == 0
+    cdef:
+        Buffer b1 = (<Buffer *>v1)[0]
+        Buffer b2 = (<Buffer *>v2)[0]
+
+    if b1.sz != b2.sz:
         return False
 
-    return memcmp(
-            (<SetItem *>v1)[0].data, (<SetItem *>v2)[0].data,
-            (<SetItem *>v1)[0].size)
+    return memcmp(b1.addr, b2.addr, b1.sz) == 0
+
+
+cdef bint triple_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+    """
+    Compare function for two triples in a CAlg set.
+
+    Here, pointers to terms are compared for s, p, o. The pointers should be
+    guaranteed to point to unique values (i.e. no two pointers have the same
+    term value within a graph).
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
+    """
+    cdef:
+        BufferTriple t1 = (<BufferTriple *>v1)[0]
+        BufferTriple t2 = (<BufferTriple *>v2)[0]
+
+    return(
+            t1.s == t2.s and
+            t1.p == t2.p and
+            t1.o == t2.o)
+
+
+cdef inline bint lookup_none_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return True
+
+
+cdef inline bint lookup_s_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    """
+    Lookup callback compare function for a given s in a triple.
+
+    The function returns ``True`` if ``t1`` matches the first term.
+
+    ``t2`` is not used and is declared only for compatibility with the
+    other interchangeable functions.
+    """
+    return buffer_cmp_fn(t1, &(trp[0].s))
+
+
+cdef inline bint lookup_p_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return buffer_cmp_fn(t1, &(trp[0].p))
+
+
+cdef inline bint lookup_o_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return buffer_cmp_fn(t1, &(trp[0].o))
+
+
+cdef inline bint lookup_sp_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, &(trp[0].s))
+            and buffer_cmp_fn(t2, &(trp[0].p)))
+
+
+cdef inline bint lookup_so_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, &(trp[0].s))
+            and buffer_cmp_fn(t2, &(trp[0].o)))
+
+
+cdef inline bint lookup_po_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, &(trp[0].p))
+            and buffer_cmp_fn(t2, &(trp[0].o)))
 
 
 
@@ -76,16 +173,22 @@ cdef class SimpleGraph:
     Fast and simple implementation of a graph.
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
-    the same funny but functional slicing notation.
+    the same funny but functional slicing notation. No lookup functions within
+    the graph are available at this time.
 
-    Instances of this class hold a set of pointers to
-    :py:class:`~lakesuperior.store.ldp_rs.triple.Triple` structures. No data
-    are copied but care must be taken when freeing the triples pointed to.
+    Instances of this class hold a set of
+    :py:class:`~lakesuperior.store.ldp_rs.term.Term` structures that stores
+    unique terms within the graph, and a set of
+    :py:class:`~lakesuperior.store.ldp_rs.triple.Triple` structures referencing
+    those terms. Therefore, no data duplication occurs and the storage is quite
+    sparse.
 
-    A SimpleGraph can be obtained from a
+    A graph can be instantiated from a store lookup.
+
+    A SimpleGraph can also be obtained from a
     :py:class:`lakesuperior.store.keyset.Keyset` which is convenient bacause
     a Keyset can be obtained very efficiently from querying a store, then also
-    very efficiently filtered and eventually converted into a set of readable
+    very efficiently filtered and eventually converted into a set of meaningful
     terms.
 
     An instance of this class can also be converted to and from a
@@ -93,18 +196,16 @@ cdef class SimpleGraph:
     """
 
     def __cinit__(
-            self, calg.Set *cdata=NULL, Keyset keyset=None, store=None,
-            set data=set()):
+            self, Keyset keyset=None, store=None, set data=set()):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
-        One of ``cdata``, ``keyset``, or ``data`` can be provided. If more than
+        One of ``keyset``, or ``data`` can be provided. If more than
         one of these is provided, precedence is given in the mentioned order.
         If none of them is specified, an empty graph is initialized.
 
         :param rdflib.URIRef uri: The graph URI.
             This will serve as the subject for some queries.
-        :param calg.Set cdata: Initial data as a C ``Set`` struct.
         :param Keyset keyset: Keyset to create the graph from. Keys will be
             converted to set elements.
         :param lakesuperior.store.ldp_rs.LmdbTripleStore store: store to
@@ -117,50 +218,30 @@ cdef class SimpleGraph:
         :param lmdbStore store: the store to look data up.
         """
         self.store = store or env.app_defaults.rdf_store
+        self._terms = NULL
+        self._triples = NULL
 
         cdef:
             size_t i = 0
             TripleKey spok
             term.Buffer pk_t
 
-        if cdata is not NULL:
-            # Get data from provided C set.
-            self._data = cdata
-
-        else:
-            # Initialize empty data set.
-            self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
-            if keyset is not None:
-                # Populate with triples extracted from provided key set.
-                while keyset.next(spok):
-                    self.store.lookup_term(spok[:KLEN], &pk_t)
-                    term.deserialize(&pk_t, self._trp.s)
-
-                    self.store.lookup_term(spok[KLEN:DBL_KLEN], &pk_t)
-                    term.deserialize(&pk_t, self._trp.p)
-
-                    self.store.lookup_term(spok[DBL_KLEN:TRP_KLEN], &pk_t)
-                    term.deserialize(&pk_t, self._trp.o)
-
-                    calg.set_insert(self._data, &self._trp)
-            else:
-                # Populate with provided Python set.
-                self._trp = <Triple *>PyMem_Malloc(sizeof(Triple) * len(data))
-                for s, p, o in data:
-                    term.from_rdflib(s, self._trp[i].s)
-                    term.from_rdflib(p, self._trp[i].p)
-                    term.from_rdflib(o, self._trp[i].o)
-                    calg.set_insert(self._data, self._trp)
+        # Initialize empty data set.
+        if keyset:
+            # Populate with triples extracted from provided key set.
+            self._data_from_keyset(keyset)
+        elif data is not None:
+            # Populate with provided Python set.
+            for s, p, o in data:
+                self._add_from_rdflib(s, p, o)
 
 
     def __dealloc__(self):
         """
-        Free the triple pointer.
+        Free the triple pointers. TODO use a Cymem pool
         """
-        PyMem_Free(self._trp)
-        # TODO This should free the structs pointed to as well, unless they
-        # were provided as ``cdata`` in the constructor (i.e. they were
-        # generated.externally).
+        free(self._triples)
+        free(self._terms)
 
 
     @property
@@ -173,8 +254,7 @@ cdef class SimpleGraph:
         return self._data_as_set()
 
 
-    cdef void _data_from_lookup(
-            self, LmdbTriplestore store, tuple trp_ptn, ctx=None) except *:
+    cdef void _data_from_lookup(self, tuple trp_ptn, ctx=None) except *:
         """
         Look up triples in the triplestore and load them into ``data``.
 
@@ -186,30 +266,101 @@ cdef class SimpleGraph:
             size_t i
             unsigned char spok[TRP_KLEN]
 
-        self._data = calg.set_new(set_item_hash_fn, set_item_cmp_fn)
-        with store.txn_ctx():
-            keyset = store.triple_keys(trp_ptn, ctx)
-            for i in range(keyset.ct):
-                spok = keyset.data + i * TRP_KLEN
-                self.data.add(store.from_trp_key(spok[: TRP_KLEN]))
-                strp = serialize_triple(self._trp)
-                calg.set_insert(self._data, strp)
+        with self.store.txn_ctx():
+            keyset = self.store.triple_keys(trp_ptn, ctx)
+            self.data_from_keyset(keyset)
 
 
-    cdef _data_as_set(self):
+
+    cdef void _data_from_keyset(self, Keyset data) except *:
+        """Populate a graph from a Keyset."""
+        cdef TripleKey spok
+
+        self._terms = calg.set_new(term_hash_fn, buffer_cmp_fn)
+        self._triples = calg.set_new(trp_hash_fn, triple_cmp_fn)
+        while data.next(spok):
+            self._add_from_spok(spok)
+
+
+    cdef inline void _add_from_spok(self, const TripleKey spok) except *:
+        """
+        Add a triple from a TripleKey of term keys.
+        """
+        cdef:
+            Buffer *ss = NULL
+            Buffer *sp = NULL
+            Buffer *so = NULL
+
+        self.store.lookup_term(spok, ss)
+        self.store.lookup_term(spok + KLEN, sp)
+        self.store.lookup_term(spok + DBL_KLEN, so)
+
+        self._add_triple(ss, sp, so)
+
+
+    cdef void _add_from_rdflib(self, s, p, o) except *:
+        """
+        Add a triple from 3 rdflib terms.
+        """
+        ss = term.serialize_from_rdflib(s)
+        sp = term.serialize_from_rdflib(p)
+        so = term.serialize_from_rdflib(o)
+        self._add_triple(ss, sp, so)
+
+
+    cdef inline void _add_triple(
+            self, const Buffer *ss, const Buffer *sp, const Buffer *so
+            ) except *:
+        """
+        Add a triple from 3 (TPL) serialized terms.
+
+        Each of the terms is added to the term set if not existing. The triple
+        also is only added if not existing.
+        """
+        cdef BufferTriple trp
+
+        calg.set_insert(self._terms, ss)
+        calg.set_insert(self._terms, sp)
+        calg.set_insert(self._terms, so)
+
+        trp.s = ss
+        trp.p = sp
+        trp.o = so
+
+        calg.set_insert(self._triples, &trp)
+
+
+    cdef set _data_as_set(self):
         """
         Convert triple data to a Python set.
 
         :rtype: set
         """
-        pass
+        cdef:
+            calg.SetIterator ti
+            BufferTriple *trp
+            term.Term s, p, o
+
+        graph_set = set()
+
+        calg.set_iterate(self._triples, &ti)
+        while calg.set_iter_has_more(&ti):
+            trp = <BufferTriple *>calg.set_iter_next(&ti)
+
+            graph_set.add((
+                    term.deserialize_to_rdflib(trp[0].s),
+                    term.deserialize_to_rdflib(trp[0].p),
+                    term.deserialize_to_rdflib(trp[0].o)))
+
+        return graph_set
 
 
     # Basic set operations.
 
-    def add(self, dataset):
-        """ Set union. """
-        self.data.add(dataset)
+    def add(self, triple):
+        """ Add one triple to the graph. """
+        pass # TODO
+
 
     def remove(self, item):
         """
@@ -322,10 +473,10 @@ cdef class SimpleGraph:
 
         Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
         """
-        self.remove_triples((trp[0], trp[1], None))
         if None in trp:
             raise ValueError(f'Invalid triple: {trp}')
-        self.data.add(trp)
+        self.remove_triples((trp[0], trp[1], None))
+        self.add(trp)
 
 
     cpdef void remove_triples(self, pattern) except *:
@@ -353,53 +504,100 @@ cdef class SimpleGraph:
         return gr
 
 
-    cdef _slice(self, s, p, o):
+    def _slice(self, s, p, o):
         """
         Return terms filtered by other terms.
 
         This behaves like the rdflib.Graph slicing policy.
         """
+        _data = self.data
+
+        logger.debug(f'Slicing graph by: {s}, {p}, {o}.')
         if s is None and p is None and o is None:
-            return self.data
+            return _data
         elif s is None and p is None:
-            return {(r[0], r[1]) for r in self.data if r[2] == o}
+            return {(r[0], r[1]) for r in _data if r[2] == o}
         elif s is None and o is None:
-            return {(r[0], r[2]) for r in self.data if r[1] == p}
+            return {(r[0], r[2]) for r in _data if r[1] == p}
         elif p is None and o is None:
-            return {(r[1], r[2]) for r in self.data if r[0] == s}
+            return {(r[1], r[2]) for r in _data if r[0] == s}
         elif s is None:
-            return {r[0] for r in self.data if r[1] == p and r[2] == o}
+            return {r[0] for r in _data if r[1] == p and r[2] == o}
         elif p is None:
-            return {r[1] for r in self.data if r[0] == s and r[2] == o}
+            return {r[1] for r in _data if r[0] == s and r[2] == o}
         elif o is None:
-            return {r[2] for r in self.data if r[0] == s and r[1] == p}
+            return {r[2] for r in _data if r[0] == s and r[1] == p}
         else:
             # all given
-            return (s,p,o) in self.data
+            return (s,p,o) in _data
 
 
-    cpdef lookup(self, s, p, o):
+    def lookup(self, s, p, o):
         """
         Look up triples by a pattern.
+
+        This function converts RDFLib terms into the serialized format stored
+        in the graph's internal structure and compares them bytewise.
+
+        Any and all of the lookup terms can be ``None``.
         """
-        logger.debug(f'Looking up in graph: {s}, {p}, {o}.')
-        if s is None and p is None and o is None:
-            return self.data
-        elif s is None and p is None:
-            return {r for r in self.data if r[2] == o}
-        elif s is None and o is None:
-            return {r for r in self.data if r[1] == p}
-        elif p is None and o is None:
-            return {r for r in self.data if r[0] == s}
-        elif s is None:
-            return {r for r in self.data if r[1] == p and r[2] == o}
-        elif p is None:
-            return {r for r in self.data if r[0] == s and r[2] == o}
-        elif o is None:
-            return {r for r in self.data if r[0] == s and r[1] == p}
+        cdef:
+            BufferTriple trp
+            BufferTriple *trp_p
+            calg.SetIterator ti
+            const Buffer *t1 = NULL
+            const Buffer *t2 = NULL
+            lookup_fn_t fn
+
+        res = set()
+
+        # Decide comparison logic outside the loop.
+        if s is not None and p is not None and o is not None:
+            # Return immediately if 3-term match is requested.
+            trp.s = term.serialize_from_rdflib(s)
+            trp.p = term.serialize_from_rdflib(p)
+            trp.o = term.serialize_from_rdflib(o)
+
+            if calg.set_query(self._triples, &trp):
+                res.add((s, p, o))
+
+            return res
+
+        elif s is not None:
+            t1 = term.serialize_from_rdflib(s)
+            if p is not None:
+                fn = lookup_sp_cmp_fn
+                t2 = term.serialize_from_rdflib(p)
+            elif o is not None:
+                fn = lookup_so_cmp_fn
+                t2 = term.serialize_from_rdflib(o)
+            else:
+                fn = lookup_s_cmp_fn
+        elif p is not None:
+            t1 = term.serialize_from_rdflib(p)
+            if o is not None:
+                fn = lookup_po_cmp_fn
+                t2 = term.serialize_from_rdflib(o)
+            else:
+                fn = lookup_p_cmp_fn
+        elif o is not None:
+            fn = lookup_o_cmp_fn
+            t1 = term.serialize_from_rdflib(o)
         else:
-            # all given
-            return (s,p,o) if (s, p, o) in self.data else set()
+            fn = lookup_none_cmp_fn
+
+        # Iterate over serialized triples.
+        calg.set_iterate(self._triples, &ti)
+        while calg.set_iter_has_more(&ti):
+            trp_p = <BufferTriple *>calg.set_iter_next(&ti)
+            if fn(trp_p, t1, t2):
+                res.add((
+                    term.deserialize_to_rdflib(trp_p[0].s),
+                    term.deserialize_to_rdflib(trp_p[0].p),
+                    term.deserialize_to_rdflib(trp_p[0].o),
+                ))
+
+        return res
 
 
     cpdef set terms(self, str type):

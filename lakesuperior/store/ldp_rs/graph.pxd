@@ -1,30 +1,39 @@
 from lakesuperior.cy_include cimport calg
-from lakesuperior.store.ldp_rs.triple cimport Triple
+from lakesuperior.store.ldp_rs.keyset cimport Keyset
+from lakesuperior.store.ldp_rs.lmdb_triplestore cimport TripleKey
+from lakesuperior.store.ldp_rs.term cimport Buffer
+from lakesuperior.store.ldp_rs.triple cimport BufferTriple
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport LmdbTriplestore
 
-ctypedef struct SetItem:
-    unsigned char *data
-    size_t size
+# Lookup function that returns whether a triple contains a match pattern.
+ctypedef bint (*lookup_fn_t)(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2)
 
 cdef:
-    unsigned int set_item_hash_fn(calg.SetValue data)
-    bint set_item_cmp_fn(calg.SetValue v1, calg.SetValue v2)
+    unsigned int term_hash_fn(calg.SetValue data)
+    bint buffer_cmp_fn(calg.SetValue v1, calg.SetValue v2)
+    unsigned int trp_hash_fn(calg.SetValue btrp)
+    bint triple_cmp_fn(calg.SetValue v1, calg.SetValue v2)
+
 
 cdef class SimpleGraph:
     cdef:
-        calg.Set *_data
-        Triple *_trp # Array of triples that are pointed to by _data.
+        calg.Set *_triples # Set of unique triples.
+        calg.Set *_terms # Set of unique serialized terms.
         LmdbTriplestore store
 
-        void _data_from_lookup(
-            self, LmdbTriplestore store, tuple trp_ptn, ctx=*) except *
-        _data_as_set(self)
+        void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
+        void _data_from_keyset(self, Keyset data) except *
+        inline void _add_from_spok(self, const TripleKey spok) except *
+        void _add_from_rdflib(self, s, p, o) except *
+        inline void _add_triple(
+            self, const Buffer *ss, const Buffer *sp, const Buffer *so
+            ) except *
+        set _data_as_set(self)
 
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
     cpdef object as_rdflib(self)
-    cdef _slice(self, s, p, o)
-    cpdef lookup(self, s, p, o)
     cpdef set terms(self, str type)
 
 cdef class Imr(SimpleGraph):

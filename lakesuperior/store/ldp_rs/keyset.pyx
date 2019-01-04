@@ -111,6 +111,13 @@ cdef class Keyset:
         return self.get_item(i)[: self.itemsize]
 
 
+    def reset(self):
+        """
+        Reset the cursor to the initial position.
+        """
+        self._cur = 0
+
+
     def tell(self):
         """
         Tell the position of the cursor in the keyset.

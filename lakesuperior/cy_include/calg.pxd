@@ -38,3 +38,47 @@ cdef extern from 'set.h':
     SetValue set_iter_next(SetIterator *iterator)
 
 
+cdef extern from 'hash-table.h':
+    ctypedef void *HashTableKey
+    ctypedef void *HashTableValue
+
+    ctypedef struct HashTablePair:
+        HashTableKey key
+        HashTableKey value
+
+    ctypedef struct HashTableEntry:
+        HashTablePair pair
+        HashTableEntry *next
+
+    ctypedef struct HashTable:
+        HashTableEntry **table
+        unsigned int table_size
+        unsigned int entries
+        unsigned int prime_index
+
+    ctypedef struct HashTableIterator:
+        pass
+
+    ctypedef unsigned int (*HashTableHashFunc)(HashTableKey value)
+    ctypedef bint (*HashTableEqualFunc)(
+            HashTableKey value1, HashTableKey value2)
+    ctypedef void (*HashTableKeyFreeFunc)(HashTableKey value)
+    ctypedef void (*HashTableValueFreeFunc)(HashTableValue value)
+
+
+    HashTable *hash_table_new(
+            HashTableHashFunc hash_func, HashTableEqualFunc equal_func)
+    void hash_table_free(HashTable *hash_table)
+    void hash_table_register_free_functions(
+            HashTable *hash_table, HashTableKeyFreeFunc key_free_func,
+            HashTableValueFreeFunc value_free_func)
+    int hash_table_insert(
+            HashTable *hash_table, HashTableKey key, HashTableValue value)
+    HashTableValue hash_table_lookup(
+            HashTable *hash_table, HashTableKey key)
+    bint hash_table_remove(HashTable *hash_table, HashTableKey key)
+    unsigned int hash_table_num_entries(HashTable *hash_table)
+    void hash_table_iterate(HashTable *hash_table, HashTableIterator *iter)
+    bint hash_table_iter_has_more(HashTableIterator *iterator)
+    HashTablePair hash_table_iter_next(HashTableIterator *iterator)
+

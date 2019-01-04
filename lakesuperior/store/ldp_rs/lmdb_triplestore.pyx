@@ -1313,7 +1313,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cdef object from_key(self, Key key):
+    cdef object from_key(self, const Key key):
         """
         Convert a single key into one term.
 
@@ -1326,7 +1326,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline int lookup_term(self, Key key, data) except -1:
+    cdef inline int lookup_term(self, const Key key, Buffer *data) except -1:
         """
         look up a term by key.
 
@@ -1347,6 +1347,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         data[0].sz = data_v.mv_size
 
         return 0
+
 
     cdef tuple from_trp_key(self, TripleKey key):
         """

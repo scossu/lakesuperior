@@ -9,7 +9,8 @@ from lakesuperior.store.ldp_rs.term cimport Buffer
 # numbers to make up the ``spookyhash_128`` seeds.
 #
 # TODO This should be made configurable.
-DEF _TERM_HASH_SEED = b'\xff\xf2Q\xf2j\x0bG\xc1\x8a}\xca\x92\x98^y\x12'
+DEF _TERM_HASH_SEED = \
+        b'\x72\x69\x76\x65\x72\x72\x75\x6e\x2c\x20\x70\x61\x73\x74\x20\x45'
 
 cdef enum:
     HLEN_32 = sizeof(uint32_t)

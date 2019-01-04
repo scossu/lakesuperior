@@ -62,7 +62,7 @@ cdef int from_rdflib(term_obj, Term *term) except -1:
             raise ValueError(f'Unsupported term type: {type(term_obj)}')
 
 
-cdef Buffer *serialize_from_rdflib(term_obj):
+cdef Buffer *serialize_from_rdflib(term_obj) except NULL:
     """
     Return a Buffer struct from a Python/RDFLib term.
     """
@@ -96,11 +96,11 @@ cdef object deserialize_to_rdflib(const Buffer *data):
     """
     Return a Python/RDFLib term from a serialized Cython term.
     """
-    cdef Term term
+    cdef Term *t
 
-    deserialize(data, &term)
+    deserialize(data, t)
 
-    return to_rdflib(&term)
+    return to_rdflib(t)
 
 
 cdef object to_bytes(const Term *term):

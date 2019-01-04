@@ -68,12 +68,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         void _index_triple(self, str op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
         Keyset _all_term_keys(self, term_type)
-        inline int lookup_term(self, Key key, Buffer *data) except -1
+        inline int lookup_term(self, const Key key, Buffer *data) except -1
         Keyset _lookup(self, tuple triple_pattern)
         Keyset _lookup_1bound(self, unsigned char idx, term)
         Keyset _lookup_2bound(
                 self, unsigned char idx1, term1, unsigned char idx2, term2)
-        object from_key(self, Key key)
+        object from_key(self, const Key key)
         tuple from_trp_key(self, TripleKey key)
         inline void _to_key(self, term, Key *key) except *
         inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *
