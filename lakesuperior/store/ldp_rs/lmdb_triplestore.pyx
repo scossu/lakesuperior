@@ -186,6 +186,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # See https://github.com/cython/cython/issues/2517
             unsigned char spock[QUAD_KLEN]
             unsigned char nkey[KLEN]
+            Buffer pk_t
 
         c = self._normalize_context(context)
         if c is None:
@@ -200,8 +201,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         icur = self._cur_open('th:t')
         try:
             for i, term_obj in enumerate((s, p, o, c)):
-                pk_t = serialize_from_rdflib(term_obj)
-                hash128(pk_t, &thash)
+                serialize_from_rdflib(term_obj, &pk_t)
+                hash128(&pk_t, &thash)
                 try:
                     key_v.mv_data = thash
                     key_v.mv_size = HLEN
@@ -213,7 +214,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     # If term_obj is not found, add it...
                     #logger.debug('Hash {} not found. Adding to DB.'.format(
                     #        thash[: HLEN]))
-                    self._append(pk_t, &nkey, dblabel=b't:st')
+                    self._append(&pk_t, &nkey, dblabel=b't:st')
                     memcpy(spock + (i * KLEN), nkey, KLEN)
 
                     # ...and index it.
@@ -282,13 +283,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         :param rdflib.URIRef graph: URI of the named graph to add.
         """
-        cdef Buffer *_sc
+        cdef Buffer _sc
 
         if isinstance(graph, Graph):
             graph = graph.identifier
 
-        _sc = serialize_from_rdflib(graph)
-        self._add_graph(_sc)
+        # FIXME This is all wrong.
+        serialize_from_rdflib(graph, &_sc)
+        self._add_graph(&_sc)
 
 
     cdef void _add_graph(self, Buffer *pk_gr) except *:
@@ -580,6 +582,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Hash128 chash
             unsigned char ck[KLEN]
             lmdb.MDB_val ck_v, chash_v
+            Buffer pk_c
 
         #logger.debug('Deleting context: {}'.format(gr_uri))
         #logger.debug('Pickled context: {}'.format(serialize(gr_uri)))
@@ -597,8 +600,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         self._remove((None, None, gr_uri))
 
         # Clean up all terms related to the graph.
-        pk_c = serialize_from_rdflib(gr_uri)
-        hash128(pk_c, &chash)
+        serialize_from_rdflib(gr_uri, &pk_c)
+        hash128(&pk_c, &chash)
 
         ck_v.mv_size = KLEN
         chash_v.mv_size = HLEN
@@ -1376,9 +1379,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             Hash128 thash
+            Buffer pk_t
 
-        pk_t = serialize_from_rdflib(term)
-        hash128(pk_t, &thash)
+        serialize_from_rdflib(term, &pk_t)
+        hash128(&pk_t, &thash)
         #logger.debug('Hash to search for: {}'.format(thash[: HLEN]))
         key_v.mv_data = thash
         key_v.mv_size = HLEN
@@ -1391,12 +1395,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key[0] = <Key>data_v.mv_data
 
 
-    cdef inline void _to_triple_key(self, tuple terms, TripleKey *tkey) except *:
+    cdef inline void _to_triple_key(
+            self, tuple terms, TripleKey *tkey) except *:
         """
         Convert a tuple of 3 terms into a triple key.
         """
         cdef:
-            char i = 0
+            unsigned char i = 0
             Key key
 
         while  i < 3:

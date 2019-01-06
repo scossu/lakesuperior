@@ -37,7 +37,7 @@ def use_data(fn):
     return _wrapper
 
 
-cdef unsigned int term_hash_fn(calg.SetValue data):
+cdef unsigned int term_hash_fn(const calg.SetValue data):
     """
     Hash function for sets of terms.
 
@@ -48,7 +48,7 @@ cdef unsigned int term_hash_fn(calg.SetValue data):
     cdef:
         Hash32 hash
 
-    hash32(<Buffer *>&data, &hash)
+    hash32(<const Buffer *>&data, &hash)
 
     return hash
 
@@ -78,7 +78,7 @@ cdef unsigned int trp_hash_fn(calg.SetValue btrp):
     return hash
 
 
-cdef bint buffer_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+cdef bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
     """
     Compare function for two Buffer objects.
 
@@ -98,7 +98,7 @@ cdef bint buffer_cmp_fn(calg.SetValue v1, calg.SetValue v2):
     return memcmp(b1.addr, b2.addr, b1.sz) == 0
 
 
-cdef bint triple_cmp_fn(calg.SetValue v1, calg.SetValue v2):
+cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
     """
     Compare function for two triples in a CAlg set.
 
@@ -133,38 +133,38 @@ cdef inline bint lookup_s_cmp_fn(
     ``t2`` is not used and is declared only for compatibility with the
     other interchangeable functions.
     """
-    return buffer_cmp_fn(t1, &(trp[0].s))
+    return buffer_cmp_fn(t1, trp[0].s)
 
 
 cdef inline bint lookup_p_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
-    return buffer_cmp_fn(t1, &(trp[0].p))
+    return buffer_cmp_fn(t1, trp[0].p)
 
 
 cdef inline bint lookup_o_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
-    return buffer_cmp_fn(t1, &(trp[0].o))
+    return buffer_cmp_fn(t1, trp[0].o)
 
 
 cdef inline bint lookup_sp_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
-            buffer_cmp_fn(t1, &(trp[0].s))
-            and buffer_cmp_fn(t2, &(trp[0].p)))
+            buffer_cmp_fn(t1, trp[0].s)
+            and buffer_cmp_fn(t2, trp[0].p))
 
 
 cdef inline bint lookup_so_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
-            buffer_cmp_fn(t1, &(trp[0].s))
-            and buffer_cmp_fn(t2, &(trp[0].o)))
+            buffer_cmp_fn(t1, trp[0].s)
+            and buffer_cmp_fn(t2, trp[0].o))
 
 
 cdef inline bint lookup_po_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
-            buffer_cmp_fn(t1, &(trp[0].p))
-            and buffer_cmp_fn(t2, &(trp[0].o)))
+            buffer_cmp_fn(t1, trp[0].p)
+            and buffer_cmp_fn(t2, trp[0].o))
 
 
 
@@ -217,9 +217,9 @@ cdef class SimpleGraph:
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
-        self.store = store or env.app_defaults.rdf_store
-        self._terms = NULL
-        self._triples = NULL
+        self.store = store or env.app_globals.rdf_store
+        self._terms = calg.set_new(term_hash_fn, buffer_cmp_fn)
+        self._triples = calg.set_new(trp_hash_fn, triple_cmp_fn)
 
         cdef:
             size_t i = 0
@@ -276,8 +276,6 @@ cdef class SimpleGraph:
         """Populate a graph from a Keyset."""
         cdef TripleKey spok
 
-        self._terms = calg.set_new(term_hash_fn, buffer_cmp_fn)
-        self._triples = calg.set_new(trp_hash_fn, triple_cmp_fn)
         while data.next(spok):
             self._add_from_spok(spok)
 
@@ -298,16 +296,6 @@ cdef class SimpleGraph:
         self._add_triple(ss, sp, so)
 
 
-    cdef void _add_from_rdflib(self, s, p, o) except *:
-        """
-        Add a triple from 3 rdflib terms.
-        """
-        ss = term.serialize_from_rdflib(s)
-        sp = term.serialize_from_rdflib(p)
-        so = term.serialize_from_rdflib(o)
-        self._add_triple(ss, sp, so)
-
-
     cdef inline void _add_triple(
             self, const Buffer *ss, const Buffer *sp, const Buffer *so
             ) except *:
@@ -319,15 +307,25 @@ cdef class SimpleGraph:
         """
         cdef BufferTriple trp
 
+        print('Adding terms.')
+        print('ss: ')
+        print((<unsigned char *>ss[0].addr)[:ss[0].sz])
         calg.set_insert(self._terms, ss)
+        print('sp: ')
+        print((<unsigned char *>sp[0].addr)[:sp[0].sz])
         calg.set_insert(self._terms, sp)
+        print('so: ')
+        print((<unsigned char *>so[0].addr)[:so[0].sz])
         calg.set_insert(self._terms, so)
+        print('Added terms.')
 
         trp.s = ss
         trp.p = sp
         trp.o = so
 
+        print('Adding triple.')
         calg.set_insert(self._triples, &trp)
+        print('Added triple.')
 
 
     cdef set _data_as_set(self):
@@ -359,7 +357,19 @@ cdef class SimpleGraph:
 
     def add(self, triple):
         """ Add one triple to the graph. """
-        pass # TODO
+        cdef Buffer ss, sp, so
+
+        s, p, o = triple
+        #print('Serializing s.')
+        term.serialize_from_rdflib(s, &ss)
+        #print('Serializing p.')
+        term.serialize_from_rdflib(p, &sp)
+        #print('Serializing o.')
+        term.serialize_from_rdflib(o, &so)
+
+        print('Adding triple from rdflib.')
+        self._add_triple(&ss, &sp, &so)
+        print('Added triple from rdflib.')
 
 
     def remove(self, item):
@@ -545,8 +555,8 @@ cdef class SimpleGraph:
             BufferTriple trp
             BufferTriple *trp_p
             calg.SetIterator ti
-            const Buffer *t1 = NULL
-            const Buffer *t2 = NULL
+            const Buffer t1
+            const Buffer t2
             lookup_fn_t fn
 
         res = set()
@@ -554,9 +564,9 @@ cdef class SimpleGraph:
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
             # Return immediately if 3-term match is requested.
-            trp.s = term.serialize_from_rdflib(s)
-            trp.p = term.serialize_from_rdflib(p)
-            trp.o = term.serialize_from_rdflib(o)
+            term.serialize_from_rdflib(s, trp.s)
+            term.serialize_from_rdflib(p, trp.p)
+            term.serialize_from_rdflib(o, trp.o)
 
             if calg.set_query(self._triples, &trp):
                 res.add((s, p, o))
@@ -564,25 +574,25 @@ cdef class SimpleGraph:
             return res
 
         elif s is not None:
-            t1 = term.serialize_from_rdflib(s)
+            term.serialize_from_rdflib(s, &t1)
             if p is not None:
                 fn = lookup_sp_cmp_fn
-                t2 = term.serialize_from_rdflib(p)
+                term.serialize_from_rdflib(p, &t2)
             elif o is not None:
                 fn = lookup_so_cmp_fn
-                t2 = term.serialize_from_rdflib(o)
+                term.serialize_from_rdflib(o, &t2)
             else:
                 fn = lookup_s_cmp_fn
         elif p is not None:
-            t1 = term.serialize_from_rdflib(p)
+            term.serialize_from_rdflib(p, &t1)
             if o is not None:
                 fn = lookup_po_cmp_fn
-                t2 = term.serialize_from_rdflib(o)
+                term.serialize_from_rdflib(o, &t2)
             else:
                 fn = lookup_p_cmp_fn
         elif o is not None:
             fn = lookup_o_cmp_fn
-            t1 = term.serialize_from_rdflib(o)
+            term.serialize_from_rdflib(o, &t1)
         else:
             fn = lookup_none_cmp_fn
 
@@ -590,7 +600,7 @@ cdef class SimpleGraph:
         calg.set_iterate(self._triples, &ti)
         while calg.set_iter_has_more(&ti):
             trp_p = <BufferTriple *>calg.set_iter_next(&ti)
-            if fn(trp_p, t1, t2):
+            if fn(trp_p, &t1, &t2):
                 res.add((
                     term.deserialize_to_rdflib(trp_p[0].s),
                     term.deserialize_to_rdflib(trp_p[0].p),

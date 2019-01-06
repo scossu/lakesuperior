@@ -10,10 +10,10 @@ ctypedef bint (*lookup_fn_t)(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2)
 
 cdef:
-    unsigned int term_hash_fn(calg.SetValue data)
-    bint buffer_cmp_fn(calg.SetValue v1, calg.SetValue v2)
-    unsigned int trp_hash_fn(calg.SetValue btrp)
-    bint triple_cmp_fn(calg.SetValue v1, calg.SetValue v2)
+    unsigned int term_hash_fn(const calg.SetValue data)
+    bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2)
+    unsigned int trp_hash_fn(const calg.SetValue btrp)
+    bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2)
 
 
 cdef class SimpleGraph:
@@ -25,10 +25,9 @@ cdef class SimpleGraph:
         void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
         void _data_from_keyset(self, Keyset data) except *
         inline void _add_from_spok(self, const TripleKey spok) except *
-        void _add_from_rdflib(self, s, p, o) except *
         inline void _add_triple(
             self, const Buffer *ss, const Buffer *sp, const Buffer *so
-            ) except *
+        ) except *
         set _data_as_set(self)
 
     cpdef void set(self, tuple trp) except *

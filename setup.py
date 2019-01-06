@@ -147,12 +147,17 @@ extensions = [
 ]
 
 if USE_CYTHON:
-    extensions = cythonize(extensions, include_path=include_dirs, compiler_directives={
-        'language_level': 3,
-        'boundscheck': False,
-        'wraparound': False,
-        'profile': True,
-    })
+    extensions = cythonize(
+        extensions,
+        include_path=include_dirs,
+        annotate=True,
+        compiler_directives={
+            'language_level': 3,
+            'boundscheck': False,
+            'wraparound': False,
+            'profile': True,
+        }
+    )
 
 
 setup(
