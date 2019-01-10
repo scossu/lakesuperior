@@ -288,25 +288,25 @@ cdef class SimpleGraph:
             Buffer *ss = NULL
             Buffer *sp = NULL
             Buffer *so = NULL
+            BufferTriple trp
 
         self.store.lookup_term(spok, ss)
         self.store.lookup_term(spok + KLEN, sp)
         self.store.lookup_term(spok + DBL_KLEN, so)
 
-        self._add_triple(ss, sp, so)
+        self._add_triple(ss, sp, so, &trp)
 
 
     cdef inline void _add_triple(
-            self, const Buffer *ss, const Buffer *sp, const Buffer *so
-            ) except *:
+        self, const Buffer *ss, const Buffer *sp, const Buffer *so,
+        BufferTriple *trp
+    ) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
 
         Each of the terms is added to the term set if not existing. The triple
         also is only added if not existing.
         """
-        cdef BufferTriple trp
-
         print('Adding terms.')
         print('ss: ')
         print((<unsigned char *>ss[0].addr)[:ss[0].sz])
@@ -319,13 +319,31 @@ cdef class SimpleGraph:
         calg.set_insert(self._terms, so)
         print('Added terms.')
 
-        trp.s = ss
-        trp.p = sp
-        trp.o = so
+        cdef calg.SetIterator ti
+        cdef Buffer *t
+        calg.set_iterate(self._terms, &ti)
+        while calg.set_iter_has_more(&ti):
+            t = <Buffer *>calg.set_iter_next(&ti)
+            print('term: ')
+            print((<unsigned char *>t.addr)[:t.sz])
+
+        trp[0].s = ss
+        trp[0].p = sp
+        trp[0].o = so
 
         print('Adding triple.')
-        calg.set_insert(self._triples, &trp)
+        calg.set_insert(self._triples, trp)
         print('Added triple.')
+
+        cdef BufferTriple *tt
+        calg.set_iterate(self._triples, &ti)
+        while calg.set_iter_has_more(&ti):
+            tt = <BufferTriple *>calg.set_iter_next(&ti)
+            print('Triple pointer address: {}'.format(<unsigned long>tt))
+            print('Triple s address: {}'.format(<unsigned long>tt[0].s))
+            print('triple s: ')
+            print((<unsigned char *>trp[0].s.addr)[:trp[0].s.sz])
+            print((<unsigned char *>tt[0].s.addr)[:tt[0].s.sz])
 
 
     cdef set _data_as_set(self):
@@ -341,10 +359,21 @@ cdef class SimpleGraph:
 
         graph_set = set()
 
+        print('Initialize iterator.')
         calg.set_iterate(self._triples, &ti)
+        print('start loop.')
         while calg.set_iter_has_more(&ti):
+            print('Set up triple.')
             trp = <BufferTriple *>calg.set_iter_next(&ti)
+            if trp == NULL:
+                print('Triple is NULL!')
+                return graph_set
+            print('Triple pointer address: {}'.format(<unsigned long>trp))
+            print('Triple s address: {}'.format(<unsigned long>trp[0].s))
+            print('Triple s:')
+            print((<unsigned char *>trp[0].s.addr)[trp[0].s.sz])
 
+            print('Add triple.')
             graph_set.add((
                     term.deserialize_to_rdflib(trp[0].s),
                     term.deserialize_to_rdflib(trp[0].p),
