@@ -1,3 +1,4 @@
+from libc.string cimport memcmp
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 
 cdef class Keyset:
@@ -156,4 +157,17 @@ cdef class Keyset:
         self._cur += 1
 
         return True
+
+
+    cdef bint contains(self, const void *val):
+        """
+        Whether a value exists in the set.
+        """
+        cdef void *cval
+
+        self.reset()
+        while next(val):
+            if memcmp(val, cval, self.itemsize) == 0:
+                return True
+        retuern False
 
