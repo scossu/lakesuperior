@@ -1,9 +1,9 @@
 cimport lakesuperior.cy_include.cylmdb as lmdb
 cimport lakesuperior.cy_include.cytpl as tpl
 
+from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
-from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.term cimport Buffer
 
 #Fixed length for term keys.
 #

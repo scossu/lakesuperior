@@ -1,7 +1,7 @@
 from libc.stdint cimport uint64_t
 from libc.string cimport memcpy
 
-from lakesuperior.store.ldp_rs.term cimport Buffer
+from lakesuperior.model.base cimport Buffer
 
 
 memcpy(&term_hash_seed32, TERM_HASH_SEED, HLEN_32)

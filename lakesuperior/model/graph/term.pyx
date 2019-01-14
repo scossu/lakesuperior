@@ -5,6 +5,7 @@ from libc.stdint cimport uint64_t
 from libc.stdlib cimport free
 
 from lakesuperior.cy_include cimport cytpl as tpl
+from lakesuperior.model.base cimport Buffer
 
 
 DEF LSUP_TERM_TYPE_URIREF = 1

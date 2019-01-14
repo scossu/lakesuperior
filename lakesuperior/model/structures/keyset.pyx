@@ -163,11 +163,11 @@ cdef class Keyset:
         """
         Whether a value exists in the set.
         """
-        cdef void *cval
+        cdef void *stored_val
 
         self.reset()
-        while next(val):
-            if memcmp(val, cval, self.itemsize) == 0:
+        while self.next(stored_val):
+            if memcmp(val, stored_val, self.itemsize) == 0:
                 return True
-        retuern False
+        return False
 

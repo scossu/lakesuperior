@@ -12,14 +12,16 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
-from lakesuperior.store.ldp_rs.term cimport Term
+from lakesuperior.model.graph.term cimport Term
 
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
-from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.term cimport (
-        Buffer, deserialize_to_rdflib, serialize_from_rdflib)
-from lakesuperior.util.hash cimport HLEN_128 as HLEN, Hash128, hash128
+from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.graph.term cimport (
+        deserialize_to_rdflib, serialize_from_rdflib)
+from lakesuperior.model.structures.keyset cimport Keyset
+from lakesuperior.model.structures.hash cimport (
+        HLEN_128 as HLEN, Hash128, hash128)
 
 
 FIRST_KEY = <bytes>KEY_START * KLEN

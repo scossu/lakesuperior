@@ -1,6 +1,5 @@
-from lakesuperior.cy_include cimport cytpl as tpl
+from lakesuperior.model.base cimport Buffer
 
-ctypedef tpl.tpl_bin Buffer
 ctypedef struct Term:
     char type
     char *data

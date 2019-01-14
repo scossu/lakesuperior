@@ -1,79 +1,826 @@
-from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+import logging
 
-from lakesuperior.util.hash cimport HLEN_32, Hash32, hash32
+from functools import wraps
 
-ctypedef void *SetItem
-ctypedef struct Index:
-    size_t *addr
-    size_t ct
+from rdflib import Graph
+from rdflib.term import Node
 
-cdef class VarSet:
+from lakesuperior import env
+
+from libc.string cimport memcmp, memcpy
+from libc.stdlib cimport free
+
+from cymem.cymem cimport Pool
+
+from lakesuperior.cy_include cimport calg
+from lakesuperior.cy_include cimport cylmdb as lmdb
+from lakesuperior.model.graph cimport term
+from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
+        KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
+from lakesuperior.model.structures.keyset cimport Keyset
+from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.graph.triple cimport BufferTriple
+from lakesuperior.model.structures.hash cimport Hash32, hash32
+
+#BUF_PTR_SZ = sizeof(Buffer *)
+
+logger = logging.getLogger(__name__)
+
+
+def use_data(fn):
     """
-    Variable-size set of variable-size values.
+    Decorator to indicate that a set operation between two SimpleGraph
+    instances should use the ``data`` property of the second term. The second
+    term can also be a simple set.
+    """
+    @wraps(fn)
+    def _wrapper(self, other):
+        if isinstance(other, SimpleGraph):
+            other = other.data
+    return _wrapper
+
+
+cdef unsigned int term_hash_fn(const calg.SetValue data):
+    """
+    Hash function for sets of terms.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
+
+    :param SetValue *data: Pointer to a Buffer structure.
     """
     cdef:
-        # Data blob. Stored contibuously in memory, and found by index.
-        void *_data
-        # Total size of data.
-        size_t _data_sz
-        # Index used to find start and end of each item.
-        Index _index
-        # KeySet of hashes of the set items.
-        Keyset _hashes
+        Hash32 hash
 
-    def __cinit__(self):
-        self._data = PyMem_Malloc(0)
-        self._hashes = Keyset(0, sizeof(Hash32))
-        self._data_sz = 0
+    hash32(<const Buffer *>&data, &hash)
+
+    return hash
+
+
+cdef unsigned int trp_hash_fn(calg.SetValue btrp):
+    """
+    Hash function for sets of (serialized) triples.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
+
+    This function computes the hash of the concatenated pointer values in the
+    s, p, o members of the triple. The triple structure is treated as a byte
+    string. This is safe in spite of byte-wise struct evaluation being a
+    frowned-upon practice (due to padding issues), because it is assumed that
+    the input value is always the same type of structure.
+
+    :param SetItem *data: Pointer to a BufferTriple structure.
+    """
+    cdef:
+        Buffer data
+        Hash32 hash
+
+    data.addr = &btrp
+    data.sz = sizeof(btrp)
+    hash32(&data, &hash)
+
+    return hash
+
+
+cdef bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
+    """
+    Compare function for two Buffer objects.
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
+    """
+    # No-cast option.
+    #if v1[0].sz != v2[0].sz:
+    #    return False
+    #return memcmp(v1[0].addr, v2[0].addr, v1[0].sz) == 0
+    cdef:
+        Buffer b1 = (<Buffer *>v1)[0]
+        Buffer b2 = (<Buffer *>v2)[0]
+
+    if b1.sz != b2.sz:
+        return False
+
+    return memcmp(b1.addr, b2.addr, b1.sz) == 0
+
+
+cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
+    """
+    Compare function for two triples in a CAlg set.
+
+    Here, pointers to terms are compared for s, p, o. The pointers should be
+    guaranteed to point to unique values (i.e. no two pointers have the same
+    term value within a graph).
+
+    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
+    """
+    cdef:
+        BufferTriple t1 = (<BufferTriple *>v1)[0]
+        BufferTriple t2 = (<BufferTriple *>v2)[0]
+
+    return(
+            t1.s == t2.s and
+            t1.p == t2.p and
+            t1.o == t2.o)
+
+
+cdef inline bint lookup_none_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return True
+
+
+cdef inline bint lookup_s_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    """
+    Lookup callback compare function for a given s in a triple.
+
+    The function returns ``True`` if ``t1`` matches the first term.
+
+    ``t2`` is not used and is declared only for compatibility with the
+    other interchangeable functions.
+    """
+    return buffer_cmp_fn(t1, trp[0].s)
+
+
+cdef inline bint lookup_p_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return buffer_cmp_fn(t1, trp[0].p)
+
+
+cdef inline bint lookup_o_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return buffer_cmp_fn(t1, trp[0].o)
+
+
+cdef inline bint lookup_sp_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, trp[0].s)
+            and buffer_cmp_fn(t2, trp[0].p))
+
+
+cdef inline bint lookup_so_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, trp[0].s)
+            and buffer_cmp_fn(t2, trp[0].o))
+
+
+cdef inline bint lookup_po_cmp_fn(
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    return (
+            buffer_cmp_fn(t1, trp[0].p)
+            and buffer_cmp_fn(t2, trp[0].o))
+
+
+
+cdef class SimpleGraph:
+    """
+    Fast and simple implementation of a graph.
+
+    Most functions should mimic RDFLib's graph with less overhead. It uses
+    the same funny but functional slicing notation. No lookup functions within
+    the graph are available at this time.
+
+    Instances of this class hold a set of
+    :py:class:`~lakesuperior.store.ldp_rs.term.Term` structures that stores
+    unique terms within the graph, and a set of
+    :py:class:`~lakesuperior.store.ldp_rs.triple.Triple` structures referencing
+    those terms. Therefore, no data duplication occurs and the storage is quite
+    sparse.
+
+    A graph can be instantiated from a store lookup.
+
+    A SimpleGraph can also be obtained from a
+    :py:class:`lakesuperior.store.keyset.Keyset` which is convenient bacause
+    a Keyset can be obtained very efficiently from querying a store, then also
+    very efficiently filtered and eventually converted into a set of meaningful
+    terms.
+
+    An instance of this class can also be converted to and from a
+    ``rdflib.Graph`` instance. TODO verify that this frees Cython pointers.
+    """
+
+    def __cinit__(
+            self, Keyset keyset=None, store=None, set data=set()):
+        """
+        Initialize the graph with pre-existing data or by looking up a store.
+
+        One of ``keyset``, or ``data`` can be provided. If more than
+        one of these is provided, precedence is given in the mentioned order.
+        If none of them is specified, an empty graph is initialized.
+
+        :param rdflib.URIRef uri: The graph URI.
+            This will serve as the subject for some queries.
+        :param Keyset keyset: Keyset to create the graph from. Keys will be
+            converted to set elements.
+        :param lakesuperior.store.ldp_rs.LmdbTripleStore store: store to
+            look up the keyset. Only used if ``keyset`` is specified. If not
+            set, the environment store is used.
+        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
+        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
+            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
+            Any and all elements may be ``None``.
+        :param lmdbStore store: the store to look data up.
+        """
+        self.store = store or env.app_globals.rdf_store
+        self._terms = calg.set_new(term_hash_fn, buffer_cmp_fn)
+        self._triples = calg.set_new(trp_hash_fn, triple_cmp_fn)
+        self._pool = Pool()
+
+        cdef:
+            size_t i = 0
+            TripleKey spok
+            term.Buffer pk_t
+
+        # Initialize empty data set.
+        if keyset:
+            # Populate with triples extracted from provided key set.
+            self._data_from_keyset(keyset)
+        elif data is not None:
+            # Populate with provided Python set.
+            for s, p, o in data:
+                self._add_from_rdflib(s, p, o)
 
 
     def __dealloc__(self):
-        PyMem_Free(self._data)
-
-
-    cdef int add(self, const SetItem data, Index *idx) except -1:
         """
-        Add a number of items.
+        Free the triple pointers. TODO use a Cymem pool
+        """
+        free(self._triples)
+        free(self._terms)
 
-        The items' content as a blob and their end boundaries must be given
-        as an array of ``size_t``.
-        """"
-        #cdef size_t grow_sz = idx.addr[idx.ct - 1]
-        # Last index indicates the position of the last byte
+
+    @property
+    def data(self):
+        """
+        Triple data as a Python set.
+
+        :rtype: set
+        """
+        return self._data_as_set()
+
+
+    cdef void _data_from_lookup(self, tuple trp_ptn, ctx=None) except *:
+        """
+        Look up triples in the triplestore and load them into ``data``.
+
+        :param tuple lookup: 3-tuple of RDFlib terms or ``None``.
+        :param LmdbTriplestore store: Reference to a LMDB triplestore. This
+            is normally set to ``lakesuperior.env.app_globals.rdf_store``.
+        """
         cdef:
-            size_t i, cur = 0, data_exp_sz, hash_exp_sz
-            void *_tmp_data
-            Hash32 hash
-            Buffer msg
-            SetItem *item
+            size_t i
+            unsigned char spok[TRP_KLEN]
 
-        # Resize data sets to maximium possible size for this function call.
-        _tmp_data = PyMem_Realloc(self._data, idx.addr[idx.ct - 1])
-        if not _tmp_data:
-            raise MemoryError('Unable to allocate memory for set data.')
-        self._hashes.resize(self._hashes.ct + idx.ct)
+        with self.store.txn_ctx():
+            keyset = self.store.triple_keys(trp_ptn, ctx)
+            self.data_from_keyset(keyset)
 
-        for i in idx.ct:
-            # Iterate over the items in the index and verify if they can be
-            # added if they are not duplicates.
-            msg.addr = data + cur
-            msg.sz = idx[i] - cur
-            hash32(&msg, &hash)
 
-            if not self.hashes.contains(hash):
-                # Add to the data.
-                memcpy(_tmp_data + i * HLEN_32, msg.addr, msg.sz)
-                # Add to the hashes keyset.
-                memcpy(self._hashes + self._data_sz, hash, HLEN32)
-                # Record the memory expansion.
-                self._data_sz += msg.sz
 
-            cur = idx[i]
+    cdef void _data_from_keyset(self, Keyset data) except *:
+        """Populate a graph from a Keyset."""
+        cdef TripleKey spok
 
-        # Shrink data back to their actual size.
-        self.hashes.resize(cur)
-        _tmp_data = PyMem_Malloc(self._data_sz)
-        if not _tmp_data :
-            raise MemoryError('Unable to allocate memory for set data.')
-        self._data = _tmp_data
+        while data.next(spok):
+            self._add_from_spok(spok)
+
+
+    cdef inline void _add_from_spok(self, const TripleKey spok) except *:
+        """
+        Add a triple from a TripleKey of term keys.
+        """
+        cdef:
+            SPOBuffer s_spo
+            BufferTriple trp
+
+        s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
+
+        self.store.lookup_term(spok, s_spo)
+        self.store.lookup_term(spok + KLEN, s_spo + 1)
+        self.store.lookup_term(spok + DBL_KLEN, s_spo + 2)
+
+        self._add_triple(s_spo, s_spo + 1, s_spo + 2)
+
+
+    cdef inline void _add_triple(
+        self, const Buffer *ss, const Buffer *sp, const Buffer *so
+    ) except *:
+        """
+        Add a triple from 3 (TPL) serialized terms.
+
+        Each of the terms is added to the term set if not existing. The triple
+        also is only added if not existing.
+        """
+        trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
+
+        print('Adding terms.')
+        print('ss: ')
+        print((<unsigned char *>ss[0].addr)[:ss[0].sz])
+        calg.set_insert(self._terms, ss)
+        print('sp: ')
+        print((<unsigned char *>sp[0].addr)[:sp[0].sz])
+        calg.set_insert(self._terms, sp)
+        print('so: ')
+        print((<unsigned char *>so[0].addr)[:so[0].sz])
+        calg.set_insert(self._terms, so)
+        print('Added terms.')
+
+        cdef calg.SetIterator ti
+        cdef Buffer *t
+        calg.set_iterate(self._terms, &ti)
+        while calg.set_iter_has_more(&ti):
+            t = <Buffer *>calg.set_iter_next(&ti)
+            print('term @{}: '.format(<size_t>t.addr))
+            print((<unsigned char *>t.addr)[:t.sz])
+
+        trp.s = ss
+        trp.p = sp
+        trp.o = so
+
+        print('Adding triple.')
+        calg.set_insert(self._triples, trp)
+        print('Added triple.')
+
+        cdef BufferTriple *tt
+        calg.set_iterate(self._triples, &ti)
+        while calg.set_iter_has_more(&ti):
+            tt = <BufferTriple *>calg.set_iter_next(&ti)
+            print('Triple pointer address: {}'.format(<unsigned long>tt))
+
+            print('Triple s address: {}'.format(<unsigned long>tt[0].s))
+            print('triple s: ')
+            print((<unsigned char *>tt[0].s.addr)[:tt[0].s.sz])
+
+            print('Triple p address: {}'.format(<unsigned long>tt[0].p))
+            print('triple p: ')
+            print((<unsigned char *>tt[0].p.addr)[:tt[0].o.sz])
+
+            print('Triple o address: {}'.format(<unsigned long>tt[0].o))
+            print('triple o: ')
+            print((<unsigned char *>tt[0].o.addr)[:tt[0].o.sz])
+
+
+    cdef set _data_as_set(self):
+        """
+        Convert triple data to a Python set.
+
+        :rtype: set
+        """
+        cdef:
+            calg.SetIterator ti
+            BufferTriple *trp
+            term.Term s, p, o
+
+        graph_set = set()
+
+        print('Initialize iterator.')
+        calg.set_iterate(self._triples, &ti)
+        print('start loop.')
+        while calg.set_iter_has_more(&ti):
+            print('Set up triple.')
+            trp = <BufferTriple *>calg.set_iter_next(&ti)
+            if trp == NULL:
+                print('Triple is NULL!')
+                return graph_set
+            print('Triple pointer address: {}'.format(<unsigned long>trp))
+
+            print('Triple s address: {}'.format(<unsigned long>trp[0].s))
+            print(f'Triple s size: {trp[0].s.sz}')
+            print('Triple s:')
+            print((<unsigned char *>trp[0].p.addr)[:trp[0].p.sz])
+            print('Triple p address: {}'.format(<unsigned long>trp[0].p))
+            print(f'Triple p size: {trp[0].p.sz}')
+            print('Triple p:')
+            print((<unsigned char *>trp[0].p.addr)[:trp[0].p.sz])
+            print('Triple o address: {}'.format(<unsigned long>trp[0].o))
+            print(f'Triple o size: {trp[0].o.sz}')
+            print('Triple o:')
+            print((<unsigned char *>trp[0].o.addr)[:trp[0].o.sz])
+
+            print('Add triple.')
+            graph_set.add((
+                term.deserialize_to_rdflib(trp.s),
+                term.deserialize_to_rdflib(trp.p),
+                term.deserialize_to_rdflib(trp.o),
+            ))
+
+        return graph_set
+
+
+    # Basic set operations.
+
+    def add(self, triple):
+        """ Add one triple to the graph. """
+        cdef SPOBuffer s_spo
+
+        s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
+        s, p, o = triple
+
+        #print('Serializing s.')
+        term.serialize_from_rdflib(s, s_spo)
+        #print('Serializing p.')
+        term.serialize_from_rdflib(p, s_spo + 1)
+        #print('Serializing o.')
+        term.serialize_from_rdflib(o, s_spo + 2)
+
+        print('Adding triple from rdflib.')
+        self._add_triple(s_spo, s_spo + 1, s_spo + 2)
+        print('Added triple from rdflib.')
+
+
+    def remove(self, item):
+        """
+        Remove one item from the graph.
+
+        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
+            wildcards are not accepted.
+        """
+        self.data.remove(item)
+
+    def __len__(self):
+        """ Number of triples in the graph. """
+        return len(self.data)
+
+    @use_data
+    def __eq__(self, other):
+        """ Equality operator between ``SimpleGraph`` instances. """
+        return self.data == other
+
+    def __repr__(self):
+        """
+        String representation of the graph.
+
+        It provides the number of triples in the graph and memory address of
+            the instance.
+        """
+        return (f'<{self.__class__.__name__} @{hex(id(self))} '
+            f'length={len(self.data)}>')
+
+    def __str__(self):
+        """ String dump of the graph triples. """
+        return str(self.data)
+
+    @use_data
+    def __sub__(self, other):
+        """ Set subtraction. """
+        return self.data - other
+
+    @use_data
+    def __isub__(self, other):
+        """ In-place set subtraction. """
+        self.data -= other
+        return self
+
+    @use_data
+    def __and__(self, other):
+        """ Set intersection. """
+        return self.data & other
+
+    @use_data
+    def __iand__(self, other):
+        """ In-place set intersection. """
+        self.data &= other
+        return self
+
+    @use_data
+    def __or__(self, other):
+        """ Set union. """
+        return self.data | other
+
+    @use_data
+    def __ior__(self, other):
+        """ In-place set union. """
+        self.data |= other
+        return self
+
+    @use_data
+    def __xor__(self, other):
+        """ Set exclusive intersection (XOR). """
+        return self.data ^ other
+
+    @use_data
+    def __ixor__(self, other):
+        """ In-place set exclusive intersection (XOR). """
+        self.data ^= other
+        return self
+
+    def __contains__(self, item):
+        """
+        Whether the graph contains a triple.
+
+        :rtype: boolean
+        """
+        return item in self.data
+
+    def __iter__(self):
+        """ Graph iterator. It iterates over the set triples. """
+        return self.data.__iter__()
+
+
+    # Slicing.
+
+    def __getitem__(self, item):
+        """
+        Slicing function.
+
+        It behaves similarly to `RDFLib graph slicing
+        <https://rdflib.readthedocs.io/en/stable/utilities.html#slicing-graphs>`__
+        """
+        if isinstance(item, slice):
+            s, p, o = item.start, item.stop, item.step
+            return self._slice(s, p, o)
+        else:
+            raise TypeError(f'Wrong slice format: {item}.')
+
+
+    cpdef void set(self, tuple trp) except *:
+        """
+        Set a single value for subject and predicate.
+
+        Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
+        """
+        if None in trp:
+            raise ValueError(f'Invalid triple: {trp}')
+        self.remove_triples((trp[0], trp[1], None))
+        self.add(trp)
+
+
+    cpdef void remove_triples(self, pattern) except *:
+        """
+        Remove triples by pattern.
+
+        The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
+        """
+        s, p, o = pattern
+        for match in self.lookup(s, p, o):
+            logger.debug(f'Removing from graph: {match}.')
+            self.data.remove(match)
+
+
+    cpdef object as_rdflib(self):
+        """
+        Return the data set as an RDFLib Graph.
+
+        :rtype: rdflib.Graph
+        """
+        gr = Graph()
+        for trp in self.data:
+            gr.add(trp)
+
+        return gr
+
+
+    def _slice(self, s, p, o):
+        """
+        Return terms filtered by other terms.
+
+        This behaves like the rdflib.Graph slicing policy.
+        """
+        _data = self.data
+
+        logger.debug(f'Slicing graph by: {s}, {p}, {o}.')
+        if s is None and p is None and o is None:
+            return _data
+        elif s is None and p is None:
+            return {(r[0], r[1]) for r in _data if r[2] == o}
+        elif s is None and o is None:
+            return {(r[0], r[2]) for r in _data if r[1] == p}
+        elif p is None and o is None:
+            return {(r[1], r[2]) for r in _data if r[0] == s}
+        elif s is None:
+            return {r[0] for r in _data if r[1] == p and r[2] == o}
+        elif p is None:
+            return {r[1] for r in _data if r[0] == s and r[2] == o}
+        elif o is None:
+            return {r[2] for r in _data if r[0] == s and r[1] == p}
+        else:
+            # all given
+            return (s,p,o) in _data
+
+
+    def lookup(self, s, p, o):
+        """
+        Look up triples by a pattern.
+
+        This function converts RDFLib terms into the serialized format stored
+        in the graph's internal structure and compares them bytewise.
+
+        Any and all of the lookup terms can be ``None``.
+        """
+        cdef:
+            BufferTriple trp
+            BufferTriple *trp_p
+            calg.SetIterator ti
+            const Buffer t1
+            const Buffer t2
+            lookup_fn_t fn
+
+        res = set()
+
+        # Decide comparison logic outside the loop.
+        if s is not None and p is not None and o is not None:
+            # Return immediately if 3-term match is requested.
+            term.serialize_from_rdflib(s, trp.s)
+            term.serialize_from_rdflib(p, trp.p)
+            term.serialize_from_rdflib(o, trp.o)
+
+            if calg.set_query(self._triples, &trp):
+                res.add((s, p, o))
+
+            return res
+
+        elif s is not None:
+            term.serialize_from_rdflib(s, &t1)
+            if p is not None:
+                fn = lookup_sp_cmp_fn
+                term.serialize_from_rdflib(p, &t2)
+            elif o is not None:
+                fn = lookup_so_cmp_fn
+                term.serialize_from_rdflib(o, &t2)
+            else:
+                fn = lookup_s_cmp_fn
+        elif p is not None:
+            term.serialize_from_rdflib(p, &t1)
+            if o is not None:
+                fn = lookup_po_cmp_fn
+                term.serialize_from_rdflib(o, &t2)
+            else:
+                fn = lookup_p_cmp_fn
+        elif o is not None:
+            fn = lookup_o_cmp_fn
+            term.serialize_from_rdflib(o, &t1)
+        else:
+            fn = lookup_none_cmp_fn
+
+        # Iterate over serialized triples.
+        calg.set_iterate(self._triples, &ti)
+        while calg.set_iter_has_more(&ti):
+            trp_p = <BufferTriple *>calg.set_iter_next(&ti)
+            if fn(trp_p, &t1, &t2):
+                res.add((
+                    term.deserialize_to_rdflib(trp_p[0].s),
+                    term.deserialize_to_rdflib(trp_p[0].p),
+                    term.deserialize_to_rdflib(trp_p[0].o),
+                ))
+
+        return res
+
+
+    cpdef set terms(self, str type):
+        """
+        Get all terms of a type: subject, predicate or object.
+
+        :param str type: One of ``s``, ``p`` or ``o``.
+        """
+        i = 'spo'.index(type)
+        return {r[i] for r in self.data}
+
+
+
+cdef class Imr(SimpleGraph):
+    """
+    In-memory resource data container.
+
+    This is an extension of :py:class:`~SimpleGraph` that adds a subject URI to
+    the data set and some convenience methods.
+
+    An instance of this class can be converted to a ``rdflib.Resource``
+    instance.
+
+    Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
+    will create a new ``Imr`` instance with the same subject URI.
+    """
+    def __init__(self, str uri, *args, **kwargs):
+        """
+        Initialize the graph with pre-existing data or by looking up a store.
+
+        Either ``data``, or ``lookup`` *and* ``store``, can be provide.
+        ``lookup`` and ``store`` have precedence. If none of them is specified,
+        an empty graph is initialized.
+
+        :param rdflib.URIRef uri: The graph URI.
+            This will serve as the subject for some queries.
+        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
+        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
+            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
+            Any and all elements may be ``None``.
+        :param lmdbStore store: the store to look data up.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.uri = uri
+
+
+    @property
+    def identifier(self):
+        """
+        IMR URI. For compatibility with RDFLib Resource.
+
+        :rtype: string
+        """
+        return self.uri
+
+
+    @property
+    def graph(self):
+        """
+        Return a SimpleGraph with the same data.
+
+        :rtype: SimpleGraph
+        """
+        return SimpleGraph(self.data)
+
+
+    def __repr__(self):
+        """
+        String representation of an Imr.
+
+        This includes the subject URI, number of triples contained and the
+        memory address of the instance.
+        """
+        return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
+            f'length={len(self.data)}>')
+
+    @use_data
+    def __sub__(self, other):
+        """
+        Set difference. This creates a new Imr with the same subject URI.
+        """
+        return self.__class__(uri=self.uri, data=self.data - other)
+
+    @use_data
+    def __and__(self, other):
+        """
+        Set intersection. This creates a new Imr with the same subject URI.
+        """
+        return self.__class__(uri=self.uri, data=self.data & other)
+
+    @use_data
+    def __or__(self, other):
+        """
+        Set union. This creates a new Imr with the same subject URI.
+        """
+        return self.__class__(uri=self.uri, data=self.data | other)
+
+    @use_data
+    def __xor__(self, other):
+        """
+        Set exclusive OR (XOR). This creates a new Imr with the same subject
+        URI.
+        """
+        return self.__class__(uri=self.uri, data=self.data ^ other)
+
+
+    def __getitem__(self, item):
+        """
+        Supports slicing notation.
+        """
+        if isinstance(item, slice):
+            s, p, o = item.start, item.stop, item.step
+            return self._slice(s, p, o)
+
+        elif isinstance(item, Node):
+            # If a Node is given, return all values for that predicate.
+            return {
+                    r[2] for r in self.data
+                    if r[0] == self.uri and r[1] == item}
+        else:
+            raise TypeError(f'Wrong slice format: {item}.')
+
+
+    def value(self, p, strict=False):
+        """
+        Get an individual value.
+
+        :param rdflib.termNode p: Predicate to search for.
+        :param bool strict: If set to ``True`` the method raises an error if
+            more than one value is found. If ``False`` (the default) only
+            the first found result is returned.
+        :rtype: rdflib.term.Node
+        """
+        values = self[p]
+
+        if strict and len(values) > 1:
+            raise RuntimeError('More than one value found for {}, {}.'.format(
+                    self.uri, p))
+
+        for ret in values:
+            return ret
+
+        return None
+
+
+    cpdef as_rdflib(self):
+        """
+        Return the IMR as a RDFLib Resource.
+
+        :rtype: rdflib.Resource
+        """
+        gr = Graph()
+        for trp in self.data:
+            gr.add(trp)
+
+        return gr.resource(identifier=self.uri)
+
+
+
 

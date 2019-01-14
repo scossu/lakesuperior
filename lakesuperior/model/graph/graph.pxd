@@ -1,13 +1,17 @@
+from cymem.cymem cimport Pool
+
 from lakesuperior.cy_include cimport calg
-from lakesuperior.store.ldp_rs.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.lmdb_triplestore cimport TripleKey
-from lakesuperior.store.ldp_rs.term cimport Buffer
-from lakesuperior.store.ldp_rs.triple cimport BufferTriple
+from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.graph.triple cimport BufferTriple
+from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport LmdbTriplestore
+from lakesuperior.store.ldp_rs.lmdb_triplestore cimport TripleKey
 
 # Lookup function that returns whether a triple contains a match pattern.
 ctypedef bint (*lookup_fn_t)(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2)
+
+ctypedef Buffer SPOBuffer[3]
 
 cdef:
     unsigned int term_hash_fn(const calg.SetValue data)
@@ -21,6 +25,8 @@ cdef class SimpleGraph:
         calg.Set *_triples # Set of unique triples.
         calg.Set *_terms # Set of unique serialized terms.
         LmdbTriplestore store
+        # Temp data pool. It gets managed with the object lifecycle via cymem.
+        Pool _pool
 
         void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
         void _data_from_keyset(self, Keyset data) except *

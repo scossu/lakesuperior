@@ -68,41 +68,47 @@ else:
 
 extensions = [
     Extension(
+        'lakesuperior.model.base',
+        [
+            path.join(tpl_src_dir, 'tpl.c'),
+            path.join('lakesuperior', 'model', f'base.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
+    ),
+    Extension(
+        'lakesuperior.model.structures.*',
+        [
+            path.join(calg_src_dir, 'set.c'),
+            path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
+    ),
+    Extension(
+        'lakesuperior.model.graph.*',
+        [
+            path.join(calg_src_dir, 'set.c'),
+            path.join(tpl_src_dir, 'tpl.c'),
+            #path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp']
+    ),
+    Extension(
         'lakesuperior.store.base_lmdb_store',
         [
+            path.join(tpl_src_dir, 'tpl.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
-    ),
-    Extension(
-        'lakesuperior.store.ldp_rs.term',
-        [
-            path.join(tpl_src_dir, 'tpl.c'),
-            path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
-        ],
-        include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
-    ),
-    Extension(
-        'lakesuperior.store.ldp_rs.triple',
-        [
-            path.join('lakesuperior', 'store', 'ldp_rs', f'triple.{ext}'),
-        ],
-        include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
-    ),
-    Extension(
-        'lakesuperior.store.ldp_rs.keyset',
-        [
-            path.join('lakesuperior', 'store', 'ldp_rs', f'keyset.{ext}'),
-        ],
-        include_dirs=include_dirs,
-        #extra_compile_args=['-fopenmp'],
-        #extra_link_args=['-fopenmp']
     ),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
@@ -116,34 +122,27 @@ extensions = [
         extra_compile_args=['-fopenmp'],
         extra_link_args=['-fopenmp']
     ),
-    Extension(
-        'lakesuperior.util.hash',
-        [
-            path.join(spookyhash_src_dir, 'spookyhash.c'),
-            path.join('lakesuperior', 'util', f'hash.{ext}'),
-        ],
-        include_dirs=include_dirs,
-    ),
-    Extension(
-        'lakesuperior.store.ldp_rs.graph',
-        [
-            path.join(calg_src_dir, 'set.c'),
-            path.join('lakesuperior', 'store', 'ldp_rs', f'graph.{ext}'),
-        ],
-        include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
-    ),
-    # For testing.
-    #Extension(
-    #    '*',
-    #    [
-    #        #path.join(tpl_src_dir, 'tpl.c'),
-    #        path.join(
-    #            path.dirname(lakesuperior.basedir), 'sandbox', f'*.{ext}'),
-    #    ],
-    #    include_dirs=include_dirs,
-    #),
+]
+
+# Great reference read about dependency management:
+# https://caremad.io/posts/2013/07/setup-vs-requirement/
+install_requires = [
+    'CoilMQ',
+    'Flask',
+    'HiYaPyCo',
+    'PyYAML',
+    'arrow',
+    'click',
+    'click-log',
+    'cymem',
+    'gevent',
+    'gunicorn',
+    'rdflib',
+    'rdflib-jsonld',
+    'requests',
+    'requests-toolbelt',
+    'sphinx-rtd-theme',
+    'stomp.py',
 ]
 
 if USE_CYTHON:
@@ -209,26 +208,7 @@ setup(
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    # Great reference read about dependency management:
-    # https://caremad.io/posts/2013/07/setup-vs-requirement/
-    install_requires=[
-        'CoilMQ',
-        'Flask',
-        'HiYaPyCo',
-        'PyYAML',
-        'arrow',
-        'cchardet',
-        'click',
-        'click-log',
-        'gevent',
-        'gunicorn',
-        'rdflib',
-        'rdflib-jsonld',
-        'requests',
-        'requests-toolbelt',
-        'sphinx-rtd-theme',
-        'stomp.py',
-    ],
+    install_requires=install_requires,
 
     setup_requires=[
         'setuptools>=18.0',

@@ -8,4 +8,5 @@ cdef class Keyset:
         void resize(self, size_t ct) except *
         unsigned char *get_item(self, i)
         bint next(self, void *val)
+        bint contains(self, const void *val)
 
