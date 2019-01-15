@@ -3,6 +3,9 @@ from rdflib import URIRef, BNode, Literal
 #from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.stdint cimport uint64_t
 from libc.stdlib cimport free
+from libc.string cimport memcpy
+
+from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cytpl as tpl
 from lakesuperior.model.base cimport Buffer
@@ -15,7 +18,7 @@ DEF LSUP_TERM_PK_FMT = b'csss' # Reflects the Term structure
 DEF LSUP_TERM_STRUCT_PK_FMT = b'S(' + LSUP_TERM_PK_FMT + b')'
 
 
-cdef int serialize(const Term *term, Buffer *sterm) except -1:
+cdef int serialize(const Term *term, Buffer *sterm, Pool pool=None) except -1:
     """
     Serialize a Term into a binary buffer.
 
@@ -25,16 +28,23 @@ cdef int serialize(const Term *term, Buffer *sterm) except -1:
         unsigned char *addr
         size_t sz
 
-    print('Dump members:')
-    print(term[0].type)
-    print(term[0].data if term[0].data is not NULL else 'NULL')
-    print(term[0].datatype if term[0].datatype is not NULL else 'NULL')
-    print(term[0].lang if term[0].lang is not NULL else 'NULL')
+    #print('Dump members:')
+    #print(term[0].type)
+    #print(term[0].data if term[0].data is not NULL else 'NULL')
+    #print(term[0].datatype if term[0].datatype is not NULL else 'NULL')
+    #print(term[0].lang if term[0].lang is not NULL else 'NULL')
     print('Now serializing.')
     tpl.tpl_jot(tpl.TPL_MEM, &addr, &sz, LSUP_TERM_STRUCT_PK_FMT, term)
     print('Serialized.')
-    sterm[0].addr = addr
-    sterm[0].sz = sz
+    if pool is None:
+        sterm.addr = addr
+    else:
+        # addr is within this function scope. Must be copied to the cymem pool.
+        sterm.addr = pool.alloc(sz, 1)
+        if not sterm.addr:
+            raise MemoryError()
+        memcpy(sterm.addr, addr, sz)
+    sterm.sz = sz
     print('Assigned to buffer. Returning.')
 
 
@@ -78,7 +88,9 @@ cdef int from_rdflib(term_obj, Term *term) except -1:
     print(f'term data: {term[0].data}')
 
 
-cdef int serialize_from_rdflib(term_obj, Buffer *data) except -1:
+cdef int serialize_from_rdflib(
+        term_obj, Buffer *data, Pool pool=None
+    ) except -1:
     """
     Return a Buffer struct from a Python/RDFLib term.
     """

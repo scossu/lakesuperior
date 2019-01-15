@@ -347,14 +347,17 @@ cdef class SimpleGraph:
             print('Triple pointer address: {}'.format(<unsigned long>tt))
 
             print('Triple s address: {}'.format(<unsigned long>tt[0].s))
+            print(f'Triple s size: {tt.s.sz}')
             print('triple s: ')
             print((<unsigned char *>tt[0].s.addr)[:tt[0].s.sz])
 
             print('Triple p address: {}'.format(<unsigned long>tt[0].p))
+            print(f'Triple p size: {tt.p.sz}')
             print('triple p: ')
             print((<unsigned char *>tt[0].p.addr)[:tt[0].o.sz])
 
             print('Triple o address: {}'.format(<unsigned long>tt[0].o))
+            print(f'Triple o size: {tt.o.sz}')
             print('triple o: ')
             print((<unsigned char *>tt[0].o.addr)[:tt[0].o.sz])
 
@@ -386,11 +389,13 @@ cdef class SimpleGraph:
             print('Triple s address: {}'.format(<unsigned long>trp[0].s))
             print(f'Triple s size: {trp[0].s.sz}')
             print('Triple s:')
-            print((<unsigned char *>trp[0].p.addr)[:trp[0].p.sz])
+            print((<unsigned char *>trp[0].s.addr)[:trp[0].s.sz])
+
             print('Triple p address: {}'.format(<unsigned long>trp[0].p))
             print(f'Triple p size: {trp[0].p.sz}')
             print('Triple p:')
             print((<unsigned char *>trp[0].p.addr)[:trp[0].p.sz])
+
             print('Triple o address: {}'.format(<unsigned long>trp[0].o))
             print(f'Triple o size: {trp[0].o.sz}')
             print('Triple o:')
@@ -410,20 +415,22 @@ cdef class SimpleGraph:
 
     def add(self, triple):
         """ Add one triple to the graph. """
-        cdef SPOBuffer s_spo
+        cdef:
+            Buffer *ss = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
+            Buffer *sp = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
+            Buffer *so = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
 
-        s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
         s, p, o = triple
 
         #print('Serializing s.')
-        term.serialize_from_rdflib(s, s_spo)
+        term.serialize_from_rdflib(s, ss, self._pool)
         #print('Serializing p.')
-        term.serialize_from_rdflib(p, s_spo + 1)
+        term.serialize_from_rdflib(p, sp, self._pool)
         #print('Serializing o.')
-        term.serialize_from_rdflib(o, s_spo + 2)
+        term.serialize_from_rdflib(o, so, self._pool)
 
         print('Adding triple from rdflib.')
-        self._add_triple(s_spo, s_spo + 1, s_spo + 2)
+        self._add_triple(ss, sp, so)
         print('Added triple from rdflib.')
 
 
