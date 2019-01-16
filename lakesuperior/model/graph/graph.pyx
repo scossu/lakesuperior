@@ -87,14 +87,19 @@ cdef bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    cdef:
-        Buffer b1 = (<Buffer *>v1)[0]
-        Buffer b2 = (<Buffer *>v2)[0]
+    b1 = <Buffer *>v1
+    b2 = <Buffer *>v2
 
     if b1.sz != b2.sz:
         return False
 
-    return memcmp(b1.addr, b2.addr, b1.sz) == 0
+    print('Term A:')
+    print((<unsigned char *>b1.addr)[:b1.sz])
+    print('Term b:')
+    print((<unsigned char *>b2.addr)[:b2.sz])
+    cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
+    logger.info(f'term memcmp: {cmp}')
+    return cmp == 0
 
 
 cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
@@ -107,14 +112,13 @@ cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    cdef:
-        BufferTriple t1 = (<BufferTriple *>v1)[0]
-        BufferTriple t2 = (<BufferTriple *>v2)[0]
+    t1 = <BufferTriple *>v1
+    t2 = <BufferTriple *>v2
 
     return(
-            t1.s == t2.s and
-            t1.p == t2.p and
-            t1.o == t2.o)
+            t1.s.addr == t2.s.addr and
+            t1.p.addr == t2.p.addr and
+            t1.o.addr == t2.o.addr)
 
 
 cdef inline bint lookup_none_cmp_fn(
@@ -306,16 +310,22 @@ cdef class SimpleGraph:
         Each of the terms is added to the term set if not existing. The triple
         also is only added if not existing.
         """
-        cdef int r
         trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
 
-        print('Inserting terms.')
+        logger.info('Inserting terms.')
+        logger.info(f'ss addr: {<unsigned long>ss.addr}')
+        logger.info(f'ss sz: {ss.sz}')
+        #logger.info('ss:')
+        #logger.info((<unsigned char *>ss.addr)[:ss.sz])
+        logger.info('Insert ss')
         calg.set_insert(self._terms, ss)
-        print(f'Insert ss result:')
-        r = calg.set_insert(self._terms, sp)
-        print(f'Insert sp result: {r}')
-        r = calg.set_insert(self._terms, so)
-        print(f'Insert so result: {r}')
+        logger.info('Insert sp')
+        calg.set_insert(self._terms, sp)
+        logger.info('Insert so')
+        calg.set_insert(self._terms, so)
+        logger.info('inserted terms.')
+        cdef size_t terms_sz = calg.set_num_entries(self._terms)
+        logger.info('Terms set size: {terms_sz}')
 
         cdef calg.SetIterator ti
         cdef Buffer *t
@@ -328,7 +338,8 @@ cdef class SimpleGraph:
         trp.o = so
 
         r = calg.set_insert(self._triples, trp)
-        print(f'Insert triple result: {r}')
+        print('Insert triple result:')
+        print(r)
 
         cdef BufferTriple *tt
         calg.set_iterate(self._triples, &ti)
@@ -369,10 +380,9 @@ cdef class SimpleGraph:
 
     def add(self, triple):
         """ Add one triple to the graph. """
-        cdef:
-            Buffer *ss = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
-            Buffer *sp = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
-            Buffer *so = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
+        ss = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
+        sp = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
+        so = <Buffer *>self._pool.alloc(1, sizeof(Buffer))
 
         s, p, o = triple
 
@@ -395,7 +405,8 @@ cdef class SimpleGraph:
 
     def __len__(self):
         """ Number of triples in the graph. """
-        return calg.set_num_entries(self._triples)
+        #return calg.set_num_entries(self._triples)
+        return len(self.data)
 
 
     @use_data
