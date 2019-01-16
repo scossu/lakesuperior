@@ -87,10 +87,6 @@ cdef bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
 
     https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    # No-cast option.
-    #if v1[0].sz != v2[0].sz:
-    #    return False
-    #return memcmp(v1[0].addr, v2[0].addr, v1[0].sz) == 0
     cdef:
         Buffer b1 = (<Buffer *>v1)[0]
         Buffer b2 = (<Buffer *>v2)[0]
@@ -310,56 +306,34 @@ cdef class SimpleGraph:
         Each of the terms is added to the term set if not existing. The triple
         also is only added if not existing.
         """
+        cdef int r
         trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
 
-        print('Adding terms.')
-        print('ss: ')
-        print((<unsigned char *>ss[0].addr)[:ss[0].sz])
+        print('Inserting terms.')
         calg.set_insert(self._terms, ss)
-        print('sp: ')
-        print((<unsigned char *>sp[0].addr)[:sp[0].sz])
-        calg.set_insert(self._terms, sp)
-        print('so: ')
-        print((<unsigned char *>so[0].addr)[:so[0].sz])
-        calg.set_insert(self._terms, so)
-        print('Added terms.')
+        print(f'Insert ss result:')
+        r = calg.set_insert(self._terms, sp)
+        print(f'Insert sp result: {r}')
+        r = calg.set_insert(self._terms, so)
+        print(f'Insert so result: {r}')
 
         cdef calg.SetIterator ti
         cdef Buffer *t
         calg.set_iterate(self._terms, &ti)
         while calg.set_iter_has_more(&ti):
             t = <Buffer *>calg.set_iter_next(&ti)
-            print('term @{}: '.format(<size_t>t.addr))
-            print((<unsigned char *>t.addr)[:t.sz])
 
         trp.s = ss
         trp.p = sp
         trp.o = so
 
-        print('Adding triple.')
-        calg.set_insert(self._triples, trp)
-        print('Added triple.')
+        r = calg.set_insert(self._triples, trp)
+        print(f'Insert triple result: {r}')
 
         cdef BufferTriple *tt
         calg.set_iterate(self._triples, &ti)
         while calg.set_iter_has_more(&ti):
             tt = <BufferTriple *>calg.set_iter_next(&ti)
-            print('Triple pointer address: {}'.format(<unsigned long>tt))
-
-            print('Triple s address: {}'.format(<unsigned long>tt[0].s))
-            print(f'Triple s size: {tt.s.sz}')
-            print('triple s: ')
-            print((<unsigned char *>tt[0].s.addr)[:tt[0].s.sz])
-
-            print('Triple p address: {}'.format(<unsigned long>tt[0].p))
-            print(f'Triple p size: {tt.p.sz}')
-            print('triple p: ')
-            print((<unsigned char *>tt[0].p.addr)[:tt[0].o.sz])
-
-            print('Triple o address: {}'.format(<unsigned long>tt[0].o))
-            print(f'Triple o size: {tt.o.sz}')
-            print('triple o: ')
-            print((<unsigned char *>tt[0].o.addr)[:tt[0].o.sz])
 
 
     cdef set _data_as_set(self):
@@ -375,33 +349,13 @@ cdef class SimpleGraph:
 
         graph_set = set()
 
-        print('Initialize iterator.')
         calg.set_iterate(self._triples, &ti)
-        print('start loop.')
         while calg.set_iter_has_more(&ti):
-            print('Set up triple.')
             trp = <BufferTriple *>calg.set_iter_next(&ti)
             if trp == NULL:
                 print('Triple is NULL!')
                 return graph_set
-            print('Triple pointer address: {}'.format(<unsigned long>trp))
 
-            print('Triple s address: {}'.format(<unsigned long>trp[0].s))
-            print(f'Triple s size: {trp[0].s.sz}')
-            print('Triple s:')
-            print((<unsigned char *>trp[0].s.addr)[:trp[0].s.sz])
-
-            print('Triple p address: {}'.format(<unsigned long>trp[0].p))
-            print(f'Triple p size: {trp[0].p.sz}')
-            print('Triple p:')
-            print((<unsigned char *>trp[0].p.addr)[:trp[0].p.sz])
-
-            print('Triple o address: {}'.format(<unsigned long>trp[0].o))
-            print(f'Triple o size: {trp[0].o.sz}')
-            print('Triple o:')
-            print((<unsigned char *>trp[0].o.addr)[:trp[0].o.sz])
-
-            print('Add triple.')
             graph_set.add((
                 term.deserialize_to_rdflib(trp.s),
                 term.deserialize_to_rdflib(trp.p),
@@ -422,16 +376,11 @@ cdef class SimpleGraph:
 
         s, p, o = triple
 
-        #print('Serializing s.')
         term.serialize_from_rdflib(s, ss, self._pool)
-        #print('Serializing p.')
         term.serialize_from_rdflib(p, sp, self._pool)
-        #print('Serializing o.')
         term.serialize_from_rdflib(o, so, self._pool)
 
-        print('Adding triple from rdflib.')
         self._add_triple(ss, sp, so)
-        print('Added triple from rdflib.')
 
 
     def remove(self, item):
@@ -443,14 +392,17 @@ cdef class SimpleGraph:
         """
         self.data.remove(item)
 
+
     def __len__(self):
         """ Number of triples in the graph. """
-        return len(self.data)
+        return calg.set_num_entries(self._triples)
+
 
     @use_data
     def __eq__(self, other):
         """ Equality operator between ``SimpleGraph`` instances. """
         return self.data == other
+
 
     def __repr__(self):
         """
@@ -462,14 +414,17 @@ cdef class SimpleGraph:
         return (f'<{self.__class__.__name__} @{hex(id(self))} '
             f'length={len(self.data)}>')
 
+
     def __str__(self):
         """ String dump of the graph triples. """
         return str(self.data)
+
 
     @use_data
     def __sub__(self, other):
         """ Set subtraction. """
         return self.data - other
+
 
     @use_data
     def __isub__(self, other):
@@ -482,6 +437,7 @@ cdef class SimpleGraph:
         """ Set intersection. """
         return self.data & other
 
+
     @use_data
     def __iand__(self, other):
         """ In-place set intersection. """
@@ -492,6 +448,7 @@ cdef class SimpleGraph:
     def __or__(self, other):
         """ Set union. """
         return self.data | other
+
 
     @use_data
     def __ior__(self, other):
@@ -504,11 +461,13 @@ cdef class SimpleGraph:
         """ Set exclusive intersection (XOR). """
         return self.data ^ other
 
+
     @use_data
     def __ixor__(self, other):
         """ In-place set exclusive intersection (XOR). """
         self.data ^= other
         return self
+
 
     def __contains__(self, item):
         """
@@ -517,6 +476,7 @@ cdef class SimpleGraph:
         :rtype: boolean
         """
         return item in self.data
+
 
     def __iter__(self):
         """ Graph iterator. It iterates over the set triples. """

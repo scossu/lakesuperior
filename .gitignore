@@ -113,4 +113,10 @@ venv.bak/
 /cython_debug
 /lakesuperior/store/*.c
 /lakesuperior/store/ldp_rs/*.c
+/lakesuperior/model/*.c
+/lakesuperior/model/*/*.c
+/lakesuperior/util/*.c
 !ext/lib
+
+# Vim CTags file.
+tags

@@ -28,14 +28,7 @@ cdef int serialize(const Term *term, Buffer *sterm, Pool pool=None) except -1:
         unsigned char *addr
         size_t sz
 
-    #print('Dump members:')
-    #print(term[0].type)
-    #print(term[0].data if term[0].data is not NULL else 'NULL')
-    #print(term[0].datatype if term[0].datatype is not NULL else 'NULL')
-    #print(term[0].lang if term[0].lang is not NULL else 'NULL')
-    print('Now serializing.')
     tpl.tpl_jot(tpl.TPL_MEM, &addr, &sz, LSUP_TERM_STRUCT_PK_FMT, term)
-    print('Serialized.')
     if pool is None:
         sterm.addr = addr
     else:
@@ -45,7 +38,6 @@ cdef int serialize(const Term *term, Buffer *sterm, Pool pool=None) except -1:
             raise MemoryError()
         memcpy(sterm.addr, addr, sz)
     sterm.sz = sz
-    print('Assigned to buffer. Returning.')
 
 
 cdef int deserialize(const Buffer *data, Term *term) except -1:
@@ -85,7 +77,6 @@ cdef int from_rdflib(term_obj, Term *term) except -1:
             term[0].type = LSUP_TERM_TYPE_BNODE
         else:
             raise ValueError(f'Unsupported term type: {type(term_obj)}')
-    print(f'term data: {term[0].data}')
 
 
 cdef int serialize_from_rdflib(
@@ -119,37 +110,11 @@ cdef int serialize_from_rdflib(
             _term.type = LSUP_TERM_TYPE_BNODE
         else:
             raise ValueError(f'Unsupported term type: {type(term_obj)}')
-    #print(f'term data: {_term.data}')
 
-    # # # #
-
-    # Serialize
-    print('Dump members:')
-    print(_term.type)
-    print(_term.data if _term.data is not NULL else 'NULL')
-    print(_term.datatype if _term.datatype is not NULL else 'NULL')
-    print(_term.lang if _term.lang is not NULL else 'NULL')
-    print('Now serializing.')
     tpl.tpl_jot(tpl.TPL_MEM, &addr, &sz, LSUP_TERM_STRUCT_PK_FMT, &_term)
-    print('Serialized.')
 
-    print(f'addr: {<unsigned long>addr}; size: {sz}')
     data[0].addr = addr
     data[0].sz = sz
-
-    print('data to be returned: ')
-    print((<unsigned char *>data[0].addr)[:data[0].sz])
-    #print('Assigned to buffer. Returning.')
-
-    # # # #
-    #cdef:
-    #    Term _term
-
-    # Resusing other methods. This won't work until I figure out how to
-    # not drop the intermediate var in from_rdflib().
-    #from_rdflib(term_obj, &_term)
-    #print('Dump members in serialize_from_rdflib:')
-    #serialize(&_term, data)
 
 
 cdef object to_rdflib(const Term *term):
