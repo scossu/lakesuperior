@@ -5,12 +5,15 @@ include ext/lmdb/libraries/liblmdb/mdb.c
 include ext/lmdb/libraries/liblmdb/lmdb.h
 include ext/lmdb/libraries/liblmdb/midl.c
 include ext/lmdb/libraries/liblmdb/midl.h
-include ext/c-algorithms/src/set.c
-include ext/c-algorithms/src/set.h
+include ext/collections-c/src/hashset.c
+include ext/collections-c/src/hashtable.c
+include ext/collections-c/src/include/hashset.h
+include ext/collections-c/src/include/hashtable.h
 include ext/tpl/src/tpl.c
 include ext/tpl/src/tpl.h
 include ext/spookyhash/src/*.c
 include ext/spookyhash/src/*.h
+
 graft lakesuperior/data/bootstrap
 graft lakesuperior/endpoints/templates
 graft lakesuperior/etc.defaults

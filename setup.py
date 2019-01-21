@@ -42,13 +42,13 @@ with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
 # Extensions directory.
-calg_src_dir = path.join('ext', 'c-algorithms', 'src')
+coll_src_dir = path.join('ext', 'collections-c', 'src')
 lmdb_src_dir = path.join('ext', 'lmdb', 'libraries', 'liblmdb')
 spookyhash_src_dir = path.join('ext', 'spookyhash', 'src')
 tpl_src_dir = path.join('ext', 'tpl', 'src')
 
 include_dirs = [
-    calg_src_dir,
+    path.join(coll_src_dir, 'include'),
     lmdb_src_dir,
     spookyhash_src_dir,
     tpl_src_dir,
@@ -80,8 +80,9 @@ extensions = [
     Extension(
         'lakesuperior.model.structures.*',
         [
-            path.join(calg_src_dir, 'set.c'),
             path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
             path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -91,9 +92,10 @@ extensions = [
     Extension(
         'lakesuperior.model.graph.*',
         [
-            path.join(calg_src_dir, 'set.c'),
             path.join(tpl_src_dir, 'tpl.c'),
-            #path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
             path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
         ],
         include_dirs=include_dirs,

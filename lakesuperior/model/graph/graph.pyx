@@ -7,22 +7,31 @@ from rdflib.term import Node
 
 from lakesuperior import env
 
+from libc.stdint cimport uint32_t, uint64_t
 from libc.string cimport memcmp, memcpy
 from libc.stdlib cimport free
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include cimport calg
 from lakesuperior.cy_include cimport cylmdb as lmdb
+from lakesuperior.cy_include.hashset cimport (
+    CC_OK,
+    HashSet, HashSetConf, HashSetIter, TableEntry,
+    hashset_add, hashset_conf_init, hashset_iter_init, hashset_iter_next,
+    hashset_new_conf, hashtable_hash_ptr, hashset_size,
+    get_table_index,
+)
 from lakesuperior.model.graph cimport term
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
+from lakesuperior.model.structures.hash cimport term_hash_seed32
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.triple cimport BufferTriple
-from lakesuperior.model.structures.hash cimport Hash32, hash32
+from lakesuperior.model.structures.hash cimport hash64
 
-#BUF_PTR_SZ = sizeof(Buffer *)
+cdef extern from 'spookyhash_api.h':
+    uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
 
 logger = logging.getLogger(__name__)
 
@@ -40,80 +49,35 @@ def use_data(fn):
     return _wrapper
 
 
-cdef unsigned int term_hash_fn(const calg.SetValue data):
-    """
-    Hash function for sets of terms.
-
-    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
-
-    :param SetValue *data: Pointer to a Buffer structure.
-    """
-    cdef:
-        Hash32 hash
-
-    hash32(<const Buffer *>&data, &hash)
-
-    return hash
-
-
-cdef unsigned int trp_hash_fn(calg.SetValue btrp):
-    """
-    Hash function for sets of (serialized) triples.
-
-    https://fragglet.github.io/c-algorithms/doc/set_8h.html#6c7986a2a80d7a3cb7b9d74e1c6fef97
-
-    This function computes the hash of the concatenated pointer values in the
-    s, p, o members of the triple. The triple structure is treated as a byte
-    string. This is safe in spite of byte-wise struct evaluation being a
-    frowned-upon practice (due to padding issues), because it is assumed that
-    the input value is always the same type of structure.
-
-    :param SetItem *data: Pointer to a BufferTriple structure.
-    """
-    cdef:
-        Buffer data
-        Hash32 hash
-
-    data.addr = &btrp
-    data.sz = sizeof(btrp)
-    hash32(&data, &hash)
-
-    return hash
-
-
-cdef bint buffer_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
+cdef bint term_cmp_fn(void* key1, void* key2):
     """
     Compare function for two Buffer objects.
-
-    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    b1 = <Buffer *>v1
-    b2 = <Buffer *>v2
+    b1 = <Buffer *>key1
+    b2 = <Buffer *>key2
 
     if b1.sz != b2.sz:
         return False
 
-    print('Term A:')
-    print((<unsigned char *>b1.addr)[:b1.sz])
-    print('Term b:')
-    print((<unsigned char *>b2.addr)[:b2.sz])
+    #print('Term A:')
+    #print((<unsigned char *>b1.addr)[:b1.sz])
+    #print('Term b:')
+    #print((<unsigned char *>b2.addr)[:b2.sz])
     cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
     logger.info(f'term memcmp: {cmp}')
     return cmp == 0
 
 
-cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
+cdef bint triple_cmp_fn(void* key1, void* key2):
     """
     Compare function for two triples in a CAlg set.
 
     Here, pointers to terms are compared for s, p, o. The pointers should be
     guaranteed to point to unique values (i.e. no two pointers have the same
     term value within a graph).
-
-    https://fragglet.github.io/c-algorithms/doc/set_8h.html#40fa2c86d5b003c1b0b0e8dd1e4df9f4
     """
-    t1 = <BufferTriple *>v1
-    t2 = <BufferTriple *>v2
+    t1 = <BufferTriple *>key1
+    t2 = <BufferTriple *>key2
 
     return(
             t1.s.addr == t2.s.addr and
@@ -121,13 +85,39 @@ cdef bint triple_cmp_fn(const calg.SetValue v1, const calg.SetValue v2):
             t1.o.addr == t2.o.addr)
 
 
+cdef size_t trp_hash_fn(void* key, int l, uint32_t seed):
+    """
+    Hash function for sets of (serialized) triples.
+
+    This function computes the hash of the concatenated pointer values in the
+    s, p, o members of the triple. The triple structure is treated as a byte
+    string. This is safe in spite of byte-wise struct evaluation being a
+    frowned-upon practice (due to padding issues), because it is assumed that
+    the input value is always the same type of structure.
+    """
+    return <size_t>spookyhash_64(key, l, seed)
+
+
+cdef size_t hash_ptr_passthrough(void* key, int l, uint32_t seed):
+    """
+    No-op function that takes a pointer and does *not* hash it.
+
+    The pointer value is used as the "hash".
+    """
+    return <size_t>key
+
+
 cdef inline bint lookup_none_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+    """
+    Dummy callback for queries with all parameters unbound.
+
+    This function always returns ``True`` 
+    """
     return True
 
 
-cdef inline bint lookup_s_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+cdef inline bint lookup_s_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
     """
     Lookup callback compare function for a given s in a triple.
 
@@ -136,38 +126,33 @@ cdef inline bint lookup_s_cmp_fn(
     ``t2`` is not used and is declared only for compatibility with the
     other interchangeable functions.
     """
-    return buffer_cmp_fn(t1, trp[0].s)
+    return term_cmp_fn(t1, trp[0].s)
 
 
-cdef inline bint lookup_p_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
-    return buffer_cmp_fn(t1, trp[0].p)
+cdef inline bint lookup_p_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+    return term_cmp_fn(t1, trp[0].p)
 
 
-cdef inline bint lookup_o_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
-    return buffer_cmp_fn(t1, trp[0].o)
+cdef inline bint lookup_o_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+    return term_cmp_fn(t1, trp[0].o)
 
 
-cdef inline bint lookup_sp_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+cdef inline bint lookup_sp_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
     return (
-            buffer_cmp_fn(t1, trp[0].s)
-            and buffer_cmp_fn(t2, trp[0].p))
+            term_cmp_fn(t1, trp[0].s)
+            and term_cmp_fn(t2, trp[0].p))
 
 
-cdef inline bint lookup_so_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+cdef inline bint lookup_so_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
     return (
-            buffer_cmp_fn(t1, trp[0].s)
-            and buffer_cmp_fn(t2, trp[0].o))
+            term_cmp_fn(t1, trp[0].s)
+            and term_cmp_fn(t2, trp[0].o))
 
 
-cdef inline bint lookup_po_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+cdef inline bint lookup_po_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
     return (
-            buffer_cmp_fn(t1, trp[0].p)
-            and buffer_cmp_fn(t2, trp[0].o))
+            term_cmp_fn(t1, trp[0].p)
+            and term_cmp_fn(t2, trp[0].o))
 
 
 
@@ -221,9 +206,23 @@ cdef class SimpleGraph:
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
+        hashset_conf_init(&self._terms_conf)
+        self._terms_conf.load_factor = 0.85
+        self._terms_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        self._terms_conf.hash_seed = term_hash_seed32
+        self._terms_conf.key_compare = term_cmp_fn
+        self._terms_conf.key_length = sizeof(void*)
+
+        hashset_conf_init(&self._trp_conf)
+        self._trp_conf.load_factor = 0.75
+        self._trp_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        self._trp_conf.hash_seed = term_hash_seed32
+        self._terms_conf.key_compare = triple_cmp_fn
+        self._terms_conf.key_length = sizeof(void*)
+
         self.store = store or env.app_globals.rdf_store
-        self._terms = calg.set_new(term_hash_fn, buffer_cmp_fn)
-        self._triples = calg.set_new(trp_hash_fn, triple_cmp_fn)
+        hashset_new_conf(&self._terms_conf, &self._terms)
+        hashset_new_conf(&self._trp_conf, &self._triples)
         self._pool = Pool()
 
         cdef:
@@ -328,38 +327,32 @@ cdef class SimpleGraph:
         logger.info('Insert so')
         self._add_or_get_term(&so)
         logger.info('inserted terms.')
-        cdef size_t terms_sz = calg.set_num_entries(self._terms)
+        cdef size_t terms_sz = hashset_size(self._terms)
         logger.info('Terms set size: {terms_sz}')
 
-        cdef calg.SetIterator ti
-        cdef Buffer *t
-        calg.set_iterate(self._terms, &ti)
-        while calg.set_iter_has_more(&ti):
-            t = <Buffer *>calg.set_iter_next(&ti)
+        #cdef HashSetIter ti
+        #cdef Buffer *t
+        #hashset_iter_init(&ti, self._terms)
+        #while calg.set_iter_has_more(&ti):
+        #    t = <Buffer *>calg.set_iter_next(&ti)
 
         trp.s = ss
         trp.p = sp
         trp.o = so
 
-        r = calg.set_insert(self._triples, trp)
+        r = hashset_add(self._triples, trp)
         print('Insert triple result:')
         print(r)
 
-        cdef BufferTriple *tt
-        calg.set_iterate(self._triples, &ti)
-        while calg.set_iter_has_more(&ti):
-            tt = <BufferTriple *>calg.set_iter_next(&ti)
+        #cdef BufferTriple *tt
+        #calg.set_iterate(self._triples, &ti)
+        #while calg.set_iter_has_more(&ti):
+        #    tt = <BufferTriple *>calg.set_iter_next(&ti)
 
 
     cdef int _add_or_get_term(self, Buffer **data) except -1:
         """
         Insert a term in the terms set, or get one that already exists.
-
-        This is a slightly modified replica of the :py:func:`calg.set_insert`
-        which takes a ``Buffer **` pointer and inserts it in the set, or if
-        existing, replaces it with the existing term. The caller can then keep
-        using the term in the same way without having to know whether the term
-        was added or not.
 
         If the new term is inserted, its address is stored in the memory pool
         and persists with the :py:class:`SimpleGraph` instance carrying it.
@@ -369,38 +362,25 @@ cdef class SimpleGraph:
         The return value gives an indication of whether the term was added or
         not.
         """
+        cdef TableEntry *entry
 
-        cdef:
-            calg.SetEntry *newentry
-            calg.SetEntry *rover
-            unsigned int index
-            calg._Set *blah = <calg._Set *>self._pool.alloc(1, sizeof(calg._Set))
+        table = self._terms.table
 
-        blah.entries
+        entry = table.buckets[get_table_index(table, data[0].addr)]
 
-        if (self._terms.entries * 3) / self._terms.table_size > 0:
-            if not calg.set_enlarge(self._terms):
-                raise MemoryError()
+        while entry:
+            if table.key_cmp(data[0].addr, entry.key) == 0:
+                # If the term is found, assign the address of entry.key
+                # to the data parameter.
+                data[0] = <Buffer *>entry.key
+                return 1
+            entry = entry.next
 
-        index = self._terms.hash_func(data) % self._terms.table_size
-
-        rover = self._terms.table[index]
-
-        while rover != NULL:
-            if (self._terms.equal_func(data[0], rover.data) != 0):
-                data[0] = <Buffer *>rover.data
-
-                return 0
-
-            rover = rover.next
-
-        newentry = <calg.SetEntry *>self._pool.alloc(1, sizeof(calg.SetEntry))
-        newentry.data = data;
-        newentry.next = self._terms.table[index]
-        self._terms.table[index] = newentry
-        self._terms.entries += 1
-
-        return 1
+        # If the term is not found, add it.
+        # TODO This is inefficient because it searches for the term again.
+        # TODO It would be best to break down the hashset_add function and
+        # TODO remove the check.
+        return hashset_add(self._terms, data[0])
 
 
     cdef set _data_as_set(self):
@@ -410,18 +390,17 @@ cdef class SimpleGraph:
         :rtype: set
         """
         cdef:
-            calg.SetIterator ti
+            HashSetIter ti
             BufferTriple *trp
             term.Term s, p, o
 
         graph_set = set()
 
-        calg.set_iterate(self._triples, &ti)
-        while calg.set_iter_has_more(&ti):
-            trp = <BufferTriple *>calg.set_iter_next(&ti)
+        hashset_iter_init(&ti, self._triples)
+        while hashset_iter_next(&ti, &trp) == CC_OK:
             if trp == NULL:
-                print('Triple is NULL!')
-                return graph_set
+                logger.warn('Triple is NULL!')
+                break
 
             graph_set.add((
                 term.deserialize_to_rdflib(trp.s),
@@ -643,7 +622,7 @@ cdef class SimpleGraph:
         cdef:
             BufferTriple trp
             BufferTriple *trp_p
-            calg.SetIterator ti
+            HashSetIter ti
             const Buffer t1
             const Buffer t2
             lookup_fn_t fn
@@ -657,7 +636,7 @@ cdef class SimpleGraph:
             term.serialize_from_rdflib(p, trp.p)
             term.serialize_from_rdflib(o, trp.o)
 
-            if calg.set_query(self._triples, &trp):
+            if hashset_contains(self._triples, &trp):
                 res.add((s, p, o))
 
             return res
@@ -686,9 +665,8 @@ cdef class SimpleGraph:
             fn = lookup_none_cmp_fn
 
         # Iterate over serialized triples.
-        calg.set_iterate(self._triples, &ti)
-        while calg.set_iter_has_more(&ti):
-            trp_p = <BufferTriple *>calg.set_iter_next(&ti)
+        hashset_iter_init(&ti, self._triples)
+        while hashset_iter_next(&ti, &trp_p) == CC_OK:
             if fn(trp_p, &t1, &t2):
                 res.add((
                     term.deserialize_to_rdflib(trp_p[0].s),
