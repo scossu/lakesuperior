@@ -3,32 +3,36 @@ cdef extern from 'set.h':
     #ctypedef _SetEntry SetEntry
     ctypedef void *SetValue
 
+    ctypedef unsigned int (*SetHashFunc)(SetValue value)
+    ctypedef bint (*SetEqualFunc)(SetValue value1, SetValue value2)
+    ctypedef void (*SetFreeFunc)(SetValue value)
+
     ctypedef struct SetEntry:
         SetValue data
         SetEntry *next
 
-    ctypedef struct Set:
+    ctypedef struct _Set:
         SetEntry **table
         unsigned int entries
         unsigned int table_size
         unsigned int prime_index
-        #SetHashFunc hash_func
-        #SetEqualFunc equal_func
-        #SetFreeFunc free_func
+        SetHashFunc hash_func
+        SetEqualFunc equal_func
+        SetFreeFunc free_func
+
+    ctypedef _Set Set
 
     ctypedef struct SetIterator:
         pass
-
-    ctypedef unsigned int (*SetHashFunc)(SetValue value)
-    ctypedef bint (*SetEqualFunc)(SetValue value1, SetValue value2)
-    ctypedef void (*SetFreeFunc)(SetValue value)
 
     Set *set_new(SetHashFunc hash_func, SetEqualFunc equal_func)
     void set_free(Set *set)
     # TODO This should return an int, ideally. See
     # https://github.com/fragglet/c-algorithms/issues/20
     bint set_insert(Set *set, SetValue data)
+    bint set_insert_or_assign(Set *set, SetValue *data)
     bint set_query(Set *set, SetValue data)
+    bint set_enlarge(Set *set)
     unsigned int set_num_entries(Set *set)
     SetValue *set_to_array(Set *set)
     Set *set_union(Set *set1, Set *set2)

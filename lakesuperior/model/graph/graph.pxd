@@ -12,6 +12,7 @@ ctypedef bint (*lookup_fn_t)(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2)
 
 ctypedef Buffer SPOBuffer[3]
+ctypedef Buffer *BufferPtr
 
 cdef:
     unsigned int term_hash_fn(const calg.SetValue data)
@@ -32,8 +33,9 @@ cdef class SimpleGraph:
         void _data_from_keyset(self, Keyset data) except *
         inline void _add_from_spok(self, const TripleKey spok) except *
         inline void _add_triple(
-            self, const Buffer *ss, const Buffer *sp, const Buffer *so
+            self, Buffer *ss, Buffer *sp, Buffer *so
         ) except *
+        int _add_or_get_term(self, Buffer **data) except -1
         set _data_as_set(self)
 
     cpdef void set(self, tuple trp) except *

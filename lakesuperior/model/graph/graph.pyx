@@ -171,6 +171,7 @@ cdef inline bint lookup_po_cmp_fn(
 
 
 
+
 cdef class SimpleGraph:
     """
     Fast and simple implementation of a graph.
@@ -302,7 +303,7 @@ cdef class SimpleGraph:
 
 
     cdef inline void _add_triple(
-        self, const Buffer *ss, const Buffer *sp, const Buffer *so
+        self, BufferPtr ss, BufferPtr sp, BufferPtr so
     ) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
@@ -317,12 +318,15 @@ cdef class SimpleGraph:
         logger.info(f'ss sz: {ss.sz}')
         #logger.info('ss:')
         #logger.info((<unsigned char *>ss.addr)[:ss.sz])
-        logger.info('Insert ss')
-        calg.set_insert(self._terms, ss)
+        logger.info('Insert ss @:')
+        print(<unsigned long>ss)
+        self._add_or_get_term(&ss)
+        logger.info('Now ss is @:')
+        print(<unsigned long>ss)
         logger.info('Insert sp')
-        calg.set_insert(self._terms, sp)
+        self._add_or_get_term(&sp)
         logger.info('Insert so')
-        calg.set_insert(self._terms, so)
+        self._add_or_get_term(&so)
         logger.info('inserted terms.')
         cdef size_t terms_sz = calg.set_num_entries(self._terms)
         logger.info('Terms set size: {terms_sz}')
@@ -345,6 +349,58 @@ cdef class SimpleGraph:
         calg.set_iterate(self._triples, &ti)
         while calg.set_iter_has_more(&ti):
             tt = <BufferTriple *>calg.set_iter_next(&ti)
+
+
+    cdef int _add_or_get_term(self, Buffer **data) except -1:
+        """
+        Insert a term in the terms set, or get one that already exists.
+
+        This is a slightly modified replica of the :py:func:`calg.set_insert`
+        which takes a ``Buffer **` pointer and inserts it in the set, or if
+        existing, replaces it with the existing term. The caller can then keep
+        using the term in the same way without having to know whether the term
+        was added or not.
+
+        If the new term is inserted, its address is stored in the memory pool
+        and persists with the :py:class:`SimpleGraph` instance carrying it.
+        Otherwise, the overwritten term is garbage collected as soon as the
+        calling function exits.
+
+        The return value gives an indication of whether the term was added or
+        not.
+        """
+
+        cdef:
+            calg.SetEntry *newentry
+            calg.SetEntry *rover
+            unsigned int index
+            calg._Set *blah = <calg._Set *>self._pool.alloc(1, sizeof(calg._Set))
+
+        blah.entries
+
+        if (self._terms.entries * 3) / self._terms.table_size > 0:
+            if not calg.set_enlarge(self._terms):
+                raise MemoryError()
+
+        index = self._terms.hash_func(data) % self._terms.table_size
+
+        rover = self._terms.table[index]
+
+        while rover != NULL:
+            if (self._terms.equal_func(data[0], rover.data) != 0):
+                data[0] = <Buffer *>rover.data
+
+                return 0
+
+            rover = rover.next
+
+        newentry = <calg.SetEntry *>self._pool.alloc(1, sizeof(calg.SetEntry))
+        newentry.data = data;
+        newentry.next = self._terms.table[index]
+        self._terms.table[index] = newentry
+        self._terms.entries += 1
+
+        return 1
 
 
     cdef set _data_as_set(self):
