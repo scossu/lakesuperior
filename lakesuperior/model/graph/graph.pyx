@@ -14,11 +14,11 @@ from libc.stdlib cimport free
 from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
-from lakesuperior.cy_include.hashset cimport (
+from lakesuperior.cy_include.collections cimport (
     CC_OK,
     HashSet, HashSetConf, HashSetIter, TableEntry,
-    hashset_add, hashset_conf_init, hashset_iter_init, hashset_iter_next,
-    hashset_new_conf, hashtable_hash_ptr, hashset_size,
+    hashset_add, hashset_conf_init, hashset_contains, hashset_iter_init,
+    hashset_iter_next, hashset_new_conf, hashtable_hash_ptr, hashset_size,
     get_table_index,
 )
 from lakesuperior.model.graph cimport term
@@ -49,7 +49,7 @@ def use_data(fn):
     return _wrapper
 
 
-cdef bint term_cmp_fn(void* key1, void* key2):
+cdef bint term_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two Buffer objects.
     """
@@ -68,7 +68,7 @@ cdef bint term_cmp_fn(void* key1, void* key2):
     return cmp == 0
 
 
-cdef bint triple_cmp_fn(void* key1, void* key2):
+cdef bint triple_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a CAlg set.
 
@@ -85,7 +85,7 @@ cdef bint triple_cmp_fn(void* key1, void* key2):
             t1.o.addr == t2.o.addr)
 
 
-cdef size_t trp_hash_fn(void* key, int l, uint32_t seed):
+cdef size_t trp_hash_fn(const void* key, int l, uint32_t seed):
     """
     Hash function for sets of (serialized) triples.
 
@@ -98,7 +98,7 @@ cdef size_t trp_hash_fn(void* key, int l, uint32_t seed):
     return <size_t>spookyhash_64(key, l, seed)
 
 
-cdef size_t hash_ptr_passthrough(void* key, int l, uint32_t seed):
+cdef size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed):
     """
     No-op function that takes a pointer and does *not* hash it.
 
@@ -108,7 +108,7 @@ cdef size_t hash_ptr_passthrough(void* key, int l, uint32_t seed):
 
 
 cdef inline bint lookup_none_cmp_fn(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
+        BufferTriple *trp, Buffer *t1, Buffer *t2):
     """
     Dummy callback for queries with all parameters unbound.
 
@@ -206,23 +206,30 @@ cdef class SimpleGraph:
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
-        hashset_conf_init(&self._terms_conf)
-        self._terms_conf.load_factor = 0.85
-        self._terms_conf.hash = hash_ptr_passthrough # spookyhash_64?
-        self._terms_conf.hash_seed = term_hash_seed32
-        self._terms_conf.key_compare = term_cmp_fn
-        self._terms_conf.key_length = sizeof(void*)
+        cdef:
+            HashSetConf terms_conf
+            HashSetConf trp_conf
 
-        hashset_conf_init(&self._trp_conf)
-        self._trp_conf.load_factor = 0.75
-        self._trp_conf.hash = hash_ptr_passthrough # spookyhash_64?
-        self._trp_conf.hash_seed = term_hash_seed32
-        self._terms_conf.key_compare = triple_cmp_fn
-        self._terms_conf.key_length = sizeof(void*)
+        hashset_conf_init(&terms_conf)
+        terms_conf.load_factor = 0.85
+        terms_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        terms_conf.hash_seed = term_hash_seed32
+        terms_conf.key_compare = &term_cmp_fn
+        terms_conf.key_length = sizeof(void*)
+
+        hashset_conf_init(&trp_conf)
+        trp_conf.load_factor = 0.75
+        trp_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        trp_conf.hash_seed = term_hash_seed32
+        trp_conf.key_compare = &triple_cmp_fn
+        trp_conf.key_length = sizeof(void*)
+
+        hashset_new_conf(&terms_conf, &self._terms)
+        hashset_new_conf(&trp_conf, &self._triples)
+        print(f'Terms member: {self._terms.dummy[0]}')
+        print(f'Triples member: {self._triples.dummy[0]}')
 
         self.store = store or env.app_globals.rdf_store
-        hashset_new_conf(&self._terms_conf, &self._terms)
-        hashset_new_conf(&self._trp_conf, &self._triples)
         self._pool = Pool()
 
         cdef:
@@ -284,7 +291,7 @@ cdef class SimpleGraph:
             self._add_from_spok(spok)
 
 
-    cdef inline void _add_from_spok(self, const TripleKey spok) except *:
+    cdef inline void _add_from_spok(self, TripleKey spok) except *:
         """
         Add a triple from a TripleKey of term keys.
         """
@@ -390,6 +397,7 @@ cdef class SimpleGraph:
         :rtype: set
         """
         cdef:
+            void *void_p
             HashSetIter ti
             BufferTriple *trp
             term.Term s, p, o
@@ -397,11 +405,12 @@ cdef class SimpleGraph:
         graph_set = set()
 
         hashset_iter_init(&ti, self._triples)
-        while hashset_iter_next(&ti, &trp) == CC_OK:
-            if trp == NULL:
+        while hashset_iter_next(&ti, &void_p) == CC_OK:
+            if void_p == NULL:
                 logger.warn('Triple is NULL!')
                 break
 
+            trp = <BufferTriple *>void_p
             graph_set.add((
                 term.deserialize_to_rdflib(trp.s),
                 term.deserialize_to_rdflib(trp.p),
@@ -620,11 +629,12 @@ cdef class SimpleGraph:
         Any and all of the lookup terms can be ``None``.
         """
         cdef:
+            void *void_p
             BufferTriple trp
             BufferTriple *trp_p
             HashSetIter ti
-            const Buffer t1
-            const Buffer t2
+            Buffer t1
+            Buffer t2
             lookup_fn_t fn
 
         res = set()
@@ -666,8 +676,9 @@ cdef class SimpleGraph:
 
         # Iterate over serialized triples.
         hashset_iter_init(&ti, self._triples)
-        while hashset_iter_next(&ti, &trp_p) == CC_OK:
-            if fn(trp_p, &t1, &t2):
+        while hashset_iter_next(&ti, &void_p) == CC_OK:
+            if void_p == NULL:
+                trp_p = <BufferTriple *>void_p
                 res.add((
                     term.deserialize_to_rdflib(trp_p[0].s),
                     term.deserialize_to_rdflib(trp_p[0].p),

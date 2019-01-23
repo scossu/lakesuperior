@@ -1,6 +1,6 @@
 from libc.stdint cimport uint32_t
 
-cdef extern from "ext/collections-c/src/include/hashtable.h":
+cdef extern from "hashset.h":
 
     cdef enum cc_stat:
         CC_OK
@@ -24,20 +24,23 @@ cdef extern from "ext/collections-c/src/include/hashtable.h":
     ctypedef void (*_mem_free_ft)(void* block)
 
     ctypedef struct Array:
-        size_t size
-        size_t capacity
-        float exp_factor
-        void **buffer
-        _mem_alloc_ft mem_alloc
-        _mem_calloc_ft mem_calloc
-        _mem_free_ft mem_free
+        size_t          size
+        size_t          capacity
+        float           exp_factor
+        void**          buffer
+        _mem_alloc_ft*  mem_alloc
+        _mem_calloc_ft* mem_calloc
+        _mem_free_ft*   mem_free
 
     ctypedef struct ArrayConf:
-        size_t capacity
-        float exp_factor
-        _mem_alloc_ft mem_alloc
-        _mem_calloc_ft mem_calloc
-        _mem_free_ft mem_free
+        size_t          capacity
+        float           exp_factor
+        #_mem_alloc_ft*  mem_alloc
+        #_mem_calloc_ft* mem_calloc
+        #_mem_free_ft*   mem_free
+        void *(*mem_alloc)  (size_t size)
+        void *(*mem_calloc) (size_t blocks, size_t size)
+        void  (*mem_free)   (void *block)
 
     ctypedef struct ArrayIter:
         Array* ar
@@ -160,9 +163,9 @@ cdef extern from "ext/collections-c/src/include/hashtable.h":
         size_t      hash
         TableEntry* next
 
-    ctypedef size_t (*_hash_ft)(void* key, int l, uint32_t seed)
+    ctypedef size_t (*_hash_ft)(const void* key, int l, uint32_t seed)
 
-    ctypedef bint (*_key_compare_ft)(void* key1, void* key2)
+    ctypedef bint (*_key_compare_ft)(const void* key1, const void* key2)
 
     ctypedef struct HashTable:
         size_t          capacity
@@ -173,22 +176,28 @@ cdef extern from "ext/collections-c/src/include/hashtable.h":
         float           load_factor
         TableEntry      **buckets
 
-        _hash_ft        hash
-        _key_compare_ft key_cmp
-        _mem_alloc_ft   mem_alloc
-        _mem_calloc_ft  mem_calloc
-        _mem_free_ft    mem_free
+        size_t (*hash)        (const void *key, int l, uint32_t seed)
+        bint    (*key_cmp) (const void *key1, const void *key2)
+        void *(*mem_alloc)  (size_t size)
+        void *(*mem_calloc) (size_t blocks, size_t size)
+        void  (*mem_free)   (void *block)
 
     ctypedef struct HashTableConf:
-        float load_factor
-        size_t initial_capacity
-        int key_length
-        uint32_t hash_seed
-        _hash_ft hash
-        _key_compare_ft key_compare
-        _mem_alloc_ft mem_alloc
-        _mem_calloc_ft mem_calloc
-        _mem_free_ft mem_free
+        float               load_factor
+        size_t              initial_capacity
+        int                 key_length
+        uint32_t            hash_seed
+
+        #_hash_ft            hash
+        #_key_compare_ft*    key_compare
+        #_mem_alloc_ft*  mem_alloc
+        #_mem_calloc_ft* mem_calloc
+        #_mem_free_ft*   mem_free
+        size_t (*hash)        (const void *key, int l, uint32_t seed)
+        bint    (*key_compare) (const void *key1, const void *key2)
+        void *(*mem_alloc)  (size_t size)
+        void *(*mem_calloc) (size_t blocks, size_t size)
+        void  (*mem_free)   (void *block)
 
     ctypedef struct HashTableIter:
         HashTable* table
@@ -245,15 +254,16 @@ cdef extern from "ext/collections-c/src/include/hashtable.h":
     cc_stat hashtable_iter_remove(HashTableIter* iter, void** out)
 
 
-cdef extern from "ext/collections-c/src/include/hashset.h":
-
     ctypedef struct HashSet:
         HashTable*      table
-        int             dummy
+        int*            dummy
 
-        _mem_alloc_ft   mem_alloc
-        _mem_calloc_ft  mem_calloc
-        _mem_free_ft    mem_free
+        #_mem_alloc_ft*  mem_alloc
+        #_mem_calloc_ft* mem_calloc
+        #_mem_free_ft*   mem_free
+        void *(*mem_alloc)  (size_t size)
+        void *(*mem_calloc) (size_t blocks, size_t size)
+        void  (*mem_free)   (void *block)
 
     ctypedef HashTableConf HashSetConf
 

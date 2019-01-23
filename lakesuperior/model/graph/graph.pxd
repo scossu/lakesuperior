@@ -2,7 +2,7 @@ from libc.stdint cimport uint32_t, uint64_t
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include.hashset cimport (
+from lakesuperior.cy_include.collections cimport (
     HashSet, HashSetConf,
     #_hash_ft, _key_compare_ft, _mem_alloc_ft, _mem_calloc_ft, _mem_free_ft,
 )
@@ -20,17 +20,15 @@ ctypedef Buffer SPOBuffer[3]
 ctypedef Buffer *BufferPtr
 
 cdef:
-    bint term_cmp_fn(void* key1, void* key2)
-    bint triple_cmp_fn(void* key1, void* key2)
-    size_t trp_hash_fn(void* key, int l, uint32_t seed)
-    size_t hash_ptr_passthrough(void* key, int l, uint32_t seed)
+    bint term_cmp_fn(const void* key1, const void* key2)
+    bint triple_cmp_fn(const void* key1, const void* key2)
+    size_t trp_hash_fn(const void* key, int l, uint32_t seed)
+    size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed)
 
 cdef class SimpleGraph:
     cdef:
         HashSet *_terms # Set of unique serialized terms.
         HashSet *_triples # Set of unique triples.
-        HashSetConf _terms_conf
-        HashSetConf _trp_conf
         readonly LmdbTriplestore store
         # Temp data pool. It gets managed with the object lifecycle via cymem.
         Pool _pool
