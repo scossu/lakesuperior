@@ -20,8 +20,8 @@ ctypedef Buffer SPOBuffer[3]
 ctypedef Buffer *BufferPtr
 
 cdef:
-    bint term_cmp_fn(const void* key1, const void* key2)
-    bint triple_cmp_fn(const void* key1, const void* key2)
+    int term_cmp_fn(const void* key1, const void* key2)
+    int triple_cmp_fn(const void* key1, const void* key2)
     size_t trp_hash_fn(const void* key, int l, uint32_t seed)
     size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed)
 
@@ -52,4 +52,3 @@ cdef class Imr(SimpleGraph):
         readonly str uri
 
     cpdef as_rdflib(self)
-

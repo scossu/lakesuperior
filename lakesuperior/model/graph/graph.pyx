@@ -14,6 +14,7 @@ from libc.stdlib cimport free
 from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
+from lakesuperior.cy_include cimport collections as cc
 from lakesuperior.cy_include.collections cimport (
     CC_OK,
     HashSet, HashSetConf, HashSetIter, TableEntry,
@@ -49,7 +50,7 @@ def use_data(fn):
     return _wrapper
 
 
-cdef bint term_cmp_fn(const void* key1, const void* key2):
+cdef int term_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two Buffer objects.
     """
@@ -68,7 +69,7 @@ cdef bint term_cmp_fn(const void* key1, const void* key2):
     return cmp == 0
 
 
-cdef bint triple_cmp_fn(const void* key1, const void* key2):
+cdef int triple_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a CAlg set.
 
@@ -212,14 +213,14 @@ cdef class SimpleGraph:
 
         hashset_conf_init(&terms_conf)
         terms_conf.load_factor = 0.85
-        terms_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        terms_conf.hash = &hash_ptr_passthrough # spookyhash_64?
         terms_conf.hash_seed = term_hash_seed32
         terms_conf.key_compare = &term_cmp_fn
         terms_conf.key_length = sizeof(void*)
 
         hashset_conf_init(&trp_conf)
         trp_conf.load_factor = 0.75
-        trp_conf.hash = hash_ptr_passthrough # spookyhash_64?
+        trp_conf.hash = &hash_ptr_passthrough # spookyhash_64?
         trp_conf.hash_seed = term_hash_seed32
         trp_conf.key_compare = &triple_cmp_fn
         trp_conf.key_length = sizeof(void*)
