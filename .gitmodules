@@ -9,9 +9,7 @@
 [submodule "ext/spookyhash"]
     path = ext/spookyhash
     url = https://github.com/centaurean/spookyhash.git
-[submodule "ext/c-algorithms"]
-    path = ext/c-algorithms
-    url = https://github.com/fragglet/c-algorithms.git
 [submodule "ext/collections-c"]
-	path = ext/collections-c
-	url = https://github.com/srdja/Collections-C.git
+    path = ext/collections-c
+    url = https://github.com/scossu/Collections-C.git
+    branch = add_or_get

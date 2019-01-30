@@ -4,20 +4,14 @@ ctypedef void* (*mem_alloc_ft)(size_t size)
 ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
 ctypedef void (*mem_free_ft)(void* block)
 ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
-ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
+ctypedef bint (*key_compare_ft)(const void* key1, const void* key2)
 
 
-#cdef extern from "array.c":
-#
-#    struct array_s:
-#        size_t          size
-#        size_t          capacity
-#        float           exp_factor
-#        void**          buffer
-#        mem_alloc_ft  mem_alloc
-#        mem_calloc_ft mem_calloc
-#        mem_free_ft   mem_free
+cdef extern from "common.h":
 
+    int cc_common_cmp_str(const void* key1, const void* key2)
+
+    int cc_common_cmp_ptr(const void* key1, const void* key2)
 
 cdef extern from "array.h":
 
@@ -32,10 +26,6 @@ cdef extern from "array.h":
         CC_ERR_OUT_OF_RANGE
         CC_ITER_END
 
-    int cc_common_cmp_str(void* key1, void* key2)
-
-    int cc_common_cmp_ptr(void* key1, void* key2)
-
     ctypedef struct Array:
         pass
 
@@ -45,9 +35,6 @@ cdef extern from "array.h":
         mem_alloc_ft  mem_alloc
         mem_calloc_ft mem_calloc
         mem_free_ft   mem_free
-        #void *(*mem_alloc)  (size_t size)
-        #void *(*mem_calloc) (size_t blocks, size_t size)
-        #void  (*mem_free)   (void *block)
 
     ctypedef struct ArrayIter:
         Array* ar
@@ -72,9 +59,9 @@ cdef extern from "array.h":
 
     void array_destroy_cb(Array* ar, _array_destroy_cb_cb_ft cb)
 
-    cc_stat array_add(Array* ar, void* element)
+    #cc_stat array_add(Array* ar, void* element)
 
-    cc_stat array_add_at(Array* ar, void* element, size_t index)
+    #cc_stat array_add_at(Array* ar, void* element, size_t index)
 
     cc_stat array_replace_at(Array* ar, void* element, size_t index, void** out)
 
@@ -167,40 +154,16 @@ cdef extern from "array.h":
 
 cdef extern from "hashtable.h":
 
-    struct table_entry_s:
+    ctypedef struct TableEntry:
         void*       key
         void*       value
         size_t      hash
-        table_entry_s* next
-
-    ctypedef table_entry_s TableEntry
-
-#cdef extern from "hashtable.c":
-#
-#    struct hashtable_s:
-#        size_t          capacity
-#        size_t          size
-#        size_t          threshold
-#        uint32_t        hash_seed
-#        int             key_len
-#        float           load_factor
-#        TableEntry**      buckets
-#
-#        #size_t (*hash)        (const void *key, int l, uint32_t seed)
-#        #bint    (*key_cmp) (const void *key1, const void *key2)
-#        #void *(*mem_alloc)  (size_t size)
-#        #void *(*mem_calloc) (size_t blocks, size_t size)
-#        #void  (*mem_free)   (void *block)
-#        hash_ft           hash
-#        key_compare_ft    key_cmp
-#        mem_alloc_ft      mem_alloc
-#        mem_calloc_ft     mem_calloc
-#        mem_free_ft       mem_free
+        TableEntry* next
 
     ctypedef struct HashTable:
         pass
 
-    struct hashtable_conf_s:
+    ctypedef struct HashTableConf:
         float               load_factor
         size_t              initial_capacity
         int                 key_length
@@ -211,21 +174,12 @@ cdef extern from "hashtable.h":
         mem_alloc_ft  mem_alloc
         mem_calloc_ft mem_calloc
         mem_free_ft   mem_free
-        #size_t (*hash)        (const void *key, int l, uint32_t seed)
-        #bint    (*key_compare) (const void *key1, const void *key2)
-        #void *(*mem_alloc)  (size_t size)
-        #void *(*mem_calloc) (size_t blocks, size_t size)
-        #void  (*mem_free)   (void *block)
 
-    ctypedef hashtable_conf_s HashTableConf
-
-    struct hashtable_iter_s:
+    ctypedef struct HashTableIter:
         HashTable* table
         size_t bucket_index
         TableEntry* prev_entry
         TableEntry* next_entry
-
-    ctypedef hashtable_iter_s HashTableIter
 
     size_t get_table_index(HashTable *table, void *key)
 
@@ -274,20 +228,6 @@ cdef extern from "hashtable.h":
     cc_stat hashtable_iter_next(HashTableIter* iter, TableEntry** out)
 
     cc_stat hashtable_iter_remove(HashTableIter* iter, void** out)
-
-
-#cdef extern from "hashset.c":
-#
-#    struct hashset_s:
-#        HashTable*      table
-#        int*            dummy
-#
-#        mem_alloc_ft  mem_alloc
-#        mem_calloc_ft mem_calloc
-#        mem_free_ft   mem_free
-#        #void *(*mem_alloc)  (size_t size)
-#        #void *(*mem_calloc) (size_t blocks, size_t size)
-#        #void  (*mem_free)   (void *block)
 
 
 cdef extern from "hashset.h":

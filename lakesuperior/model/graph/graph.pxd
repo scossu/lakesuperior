@@ -20,8 +20,8 @@ ctypedef Buffer SPOBuffer[3]
 ctypedef Buffer *BufferPtr
 
 cdef:
-    int term_cmp_fn(const void* key1, const void* key2)
-    int triple_cmp_fn(const void* key1, const void* key2)
+    bint term_cmp_fn(const void* key1, const void* key2)
+    bint triple_cmp_fn(const void* key1, const void* key2)
     size_t trp_hash_fn(const void* key, int l, uint32_t seed)
     size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed)
 

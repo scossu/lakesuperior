@@ -50,7 +50,7 @@ def use_data(fn):
     return _wrapper
 
 
-cdef int term_cmp_fn(const void* key1, const void* key2):
+cdef bint term_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two Buffer objects.
     """
@@ -69,7 +69,7 @@ cdef int term_cmp_fn(const void* key1, const void* key2):
     return cmp == 0
 
 
-cdef int triple_cmp_fn(const void* key1, const void* key2):
+cdef bint triple_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a CAlg set.
 
@@ -109,7 +109,7 @@ cdef size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed):
 
 
 cdef inline bint lookup_none_cmp_fn(
-        BufferTriple *trp, Buffer *t1, Buffer *t2):
+        const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     """
     Dummy callback for queries with all parameters unbound.
 
@@ -118,7 +118,7 @@ cdef inline bint lookup_none_cmp_fn(
     return True
 
 
-cdef inline bint lookup_s_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_s_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     """
     Lookup callback compare function for a given s in a triple.
 
@@ -130,27 +130,27 @@ cdef inline bint lookup_s_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
     return term_cmp_fn(t1, trp[0].s)
 
 
-cdef inline bint lookup_p_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_p_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return term_cmp_fn(t1, trp[0].p)
 
 
-cdef inline bint lookup_o_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_o_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return term_cmp_fn(t1, trp[0].o)
 
 
-cdef inline bint lookup_sp_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_sp_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
             term_cmp_fn(t1, trp[0].s)
             and term_cmp_fn(t2, trp[0].p))
 
 
-cdef inline bint lookup_so_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_so_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
             term_cmp_fn(t1, trp[0].s)
             and term_cmp_fn(t2, trp[0].o))
 
 
-cdef inline bint lookup_po_cmp_fn(BufferTriple *trp, Buffer *t1, Buffer *t2):
+cdef inline bint lookup_po_cmp_fn(const BufferTriple *trp, const Buffer *t1, const Buffer *t2):
     return (
             term_cmp_fn(t1, trp[0].p)
             and term_cmp_fn(t2, trp[0].o))
