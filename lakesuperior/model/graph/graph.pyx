@@ -227,8 +227,6 @@ cdef class SimpleGraph:
 
         hashset_new_conf(&terms_conf, &self._terms)
         hashset_new_conf(&trp_conf, &self._triples)
-        print(f'Terms member: {self._terms.dummy[0]}')
-        print(f'Triples member: {self._triples.dummy[0]}')
 
         self.store = store or env.app_globals.rdf_store
         self._pool = Pool()
@@ -327,13 +325,13 @@ cdef class SimpleGraph:
         #logger.info((<unsigned char *>ss.addr)[:ss.sz])
         logger.info('Insert ss @:')
         print(<unsigned long>ss)
-        self._add_or_get_term(&ss)
+        cc.hashset_add_or_get(self._terms, <void **>&ss)
         logger.info('Now ss is @:')
         print(<unsigned long>ss)
         logger.info('Insert sp')
-        self._add_or_get_term(&sp)
+        cc.hashset_add_or_get(self._terms, <void **>&sp)
         logger.info('Insert so')
-        self._add_or_get_term(&so)
+        cc.hashset_add_or_get(self._terms, <void **>&so)
         logger.info('inserted terms.')
         cdef size_t terms_sz = hashset_size(self._terms)
         logger.info('Terms set size: {terms_sz}')
@@ -356,39 +354,6 @@ cdef class SimpleGraph:
         #calg.set_iterate(self._triples, &ti)
         #while calg.set_iter_has_more(&ti):
         #    tt = <BufferTriple *>calg.set_iter_next(&ti)
-
-
-    cdef int _add_or_get_term(self, Buffer **data) except -1:
-        """
-        Insert a term in the terms set, or get one that already exists.
-
-        If the new term is inserted, its address is stored in the memory pool
-        and persists with the :py:class:`SimpleGraph` instance carrying it.
-        Otherwise, the overwritten term is garbage collected as soon as the
-        calling function exits.
-
-        The return value gives an indication of whether the term was added or
-        not.
-        """
-        cdef TableEntry *entry
-
-        table = self._terms.table
-
-        entry = table.buckets[get_table_index(table, data[0].addr)]
-
-        while entry:
-            if table.key_cmp(data[0].addr, entry.key) == 0:
-                # If the term is found, assign the address of entry.key
-                # to the data parameter.
-                data[0] = <Buffer *>entry.key
-                return 1
-            entry = entry.next
-
-        # If the term is not found, add it.
-        # TODO This is inefficient because it searches for the term again.
-        # TODO It would be best to break down the hashset_add function and
-        # TODO remove the check.
-        return hashset_add(self._terms, data[0])
 
 
     cdef set _data_as_set(self):

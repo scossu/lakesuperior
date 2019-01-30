@@ -175,32 +175,30 @@ cdef extern from "hashtable.h":
 
     ctypedef table_entry_s TableEntry
 
-cdef extern from "hashtable.c":
+#cdef extern from "hashtable.c":
+#
+#    struct hashtable_s:
+#        size_t          capacity
+#        size_t          size
+#        size_t          threshold
+#        uint32_t        hash_seed
+#        int             key_len
+#        float           load_factor
+#        TableEntry**      buckets
+#
+#        #size_t (*hash)        (const void *key, int l, uint32_t seed)
+#        #bint    (*key_cmp) (const void *key1, const void *key2)
+#        #void *(*mem_alloc)  (size_t size)
+#        #void *(*mem_calloc) (size_t blocks, size_t size)
+#        #void  (*mem_free)   (void *block)
+#        hash_ft           hash
+#        key_compare_ft    key_cmp
+#        mem_alloc_ft      mem_alloc
+#        mem_calloc_ft     mem_calloc
+#        mem_free_ft       mem_free
 
-    struct hashtable_s:
-        size_t          capacity
-        size_t          size
-        size_t          threshold
-        uint32_t        hash_seed
-        int             key_len
-        float           load_factor
-        TableEntry**      buckets
-
-        #size_t (*hash)        (const void *key, int l, uint32_t seed)
-        #bint    (*key_cmp) (const void *key1, const void *key2)
-        #void *(*mem_alloc)  (size_t size)
-        #void *(*mem_calloc) (size_t blocks, size_t size)
-        #void  (*mem_free)   (void *block)
-        hash_ft           hash
-        key_compare_ft    key_cmp
-        mem_alloc_ft      mem_alloc
-        mem_calloc_ft     mem_calloc
-        mem_free_ft       mem_free
-
-
-cdef extern from "hashtable.h":
-
-    ctypedef hashtable_s HashTable
+    ctypedef struct HashTable:
+        pass
 
     struct hashtable_conf_s:
         float               load_factor
@@ -278,23 +276,24 @@ cdef extern from "hashtable.h":
     cc_stat hashtable_iter_remove(HashTableIter* iter, void** out)
 
 
-cdef extern from "hashset.c":
-
-    struct hashset_s:
-        HashTable*      table
-        int*            dummy
-
-        mem_alloc_ft  mem_alloc
-        mem_calloc_ft mem_calloc
-        mem_free_ft   mem_free
-        #void *(*mem_alloc)  (size_t size)
-        #void *(*mem_calloc) (size_t blocks, size_t size)
-        #void  (*mem_free)   (void *block)
+#cdef extern from "hashset.c":
+#
+#    struct hashset_s:
+#        HashTable*      table
+#        int*            dummy
+#
+#        mem_alloc_ft  mem_alloc
+#        mem_calloc_ft mem_calloc
+#        mem_free_ft   mem_free
+#        #void *(*mem_alloc)  (size_t size)
+#        #void *(*mem_calloc) (size_t blocks, size_t size)
+#        #void  (*mem_free)   (void *block)
 
 
 cdef extern from "hashset.h":
 
-    ctypedef hashset_s HashSet
+    ctypedef struct HashSet:
+        pass
 
     ctypedef HashTableConf HashSetConf
 
@@ -310,6 +309,8 @@ cdef extern from "hashset.h":
     void hashset_destroy(HashSet* set)
 
     cc_stat hashset_add(HashSet* set, void* element)
+
+    cc_stat hashset_add_or_get(HashSet* set, void** element)
 
     cc_stat hashset_remove(HashSet* set, void* element, void** out)
 

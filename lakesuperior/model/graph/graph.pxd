@@ -39,7 +39,6 @@ cdef class SimpleGraph:
         inline void _add_triple(
             self, Buffer *ss, Buffer *sp, Buffer *so
         ) except *
-        int _add_or_get_term(self, Buffer **data) except -1
         set _data_as_set(self)
 
     cpdef void set(self, tuple trp) except *
