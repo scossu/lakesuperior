@@ -12,4 +12,4 @@
 [submodule "ext/collections-c"]
     path = ext/collections-c
     url = https://github.com/scossu/Collections-C.git
-    branch = add_or_get
+    branch = lsup
