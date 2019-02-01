@@ -8,15 +8,15 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior import env
-from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.model.ldp_nr import LdpNr
-from lakesuperior.model.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
+from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldp_nr import LdpNr
+from lakesuperior.model.ldp.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
 from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.store.ldp_rs.graph import Imr
+from lakesuperior.model.graph.graph import Imr
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource

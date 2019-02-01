@@ -26,7 +26,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.store.ldp_rs.graph import SimpleGraph, Imr
+from lakesuperior.model.graph.graph import SimpleGraph, Imr
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -47,7 +47,7 @@ class Ldpr(metaclass=ABCMeta):
     **Note**: Even though LdpNr (which is a subclass of Ldpr) handles binary
     files, it still has an RDF representation in the triplestore. Hence, some
     of the RDF-related methods are defined in this class rather than in
-    :class:`~lakesuperior.model.ldp_rs.LdpRs`.
+    :class:`~lakesuperior.model.ldp.ldp_rs.LdpRs`.
 
     **Note:** Only internal facing (``info:fcres``-prefixed) URIs are handled
     in this class. Public-facing URI conversion is handled in the
@@ -462,7 +462,7 @@ class Ldpr(metaclass=ABCMeta):
             }
 
         # Bury descendants.
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
         for desc_uri in rdfly.get_descendants(self.uid):
             try:
                 desc_rsrc = LdpFactory.from_stored(
@@ -513,7 +513,7 @@ class Ldpr(metaclass=ABCMeta):
         self.modify(RES_CREATED, remove_trp, add_trp)
 
         # Resurrect descendants.
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
         descendants = env.app_globals.rdfly.get_descendants(self.uid)
         for desc_uri in descendants:
             LdpFactory.from_stored(
@@ -856,7 +856,7 @@ class Ldpr(metaclass=ABCMeta):
         a LDP-NR has "children" under ``fcr:versions``) by setting this to
         True.
         """
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
 
         if '/' in self.uid.lstrip('/'):
             # Traverse up the hierarchy to find the parent.
@@ -908,7 +908,7 @@ class Ldpr(metaclass=ABCMeta):
         add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            from lakesuperior.model.ldp_factory import LdpFactory
+            from lakesuperior.model.ldp.ldp_factory import LdpFactory
 
             s = cont_rsrc.metadata.value(self.MBR_RSRC_URI)
             p = cont_rsrc.metadata.value(self.MBR_REL_URI)

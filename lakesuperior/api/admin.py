@@ -77,7 +77,7 @@ def fixity_check(uid):
         resource is not an LDP-NR.
     """
     from lakesuperior.api import resource as rsrc_api
-    from lakesuperior.model.ldp_factory import LDP_NR_TYPE
+    from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE
 
     rsrc = rsrc_api.get(uid)
     if LDP_NR_TYPE not in rsrc.ldp_types:

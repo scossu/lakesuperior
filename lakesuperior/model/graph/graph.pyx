@@ -186,7 +186,7 @@ cdef class SimpleGraph:
     """
 
     def __cinit__(
-            self, Keyset keyset=None, store=None, set data=set()):
+            self, Keyset keyset=None, store=None, set data=set(), **kwargs):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
@@ -230,11 +230,6 @@ cdef class SimpleGraph:
 
         self.store = store or env.app_globals.rdf_store
         self._pool = Pool()
-
-        cdef:
-            size_t i = 0
-            TripleKey spok
-            term.Buffer pk_t
 
         # Initialize empty data set.
         if keyset:
@@ -676,7 +671,7 @@ cdef class Imr(SimpleGraph):
     Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
     will create a new ``Imr`` instance with the same subject URI.
     """
-    def __init__(self, str uri, *args, **kwargs):
+    def __init__(self, uri, *args, **kwargs):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
@@ -692,9 +687,7 @@ cdef class Imr(SimpleGraph):
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
-        super().__init__(*args, **kwargs)
-
-        self.uri = uri
+        self.uri = str(uri)
 
 
     @property

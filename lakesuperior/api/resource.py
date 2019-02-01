@@ -15,8 +15,8 @@ from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
-from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.store.ldp_rs.graph import SimpleGraph
+from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
+from lakesuperior.model.graph.graph import SimpleGraph
 
 
 logger = logging.getLogger(__name__)
@@ -200,13 +200,13 @@ def create(parent, slug=None, **kwargs):
     :param str parent: UID of the parent resource.
     :param str slug: Tentative path relative to the parent UID.
     :param \*\*kwargs: Other parameters are passed to the
-      :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+      :py:meth:`~lakesuperior.model.ldp.ldp_factory.LdpFactory.from_provided`
       method.
 
-    :rtype: tuple(str, lakesuperior.model.ldpr.Ldpr)
+    :rtype: tuple(str, lakesuperior.model.ldp.ldpr.Ldpr)
     :return: A tuple of:
         1. Event type (str): whether the resource was created or updated.
-        2. Resource (lakesuperior.model.ldpr.Ldpr): The new or updated resource.
+        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated resource.
     """
     uid = LdpFactory.mint_uid(parent, slug)
     logger.debug('Minted UID for new resource: {}'.format(uid))
@@ -224,13 +224,13 @@ def create_or_replace(uid, **kwargs):
 
     :param string uid: UID of the resource to be created or updated.
     :param \*\*kwargs: Other parameters are passed to the
-        :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+        :py:meth:`~lakesuperior.model.ldp.ldp_factory.LdpFactory.from_provided`
         method.
 
-    :rtype: tuple(str, lakesuperior.model.ldpr.Ldpr)
+    :rtype: tuple(str, lakesuperior.model.ldp.ldpr.Ldpr)
     :return: A tuple of:
         1. Event type (str): whether the resource was created or updated.
-        2. Resource (lakesuperior.model.ldpr.Ldpr): The new or updated resource.
+        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated resource.
     """
     rsrc = LdpFactory.from_provided(uid, **kwargs)
     return rsrc.create_or_replace(), rsrc

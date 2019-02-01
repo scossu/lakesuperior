@@ -25,10 +25,10 @@ from lakesuperior.exceptions import (
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
         ResourceExistsError, IncompatibleLdpTypeError)
 from lakesuperior.globals import RES_CREATED
-from lakesuperior.model.ldp_factory import LdpFactory
-from lakesuperior.model.ldp_nr import LdpNr
-from lakesuperior.model.ldp_rs import LdpRs
-from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.model.ldp.ldp_factory import LdpFactory
+from lakesuperior.model.ldp.ldp_nr import LdpNr
+from lakesuperior.model.ldp.ldp_rs import LdpRs
+from lakesuperior.model.ldp.ldpr import Ldpr
 from lakesuperior.toolbox import Toolbox
 
 
@@ -668,7 +668,7 @@ def _headers_from_metadata(rsrc, out_fmt='text/turtle'):
     """
     Create a dict of headers from a metadata graph.
 
-    :param lakesuperior.model.ldpr.Ldpr rsrc: Resource to extract metadata
+    :param lakesuperior.model.ldp.ldpr.Ldpr rsrc: Resource to extract metadata
         from.
     """
     rsp_headers = defaultdict(list)

@@ -13,8 +13,8 @@ from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceNotExistsError,
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
-from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.store.ldp_rs.graph import SimpleGraph, Imr
+from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.graph.graph import SimpleGraph, Imr
 
 
 @pytest.fixture(scope='module')
