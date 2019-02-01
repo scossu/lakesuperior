@@ -15,13 +15,6 @@ from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.cy_include cimport collections as cc
-from lakesuperior.cy_include.collections cimport (
-    CC_OK,
-    HashSet, HashSetConf, HashSetIter, TableEntry,
-    hashset_add, hashset_conf_init, hashset_contains, hashset_iter_init,
-    hashset_iter_next, hashset_new_conf, hashtable_hash_ptr, hashset_size,
-    get_table_index,
-)
 from lakesuperior.model.graph cimport term
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
@@ -50,15 +43,18 @@ def use_data(fn):
     return _wrapper
 
 
-cdef bint term_cmp_fn(const void* key1, const void* key2):
+cdef int term_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two Buffer objects.
+
+    :rtype: int
+    :return: 0 if the byte streams are the same, another integer otherwise.
     """
     b1 = <Buffer *>key1
     b2 = <Buffer *>key2
 
     if b1.sz != b2.sz:
-        return False
+        return 1
 
     #print('Term A:')
     #print((<unsigned char *>b1.addr)[:b1.sz])
@@ -66,24 +62,28 @@ cdef bint term_cmp_fn(const void* key1, const void* key2):
     #print((<unsigned char *>b2.addr)[:b2.sz])
     cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
     logger.info(f'term memcmp: {cmp}')
-    return cmp == 0
+    return cmp
 
 
-cdef bint triple_cmp_fn(const void* key1, const void* key2):
+cdef int triple_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a CAlg set.
 
     Here, pointers to terms are compared for s, p, o. The pointers should be
     guaranteed to point to unique values (i.e. no two pointers have the same
     term value within a graph).
+
+    :rtype: int
+    :return: 0 if the addresses of all terms are the same, 1 otherwise.
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
 
-    return(
-            t1.s.addr == t2.s.addr and
-            t1.p.addr == t2.p.addr and
-            t1.o.addr == t2.o.addr)
+    return (
+        t1.s.addr != t2.s.addr or
+        t1.p.addr != t2.p.addr or
+        t1.o.addr != t2.o.addr
+    )
 
 
 cdef size_t trp_hash_fn(const void* key, int l, uint32_t seed):
@@ -208,25 +208,25 @@ cdef class SimpleGraph:
         :param lmdbStore store: the store to look data up.
         """
         cdef:
-            HashSetConf terms_conf
-            HashSetConf trp_conf
+            cc.HashSetConf terms_conf
+            cc.HashSetConf trp_conf
 
-        hashset_conf_init(&terms_conf)
+        cc.hashset_conf_init(&terms_conf)
         terms_conf.load_factor = 0.85
         terms_conf.hash = &hash_ptr_passthrough # spookyhash_64?
         terms_conf.hash_seed = term_hash_seed32
         terms_conf.key_compare = &term_cmp_fn
         terms_conf.key_length = sizeof(void*)
 
-        hashset_conf_init(&trp_conf)
+        cc.hashset_conf_init(&trp_conf)
         trp_conf.load_factor = 0.75
         trp_conf.hash = &hash_ptr_passthrough # spookyhash_64?
         trp_conf.hash_seed = term_hash_seed32
         trp_conf.key_compare = &triple_cmp_fn
         trp_conf.key_length = sizeof(void*)
 
-        hashset_new_conf(&terms_conf, &self._terms)
-        hashset_new_conf(&trp_conf, &self._triples)
+        cc.hashset_new_conf(&terms_conf, &self._terms)
+        cc.hashset_new_conf(&trp_conf, &self._triples)
 
         self.store = store or env.app_globals.rdf_store
         self._pool = Pool()
@@ -323,22 +323,20 @@ cdef class SimpleGraph:
         logger.info(f'ss sz: {ss.sz}')
         #logger.info('ss:')
         #logger.info((<unsigned char *>ss.addr)[:ss.sz])
-        logger.info('Insert ss @:')
-        print(<unsigned long>ss)
+        print('Insert ss: @0x{:02x}'.format(<unsigned long>ss))
         cc.hashset_add_or_get(self._terms, <void **>&ss)
-        logger.info('Now ss is @:')
-        print(<unsigned long>ss)
+        print('Now ss is: @0x{:02x}'.format(<unsigned long>ss))
         logger.info('Insert sp')
         cc.hashset_add_or_get(self._terms, <void **>&sp)
         logger.info('Insert so')
         cc.hashset_add_or_get(self._terms, <void **>&so)
         logger.info('inserted terms.')
-        cdef size_t terms_sz = hashset_size(self._terms)
+        cdef size_t terms_sz = cc.hashset_size(self._terms)
         logger.info('Terms set size: {terms_sz}')
 
-        #cdef HashSetIter ti
+        #cdef cc.HashSetIter ti
         #cdef Buffer *t
-        #hashset_iter_init(&ti, self._terms)
+        #cc.hashset_iter_init(&ti, self._terms)
         #while calg.set_iter_has_more(&ti):
         #    t = <Buffer *>calg.set_iter_next(&ti)
 
@@ -346,7 +344,7 @@ cdef class SimpleGraph:
         trp.p = sp
         trp.o = so
 
-        r = hashset_add(self._triples, trp)
+        r = cc.hashset_add(self._triples, trp)
         print('Insert triple result:')
         print(r)
 
@@ -364,14 +362,14 @@ cdef class SimpleGraph:
         """
         cdef:
             void *void_p
-            HashSetIter ti
+            cc.HashSetIter ti
             BufferTriple *trp
             term.Term s, p, o
 
         graph_set = set()
 
-        hashset_iter_init(&ti, self._triples)
-        while hashset_iter_next(&ti, &void_p) == CC_OK:
+        cc.hashset_iter_init(&ti, self._triples)
+        while cc.hashset_iter_next(&ti, &void_p) == cc.CC_OK:
             if void_p == NULL:
                 logger.warn('Triple is NULL!')
                 break
@@ -598,7 +596,7 @@ cdef class SimpleGraph:
             void *void_p
             BufferTriple trp
             BufferTriple *trp_p
-            HashSetIter ti
+            cc.HashSetIter ti
             Buffer t1
             Buffer t2
             lookup_fn_t fn
@@ -612,7 +610,7 @@ cdef class SimpleGraph:
             term.serialize_from_rdflib(p, trp.p)
             term.serialize_from_rdflib(o, trp.o)
 
-            if hashset_contains(self._triples, &trp):
+            if cc.hashset_contains(self._triples, &trp):
                 res.add((s, p, o))
 
             return res
@@ -641,8 +639,8 @@ cdef class SimpleGraph:
             fn = lookup_none_cmp_fn
 
         # Iterate over serialized triples.
-        hashset_iter_init(&ti, self._triples)
-        while hashset_iter_next(&ti, &void_p) == CC_OK:
+        cc.hashset_iter_init(&ti, self._triples)
+        while cc.hashset_iter_next(&ti, &void_p) == cc.CC_OK:
             if void_p == NULL:
                 trp_p = <BufferTriple *>void_p
                 res.add((

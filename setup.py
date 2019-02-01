@@ -81,6 +81,8 @@ extensions = [
         'lakesuperior.model.structures.*',
         [
             path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
             path.join(coll_src_dir, 'hashset.c'),
             path.join(coll_src_dir, 'hashtable.c'),
             path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
@@ -94,6 +96,8 @@ extensions = [
         [
             path.join(tpl_src_dir, 'tpl.c'),
             path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
             path.join(coll_src_dir, 'hashset.c'),
             path.join(coll_src_dir, 'hashtable.c'),
             path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
