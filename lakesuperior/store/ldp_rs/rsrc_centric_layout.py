@@ -381,7 +381,7 @@ class RsrcCentricLayout:
         #Get version graphs proper.
         for vtrp in imr:
             # Add the hasVersion triple to the result graph.
-            vmeta.add(vtrp)
+            vmeta.add((vtrp,))
             vmeta_gr = SimpleGraph(
                 lookup=((
                     None, nsc['foaf'].primaryTopic, vtrp[2]), HIST_GR_URI),
@@ -394,7 +394,7 @@ class RsrcCentricLayout:
                             (trp[1] != nsc['rdf'].type
                             or trp[2] not in self.ignore_vmeta_types)
                             and (trp[1] not in self.ignore_vmeta_preds)):
-                        vmeta.add((vtrp[2], trp[1], trp[2]))
+                        vmeta.add(((vtrp[2], trp[1], trp[2]),))
 
         return vmeta
 
@@ -443,7 +443,7 @@ class RsrcCentricLayout:
                     lookup=((s, cont_p, None), c), store=self.store)[s : cont_p]
             #new_dset = set(ds.graph(c)[s : cont_p])
             for ss in new_dset:
-                dset.add(ss)
+                dset.add((ss,))
                 cc = URIRef(ss.replace(nsc['fcres'], nsc['fcstruct']))
                 sub_dset = self.store.triples((ss, cont_p, None), cc)
                 #if set(ds.graph(cc)[ss : cont_p]):

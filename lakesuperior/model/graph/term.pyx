@@ -22,7 +22,7 @@ cdef int serialize(const Term *term, Buffer *sterm, Pool pool=None) except -1:
     """
     Serialize a Term into a binary buffer.
 
-    The returned result is dynamically allocated and must be manually freed.
+    The returned result is dynamically allocated in the provided memory pool.
     """
     cdef:
         unsigned char *addr
@@ -57,7 +57,7 @@ cdef int deserialize(const Buffer *data, Term *term) except -1:
 
 cdef int from_rdflib(term_obj, Term *term) except -1:
     """
-    Return a Term struct obtained from a Python/RDFLiib term.
+    Return a Term struct obtained from a Python/RDFLib term.
     """
     _data = str(term_obj).encode()
     term[0].data = _data
@@ -111,10 +111,7 @@ cdef int serialize_from_rdflib(
         else:
             raise ValueError(f'Unsupported term type: {type(term_obj)}')
 
-    tpl.tpl_jot(tpl.TPL_MEM, &addr, &sz, LSUP_TERM_STRUCT_PK_FMT, &_term)
-
-    data[0].addr = addr
-    data[0].sz = sz
+    serialize(&_term, data, pool)
 
 
 cdef object to_rdflib(const Term *term):

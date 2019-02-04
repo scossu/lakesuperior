@@ -21,7 +21,7 @@ ctypedef Buffer *BufferPtr
 
 cdef:
     int term_cmp_fn(const void* key1, const void* key2)
-    int triple_cmp_fn(const void* key1, const void* key2)
+    int trp_cmp_fn(const void* key1, const void* key2)
     size_t trp_hash_fn(const void* key, int l, uint32_t seed)
     size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed)
 
@@ -39,12 +39,15 @@ cdef class SimpleGraph:
         inline void _add_triple(
             self, Buffer *ss, Buffer *sp, Buffer *so
         ) except *
-        set _data_as_set(self)
+        set _to_pyset(self)
 
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
     cpdef object as_rdflib(self)
     cpdef set terms(self, str type)
+
+    cpdef SimpleGraph union(self, SimpleGraph other)
+    cpdef void ip_union(self, SimpleGraph other)
 
 cdef class Imr(SimpleGraph):
     cdef:

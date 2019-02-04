@@ -155,11 +155,11 @@ cdef extern from "common.h":
 
 cdef extern from "hashtable.h":
 
-#    ctypedef struct TableEntry:
-#        void*       key
-#        void*       value
-#        size_t      hash
-#        TableEntry* next
+    ctypedef struct TableEntry:
+        void*       key
+        void*       value
+        size_t      hash
+        TableEntry* next
 
     ctypedef struct HashTable:
         pass
@@ -177,12 +177,11 @@ cdef extern from "hashtable.h":
         mem_free_ft   mem_free
 
     ctypedef struct HashTableIter:
-        pass
-#        HashTable* table
-#        size_t bucket_index
-#        TableEntry* prev_entry
-#        TableEntry* next_entry
-#
+        HashTable* table
+        size_t bucket_index
+        TableEntry* prev_entry
+        TableEntry* next_entry
+
 #    size_t get_table_index(HashTable *table, void *key)
 #
 #    void hashtable_conf_init(HashTableConf* conf)
@@ -215,7 +214,7 @@ cdef extern from "hashtable.h":
 #
 #    size_t hashtable_hash(void* key, int len, uint32_t seed)
 #
-#    size_t hashtable_hash_ptr(void* key, int len, uint32_t seed)
+    size_t hashtable_hash_ptr(void* key, int len, uint32_t seed)
 #
 #    ctypedef void (*_hashtable_foreach_key_op_ft)(void*)
 #
