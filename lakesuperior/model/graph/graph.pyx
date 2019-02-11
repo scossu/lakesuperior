@@ -258,10 +258,9 @@ cdef class SimpleGraph:
         if keyset:
             # Populate with triples extracted from provided key set.
             self._data_from_keyset(keyset)
-        elif data is not None:
+        elif data:
             # Populate with provided Python set.
-            for s, p, o in data:
-                self._add_from_rdflib(s, p, o)
+            self.add(data)
 
         print(len(self))
         print('SimpleGraph cinit complete.')
@@ -315,7 +314,7 @@ cdef class SimpleGraph:
         return new_gr
 
 
-    cpdef void ip_union(self, SimpleGraph other):
+    cpdef void ip_union(self, SimpleGraph other) except *:
         """
         Perform an in-place set union that adds triples to this instance
 
@@ -578,67 +577,67 @@ cdef class SimpleGraph:
         return str(self.data)
 
 
-    @use_data
     def __sub__(self, other):
         """ Set subtraction. """
-        return self.data - other
+        return self.subtract(other)
 
 
-    @use_data
     def __isub__(self, other):
         """ In-place set subtraction. """
-        self.data -= other
+        self.ip_subtract(other)
         return self
 
-    @use_data
     def __and__(self, other):
         """ Set intersection. """
-        return self.data & other
+        return self.intersect(other)
 
 
-    @use_data
     def __iand__(self, other):
         """ In-place set intersection. """
-        self.data &= other
+        self.ip_intersect(other)
         return self
 
-    @use_data
     def __or__(self, other):
         """ Set union. """
-        return self.data | other
+        return self.union(other)
 
 
-    @use_data
     def __ior__(self, other):
         """ In-place set union. """
-        self.data |= other
+        self.ip_union(other)
         return self
 
-    @use_data
     def __xor__(self, other):
         """ Set exclusive intersection (XOR). """
-        return self.data ^ other
+        return self.xintersect(other)
 
 
-    @use_data
     def __ixor__(self, other):
         """ In-place set exclusive intersection (XOR). """
-        self.data ^= other
+        self.ip_xintersect(other)
         return self
 
 
-    def __contains__(self, item):
+    def __contains__(self, trp):
         """
         Whether the graph contains a triple.
 
         :rtype: boolean
         """
-        return item in self.data
+        cdef:
+            BufferTriple btrp
+
+        s, p, o = trp
+        term.serialize_from_rdflib(s, btrp.s)
+        term.serialize_from_rdflib(p, btrp.p)
+        term.serialize_from_rdflib(o, btrp.o)
+
+        return bool(cc.hashset_contains(self._triples, &btrp))
 
 
     def __iter__(self):
         """ Graph iterator. It iterates over the set triples. """
-        return self.data.__iter__()
+        raise NotImplementedError()
 
 
     # Slicing.

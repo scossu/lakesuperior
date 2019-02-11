@@ -47,7 +47,7 @@ cdef class SimpleGraph:
     cpdef set terms(self, str type)
 
     cpdef SimpleGraph union(self, SimpleGraph other)
-    cpdef void ip_union(self, SimpleGraph other)
+    cpdef void ip_union(self, SimpleGraph other) except *
 
 cdef class Imr(SimpleGraph):
     cdef:
