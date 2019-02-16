@@ -90,6 +90,25 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     return is_not_equal
 
 
+cdef bint graph_eq_fn(SimpleGraph g1, SimpleGraph g2):
+    """
+    Compare 2 graphs for equality.
+
+    Note that this returns the opposite value than the triple and term
+    compare functions: 1 (True) if equal, 0 (False) if not.
+    """
+    cdef:
+        void* el
+        cc.HashSetIter it
+
+    cc.hashset_iter_init(&it, g1._triples)
+    while cc.hashset_iter_next(&it, &el) != cc.CC_ITER_END:
+        if cc.hashset_contains(g2._triples, el):
+            return False
+
+    return True
+
+
 cdef size_t term_hash_fn(const void* key, int l, uint32_t seed):
     """
     Hash function for serialized terms (:py:class:`Buffer` objects)
@@ -234,18 +253,21 @@ cdef class SimpleGraph:
         cdef:
             cc.HashSetConf terms_conf, trp_conf
 
+        self.term_cmp_fn = &term_cmp_fn
+        self.trp_cmp_fn = &trp_cmp_fn
+
         cc.hashset_conf_init(&terms_conf)
         terms_conf.load_factor = 0.85
         terms_conf.hash = &term_hash_fn
         terms_conf.hash_seed = term_hash_seed32
-        terms_conf.key_compare = &term_cmp_fn
+        terms_conf.key_compare = self.term_cmp_fn
         terms_conf.key_length = sizeof(Buffer*)
 
         cc.hashset_conf_init(&trp_conf)
         trp_conf.load_factor = 0.75
         trp_conf.hash = &trp_hash_fn
         trp_conf.hash_seed = term_hash_seed32
-        trp_conf.key_compare = &trp_cmp_fn
+        trp_conf.key_compare = self.trp_cmp_fn
         trp_conf.key_length = sizeof(BufferTriple)
 
         cc.hashset_new_conf(&terms_conf, &self._terms)
@@ -413,40 +435,6 @@ cdef class SimpleGraph:
         cdef size_t terms_sz = cc.hashset_size(self._terms)
         logger.info(f'Terms set size: {terms_sz}')
 
-        #cdef cc.HashSetIter ti
-        #cdef Buffer *t
-        #cc.hashset_iter_init(&ti, self._terms)
-        #while calg.set_iter_has_more(&ti):
-        #    t = <Buffer *>calg.set_iter_next(&ti)
-
-        # # # Test area
-        #cdef:
-        #    cc.HashSet* testset
-        #    cc.HashSetConf testconf
-        #    int i = 24
-        #    size_t sz
-
-        #cc.hashset_conf_init(&testconf)
-        #testconf.hash = &hash_ptr_passthrough # spookyhash_64?
-        #testconf.hash_seed = term_hash_seed32
-        #testconf.key_length = sizeof(int*)
-        #testconf.key_compare = &trp_cmp_fn
-        #testconf.key_length = sizeof(BufferTriple*)
-
-        #cc.hashset_new_conf(&testconf, &testset)
-
-        #sz = cc.hashset_size(testset)
-        #print(f'Test set size (start): {sz}')
-
-        #cc.hashset_add(testset, &i)
-        #sz = cc.hashset_size(testset)
-        #print(f'Test set size (1st insert): {sz}')
-
-        #cc.hashset_add(testset, &i)
-        #sz = cc.hashset_size(testset)
-        #print(f'Test set size (2nd insert): {sz}')
-        # # # END test area
-
         trp.s = ss
         trp.p = sp
         trp.o = so
@@ -472,11 +460,37 @@ cdef class SimpleGraph:
                     <size_t>test_trp.s, <size_t>test_trp.p, <size_t>test_trp.o))
 
 
+    cdef int _remove_triple(self, BufferTriple* trp_buf) except -1:
+        """
+        Remove one triple from the graph.
+        """
+        return cc.hashset_remove(self._triples, trp_buf, NULL)
 
-        #cdef BufferTriple *tt
-        #calg.set_iterate(self._triples, &ti)
-        #while calg.set_iter_has_more(&ti):
-        #    tt = <BufferTriple *>calg.set_iter_next(&ti)
+
+    cdef bint _trp_contains(self, BufferTriple* btrp):
+        cdef:
+            cc.HashSetIter it
+            void* cur
+            void* ss = <void*>btrp.s
+            void* sp = <void*>btrp.p
+            void* so = <void*>btrp.o
+
+        if (
+            cc.hashset_add_or_get(self._terms, &ss) != cc.CC_DUP_KEY or
+            cc.hashset_add_or_get(self._terms, &sp) != cc.CC_DUP_KEY or
+            cc.hashset_add_or_get(self._terms, &so) != cc.CC_DUP_KEY
+        ):
+            return False
+
+        btrp.s = <Buffer*>ss
+        btrp.p = <Buffer*>sp
+        btrp.o = <Buffer*>so
+
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            if self.trp_cmp_fn(&cur, &btrp) == 0:
+                return True
+        return False
 
 
     cdef set _to_pyset(self):
@@ -520,7 +534,7 @@ cdef class SimpleGraph:
         cdef size_t cur = 0
 
         trp_ct = len(trp)
-        trp_buf = <SPOBuffer>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
+        trp_buf = <Buffer *>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
 
         for s, p, o in trp:
             term.serialize_from_rdflib(s, trp_buf + cur, self._pool)
@@ -547,7 +561,19 @@ cdef class SimpleGraph:
         :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
             wildcards are not accepted.
         """
-        self.data.remove(trp)
+        cdef:
+            Buffer ss, sp, so
+            BufferTriple trp_buf
+
+        term.serialize_from_rdflib(trp[0], &ss, self._pool)
+        term.serialize_from_rdflib(trp[1], &sp, self._pool)
+        term.serialize_from_rdflib(trp[2], &so, self._pool)
+
+        trp_buf.s = &ss
+        trp_buf.p = &sp
+        trp_buf.o = &so
+
+        self._remove_triple(&trp_buf)
 
 
     def __len__(self):
@@ -558,7 +584,7 @@ cdef class SimpleGraph:
     @use_data
     def __eq__(self, other):
         """ Equality operator between ``SimpleGraph`` instances. """
-        return self.data == other
+        return graph_eq_fn(self, other)
 
 
     def __repr__(self):
@@ -625,14 +651,19 @@ cdef class SimpleGraph:
         :rtype: boolean
         """
         cdef:
+            Buffer ss, sp, so
             BufferTriple btrp
+
+        btrp.s = &ss
+        btrp.p = &sp
+        btrp.o = &so
 
         s, p, o = trp
         term.serialize_from_rdflib(s, btrp.s)
         term.serialize_from_rdflib(p, btrp.p)
         term.serialize_from_rdflib(o, btrp.o)
 
-        return bool(cc.hashset_contains(self._triples, &btrp))
+        return self._trp_contains(&btrp)
 
 
     def __iter__(self):
@@ -778,7 +809,7 @@ cdef class SimpleGraph:
 
         # Iterate over serialized triples.
         cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &void_p) == cc.CC_OK:
+        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
             if void_p == NULL:
                 trp_p = <BufferTriple *>void_p
                 res.add((

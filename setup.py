@@ -26,8 +26,16 @@ try:
 except ImportError:
     USE_CYTHON = False
 else:
-    if Cython.__version__ == CYTHON_VERSION:
+    cy_installed_version = Cython.__version__
+    if cy_installed_version == CYTHON_VERSION:
         USE_CYTHON = True
+    else:
+        raise ImportError(
+            f'The installed Cython version ({cy_installed_version}) '
+            f'does not match the required version ({CYTHON_VERSION}). '
+            'Please insstall the exact required Cython version in order to '
+            'generate the C sources.'
+        )
 
 
 # ``pytest_runner`` is referenced in ``setup_requires``.

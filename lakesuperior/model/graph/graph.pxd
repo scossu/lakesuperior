@@ -2,10 +2,7 @@ from libc.stdint cimport uint32_t, uint64_t
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include.collections cimport (
-    HashSet, HashSetConf,
-    #_hash_ft, _key_compare_ft, _mem_alloc_ft, _mem_calloc_ft, _mem_free_ft,
-)
+from lakesuperior.cy_include cimport collections as cc
 from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.keyset cimport Keyset
@@ -22,16 +19,20 @@ ctypedef Buffer *BufferPtr
 cdef:
     int term_cmp_fn(const void* key1, const void* key2)
     int trp_cmp_fn(const void* key1, const void* key2)
+    bint graph_eq_fn(SimpleGraph g1, SimpleGraph g2)
     size_t trp_hash_fn(const void* key, int l, uint32_t seed)
     size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed)
 
 cdef class SimpleGraph:
     cdef:
-        HashSet *_terms # Set of unique serialized terms.
-        HashSet *_triples # Set of unique triples.
+        cc.HashSet *_terms # Set of unique serialized terms.
+        cc.HashSet *_triples # Set of unique triples.
         readonly LmdbTriplestore store
         # Temp data pool. It gets managed with the object lifecycle via cymem.
         Pool _pool
+
+        cc.key_compare_ft term_cmp_fn
+        cc.key_compare_ft trp_cmp_fn
 
         void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
         void _data_from_keyset(self, Keyset data) except *
@@ -39,6 +40,8 @@ cdef class SimpleGraph:
         inline void _add_triple(
             self, Buffer *ss, Buffer *sp, Buffer *so
         ) except *
+        int _remove_triple(self, BufferTriple* trp_buf) except -1
+        bint _trp_contains(self, BufferTriple* btrp)
         set _to_pyset(self)
 
     cpdef void set(self, tuple trp) except *
