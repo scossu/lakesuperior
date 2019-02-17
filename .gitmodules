@@ -11,5 +11,5 @@
     url = https://github.com/centaurean/spookyhash.git
 [submodule "ext/collections-c"]
     path = ext/collections-c
-    url = https://github.com/scossu/Collections-C.git
+    url = https://github.com/scossu/lsup-collections-c.git
     branch = lsup
