@@ -411,26 +411,22 @@ cdef class SimpleGraph:
         """
         trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
 
-        logger.info('ss: {}'.format((<unsigned char *>ss.addr)[:ss.sz]))
-        logger.info('sp: {}'.format((<unsigned char *>sp.addr)[:sp.sz]))
-        logger.info('so: {}'.format((<unsigned char *>so.addr)[:so.sz]))
-
         logger.info('Inserting terms.')
-        logger.info(f'ss addr: {<unsigned long>ss.addr}')
+        logger.info(f'ss addr: 0x{<size_t>ss.addr:02x}')
         logger.info(f'ss sz: {ss.sz}')
         #logger.info('ss:')
         #logger.info((<unsigned char *>ss.addr)[:ss.sz])
-        print('Insert ss: @0x{:02x}'.format(<unsigned long>ss))
+        #print('Insert ss: @0x{:02x}'.format(<unsigned long>ss))
         cc.hashset_add_or_get(self._terms, <void **>&ss)
-        print('Now ss is: @0x{:02x}'.format(<unsigned long>ss))
+        #print('Now ss is: @0x{:02x}'.format(<unsigned long>ss))
 
-        print('Insert sp: @0x{:02x}'.format(<unsigned long>sp))
+        #print('Insert sp: @0x{:02x}'.format(<unsigned long>sp))
         cc.hashset_add_or_get(self._terms, <void **>&sp)
-        print('Now sp is: @0x{:02x}'.format(<unsigned long>sp))
+        #print('Now sp is: @0x{:02x}'.format(<unsigned long>sp))
 
-        print('Insert so: @0x{:02x}'.format(<unsigned long>so))
+        #print('Insert so: @0x{:02x}'.format(<unsigned long>so))
         cc.hashset_add_or_get(self._terms, <void **>&so)
-        print('Now so is: @0x{:02x}'.format(<unsigned long>so))
+        #print('Now so is: @0x{:02x}'.format(<unsigned long>so))
         logger.info('inserted terms.')
         cdef size_t terms_sz = cc.hashset_size(self._terms)
         logger.info(f'Terms set size: {terms_sz}')
@@ -442,8 +438,8 @@ cdef class SimpleGraph:
         logger.info(f'Triples set size before adding: {trp_sz}')
 
         r = cc.hashset_add(self._triples, trp)
-        print('Insert triple result:')
-        print(r)
+        #print('Insert triple result:')
+        #print(r)
 
         trp_sz = cc.hashset_size(self._triples)
         logger.info(f'Triples set size after adding: {trp_sz}')
@@ -464,6 +460,23 @@ cdef class SimpleGraph:
         """
         Remove one triple from the graph.
         """
+        cdef:
+            cc.HashSetIter ti
+            void* cur
+
+        if (
+            cc.hashset_get(
+                self._terms, <void**>&(trp_buf.o)
+            ) == cc.CC_ERR_KEY_NOT_FOUND or
+            cc.hashset_get(
+                self._terms, <void**>&(trp_buf.s)
+            ) == cc.CC_ERR_KEY_NOT_FOUND or
+            cc.hashset_get(
+                self._terms, <void**>&(trp_buf.p)
+            ) == cc.CC_ERR_KEY_NOT_FOUND
+        ):
+            return cc.CC_ERR_KEY_NOT_FOUND
+
         return cc.hashset_remove(self._triples, trp_buf, NULL)
 
 
@@ -471,24 +484,26 @@ cdef class SimpleGraph:
         cdef:
             cc.HashSetIter it
             void* cur
-            void* ss = <void*>btrp.s
-            void* sp = <void*>btrp.p
-            void* so = <void*>btrp.o
 
+        # First check if any term is not in the set.
+        # Also assign addresses of terms in set with matching input terms.
         if (
-            cc.hashset_add_or_get(self._terms, &ss) != cc.CC_DUP_KEY or
-            cc.hashset_add_or_get(self._terms, &sp) != cc.CC_DUP_KEY or
-            cc.hashset_add_or_get(self._terms, &so) != cc.CC_DUP_KEY
+            # Starting with o which is most likely to be missing.
+            cc.hashset_get(
+                self._terms, <void**>&(btrp.o)
+            ) == cc.CC_ERR_KEY_NOT_FOUND or
+            cc.hashset_get(
+                self._terms, <void**>&(btrp.s)
+            ) == cc.CC_ERR_KEY_NOT_FOUND or
+            cc.hashset_get(
+                self._terms, <void**>&(btrp.p)
+            ) == cc.CC_ERR_KEY_NOT_FOUND
         ):
             return False
 
-        btrp.s = <Buffer*>ss
-        btrp.p = <Buffer*>sp
-        btrp.o = <Buffer*>so
-
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            if self.trp_cmp_fn(&cur, &btrp) == 0:
+            if self.trp_cmp_fn(cur, btrp) == 0:
                 return True
         return False
 
@@ -659,9 +674,9 @@ cdef class SimpleGraph:
         btrp.o = &so
 
         s, p, o = trp
-        term.serialize_from_rdflib(s, btrp.s)
-        term.serialize_from_rdflib(p, btrp.p)
-        term.serialize_from_rdflib(o, btrp.o)
+        term.serialize_from_rdflib(s, &ss)
+        term.serialize_from_rdflib(p, &sp)
+        term.serialize_from_rdflib(o, &so)
 
         return self._trp_contains(&btrp)
 

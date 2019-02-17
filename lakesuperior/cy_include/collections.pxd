@@ -259,6 +259,8 @@ cdef extern from "hashset.h":
 
     bint hashset_contains(HashSet* set, void* element)
 
+    cc_stat hashset_get(HashSet *set, void **element)
+
     size_t hashset_size(HashSet* set)
 
     size_t hashset_capacity(HashSet* set)
