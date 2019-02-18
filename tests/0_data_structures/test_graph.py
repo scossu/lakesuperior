@@ -96,9 +96,9 @@ class TestGraphOps:
         assert trp[4] in gr3
 
 
-    def test_iunion(self, trp):
+    def test_ip_union(self, trp):
         """
-        Test graph union.
+        Test graph in-place union.
         """
         gr1 = SimpleGraph()
         gr2 = SimpleGraph()
@@ -115,7 +115,7 @@ class TestGraphOps:
 
     def test_intersect(self, trp):
         """
-        Test graph union.
+        Test graph intersextion.
         """
         gr1 = SimpleGraph()
         gr2 = SimpleGraph()
@@ -130,5 +130,62 @@ class TestGraphOps:
         assert trp[3] in gr3
         assert trp[0] not in gr3
         assert trp[5] not in gr3
+
+
+    def test_ip_intersect(self, trp):
+        """
+        Test graph intersextion.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:4])
+        gr2.add(trp[2:6])
+
+        gr1 &= gr2
+
+        assert len(gr1) == 2
+        assert trp[2] in gr1
+        assert trp[3] in gr1
+        assert trp[0] not in gr1
+        assert trp[5] not in gr1
+
+
+    def test_xor(self, trp):
+        """
+        Test graph intersextion.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:4])
+        gr2.add(trp[2:6])
+
+        gr3 = gr1 ^ gr2
+
+        assert len(gr3) == 3
+        assert trp[2] not in gr3
+        assert trp[3] not in gr3
+        assert trp[0] in gr3
+        assert trp[5] in gr3
+
+
+    def test_ip_xor(self, trp):
+        """
+        Test graph intersextion.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:4])
+        gr2.add(trp[2:6])
+
+        gr1 ^= gr2
+
+        assert len(gr1) == 3
+        assert trp[2] not in gr1
+        assert trp[3] not in gr1
+        assert trp[0] in gr1
+        assert trp[5] in gr1
 
 

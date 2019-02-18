@@ -62,22 +62,16 @@ cdef int trp_lit_cmp_fn(const void* key1, const void* key2):
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
-    print('Comparing terms: {} {} {}'.format(
-        (<unsigned char*>t1.s.addr)[:t1.s.sz],
-        (<unsigned char*>t1.p.addr)[:t1.p.sz],
-        (<unsigned char*>t1.o.addr)[:t1.o.sz]
-    ))
-    print('With:            {} {} {}'.format(
-        (<unsigned char*>t2.s.addr)[:t2.s.sz],
-        (<unsigned char*>t2.p.addr)[:t2.p.sz],
-        (<unsigned char*>t2.o.addr)[:t2.o.sz]
-    ))
-
-    print('Term comparison results: {}, {}, {}'.format(
-        term_cmp_fn(t1.o, t2.o),
-        term_cmp_fn(t1.s, t2.s),
-        term_cmp_fn(t1.p, t2.p)
-    ))
+    #print('Comparing terms: {} {} {}'.format(
+    #    (<unsigned char*>t1.s.addr)[:t1.s.sz],
+    #    (<unsigned char*>t1.p.addr)[:t1.p.sz],
+    #    (<unsigned char*>t1.o.addr)[:t1.o.sz]
+    #))
+    #print('With:            {} {} {}'.format(
+    #    (<unsigned char*>t2.s.addr)[:t2.s.sz],
+    #    (<unsigned char*>t2.p.addr)[:t2.p.sz],
+    #    (<unsigned char*>t2.o.addr)[:t2.o.sz]
+    #))
 
     diff = (
         term_cmp_fn(t1.o, t2.o) or
@@ -102,20 +96,20 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
-    print('Comparing terms: {} {} {}'.format(
-        (<unsigned char*>t1.s.addr)[:t1.s.sz],
-        (<unsigned char*>t1.p.addr)[:t1.p.sz],
-        (<unsigned char*>t1.o.addr)[:t1.o.sz]
-    ))
-    print('With:            {} {} {}'.format(
-        (<unsigned char*>t2.s.addr)[:t2.s.sz],
-        (<unsigned char*>t2.p.addr)[:t2.p.sz],
-        (<unsigned char*>t2.o.addr)[:t2.o.sz]
-    ))
-    print('Comparing addresses: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-        <size_t>t1.s, <size_t>t1.p, <size_t>t1.o))
-    print('With:                <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-        <size_t>t2.s, <size_t>t2.p, <size_t>t2.o))
+    #print('Comparing terms: {} {} {}'.format(
+    #    (<unsigned char*>t1.s.addr)[:t1.s.sz],
+    #    (<unsigned char*>t1.p.addr)[:t1.p.sz],
+    #    (<unsigned char*>t1.o.addr)[:t1.o.sz]
+    #))
+    #print('With:            {} {} {}'.format(
+    #    (<unsigned char*>t2.s.addr)[:t2.s.sz],
+    #    (<unsigned char*>t2.p.addr)[:t2.p.sz],
+    #    (<unsigned char*>t2.o.addr)[:t2.o.sz]
+    #))
+    #print('Comparing addresses: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+    #    <size_t>t1.s, <size_t>t1.p, <size_t>t1.o))
+    #print('With:                <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+    #    <size_t>t2.s, <size_t>t2.p, <size_t>t2.o))
 
     cdef int is_not_equal = (
         t1.s.addr != t2.s.addr or
@@ -433,10 +427,10 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-                <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
+            #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+            #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if other._trp_contains(bt):
-                print('Adding.')
+                #print('Adding.')
                 new_gr._add_triple(bt)
 
         return new_gr
@@ -473,32 +467,24 @@ cdef class SimpleGraph:
         :return: A new SimpleGraph instance.
         """
         cdef:
-            void *cur_self
-            void *cur_other
-            cc.HashSetIter it_self, it_other
+            void *cur
+            cc.HashSetIter it
             SimpleGraph new_gr = SimpleGraph()
             BufferTriple* bt
 
         # Add triples in this and not in other.
-        print('Comparing with this.')
-        cc.hashset_iter_init(&it_self, self._triples)
-        while cc.hashset_iter_next(&it_self, &cur_self) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur_self
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
             if not other._trp_contains(bt):
-                print('Adding from this.')
                 new_gr._add_triple(bt)
 
         # Other way around.
-        print('Comparing with that.')
-        cc.hashset_iter_init(&it_other, other._triples)
-        while cc.hashset_iter_next(&it_other, &cur_other) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur_other
-            print('Checking on that.')
+        cc.hashset_iter_init(&it, other._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
             if not self._trp_contains(bt):
-                print('Adding from that.')
                 new_gr._add_triple(bt)
-            else:
-                print('Triple exists. Not adding.')
 
         return new_gr
 
@@ -517,20 +503,26 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
+            # TODO This could be more efficient to stash values in a simple
+            # array, but how urgent is it to improve an in-place XOR?
+            SimpleGraph tmp = SimpleGraph()
 
-        # Add triples in other graph and not in this graph.
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if other._trp_contains(bt):
-                self._remove_triple(bt)
-
-        # Remove triples in common.
+        # Add *to the tmp graph* triples in other graph and not in this graph.
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not self._trp_contains(bt):
-                self._add_triple(bt)
+                tmp._add_triple(bt)
+
+        # Remove triples in common.
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            if other._trp_contains(bt):
+                print(self._remove_triple(bt))
+
+        self |= tmp
+
 
 
     cdef void _data_from_lookup(self, tuple trp_ptn, ctx=None) except *:
@@ -595,8 +587,8 @@ cdef class SimpleGraph:
         logger.info(f'Triples set size before adding: {trp_sz}')
 
         r = cc.hashset_add(self._triples, trp)
-        print('Insert triple result:')
-        print(r)
+        #print('Insert triple result:')
+        #print(r)
 
         trp_sz = cc.hashset_size(self._triples)
         logger.info(f'Triples set size after adding: {trp_sz}')
@@ -606,11 +598,11 @@ cdef class SimpleGraph:
             void *cur
 
 
-    cdef int _remove_triple(self, BufferTriple* trp_buf) except -1:
+    cdef int _remove_triple(self, BufferTriple* btrp) except -1:
         """
         Remove one triple from the graph.
         """
-        return cc.hashset_remove(self._triples, trp_buf, NULL)
+        return cc.hashset_remove(self._triples, btrp, NULL)
 
 
     cdef bint _trp_contains(self, BufferTriple* btrp):
@@ -1020,7 +1012,6 @@ cdef class Imr(SimpleGraph):
             Any and all elements may be ``None``.
         :param lmdbStore store: the store to look data up.
         """
-        print(len(self))
         self.uri = str(uri)
 
 
