@@ -1,20 +1,13 @@
-from libc.stdint cimport uint64_t
+from libc.stdint cimport uint32_t, uint64_t
 from libc.string cimport memcpy
 
 from lakesuperior.model.base cimport Buffer
+from lakesuperior.cy_include cimport spookyhash as sph
 
 
 memcpy(&term_hash_seed32, TERM_HASH_SEED, HLEN_32)
 memcpy(&term_hash_seed64_1, TERM_HASH_SEED, HLEN_64)
 memcpy(&term_hash_seed64_2, TERM_HASH_SEED + HLEN_64, HLEN_64)
-
-# We only need a few basic functions from spookyhash. No need for a pxd file.
-cdef extern from 'spookyhash_api.h':
-    uint32_t spookyhash_32(const void *input, size_t input_size, uint32_t seed)
-    uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
-    void spookyhash_128(
-            const void *input, size_t input_size, uint64_t *hash_1,
-            uint64_t *hash_2)
 
 
 cdef inline int hash32(const Buffer *message, Hash32 *hash) except -1:
@@ -23,7 +16,7 @@ cdef inline int hash32(const Buffer *message, Hash32 *hash) except -1:
     """
     cdef uint32_t seed = term_hash_seed64_1
 
-    hash[0] = spookyhash_32(message[0].addr, message[0].sz, seed)
+    hash[0] = sph.spookyhash_32(message[0].addr, message[0].sz, seed)
 
 
 cdef inline int hash64(const Buffer *message, Hash64 *hash) except -1:
@@ -32,7 +25,7 @@ cdef inline int hash64(const Buffer *message, Hash64 *hash) except -1:
     """
     cdef uint64_t seed = term_hash_seed32
 
-    hash[0] = spookyhash_64(message[0].addr, message[0].sz, seed)
+    hash[0] = sph.spookyhash_64(message[0].addr, message[0].sz, seed)
 
 
 cdef inline int hash128(const Buffer *message, Hash128 *hash) except -1:
@@ -54,7 +47,7 @@ cdef inline int hash128(const Buffer *message, Hash128 *hash) except -1:
         DoubleHash64 seed = [term_hash_seed64_1, term_hash_seed64_2]
         Hash128 digest
 
-    spookyhash_128(message[0].addr, message[0].sz, seed, seed + 1)
+    sph.spookyhash_128(message[0].addr, message[0].sz, seed, seed + 1)
 
     # This casts the 2 contiguous uint64_t's into a char[16] pointer.
     hash[0] = <Hash128>seed

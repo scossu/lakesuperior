@@ -103,6 +103,8 @@ extensions = [
         'lakesuperior.model.graph.*',
         [
             path.join(tpl_src_dir, 'tpl.c'),
+            path.join(spookyhash_src_dir, 'context.c'),
+            path.join(spookyhash_src_dir, 'globals.c'),
             path.join(spookyhash_src_dir, 'spookyhash.c'),
             path.join(coll_src_dir, 'common.c'),
             path.join(coll_src_dir, 'array.c'),

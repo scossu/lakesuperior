@@ -15,6 +15,7 @@ from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.cy_include cimport collections as cc
+from lakesuperior.cy_include cimport spookyhash as sph
 from lakesuperior.model.graph cimport term
 from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
         KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
@@ -28,19 +29,6 @@ cdef extern from 'spookyhash_api.h':
     uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
 
 logger = logging.getLogger(__name__)
-
-
-def use_data(fn):
-    """
-    Decorator to indicate that a set operation between two SimpleGraph
-    instances should use the ``data`` property of the second term. The second
-    term can also be a simple set.
-    """
-    @wraps(fn)
-    def _wrapper(self, other):
-        if isinstance(other, SimpleGraph):
-            other = other.data
-    return _wrapper
 
 
 cdef int term_cmp_fn(const void* key1, const void* key2):
@@ -62,6 +50,45 @@ cdef int term_cmp_fn(const void* key1, const void* key2):
     return cmp
 
 
+cdef int trp_lit_cmp_fn(const void* key1, const void* key2):
+    """
+    Compare function for two triples in a set.
+
+    s, p, o byte data are compared literally.
+
+    :rtype: int
+    :return: 0 if all three terms point to byte-wise identical data in both
+        triples.
+    """
+    t1 = <BufferTriple *>key1
+    t2 = <BufferTriple *>key2
+    print('Comparing terms: {} {} {}'.format(
+        (<unsigned char*>t1.s.addr)[:t1.s.sz],
+        (<unsigned char*>t1.p.addr)[:t1.p.sz],
+        (<unsigned char*>t1.o.addr)[:t1.o.sz]
+    ))
+    print('With:            {} {} {}'.format(
+        (<unsigned char*>t2.s.addr)[:t2.s.sz],
+        (<unsigned char*>t2.p.addr)[:t2.p.sz],
+        (<unsigned char*>t2.o.addr)[:t2.o.sz]
+    ))
+
+    print('Term comparison results: {}, {}, {}'.format(
+        term_cmp_fn(t1.o, t2.o),
+        term_cmp_fn(t1.s, t2.s),
+        term_cmp_fn(t1.p, t2.p)
+    ))
+
+    diff = (
+        term_cmp_fn(t1.o, t2.o) or
+        term_cmp_fn(t1.s, t2.s) or
+        term_cmp_fn(t1.p, t2.p)
+    )
+
+    logger.info(f'Triples match: {not(diff)}')
+    return diff
+
+
 cdef int trp_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a set.
@@ -75,10 +102,20 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
-    print('Comparing: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-        <unsigned long>t1.s, <unsigned long>t1.p, <unsigned long>t1.o))
-    print('With:      <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-        <unsigned long>t2.s, <unsigned long>t2.p, <unsigned long>t2.o))
+    print('Comparing terms: {} {} {}'.format(
+        (<unsigned char*>t1.s.addr)[:t1.s.sz],
+        (<unsigned char*>t1.p.addr)[:t1.p.sz],
+        (<unsigned char*>t1.o.addr)[:t1.o.sz]
+    ))
+    print('With:            {} {} {}'.format(
+        (<unsigned char*>t2.s.addr)[:t2.s.sz],
+        (<unsigned char*>t2.p.addr)[:t2.p.sz],
+        (<unsigned char*>t2.o.addr)[:t2.o.sz]
+    ))
+    print('Comparing addresses: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+        <size_t>t1.s, <size_t>t1.p, <size_t>t1.o))
+    print('With:                <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+        <size_t>t2.s, <size_t>t2.p, <size_t>t2.o))
 
     cdef int is_not_equal = (
         t1.s.addr != t2.s.addr or
@@ -86,7 +123,7 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
         t1.o.addr != t2.o.addr
     )
 
-    logger.info(f'Triples are NOT equal and will be added: {is_not_equal}')
+    logger.info(f'Triples match: {not(is_not_equal)}')
     return is_not_equal
 
 
@@ -114,6 +151,28 @@ cdef size_t term_hash_fn(const void* key, int l, uint32_t seed):
     Hash function for serialized terms (:py:class:`Buffer` objects)
     """
     return <size_t>spookyhash_64((<Buffer*>key).addr, (<Buffer*>key).sz, seed)
+
+
+cdef size_t trp_lit_hash_fn(const void* key, int l, uint32_t seed):
+    """
+    Hash function for sets of (serialized) triples.
+
+    This function concatenates the literal terms of the triple as bytes
+    and computes their hash.
+    """
+    trp = <BufferTriple*>key
+    seed64 = <uint64_t>seed
+    seed_dummy = seed64
+
+    cdef sph.spookyhash_context ctx
+
+    sph.spookyhash_context_init(&ctx, seed64, seed_dummy)
+    sph.spookyhash_update(&ctx, trp.s.addr, trp.s.sz)
+    sph.spookyhash_update(&ctx, trp.s.addr, trp.p.sz)
+    sph.spookyhash_update(&ctx, trp.s.addr, trp.o.sz)
+    sph.spookyhash_final(&ctx, &seed64, &seed_dummy)
+
+    return <size_t>seed64
 
 
 cdef size_t trp_hash_fn(const void* key, int l, uint32_t seed):
@@ -254,7 +313,7 @@ cdef class SimpleGraph:
             cc.HashSetConf terms_conf, trp_conf
 
         self.term_cmp_fn = &term_cmp_fn
-        self.trp_cmp_fn = &trp_cmp_fn
+        self.trp_cmp_fn = &trp_lit_cmp_fn
 
         cc.hashset_conf_init(&terms_conf)
         terms_conf.load_factor = 0.85
@@ -265,7 +324,7 @@ cdef class SimpleGraph:
 
         cc.hashset_conf_init(&trp_conf)
         trp_conf.load_factor = 0.75
-        trp_conf.hash = &trp_hash_fn
+        trp_conf.hash = &trp_lit_hash_fn
         trp_conf.hash_seed = term_hash_seed32
         trp_conf.key_compare = self.trp_cmp_fn
         trp_conf.key_length = sizeof(BufferTriple)
@@ -284,9 +343,6 @@ cdef class SimpleGraph:
             # Populate with provided Python set.
             self.add(data)
 
-        print(len(self))
-        print('SimpleGraph cinit complete.')
-
 
     def __dealloc__(self):
         """
@@ -304,6 +360,10 @@ cdef class SimpleGraph:
         :rtype: set
         """
         return self._to_pyset()
+
+    @property
+    def terms(self):
+        return self._get_terms()
 
 
     # # # BASIC SET OPERATIONS # # #
@@ -331,12 +391,12 @@ cdef class SimpleGraph:
             cc.hashset_iter_init(&it, gr._triples)
             while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
                 bt = <BufferTriple*>cur
-                new_gr._add_triple(bt.s, bt.p, bt.o)
+                new_gr._add_triple(bt)
 
         return new_gr
 
 
-    cpdef void ip_union(self, SimpleGraph other) except *:
+    cdef void ip_union(self, SimpleGraph other) except *:
         """
         Perform an in-place set union that adds triples to this instance
 
@@ -349,12 +409,128 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
-            BufferTriple *trp
 
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            self._add_triple(bt.s, bt.p, bt.o)
+            self._add_triple(bt)
+
+
+    cpdef SimpleGraph intersection(self, SimpleGraph other):
+        """
+        Graph intersection.
+
+        :param SimpleGraph other: The other graph to intersect.
+
+        :rtype: SimpleGraph
+        :return: A new SimpleGraph instance.
+        """
+        cdef:
+            void *cur
+            cc.HashSetIter it
+            SimpleGraph new_gr = SimpleGraph()
+
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+                <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
+            if other._trp_contains(bt):
+                print('Adding.')
+                new_gr._add_triple(bt)
+
+        return new_gr
+
+
+    cdef void ip_intersection(self, SimpleGraph other) except *:
+        """
+        In-place graph intersection.
+
+        Triples in common with another graph are removed from the current one.
+
+        :param SimpleGraph other: The other graph to intersect.
+
+        :rtype: void
+        """
+        cdef:
+            void *cur
+            cc.HashSetIter it
+
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            if not other._trp_contains(bt):
+                self._remove_triple(bt)
+
+
+    cpdef SimpleGraph xor(self, SimpleGraph other):
+        """
+        Graph Exclusive disjunction (XOR).
+
+        :param SimpleGraph other: The other graph to perform XOR with.
+
+        :rtype: SimpleGraph
+        :return: A new SimpleGraph instance.
+        """
+        cdef:
+            void *cur_self
+            void *cur_other
+            cc.HashSetIter it_self, it_other
+            SimpleGraph new_gr = SimpleGraph()
+            BufferTriple* bt
+
+        # Add triples in this and not in other.
+        print('Comparing with this.')
+        cc.hashset_iter_init(&it_self, self._triples)
+        while cc.hashset_iter_next(&it_self, &cur_self) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur_self
+            if not other._trp_contains(bt):
+                print('Adding from this.')
+                new_gr._add_triple(bt)
+
+        # Other way around.
+        print('Comparing with that.')
+        cc.hashset_iter_init(&it_other, other._triples)
+        while cc.hashset_iter_next(&it_other, &cur_other) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur_other
+            print('Checking on that.')
+            if not self._trp_contains(bt):
+                print('Adding from that.')
+                new_gr._add_triple(bt)
+            else:
+                print('Triple exists. Not adding.')
+
+        return new_gr
+
+
+    cdef void ip_xor(self, SimpleGraph other) except *:
+        """
+        In-place graph XOR.
+
+        Triples in common with another graph are removed from the current one,
+        and triples not in common will be added from the other one.
+
+        :param SimpleGraph other: The other graph to perform XOR with.
+
+        :rtype: void
+        """
+        cdef:
+            void *cur
+            cc.HashSetIter it
+
+        # Add triples in other graph and not in this graph.
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            if other._trp_contains(bt):
+                self._remove_triple(bt)
+
+        # Remove triples in common.
+        cc.hashset_iter_init(&it, other._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            if not self._trp_contains(bt):
+                self._add_triple(bt)
 
 
     cdef void _data_from_lookup(self, tuple trp_ptn, ctx=None) except *:
@@ -387,96 +563,53 @@ cdef class SimpleGraph:
         """
         Add a triple from a TripleKey of term keys.
         """
-        cdef:
-            SPOBuffer s_spo
-            BufferTriple trp
-
         s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
 
         self.store.lookup_term(spok, s_spo)
         self.store.lookup_term(spok + KLEN, s_spo + 1)
         self.store.lookup_term(spok + DBL_KLEN, s_spo + 2)
 
-        self._add_triple(s_spo, s_spo + 1, s_spo + 2)
+        trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
+        trp.s = s_spo
+        trp.p = s_spo + 1
+        trp.o = s_spo + 2
+
+        self._add_triple(trp)
 
 
-    cdef inline void _add_triple(
-        self, BufferPtr ss, BufferPtr sp, BufferPtr so
-    ) except *:
+    cdef inline void _add_triple(self, BufferTriple* trp) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
 
         Each of the terms is added to the term set if not existing. The triple
         also is only added if not existing.
         """
-        trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
-
         logger.info('Inserting terms.')
-        logger.info(f'ss addr: 0x{<size_t>ss.addr:02x}')
-        logger.info(f'ss sz: {ss.sz}')
-        #logger.info('ss:')
-        #logger.info((<unsigned char *>ss.addr)[:ss.sz])
-        #print('Insert ss: @0x{:02x}'.format(<unsigned long>ss))
-        cc.hashset_add_or_get(self._terms, <void **>&ss)
-        #print('Now ss is: @0x{:02x}'.format(<unsigned long>ss))
-
-        #print('Insert sp: @0x{:02x}'.format(<unsigned long>sp))
-        cc.hashset_add_or_get(self._terms, <void **>&sp)
-        #print('Now sp is: @0x{:02x}'.format(<unsigned long>sp))
-
-        #print('Insert so: @0x{:02x}'.format(<unsigned long>so))
-        cc.hashset_add_or_get(self._terms, <void **>&so)
-        #print('Now so is: @0x{:02x}'.format(<unsigned long>so))
+        cc.hashset_add(self._terms, trp.s)
+        cc.hashset_add(self._terms, trp.p)
+        cc.hashset_add(self._terms, trp.o)
         logger.info('inserted terms.')
-        cdef size_t terms_sz = cc.hashset_size(self._terms)
-        logger.info(f'Terms set size: {terms_sz}')
+        logger.info(f'Terms set size: {cc.hashset_size(self._terms)}')
 
-        trp.s = ss
-        trp.p = sp
-        trp.o = so
         cdef size_t trp_sz = cc.hashset_size(self._triples)
         logger.info(f'Triples set size before adding: {trp_sz}')
 
         r = cc.hashset_add(self._triples, trp)
-        #print('Insert triple result:')
-        #print(r)
+        print('Insert triple result:')
+        print(r)
 
         trp_sz = cc.hashset_size(self._triples)
         logger.info(f'Triples set size after adding: {trp_sz}')
 
         cdef:
             cc.HashSetIter ti
-            BufferTriple *test_trp
             void *cur
-
-        cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &cur) != cc.CC_ITER_END:
-            test_trp = <BufferTriple *>cur
-            print('Triple in set: 0x{:02x} 0x{:02x} 0x{:02x}'.format(
-                    <size_t>test_trp.s, <size_t>test_trp.p, <size_t>test_trp.o))
 
 
     cdef int _remove_triple(self, BufferTriple* trp_buf) except -1:
         """
         Remove one triple from the graph.
         """
-        cdef:
-            cc.HashSetIter ti
-            void* cur
-
-        if (
-            cc.hashset_get(
-                self._terms, <void**>&(trp_buf.o)
-            ) == cc.CC_ERR_KEY_NOT_FOUND or
-            cc.hashset_get(
-                self._terms, <void**>&(trp_buf.s)
-            ) == cc.CC_ERR_KEY_NOT_FOUND or
-            cc.hashset_get(
-                self._terms, <void**>&(trp_buf.p)
-            ) == cc.CC_ERR_KEY_NOT_FOUND
-        ):
-            return cc.CC_ERR_KEY_NOT_FOUND
-
         return cc.hashset_remove(self._triples, trp_buf, NULL)
 
 
@@ -485,27 +618,29 @@ cdef class SimpleGraph:
             cc.HashSetIter it
             void* cur
 
-        # First check if any term is not in the set.
-        # Also assign addresses of terms in set with matching input terms.
-        if (
-            # Starting with o which is most likely to be missing.
-            cc.hashset_get(
-                self._terms, <void**>&(btrp.o)
-            ) == cc.CC_ERR_KEY_NOT_FOUND or
-            cc.hashset_get(
-                self._terms, <void**>&(btrp.s)
-            ) == cc.CC_ERR_KEY_NOT_FOUND or
-            cc.hashset_get(
-                self._terms, <void**>&(btrp.p)
-            ) == cc.CC_ERR_KEY_NOT_FOUND
-        ):
-            return False
-
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             if self.trp_cmp_fn(cur, btrp) == 0:
                 return True
         return False
+
+
+    cdef _get_terms(self):
+        """
+        Get all terms in the graph.
+        """
+        cdef:
+            cc.HashSetIter it
+            void *cur
+
+        terms = [] # This is intentionally a list to spot issues with the set.
+
+        cc.hashset_iter_init(&it, self._terms)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            s_term = <Buffer*>cur
+            terms.append((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
+
+        return terms
 
 
     cdef set _to_pyset(self):
@@ -517,13 +652,16 @@ cdef class SimpleGraph:
         cdef:
             void *void_p
             cc.HashSetIter ti
-            BufferTriple *trp
             term.Term s, p, o
 
         graph_set = set()
+        # Looping over an empty HashSet results in a segfault. Exit early in
+        # that case.
+        #if not cc.hashset_size(self._triples):
+        #    return graph_set
 
         cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &void_p) == cc.CC_OK:
+        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
             if void_p == NULL:
                 logger.warn('Triple is NULL!')
                 break
@@ -546,21 +684,24 @@ cdef class SimpleGraph:
 
         :param iterable triples: Set, list or tuple of 3-tuple triples.
         """
-        cdef size_t cur = 0
+        cdef size_t cur = 0, trp_cur = 0
 
         trp_ct = len(trp)
-        trp_buf = <Buffer *>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
+        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
+        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
 
         for s, p, o in trp:
-            term.serialize_from_rdflib(s, trp_buf + cur, self._pool)
-            term.serialize_from_rdflib(p, trp_buf + cur + 1, self._pool)
-            term.serialize_from_rdflib(o, trp_buf + cur + 2, self._pool)
+            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
+            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
+            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
 
-            self._add_triple(
-                trp_buf + cur,
-                trp_buf + cur + 1,
-                trp_buf + cur + 2
-            )
+            (trp_buf + trp_cur).s = term_buf + cur
+            (trp_buf + trp_cur).p = term_buf + cur + 1
+            (trp_buf + trp_cur).o = term_buf + cur + 2
+
+            self._add_triple(trp_buf + trp_cur)
+
+            trp_cur += 1
             cur += 3
 
 
@@ -596,7 +737,6 @@ cdef class SimpleGraph:
         return cc.hashset_size(self._triples)
 
 
-    @use_data
     def __eq__(self, other):
         """ Equality operator between ``SimpleGraph`` instances. """
         return graph_eq_fn(self, other)
@@ -609,8 +749,10 @@ cdef class SimpleGraph:
         It provides the number of triples in the graph and memory address of
             the instance.
         """
-        return (f'<{self.__class__.__name__} @{hex(id(self))} '
-            f'length={len(self.data)}>')
+        return (
+            f'<{self.__class__.__name__} @{hex(id(self))} '
+            f'length={len(self.data)}>'
+        )
 
 
     def __str__(self):
@@ -630,13 +772,14 @@ cdef class SimpleGraph:
 
     def __and__(self, other):
         """ Set intersection. """
-        return self.intersect(other)
+        return self.intersection(other)
 
 
     def __iand__(self, other):
         """ In-place set intersection. """
-        self.ip_intersect(other)
+        self.ip_intersection(other)
         return self
+
 
     def __or__(self, other):
         """ Set union. """
@@ -648,14 +791,15 @@ cdef class SimpleGraph:
         self.ip_union(other)
         return self
 
+
     def __xor__(self, other):
-        """ Set exclusive intersection (XOR). """
-        return self.xintersect(other)
+        """ Set exclusive disjunction (XOR). """
+        return self.xor(other)
 
 
     def __ixor__(self, other):
-        """ In-place set exclusive intersection (XOR). """
-        self.ip_xintersect(other)
+        """ In-place set exclusive disjunction (XOR). """
+        self.ip_xor(other)
         return self
 
 
@@ -836,14 +980,14 @@ cdef class SimpleGraph:
         return res
 
 
-    cpdef set terms(self, str type):
-        """
-        Get all terms of a type: subject, predicate or object.
+    #cpdef set terms(self, str type):
+    #    """
+    #    Get all terms of a type: subject, predicate or object.
 
-        :param str type: One of ``s``, ``p`` or ``o``.
-        """
-        i = 'spo'.index(type)
-        return {r[i] for r in self.data}
+    #    :param str type: One of ``s``, ``p`` or ``o``.
+    #    """
+    #    i = 'spo'.index(type)
+    #    return {r[i] for r in self.data}
 
 
 
@@ -910,28 +1054,24 @@ cdef class Imr(SimpleGraph):
         return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
             f'length={len(self.data)}>')
 
-    @use_data
     def __sub__(self, other):
         """
         Set difference. This creates a new Imr with the same subject URI.
         """
         return self.__class__(uri=self.uri, data=self.data - other)
 
-    @use_data
     def __and__(self, other):
         """
         Set intersection. This creates a new Imr with the same subject URI.
         """
         return self.__class__(uri=self.uri, data=self.data & other)
 
-    @use_data
     def __or__(self, other):
         """
         Set union. This creates a new Imr with the same subject URI.
         """
         return self.__class__(uri=self.uri, data=self.data | other)
 
-    @use_data
     def __xor__(self, other):
         """
         Set exclusive OR (XOR). This creates a new Imr with the same subject

@@ -37,20 +37,25 @@ cdef class SimpleGraph:
         void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
         void _data_from_keyset(self, Keyset data) except *
         inline void _add_from_spok(self, const TripleKey spok) except *
-        inline void _add_triple(
-            self, Buffer *ss, Buffer *sp, Buffer *so
-        ) except *
+        inline void _add_triple(self, BufferTriple *trp) except *
         int _remove_triple(self, BufferTriple* trp_buf) except -1
         bint _trp_contains(self, BufferTriple* btrp)
+        _get_terms(self)
         set _to_pyset(self)
 
+        # Basic graph operations.
+        void ip_union(self, SimpleGraph other) except *
+        void ip_intersection(self, SimpleGraph other) except *
+        void ip_xor(self, SimpleGraph other) except *
+
+    cpdef SimpleGraph xor(self, SimpleGraph other)
+    cpdef SimpleGraph intersection(self, SimpleGraph other)
+    cpdef SimpleGraph union(self, SimpleGraph other)
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
     cpdef object as_rdflib(self)
-    cpdef set terms(self, str type)
+    #cpdef set terms(self, str type)
 
-    cpdef SimpleGraph union(self, SimpleGraph other)
-    cpdef void ip_union(self, SimpleGraph other) except *
 
 cdef class Imr(SimpleGraph):
     cdef:

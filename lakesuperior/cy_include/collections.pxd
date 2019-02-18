@@ -19,7 +19,7 @@ cdef extern from "common.h":
         CC_ERR_VALUE_NOT_FOUND
         CC_ERR_OUT_OF_RANGE
         CC_ITER_END
-        CC_DUP_KEY
+        #CC_DUP_KEY
 #
 #    int cc_common_cmp_str(const void* key1, const void* key2)
 #
