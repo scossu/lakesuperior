@@ -440,7 +440,8 @@ cdef class SimpleGraph:
         """
         In-place graph intersection.
 
-        Triples in common with another graph are removed from the current one.
+        Triples not in common with another graph are removed from the current
+        one.
 
         :param SimpleGraph other: The other graph to intersect.
 
@@ -454,6 +455,56 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not other._trp_contains(bt):
+                self._remove_triple(bt)
+
+
+    cpdef SimpleGraph subtraction(self, SimpleGraph other):
+        """
+        Graph set-theoretical subtraction.
+
+        Create a new graph with the triples of this graph minus the ones in
+        common with the other graph.
+
+        :param SimpleGraph other: The other graph to subtract to this.
+
+        :rtype: SimpleGraph
+        :return: A new SimpleGraph instance.
+        """
+        cdef:
+            void *cur
+            cc.HashSetIter it
+            SimpleGraph new_gr = SimpleGraph()
+
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
+            #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
+            if not other._trp_contains(bt):
+                #print('Adding.')
+                new_gr._add_triple(bt)
+
+        return new_gr
+
+
+    cdef void ip_subtraction(self, SimpleGraph other) except *:
+        """
+        In-place graph subtraction.
+
+        Triples in common with another graph are removed from the current one.
+
+        :param SimpleGraph other: The other graph to intersect.
+
+        :rtype: void
+        """
+        cdef:
+            void *cur
+            cc.HashSetIter it
+
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            bt = <BufferTriple*>cur
+            if other._trp_contains(bt):
                 self._remove_triple(bt)
 
 
@@ -731,7 +782,7 @@ cdef class SimpleGraph:
 
     def __eq__(self, other):
         """ Equality operator between ``SimpleGraph`` instances. """
-        return graph_eq_fn(self, other)
+        return len(self ^ other) == 0
 
 
     def __repr__(self):
@@ -752,45 +803,56 @@ cdef class SimpleGraph:
         return str(self.data)
 
 
+    def __add__(self, other):
+        """ Alias for set-theoretical union. """
+        return self.union(other)
+
+
+    def __iadd__(self, other):
+        """ Alias for in-place set-theoretical union. """
+        self.ip_union(other)
+        return self
+
+
     def __sub__(self, other):
-        """ Set subtraction. """
-        return self.subtract(other)
+        """ Set-theoretical subtraction. """
+        return self.subtraction(other)
 
 
     def __isub__(self, other):
-        """ In-place set subtraction. """
-        self.ip_subtract(other)
+        """ In-place set-theoretical subtraction. """
+        self.ip_subtraction(other)
         return self
 
     def __and__(self, other):
-        """ Set intersection. """
+        """ Set-theoretical intersection. """
         return self.intersection(other)
 
 
     def __iand__(self, other):
-        """ In-place set intersection. """
+        """ In-place set-theoretical intersection. """
         self.ip_intersection(other)
         return self
 
 
     def __or__(self, other):
-        """ Set union. """
+        """ Set-theoretical union. """
         return self.union(other)
 
 
     def __ior__(self, other):
-        """ In-place set union. """
+        """ In-place set-theoretical union. """
         self.ip_union(other)
         return self
 
 
     def __xor__(self, other):
-        """ Set exclusive disjunction (XOR). """
+        """ Set-theoretical exclusive disjunction (XOR). """
         return self.xor(other)
 
 
     def __ixor__(self, other):
-        """ In-place set exclusive disjunction (XOR). """
+        """ In-place set-theoretical exclusive disjunction (XOR). """
         self.ip_xor(other)
         return self
 

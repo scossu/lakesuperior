@@ -45,12 +45,14 @@ cdef class SimpleGraph:
 
         # Basic graph operations.
         void ip_union(self, SimpleGraph other) except *
+        void ip_subtraction(self, SimpleGraph other) except *
         void ip_intersection(self, SimpleGraph other) except *
         void ip_xor(self, SimpleGraph other) except *
 
-    cpdef SimpleGraph xor(self, SimpleGraph other)
-    cpdef SimpleGraph intersection(self, SimpleGraph other)
     cpdef SimpleGraph union(self, SimpleGraph other)
+    cpdef SimpleGraph subtraction(self, SimpleGraph other)
+    cpdef SimpleGraph intersection(self, SimpleGraph other)
+    cpdef SimpleGraph xor(self, SimpleGraph other)
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
     cpdef object as_rdflib(self)

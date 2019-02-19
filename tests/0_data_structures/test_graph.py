@@ -113,6 +113,91 @@ class TestGraphOps:
         assert trp[4] in gr1
 
 
+    def test_addition(self, trp):
+        """
+        Test graph addition.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:3])
+        gr2.add(trp[2:6])
+
+        gr3 = gr1 + gr2
+
+        assert len(gr3) == 5
+        assert trp[0] in gr3
+        assert trp[4] in gr3
+
+
+    def test_ip_addition(self, trp):
+        """
+        Test graph in-place addition.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:3])
+        gr2.add(trp[2:6])
+
+        gr1 += gr2
+
+        assert len(gr1) == 5
+        assert trp[0] in gr1
+        assert trp[4] in gr1
+
+
+    def test_subtraction(self, trp):
+        """
+        Test graph addition.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:4])
+        gr2.add(trp[2:6])
+
+        gr3 = gr1 - gr2
+
+        assert len(gr3) == 1
+        assert trp[0] in gr3
+        assert trp[1] in gr3
+        assert trp[2] not in gr3
+        assert trp[3] not in gr3
+        assert trp[4] not in gr3
+
+        gr3 = gr2 - gr1
+
+        assert len(gr3) == 2
+        assert trp[0] not in gr3
+        assert trp[1] not in gr3
+        assert trp[2] not in gr3
+        assert trp[3] not in gr3
+        assert trp[4] in gr3
+        assert trp[5] in gr3
+
+
+    def test_ip_subtraction(self, trp):
+        """
+        Test graph in-place addition.
+        """
+        gr1 = SimpleGraph()
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:4])
+        gr2.add(trp[2:6])
+
+        gr1 -= gr2
+
+        assert len(gr1) == 1
+        assert trp[0] in gr1
+        assert trp[1] in gr1
+        assert trp[2] not in gr1
+        assert trp[3] not in gr1
+        assert trp[4] not in gr1
+
+
+
     def test_intersect(self, trp):
         """
         Test graph intersextion.
