@@ -362,7 +362,16 @@ cdef class SimpleGraph:
 
     # # # BASIC SET OPERATIONS # # #
 
-    cpdef SimpleGraph union(self, SimpleGraph other):
+    cdef SimpleGraph empty_copy(self):
+        """
+        Create an empty copy carrying over some key properties.
+
+        Override in subclasses to accommodate for different init properties.
+        """
+        return self.__class__(store=getattr(self, 'store'))
+
+
+    cpdef union_(self, SimpleGraph other):
         """
         Perform set union resulting in a new SimpleGraph instance.
 
@@ -376,9 +385,9 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
-            SimpleGraph new_gr = SimpleGraph()
             BufferTriple *trp
 
+        new_gr = self.empty_copy()
         new_gr.store = self.store
 
         for gr in (self, other):
@@ -410,7 +419,7 @@ cdef class SimpleGraph:
             self._add_triple(bt)
 
 
-    cpdef SimpleGraph intersection(self, SimpleGraph other):
+    cpdef intersection(self, SimpleGraph other):
         """
         Graph intersection.
 
@@ -422,7 +431,8 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
-            SimpleGraph new_gr = SimpleGraph()
+
+        new_gr = self.empty_copy()
 
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
@@ -458,7 +468,7 @@ cdef class SimpleGraph:
                 self._remove_triple(bt)
 
 
-    cpdef SimpleGraph subtraction(self, SimpleGraph other):
+    cpdef subtraction(self, SimpleGraph other):
         """
         Graph set-theoretical subtraction.
 
@@ -473,7 +483,8 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
-            SimpleGraph new_gr = SimpleGraph()
+
+        new_gr = self.empty_copy()
 
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
@@ -508,7 +519,7 @@ cdef class SimpleGraph:
                 self._remove_triple(bt)
 
 
-    cpdef SimpleGraph xor(self, SimpleGraph other):
+    cpdef xor(self, SimpleGraph other):
         """
         Graph Exclusive disjunction (XOR).
 
@@ -520,8 +531,9 @@ cdef class SimpleGraph:
         cdef:
             void *cur
             cc.HashSetIter it
-            SimpleGraph new_gr = SimpleGraph()
             BufferTriple* bt
+
+        new_gr = self.empty_copy()
 
         # Add triples in this and not in other.
         cc.hashset_iter_init(&it, self._triples)
@@ -805,7 +817,7 @@ cdef class SimpleGraph:
 
     def __add__(self, other):
         """ Alias for set-theoretical union. """
-        return self.union(other)
+        return self.union_(other)
 
 
     def __iadd__(self, other):
@@ -837,7 +849,7 @@ cdef class SimpleGraph:
 
     def __or__(self, other):
         """ Set-theoretical union. """
-        return self.union(other)
+        return self.union_(other)
 
 
     def __ior__(self, other):
@@ -1068,13 +1080,13 @@ cdef class Imr(SimpleGraph):
 
         :param rdflib.URIRef uri: The graph URI.
             This will serve as the subject for some queries.
-        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
-        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
-            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
-            Any and all elements may be ``None``.
-        :param lmdbStore store: the store to look data up.
+        :param args: Positional arguments inherited from
+            ``SimpleGraph.__init__``.
+        :param kwargs: Keyword arguments inherited from
+            ``SimpleGraph.__init__``.
         """
         self.uri = str(uri)
+        #super().__init(*args, **kwargs)
 
 
     @property
@@ -1094,7 +1106,7 @@ cdef class Imr(SimpleGraph):
 
         :rtype: SimpleGraph
         """
-        return SimpleGraph(self.data)
+        raise NotImplementedError() # TODO
 
 
     def __repr__(self):
@@ -1106,31 +1118,6 @@ cdef class Imr(SimpleGraph):
         """
         return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
             f'length={len(self.data)}>')
-
-    def __sub__(self, other):
-        """
-        Set difference. This creates a new Imr with the same subject URI.
-        """
-        return self.__class__(uri=self.uri, data=self.data - other)
-
-    def __and__(self, other):
-        """
-        Set intersection. This creates a new Imr with the same subject URI.
-        """
-        return self.__class__(uri=self.uri, data=self.data & other)
-
-    def __or__(self, other):
-        """
-        Set union. This creates a new Imr with the same subject URI.
-        """
-        return self.__class__(uri=self.uri, data=self.data | other)
-
-    def __xor__(self, other):
-        """
-        Set exclusive OR (XOR). This creates a new Imr with the same subject
-        URI.
-        """
-        return self.__class__(uri=self.uri, data=self.data ^ other)
 
 
     def __getitem__(self, item):
@@ -1148,6 +1135,13 @@ cdef class Imr(SimpleGraph):
                     if r[0] == self.uri and r[1] == item}
         else:
             raise TypeError(f'Wrong slice format: {item}.')
+
+
+    cdef Imr empty_copy(self):
+        """
+        Create an empty instance carrying over some key properties.
+        """
+        return self.__class__(uri=self.uri, store=getattr(self, 'store'))
 
 
     def value(self, p, strict=False):

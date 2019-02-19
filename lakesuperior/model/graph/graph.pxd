@@ -48,11 +48,12 @@ cdef class SimpleGraph:
         void ip_subtraction(self, SimpleGraph other) except *
         void ip_intersection(self, SimpleGraph other) except *
         void ip_xor(self, SimpleGraph other) except *
+        SimpleGraph empty_copy(self)
 
-    cpdef SimpleGraph union(self, SimpleGraph other)
-    cpdef SimpleGraph subtraction(self, SimpleGraph other)
-    cpdef SimpleGraph intersection(self, SimpleGraph other)
-    cpdef SimpleGraph xor(self, SimpleGraph other)
+    cpdef union_(self, SimpleGraph other)
+    cpdef subtraction(self, SimpleGraph other)
+    cpdef intersection(self, SimpleGraph other)
+    cpdef xor(self, SimpleGraph other)
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
     cpdef object as_rdflib(self)
@@ -62,5 +63,6 @@ cdef class SimpleGraph:
 cdef class Imr(SimpleGraph):
     cdef:
         readonly str uri
+        Imr empty_copy(self)
 
     cpdef as_rdflib(self)
