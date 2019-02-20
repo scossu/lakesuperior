@@ -368,7 +368,8 @@ cdef class SimpleGraph:
 
         Override in subclasses to accommodate for different init properties.
         """
-        return self.__class__(store=getattr(self, 'store'))
+        with self.store.txn_ctx():
+            return self.__class__(store=self.store)
 
 
     cpdef union_(self, SimpleGraph other):
@@ -388,7 +389,6 @@ cdef class SimpleGraph:
             BufferTriple *trp
 
         new_gr = self.empty_copy()
-        new_gr.store = self.store
 
         for gr in (self, other):
             cc.hashset_iter_init(&it, gr._triples)
@@ -1141,7 +1141,8 @@ cdef class Imr(SimpleGraph):
         """
         Create an empty instance carrying over some key properties.
         """
-        return self.__class__(uri=self.uri, store=getattr(self, 'store'))
+        with self.store.txn_ctx():
+            return self.__class__(uri=self.uri, store=self.store)
 
 
     def value(self, p, strict=False):

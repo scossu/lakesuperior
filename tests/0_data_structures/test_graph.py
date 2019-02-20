@@ -431,6 +431,8 @@ class TestImrOps:
         assert trp[3] not in gr3
         assert trp[4] not in gr3
 
+        assert gr3.uri == 'http://example.edu/imr01'
+
         gr3 = gr2 - gr1
 
         assert len(gr3) == 2
@@ -441,7 +443,7 @@ class TestImrOps:
         assert trp[4] in gr3
         assert trp[5] in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == 'http://example.edu/imr02'
 
 
     def test_ip_subtraction(self, trp):
