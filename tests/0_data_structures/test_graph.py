@@ -1,8 +1,29 @@
 import pytest
 
+from shutil import rmtree
+
 from rdflib import Graph, Namespace, URIRef
 
 from lakesuperior.model.graph.graph import SimpleGraph, Imr
+from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
+
+
+@pytest.fixture(scope='class')
+def store():
+    """
+    Test LMDB store.
+
+    This store has a different life cycle than the one used for tests in higher
+    levels of the stack and is not bootstrapped (i.e. starts completely empty).
+    """
+    env_path = '/tmp/test_lmdbstore'
+    # Remove previous test DBs
+    rmtree(env_path, ignore_errors=True)
+    store = LmdbStore(env_path)
+    yield store
+    store.close()
+    store.destroy()
+
 
 @pytest.fixture(scope='class')
 def trp():
@@ -17,6 +38,76 @@ def trp():
         (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1')),
         (URIRef('urn:s:1'), URIRef('urn:p:2'), URIRef('urn:o:2')),
     )
+
+@pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
+class TestGraphInit:
+    """
+    Test initialization of graphs with different base data sets.
+    """
+    def test_empty(self):
+        """
+        Test creation of an empty graph.
+        """
+        gr = SimpleGraph()
+
+        assert len(gr) == 0
+
+
+    def test_init_triples(self, trp):
+        """
+        Test creation using a Python set.
+        """
+        gr = SimpleGraph(data=set(trp))
+
+        assert len(gr) == 6
+
+        for t in trp:
+            assert t in gr
+
+
+    @pytest.mark.skip(reason='TODO')
+    def test_init_keyset(self):
+        """
+        Test creation using a keyset.
+
+        TODO
+        """
+        pass
+
+
+    def test_init_lookup(self, trp, store):
+        """
+        Test creation by store lookup.
+        """
+        with store.txn_ctx(True):
+            for t in trp:
+                store.add(t)
+
+        with store.txn_ctx():
+            gr1 = SimpleGraph(store=store, lookup=((None, None, None)))
+        assert len(gr1) == 6
+
+        with store.txn_ctx():
+            gr2 = SimpleGraph(store=store, lookup=((URIRef('urn:s:1'), None, None)))
+        assert len(gr1) == 2
+
+
+@pytest.mark.usefixtures('trp')
+class TestGraphLookup:
+    """
+    Test triple lookup.
+
+    TODO
+    """
+
+    @pytest.mark.skip(reason='TODO')
+    def test_lookup_pattern(self, trp):
+        """
+        Test lookup by basic pattern.
+        """
+        pass
+
 
 @pytest.mark.usefixtures('trp')
 class TestGraphOps:
@@ -553,3 +644,72 @@ class TestImrOps:
         assert gr1.uri == 'http://example.edu/imr01'
 
 
+@pytest.mark.usefixtures('trp')
+class TestHybridOps:
+    """
+    Test operations between IMR and graph.
+    """
+
+
+    def test_union(self, trp):
+        """
+        Test hybrid IMR + graph union.
+        """
+        gr1 = Imr(uri='http://example.edu/imr01')
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:3])
+        gr2.add(trp[2:6])
+
+        gr3 = gr1 | gr2
+
+        assert len(gr3) == 5
+        assert trp[0] in gr3
+        assert trp[4] in gr3
+
+        assert isinstance(gr3, Imr)
+        assert gr3.uri == 'http://example.edu/imr01'
+
+        gr4 = gr2 | gr1
+
+        assert isinstance(gr4, SimpleGraph)
+
+        assert gr3 == gr4
+
+
+    def test_ip_union_imr(self, trp):
+        """
+        Test IMR + graph in-place union.
+        """
+        gr1 = Imr(uri='http://example.edu/imr01')
+        gr2 = SimpleGraph()
+
+        gr1.add(trp[0:3])
+        gr2.add(trp[2:6])
+
+        gr1 |= gr2
+
+        assert len(gr1) == 5
+        assert trp[0] in gr1
+        assert trp[4] in gr1
+
+        assert gr1.uri == 'http://example.edu/imr01'
+
+
+    def test_ip_union_gr(self, trp):
+        """
+        Test graph + IMR in-place union.
+        """
+        gr1 = SimpleGraph()
+        gr2 = Imr(uri='http://example.edu/imr01')
+
+        gr1.add(trp[0:3])
+        gr2.add(trp[2:6])
+
+        gr1 |= gr2
+
+        assert len(gr1) == 5
+        assert trp[0] in gr1
+        assert trp[4] in gr1
+
+        assert isinstance(gr1, SimpleGraph)

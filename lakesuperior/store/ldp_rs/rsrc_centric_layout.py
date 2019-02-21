@@ -220,6 +220,7 @@ class RsrcCentricLayout:
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
+            import pdb; pdb.set_trace()
             imr = self.get_imr('/', incl_inbound=False, incl_children=True)
 
         gr = Graph(identifier=imr.uri)
@@ -295,11 +296,11 @@ class RsrcCentricLayout:
 
         for ctx in contexts:
             imr |= SimpleGraph(
-                    lookup=((None, None, None), ctx), store=self.store).data
+                    lookup=((None, None, None), ctx), store=self.store)
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            imr |= set(self.get_inbound_rel(nsc['fcres'][uid]))
+            imr |= SimpleGraph(data=self.get_inbound_rel(nsc['fcres'][uid]))
 
         if strict:
             self._check_rsrc_status(imr)

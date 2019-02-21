@@ -62,16 +62,6 @@ cdef int trp_lit_cmp_fn(const void* key1, const void* key2):
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
-    #print('Comparing terms: {} {} {}'.format(
-    #    (<unsigned char*>t1.s.addr)[:t1.s.sz],
-    #    (<unsigned char*>t1.p.addr)[:t1.p.sz],
-    #    (<unsigned char*>t1.o.addr)[:t1.o.sz]
-    #))
-    #print('With:            {} {} {}'.format(
-    #    (<unsigned char*>t2.s.addr)[:t2.s.sz],
-    #    (<unsigned char*>t2.p.addr)[:t2.p.sz],
-    #    (<unsigned char*>t2.o.addr)[:t2.o.sz]
-    #))
 
     diff = (
         term_cmp_fn(t1.o, t2.o) or
@@ -96,20 +86,6 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     """
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
-    #print('Comparing terms: {} {} {}'.format(
-    #    (<unsigned char*>t1.s.addr)[:t1.s.sz],
-    #    (<unsigned char*>t1.p.addr)[:t1.p.sz],
-    #    (<unsigned char*>t1.o.addr)[:t1.o.sz]
-    #))
-    #print('With:            {} {} {}'.format(
-    #    (<unsigned char*>t2.s.addr)[:t2.s.sz],
-    #    (<unsigned char*>t2.p.addr)[:t2.p.sz],
-    #    (<unsigned char*>t2.o.addr)[:t2.o.sz]
-    #))
-    #print('Comparing addresses: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-    #    <size_t>t1.s, <size_t>t1.p, <size_t>t1.o))
-    #print('With:                <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-    #    <size_t>t2.s, <size_t>t2.p, <size_t>t2.o))
 
     cdef int is_not_equal = (
         t1.s.addr != t2.s.addr or
@@ -259,30 +235,21 @@ cdef class SimpleGraph:
     Fast and simple implementation of a graph.
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
-    the same funny but functional slicing notation. No lookup functions within
-    the graph are available at this time.
+    the same funny but functional slicing notation.
 
-    Instances of this class hold a set of
-    :py:class:`~lakesuperior.store.ldp_rs.term.Term` structures that stores
-    unique terms within the graph, and a set of
-    :py:class:`~lakesuperior.store.ldp_rs.triple.Triple` structures referencing
-    those terms. Therefore, no data duplication occurs and the storage is quite
-    sparse.
-
-    A graph can be instantiated from a store lookup.
-
-    A SimpleGraph can also be obtained from a
-    :py:class:`lakesuperior.store.keyset.Keyset` which is convenient bacause
-    a Keyset can be obtained very efficiently from querying a store, then also
-    very efficiently filtered and eventually converted into a set of meaningful
-    terms.
+    A SimpleGraph can be instantiated from a store lookup or obtained from a
+    :py:class:`lakesuperior.store.keyset.Keyset`. This makes it possible to use
+    a Keyset to perform initial filtering via identity by key, then the
+    filtered Keyset can be converted into a set of meaningful terms.
 
     An instance of this class can also be converted to and from a
-    ``rdflib.Graph`` instance. TODO verify that this frees Cython pointers.
+    ``rdflib.Graph`` instance.
     """
 
     def __cinit__(
-            self, Keyset keyset=None, store=None, set data=set(), *args, **kwargs):
+        self, lookup=None, Keyset keyset=None, store=None,
+        set data=set(), *args, **kwargs
+    ):
         """
         Initialize the graph with pre-existing data or by looking up a store.
 
@@ -295,7 +262,9 @@ cdef class SimpleGraph:
         :param Keyset keyset: Keyset to create the graph from. Keys will be
             converted to set elements.
         :param lakesuperior.store.ldp_rs.LmdbTripleStore store: store to
-            look up the keyset. Only used if ``keyset`` is specified. If not
+            look up the keyset. It is used if ``keyset`` is specified on init
+            or if the :py:meth:`_data_from_keyset` or
+            :py:meth:`_data_from_lookup` methods are used later. If not
             set, the environment store is used.
         :param set data: Initial data as a set of 3-tuples of RDFLib terms.
         :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
@@ -336,11 +305,17 @@ cdef class SimpleGraph:
         elif data:
             # Populate with provided Python set.
             self.add(data)
+        elif lookup:
+            # Populate via store lookup.
+            spo = lookup[:3]
+            # If lookup has 4 elements, it's a spoc.
+            c = lookup[3] if len(lookup) > 3 else None
+            self._data_from_lookup(spo, c)
 
 
     def __dealloc__(self):
         """
-        Free the triple pointers. TODO use a Cymem pool
+        Free the triple pointers.
         """
         free(self._triples)
         free(self._terms)
@@ -361,6 +336,190 @@ cdef class SimpleGraph:
 
 
     # # # BASIC SET OPERATIONS # # #
+
+    def add(self, trp):
+        """
+        Add triples to the graph.
+
+        :param iterable triples: Set, list or tuple of 3-tuple triples.
+        """
+        cdef size_t cur = 0, trp_cur = 0
+
+        trp_ct = len(trp)
+        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
+        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
+
+        for s, p, o in trp:
+            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
+            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
+            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
+
+            (trp_buf + trp_cur).s = term_buf + cur
+            (trp_buf + trp_cur).p = term_buf + cur + 1
+            (trp_buf + trp_cur).o = term_buf + cur + 2
+
+            self._add_triple(trp_buf + trp_cur)
+
+            trp_cur += 1
+            cur += 3
+
+
+    def len_terms(self):
+        """ Number of triples in the graph. """
+        return cc.hashset_size(self._terms)
+
+
+    def remove(self, trp):
+        """
+        Remove one item from the graph.
+
+        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
+            wildcards are not accepted.
+        """
+        cdef:
+            Buffer ss, sp, so
+            BufferTriple trp_buf
+
+        term.serialize_from_rdflib(trp[0], &ss, self._pool)
+        term.serialize_from_rdflib(trp[1], &sp, self._pool)
+        term.serialize_from_rdflib(trp[2], &so, self._pool)
+
+        trp_buf.s = &ss
+        trp_buf.p = &sp
+        trp_buf.o = &so
+
+        self._remove_triple(&trp_buf)
+
+
+    def __len__(self):
+        """ Number of triples in the graph. """
+        return cc.hashset_size(self._triples)
+
+
+    def __eq__(self, other):
+        """ Equality operator between ``SimpleGraph`` instances. """
+        return len(self ^ other) == 0
+
+
+    def __repr__(self):
+        """
+        String representation of the graph.
+
+        It provides the number of triples in the graph and memory address of
+            the instance.
+        """
+        return (
+            f'<{self.__class__.__name__} @{hex(id(self))} '
+            f'length={len(self.data)}>'
+        )
+
+
+    def __str__(self):
+        """ String dump of the graph triples. """
+        return str(self.data)
+
+
+    def __add__(self, other):
+        """ Alias for set-theoretical union. """
+        return self.union_(other)
+
+
+    def __iadd__(self, other):
+        """ Alias for in-place set-theoretical union. """
+        self.ip_union(other)
+        return self
+
+
+    def __sub__(self, other):
+        """ Set-theoretical subtraction. """
+        return self.subtraction(other)
+
+
+    def __isub__(self, other):
+        """ In-place set-theoretical subtraction. """
+        self.ip_subtraction(other)
+        return self
+
+    def __and__(self, other):
+        """ Set-theoretical intersection. """
+        return self.intersection(other)
+
+
+    def __iand__(self, other):
+        """ In-place set-theoretical intersection. """
+        self.ip_intersection(other)
+        return self
+
+
+    def __or__(self, other):
+        """ Set-theoretical union. """
+        return self.union_(other)
+
+
+    def __ior__(self, other):
+        """ In-place set-theoretical union. """
+        self.ip_union(other)
+        return self
+
+
+    def __xor__(self, other):
+        """ Set-theoretical exclusive disjunction (XOR). """
+        return self.xor(other)
+
+
+    def __ixor__(self, other):
+        """ In-place set-theoretical exclusive disjunction (XOR). """
+        self.ip_xor(other)
+        return self
+
+
+    def __contains__(self, trp):
+        """
+        Whether the graph contains a triple.
+
+        :rtype: boolean
+        """
+        cdef:
+            Buffer ss, sp, so
+            BufferTriple btrp
+
+        btrp.s = &ss
+        btrp.p = &sp
+        btrp.o = &so
+
+        s, p, o = trp
+        term.serialize_from_rdflib(s, &ss)
+        term.serialize_from_rdflib(p, &sp)
+        term.serialize_from_rdflib(o, &so)
+
+        return self._trp_contains(&btrp)
+
+
+    def __iter__(self):
+        """ Graph iterator. It iterates over the set triples. """
+        raise NotImplementedError()
+
+
+    # Slicing.
+
+    def __getitem__(self, item):
+        """
+        Slicing function.
+
+        It behaves similarly to `RDFLib graph slicing
+        <https://rdflib.readthedocs.io/en/stable/utilities.html#slicing-graphs>`__
+        """
+        if isinstance(item, slice):
+            s, p, o = item.start, item.stop, item.step
+            return self._slice(s, p, o)
+        else:
+            raise TypeError(f'Wrong slice format: {item}.')
+
+
+    def __hash__(self):
+        return 23465
+
+    # Cython counterparts to basic methods.
 
     cdef SimpleGraph empty_copy(self):
         """
@@ -602,7 +761,7 @@ cdef class SimpleGraph:
 
         with self.store.txn_ctx():
             keyset = self.store.triple_keys(trp_ptn, ctx)
-            self.data_from_keyset(keyset)
+            self._data_from_keyset(keyset)
 
 
 
@@ -619,6 +778,7 @@ cdef class SimpleGraph:
         Add a triple from a TripleKey of term keys.
         """
         s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
+        print('SPO: {}'.format((<unsigned char*>spok)[:TRP_KLEN]))
 
         self.store.lookup_term(spok, s_spo)
         self.store.lookup_term(spok + KLEN, s_spo + 1)
@@ -729,187 +889,6 @@ cdef class SimpleGraph:
             ))
 
         return graph_set
-
-
-    # Basic set operations.
-
-    def add(self, trp):
-        """
-        Add triples to the graph.
-
-        :param iterable triples: Set, list or tuple of 3-tuple triples.
-        """
-        cdef size_t cur = 0, trp_cur = 0
-
-        trp_ct = len(trp)
-        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
-        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
-
-        for s, p, o in trp:
-            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
-            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
-            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
-
-            (trp_buf + trp_cur).s = term_buf + cur
-            (trp_buf + trp_cur).p = term_buf + cur + 1
-            (trp_buf + trp_cur).o = term_buf + cur + 2
-
-            self._add_triple(trp_buf + trp_cur)
-
-            trp_cur += 1
-            cur += 3
-
-
-    def len_terms(self):
-        """ Number of triples in the graph. """
-        return cc.hashset_size(self._terms)
-
-
-    def remove(self, trp):
-        """
-        Remove one item from the graph.
-
-        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
-            wildcards are not accepted.
-        """
-        cdef:
-            Buffer ss, sp, so
-            BufferTriple trp_buf
-
-        term.serialize_from_rdflib(trp[0], &ss, self._pool)
-        term.serialize_from_rdflib(trp[1], &sp, self._pool)
-        term.serialize_from_rdflib(trp[2], &so, self._pool)
-
-        trp_buf.s = &ss
-        trp_buf.p = &sp
-        trp_buf.o = &so
-
-        self._remove_triple(&trp_buf)
-
-
-    def __len__(self):
-        """ Number of triples in the graph. """
-        return cc.hashset_size(self._triples)
-
-
-    def __eq__(self, other):
-        """ Equality operator between ``SimpleGraph`` instances. """
-        return len(self ^ other) == 0
-
-
-    def __repr__(self):
-        """
-        String representation of the graph.
-
-        It provides the number of triples in the graph and memory address of
-            the instance.
-        """
-        return (
-            f'<{self.__class__.__name__} @{hex(id(self))} '
-            f'length={len(self.data)}>'
-        )
-
-
-    def __str__(self):
-        """ String dump of the graph triples. """
-        return str(self.data)
-
-
-    def __add__(self, other):
-        """ Alias for set-theoretical union. """
-        return self.union_(other)
-
-
-    def __iadd__(self, other):
-        """ Alias for in-place set-theoretical union. """
-        self.ip_union(other)
-        return self
-
-
-    def __sub__(self, other):
-        """ Set-theoretical subtraction. """
-        return self.subtraction(other)
-
-
-    def __isub__(self, other):
-        """ In-place set-theoretical subtraction. """
-        self.ip_subtraction(other)
-        return self
-
-    def __and__(self, other):
-        """ Set-theoretical intersection. """
-        return self.intersection(other)
-
-
-    def __iand__(self, other):
-        """ In-place set-theoretical intersection. """
-        self.ip_intersection(other)
-        return self
-
-
-    def __or__(self, other):
-        """ Set-theoretical union. """
-        return self.union_(other)
-
-
-    def __ior__(self, other):
-        """ In-place set-theoretical union. """
-        self.ip_union(other)
-        return self
-
-
-    def __xor__(self, other):
-        """ Set-theoretical exclusive disjunction (XOR). """
-        return self.xor(other)
-
-
-    def __ixor__(self, other):
-        """ In-place set-theoretical exclusive disjunction (XOR). """
-        self.ip_xor(other)
-        return self
-
-
-    def __contains__(self, trp):
-        """
-        Whether the graph contains a triple.
-
-        :rtype: boolean
-        """
-        cdef:
-            Buffer ss, sp, so
-            BufferTriple btrp
-
-        btrp.s = &ss
-        btrp.p = &sp
-        btrp.o = &so
-
-        s, p, o = trp
-        term.serialize_from_rdflib(s, &ss)
-        term.serialize_from_rdflib(p, &sp)
-        term.serialize_from_rdflib(o, &so)
-
-        return self._trp_contains(&btrp)
-
-
-    def __iter__(self):
-        """ Graph iterator. It iterates over the set triples. """
-        raise NotImplementedError()
-
-
-    # Slicing.
-
-    def __getitem__(self, item):
-        """
-        Slicing function.
-
-        It behaves similarly to `RDFLib graph slicing
-        <https://rdflib.readthedocs.io/en/stable/utilities.html#slicing-graphs>`__
-        """
-        if isinstance(item, slice):
-            s, p, o = item.start, item.stop, item.step
-            return self._slice(s, p, o)
-        else:
-            raise TypeError(f'Wrong slice format: {item}.')
 
 
     cpdef void set(self, tuple trp) except *:

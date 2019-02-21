@@ -3,6 +3,7 @@ import logging
 from rdflib import Graph
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 
+from lakesuperior.model.graph.graph import Imr
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
 from lakesuperior.store.base_lmdb_store cimport _check
@@ -624,10 +625,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get a list of all contexts.
 
-        :rtype: Iterator(rdflib.Graph)
+        :rtype: Iterator(lakesuperior.model.graph.graph.Imr)
         """
         for ctx_uri in self.all_contexts(triple):
-            yield Graph(identifier=self.from_key(ctx_uri), store=self)
+            yield Imr(uri=self.from_key(ctx_uri), store=self)
 
 
     def triples(self, triple_pattern, context=None):
@@ -676,7 +677,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET))
                 while True:
                     c_uri = self.from_key(<Key>data_v.mv_data)
-                    contexts.append(Graph(identifier=c_uri, store=self))
+                    contexts.append(Imr(uri=c_uri, store=self))
                     try:
                         _check(lmdb.mdb_cursor_get(
                             cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
@@ -1251,7 +1252,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Get a list of all contexts.
 
-        :rtype: Iterator(rdflib.Graph)
+        :rtype: Iterator(lakesuperior.model.graph.graph.Imr)
         """
         cdef:
             lmdb.MDB_stat stat
