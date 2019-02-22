@@ -246,31 +246,11 @@ cdef class SimpleGraph:
     ``rdflib.Graph`` instance.
     """
 
-    def __cinit__(
-        self, lookup=None, Keyset keyset=None, store=None,
-        set data=set(), *args, **kwargs
-    ):
+    def __cinit__(self, set data=set(), *args, **kwargs):
         """
-        Initialize the graph with pre-existing data or by looking up a store.
+        Initialize the graph, optionally with Python data.
 
-        One of ``keyset``, or ``data`` can be provided. If more than
-        one of these is provided, precedence is given in the mentioned order.
-        If none of them is specified, an empty graph is initialized.
-
-        :param rdflib.URIRef uri: The graph URI.
-            This will serve as the subject for some queries.
-        :param Keyset keyset: Keyset to create the graph from. Keys will be
-            converted to set elements.
-        :param lakesuperior.store.ldp_rs.LmdbTripleStore store: store to
-            look up the keyset. It is used if ``keyset`` is specified on init
-            or if the :py:meth:`_data_from_keyset` or
-            :py:meth:`_data_from_lookup` methods are used later. If not
-            set, the environment store is used.
         :param set data: Initial data as a set of 3-tuples of RDFLib terms.
-        :param tuple lookup: tuple of a 3-tuple of lookup terms, and a context.
-            E.g. ``((URIRef('urn:ns:a'), None, None), URIRef('urn:ns:ctx'))``.
-            Any and all elements may be ``None``.
-        :param lmdbStore store: the store to look data up.
         """
         cdef:
             cc.HashSetConf terms_conf, trp_conf
@@ -295,22 +275,12 @@ cdef class SimpleGraph:
         cc.hashset_new_conf(&terms_conf, &self._terms)
         cc.hashset_new_conf(&trp_conf, &self._triples)
 
-        self.store = store or env.app_globals.rdf_store
         self._pool = Pool()
 
         # Initialize empty data set.
-        if keyset:
-            # Populate with triples extracted from provided key set.
-            self._data_from_keyset(keyset)
-        elif data:
+        if data:
             # Populate with provided Python set.
             self.add(data)
-        elif lookup:
-            # Populate via store lookup.
-            spo = lookup[:3]
-            # If lookup has 4 elements, it's a spoc.
-            c = lookup[3] if len(lookup) > 3 else None
-            self._data_from_lookup(spo, c)
 
 
     def __dealloc__(self):
@@ -321,6 +291,8 @@ cdef class SimpleGraph:
         free(self._terms)
 
 
+    ## PROPERTIES ##
+
     @property
     def data(self):
         """
@@ -328,68 +300,50 @@ cdef class SimpleGraph:
 
         :rtype: set
         """
-        return self._to_pyset()
+        cdef:
+            void *void_p
+            cc.HashSetIter ti
+            term.Term s, p, o
+
+        graph_set = set()
+
+        cc.hashset_iter_init(&ti, self._triples)
+        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
+            if void_p == NULL:
+                logger.warn('Triple is NULL!')
+                break
+
+            trp = <BufferTriple *>void_p
+            graph_set.add((
+                term.deserialize_to_rdflib(trp.s),
+                term.deserialize_to_rdflib(trp.p),
+                term.deserialize_to_rdflib(trp.o),
+            ))
+
+        return graph_set
 
     @property
-    def terms(self):
-        return self._get_terms()
-
-
-    # # # BASIC SET OPERATIONS # # #
-
-    def add(self, trp):
+    def _all_terms(self):
         """
-        Add triples to the graph.
+        All terms in the graph with their memory address.
 
-        :param iterable triples: Set, list or tuple of 3-tuple triples.
-        """
-        cdef size_t cur = 0, trp_cur = 0
-
-        trp_ct = len(trp)
-        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
-        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
-
-        for s, p, o in trp:
-            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
-            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
-            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
-
-            (trp_buf + trp_cur).s = term_buf + cur
-            (trp_buf + trp_cur).p = term_buf + cur + 1
-            (trp_buf + trp_cur).o = term_buf + cur + 2
-
-            self._add_triple(trp_buf + trp_cur)
-
-            trp_cur += 1
-            cur += 3
-
-
-    def len_terms(self):
-        """ Number of triples in the graph. """
-        return cc.hashset_size(self._terms)
-
-
-    def remove(self, trp):
-        """
-        Remove one item from the graph.
-
-        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
-            wildcards are not accepted.
+        For debugging purposes.
         """
         cdef:
-            Buffer ss, sp, so
-            BufferTriple trp_buf
+            cc.HashSetIter it
+            void *cur
 
-        term.serialize_from_rdflib(trp[0], &ss, self._pool)
-        term.serialize_from_rdflib(trp[1], &sp, self._pool)
-        term.serialize_from_rdflib(trp[2], &so, self._pool)
+        terms = {}
 
-        trp_buf.s = &ss
-        trp_buf.p = &sp
-        trp_buf.o = &so
+        cc.hashset_iter_init(&it, self._terms)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            s_term = <Buffer*>cur
+            terms.append((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
 
-        self._remove_triple(&trp_buf)
+        return terms
 
+
+    ## MAGIC METHODS ##
 
     def __len__(self):
         """ Number of triples in the graph. """
@@ -519,7 +473,74 @@ cdef class SimpleGraph:
     def __hash__(self):
         return 23465
 
-    # Cython counterparts to basic methods.
+
+    ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
+
+    def terms_by_type(self, type):
+        """
+        Get all terms of a type: subject, predicate or object.
+
+        :param str type: One of ``s``, ``p`` or ``o``.
+        """
+        i = 'spo'.index(type)
+        return {r[i] for r in self.data}
+
+
+    def add(self, trp):
+        """
+        Add triples to the graph.
+
+        :param iterable triples: iterable of 3-tuple triples.
+        """
+        cdef size_t cur = 0, trp_cur = 0
+
+        trp_ct = len(trp)
+        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
+        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
+
+        for s, p, o in trp:
+            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
+            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
+            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
+
+            (trp_buf + trp_cur).s = term_buf + cur
+            (trp_buf + trp_cur).p = term_buf + cur + 1
+            (trp_buf + trp_cur).o = term_buf + cur + 2
+
+            self.add_triple(trp_buf + trp_cur)
+
+            trp_cur += 1
+            cur += 3
+
+
+    def len_terms(self):
+        """ Number of terms in the graph. """
+        return cc.hashset_size(self._terms)
+
+
+    def remove(self, trp):
+        """
+        Remove one item from the graph.
+
+        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
+            wildcards are not accepted.
+        """
+        cdef:
+            Buffer ss, sp, so
+            BufferTriple trp_buf
+
+        term.serialize_from_rdflib(trp[0], &ss, self._pool)
+        term.serialize_from_rdflib(trp[1], &sp, self._pool)
+        term.serialize_from_rdflib(trp[2], &so, self._pool)
+
+        trp_buf.s = &ss
+        trp_buf.p = &sp
+        trp_buf.o = &so
+
+        self.remove_triple(&trp_buf)
+
+
+    ## CYTHON-ACCESSIBLE BASIC METHODS ##
 
     cdef SimpleGraph empty_copy(self):
         """
@@ -527,8 +548,7 @@ cdef class SimpleGraph:
 
         Override in subclasses to accommodate for different init properties.
         """
-        with self.store.txn_ctx():
-            return self.__class__(store=self.store)
+        return self.__class__()
 
 
     cpdef union_(self, SimpleGraph other):
@@ -553,7 +573,7 @@ cdef class SimpleGraph:
             cc.hashset_iter_init(&it, gr._triples)
             while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
                 bt = <BufferTriple*>cur
-                new_gr._add_triple(bt)
+                new_gr.add_triple(bt)
 
         return new_gr
 
@@ -575,7 +595,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            self._add_triple(bt)
+            self.add_triple(bt)
 
 
     cpdef intersection(self, SimpleGraph other):
@@ -600,7 +620,7 @@ cdef class SimpleGraph:
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if other._trp_contains(bt):
                 #print('Adding.')
-                new_gr._add_triple(bt)
+                new_gr.add_triple(bt)
 
         return new_gr
 
@@ -624,7 +644,7 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not other._trp_contains(bt):
-                self._remove_triple(bt)
+                self.remove_triple(bt)
 
 
     cpdef subtraction(self, SimpleGraph other):
@@ -652,7 +672,7 @@ cdef class SimpleGraph:
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if not other._trp_contains(bt):
                 #print('Adding.')
-                new_gr._add_triple(bt)
+                new_gr.add_triple(bt)
 
         return new_gr
 
@@ -675,7 +695,7 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if other._trp_contains(bt):
-                self._remove_triple(bt)
+                self.remove_triple(bt)
 
 
     cpdef xor(self, SimpleGraph other):
@@ -699,14 +719,14 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not other._trp_contains(bt):
-                new_gr._add_triple(bt)
+                new_gr.add_triple(bt)
 
         # Other way around.
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not self._trp_contains(bt):
-                new_gr._add_triple(bt)
+                new_gr.add_triple(bt)
 
         return new_gr
 
@@ -734,65 +754,19 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not self._trp_contains(bt):
-                tmp._add_triple(bt)
+                tmp.add_triple(bt)
 
         # Remove triples in common.
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if other._trp_contains(bt):
-                print(self._remove_triple(bt))
+                print(self.remove_triple(bt))
 
         self |= tmp
 
 
-
-    cdef void _data_from_lookup(self, tuple trp_ptn, ctx=None) except *:
-        """
-        Look up triples in the triplestore and load them into ``data``.
-
-        :param tuple lookup: 3-tuple of RDFlib terms or ``None``.
-        :param LmdbTriplestore store: Reference to a LMDB triplestore. This
-            is normally set to ``lakesuperior.env.app_globals.rdf_store``.
-        """
-        cdef:
-            size_t i
-            unsigned char spok[TRP_KLEN]
-
-        with self.store.txn_ctx():
-            keyset = self.store.triple_keys(trp_ptn, ctx)
-            self._data_from_keyset(keyset)
-
-
-
-    cdef void _data_from_keyset(self, Keyset data) except *:
-        """Populate a graph from a Keyset."""
-        cdef TripleKey spok
-
-        while data.next(spok):
-            self._add_from_spok(spok)
-
-
-    cdef inline void _add_from_spok(self, TripleKey spok) except *:
-        """
-        Add a triple from a TripleKey of term keys.
-        """
-        s_spo = <SPOBuffer>self._pool.alloc(3, sizeof(Buffer))
-        print('SPO: {}'.format((<unsigned char*>spok)[:TRP_KLEN]))
-
-        self.store.lookup_term(spok, s_spo)
-        self.store.lookup_term(spok + KLEN, s_spo + 1)
-        self.store.lookup_term(spok + DBL_KLEN, s_spo + 2)
-
-        trp = <BufferTriple *>self._pool.alloc(1, sizeof(BufferTriple))
-        trp.s = s_spo
-        trp.p = s_spo + 1
-        trp.o = s_spo + 2
-
-        self._add_triple(trp)
-
-
-    cdef inline void _add_triple(self, BufferTriple* trp) except *:
+    cdef inline void add_triple(self, BufferTriple* trp) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
 
@@ -810,8 +784,6 @@ cdef class SimpleGraph:
         logger.info(f'Triples set size before adding: {trp_sz}')
 
         r = cc.hashset_add(self._triples, trp)
-        #print('Insert triple result:')
-        #print(r)
 
         trp_sz = cc.hashset_size(self._triples)
         logger.info(f'Triples set size after adding: {trp_sz}')
@@ -821,7 +793,7 @@ cdef class SimpleGraph:
             void *cur
 
 
-    cdef int _remove_triple(self, BufferTriple* btrp) except -1:
+    cdef int remove_triple(self, BufferTriple* btrp) except -1:
         """
         Remove one triple from the graph.
         """
@@ -838,57 +810,6 @@ cdef class SimpleGraph:
             if self.trp_cmp_fn(cur, btrp) == 0:
                 return True
         return False
-
-
-    cdef _get_terms(self):
-        """
-        Get all terms in the graph.
-        """
-        cdef:
-            cc.HashSetIter it
-            void *cur
-
-        terms = [] # This is intentionally a list to spot issues with the set.
-
-        cc.hashset_iter_init(&it, self._terms)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            s_term = <Buffer*>cur
-            terms.append((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
-
-        return terms
-
-
-    cdef set _to_pyset(self):
-        """
-        Convert triple data to a Python set.
-
-        :rtype: set
-        """
-        cdef:
-            void *void_p
-            cc.HashSetIter ti
-            term.Term s, p, o
-
-        graph_set = set()
-        # Looping over an empty HashSet results in a segfault. Exit early in
-        # that case.
-        #if not cc.hashset_size(self._triples):
-        #    return graph_set
-
-        cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
-            if void_p == NULL:
-                logger.warn('Triple is NULL!')
-                break
-
-            trp = <BufferTriple *>void_p
-            graph_set.add((
-                term.deserialize_to_rdflib(trp.s),
-                term.deserialize_to_rdflib(trp.p),
-                term.deserialize_to_rdflib(trp.o),
-            ))
-
-        return graph_set
 
 
     cpdef void set(self, tuple trp) except *:
@@ -1025,16 +946,6 @@ cdef class SimpleGraph:
         return res
 
 
-    #cpdef set terms(self, str type):
-    #    """
-    #    Get all terms of a type: subject, predicate or object.
-
-    #    :param str type: One of ``s``, ``p`` or ``o``.
-    #    """
-    #    i = 'spo'.index(type)
-    #    return {r[i] for r in self.data}
-
-
 
 cdef class Imr(SimpleGraph):
     """
@@ -1120,8 +1031,7 @@ cdef class Imr(SimpleGraph):
         """
         Create an empty instance carrying over some key properties.
         """
-        with self.store.txn_ctx():
-            return self.__class__(uri=self.uri, store=self.store)
+        return self.__class__(uri=self.uri)
 
 
     def value(self, p, strict=False):
