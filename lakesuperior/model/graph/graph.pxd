@@ -6,8 +6,6 @@ from lakesuperior.cy_include cimport collections as cc
 from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.lmdb_triplestore cimport LmdbTriplestore
-from lakesuperior.store.ldp_rs.lmdb_triplestore cimport TripleKey
 
 # Lookup function that returns whether a triple contains a match pattern.
 ctypedef bint (*lookup_fn_t)(
@@ -27,21 +25,15 @@ cdef class SimpleGraph:
     cdef:
         cc.HashSet *_terms # Set of unique serialized terms.
         cc.HashSet *_triples # Set of unique triples.
-        readonly LmdbTriplestore store
         # Temp data pool. It gets managed with the object lifecycle via cymem.
         Pool _pool
 
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        void _data_from_lookup(self, tuple trp_ptn, ctx=*) except *
-        void _data_from_keyset(self, Keyset data) except *
-        inline void _add_from_spok(self, const TripleKey spok) except *
-        inline void _add_triple(self, BufferTriple *trp) except *
-        int _remove_triple(self, BufferTriple* trp_buf) except -1
-        bint _trp_contains(self, BufferTriple* btrp)
-        _get_terms(self)
-        set _to_pyset(self)
+        inline void add_triple(self, BufferTriple *trp) except *
+        int remove_triple(self, BufferTriple* trp_buf) except -1
+        bint trp_contains(self, BufferTriple* btrp)
 
         # Basic graph operations.
         void ip_union(self, SimpleGraph other) except *
@@ -56,8 +48,6 @@ cdef class SimpleGraph:
     cpdef xor(self, SimpleGraph other)
     cpdef void set(self, tuple trp) except *
     cpdef void remove_triples(self, pattern) except *
-    cpdef object as_rdflib(self)
-    #cpdef set terms(self, str type)
 
 
 cdef class Imr(SimpleGraph):

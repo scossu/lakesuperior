@@ -66,33 +66,6 @@ class TestGraphInit:
             assert t in gr
 
 
-    @pytest.mark.skip(reason='TODO')
-    def test_init_keyset(self):
-        """
-        Test creation using a keyset.
-
-        TODO
-        """
-        pass
-
-
-    def test_init_lookup(self, trp, store):
-        """
-        Test creation by store lookup.
-        """
-        with store.txn_ctx(True):
-            for t in trp:
-                store.add(t)
-
-        with store.txn_ctx():
-            gr1 = SimpleGraph(store=store, lookup=((None, None, None)))
-        assert len(gr1) == 6
-
-        with store.txn_ctx():
-            gr2 = SimpleGraph(store=store, lookup=((URIRef('urn:s:1'), None, None)))
-        assert len(gr1) == 2
-
-
 @pytest.mark.usefixtures('trp')
 class TestGraphLookup:
     """

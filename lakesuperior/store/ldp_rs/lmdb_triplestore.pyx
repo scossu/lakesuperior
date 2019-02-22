@@ -693,6 +693,39 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(cur)
 
 
+    cpdef SimpleGraph graph(self, triple_pattern, context=None):
+        """
+        Create a SimpleGraph instance from "borrowed" buffers from the store.
+
+        The instance is only valid within the LMDB transaction that created it.
+
+        :param tuple triple_pattern: 3 RDFLib terms
+        :param context: Context graph, if available.
+        :type context: rdflib.Graph or None
+
+        :rtype: Iterator
+        :return: Generator over triples and contexts in which each result has
+            the following format::
+
+                (s, p, o), generator(contexts)
+
+        Where the contexts generator lists all context that the triple appears
+        in.
+        """
+        cdef:
+            unsigned char spok[TRP_KLEN]
+            lmdb.MDB_val key_v, data_v
+            SimpleGraph gr = SimpleGraph()
+
+        logger.debug(
+                'Getting triples for: {}, {}'.format(triple_pattern, context))
+
+        for spok in self.triple_keys(triple_pattern, context):
+            gr.add(self.lookup_term(spok))
+
+        return gr
+
+
     cdef Keyset triple_keys(self, tuple triple_pattern, context=None):
         """
         Top-level lookup method.
@@ -1327,12 +1360,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Buffer pk_t
 
-        self.lookup_term(key, &pk_t)
+        #self.lookup_term(key, &pk_t)
 
-        return deserialize_to_rdflib(&pk_t)
+        return deserialize_to_rdflib(self.lookup_term(key))
 
 
-    cdef inline int lookup_term(self, const Key key, Buffer *data) except -1:
+    cdef inline Buffer lookup_term(self, const Key key, Buffer *data):
         """
         look up a term by key.
 
@@ -1349,10 +1382,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 lmdb.mdb_get(self.txn, self.get_dbi('t:st'), &key_v, &data_v),
                 f'Error getting data for key \'{key}\'.')
 
-        data[0].addr = data_v.mv_data
-        data[0].sz = data_v.mv_size
-
-        return 0
+        return <Buffer>data
 
 
     cdef tuple from_trp_key(self, TripleKey key):

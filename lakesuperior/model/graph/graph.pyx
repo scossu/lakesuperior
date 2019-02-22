@@ -323,7 +323,7 @@ cdef class SimpleGraph:
         return graph_set
 
     @property
-    def _all_terms(self):
+    def stored_terms(self):
         """
         All terms in the graph with their memory address.
 
@@ -446,7 +446,7 @@ cdef class SimpleGraph:
         term.serialize_from_rdflib(p, &sp)
         term.serialize_from_rdflib(o, &so)
 
-        return self._trp_contains(&btrp)
+        return self.trp_contains(&btrp)
 
 
     def __iter__(self):
@@ -618,7 +618,7 @@ cdef class SimpleGraph:
             bt = <BufferTriple*>cur
             #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
-            if other._trp_contains(bt):
+            if other.trp_contains(bt):
                 #print('Adding.')
                 new_gr.add_triple(bt)
 
@@ -643,7 +643,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if not other._trp_contains(bt):
+            if not other.trp_contains(bt):
                 self.remove_triple(bt)
 
 
@@ -670,7 +670,7 @@ cdef class SimpleGraph:
             bt = <BufferTriple*>cur
             #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
-            if not other._trp_contains(bt):
+            if not other.trp_contains(bt):
                 #print('Adding.')
                 new_gr.add_triple(bt)
 
@@ -694,7 +694,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if other._trp_contains(bt):
+            if other.trp_contains(bt):
                 self.remove_triple(bt)
 
 
@@ -718,14 +718,14 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if not other._trp_contains(bt):
+            if not other.trp_contains(bt):
                 new_gr.add_triple(bt)
 
         # Other way around.
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if not self._trp_contains(bt):
+            if not self.trp_contains(bt):
                 new_gr.add_triple(bt)
 
         return new_gr
@@ -753,14 +753,14 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if not self._trp_contains(bt):
+            if not self.trp_contains(bt):
                 tmp.add_triple(bt)
 
         # Remove triples in common.
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            if other._trp_contains(bt):
+            if other.trp_contains(bt):
                 print(self.remove_triple(bt))
 
         self |= tmp
@@ -800,7 +800,7 @@ cdef class SimpleGraph:
         return cc.hashset_remove(self._triples, btrp, NULL)
 
 
-    cdef bint _trp_contains(self, BufferTriple* btrp):
+    cdef bint trp_contains(self, BufferTriple* btrp):
         cdef:
             cc.HashSetIter it
             void* cur
@@ -820,7 +820,7 @@ cdef class SimpleGraph:
         """
         if None in trp:
             raise ValueError(f'Invalid triple: {trp}')
-        self.remove_triples((trp[0], trp[1], None))
+        self.remove((trp[0], trp[1], None))
         self.add((trp,))
 
 
@@ -836,7 +836,7 @@ cdef class SimpleGraph:
             self.data.remove(match)
 
 
-    cpdef object as_rdflib(self):
+    def as_rdflib(self):
         """
         Return the data set as an RDFLib Graph.
 
@@ -977,26 +977,6 @@ cdef class Imr(SimpleGraph):
         """
         self.uri = str(uri)
         #super().__init(*args, **kwargs)
-
-
-    @property
-    def identifier(self):
-        """
-        IMR URI. For compatibility with RDFLib Resource.
-
-        :rtype: string
-        """
-        return self.uri
-
-
-    @property
-    def graph(self):
-        """
-        Return a SimpleGraph with the same data.
-
-        :rtype: SimpleGraph
-        """
-        raise NotImplementedError() # TODO
 
 
     def __repr__(self):
