@@ -714,14 +714,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             unsigned char spok[TRP_KLEN]
+            size_t cur = 0
             lmdb.MDB_val key_v, data_v
             SimpleGraph gr = SimpleGraph()
+            BufferTriple* trp_buffer
 
         logger.debug(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
 
-        for spok in self.triple_keys(triple_pattern, context):
-            gr.add(self.lookup_term(spok))
+        match = self.triple_keys(triple_pattern, context)
+        trp_buffer = gr.pool.alloc(len(match), sizeof(BufferTriple))
+        for spok in match:
+            (trp_buffer + cur).s = self.lookup_term(spok[: KLEN])
+            (trp_buffer + cur).p = self.lookup_term(spok[KLEN: DBL_KLEN])
+            (trp_buffer + cur).o = self.lookup_term(spok[DBL_KLEN: TRP_KLEN])
+            gr.add_triple(trp_buffer + cur)
 
         return gr
 

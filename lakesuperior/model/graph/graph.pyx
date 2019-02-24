@@ -275,7 +275,7 @@ cdef class SimpleGraph:
         cc.hashset_new_conf(&terms_conf, &self._terms)
         cc.hashset_new_conf(&trp_conf, &self._triples)
 
-        self._pool = Pool()
+        self.pool = Pool()
 
         # Initialize empty data set.
         if data:
@@ -495,13 +495,13 @@ cdef class SimpleGraph:
         cdef size_t cur = 0, trp_cur = 0
 
         trp_ct = len(trp)
-        term_buf = <Buffer*>self._pool.alloc(3 * trp_ct, sizeof(Buffer))
-        trp_buf = <BufferTriple*>self._pool.alloc(trp_ct, sizeof(BufferTriple))
+        term_buf = <Buffer*>self.pool.alloc(3 * trp_ct, sizeof(Buffer))
+        trp_buf = <BufferTriple*>self.pool.alloc(trp_ct, sizeof(BufferTriple))
 
         for s, p, o in trp:
-            term.serialize_from_rdflib(s, term_buf + cur, self._pool)
-            term.serialize_from_rdflib(p, term_buf + cur + 1, self._pool)
-            term.serialize_from_rdflib(o, term_buf + cur + 2, self._pool)
+            term.serialize_from_rdflib(s, term_buf + cur, self.pool)
+            term.serialize_from_rdflib(p, term_buf + cur + 1, self.pool)
+            term.serialize_from_rdflib(o, term_buf + cur + 2, self.pool)
 
             (trp_buf + trp_cur).s = term_buf + cur
             (trp_buf + trp_cur).p = term_buf + cur + 1
@@ -529,9 +529,9 @@ cdef class SimpleGraph:
             Buffer ss, sp, so
             BufferTriple trp_buf
 
-        term.serialize_from_rdflib(trp[0], &ss, self._pool)
-        term.serialize_from_rdflib(trp[1], &sp, self._pool)
-        term.serialize_from_rdflib(trp[2], &so, self._pool)
+        term.serialize_from_rdflib(trp[0], &ss, self.pool)
+        term.serialize_from_rdflib(trp[1], &sp, self.pool)
+        term.serialize_from_rdflib(trp[2], &so, self.pool)
 
         trp_buf.s = &ss
         trp_buf.p = &sp
@@ -900,9 +900,9 @@ cdef class SimpleGraph:
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
             # Return immediately if 3-term match is requested.
-            term.serialize_from_rdflib(s, trp.s, self._pool)
-            term.serialize_from_rdflib(p, trp.p, self._pool)
-            term.serialize_from_rdflib(o, trp.o, self._pool)
+            term.serialize_from_rdflib(s, trp.s, self.pool)
+            term.serialize_from_rdflib(p, trp.p, self.pool)
+            term.serialize_from_rdflib(o, trp.o, self.pool)
 
             if cc.hashset_contains(self._triples, &trp):
                 res.add((s, p, o))

@@ -26,7 +26,7 @@ cdef class SimpleGraph:
         cc.HashSet *_terms # Set of unique serialized terms.
         cc.HashSet *_triples # Set of unique triples.
         # Temp data pool. It gets managed with the object lifecycle via cymem.
-        Pool _pool
+        Pool pool
 
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
