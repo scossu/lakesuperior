@@ -8,7 +8,7 @@ from libc.string cimport memcpy
 from cymem.cymem cimport Pool
 
 from lakesuperior.cy_include cimport cytpl as tpl
-from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.base cimport Buffer, buffer_dump
 
 
 DEF LSUP_TERM_TYPE_URIREF = 1
@@ -44,6 +44,7 @@ cdef int deserialize(const Buffer *data, Term *term) except -1:
     """
     Return a term from serialized binary data.
     """
+    #print(f'Deserializing: {buffer_dump(data)}')
     _pk = tpl.tpl_peek(
             tpl.TPL_MEM | tpl.TPL_DATAPEEK, data[0].addr, data[0].sz,
             LSUP_TERM_PK_FMT, &(term[0].type), &(term[0].data),
@@ -120,7 +121,11 @@ cdef object to_rdflib(const Term *term):
     """
     cdef str data = (<bytes>term[0].data).decode()
     if term[0].type == LSUP_TERM_TYPE_LITERAL:
-        return Literal(data, datatype=term[0].datatype, lang=term[0].lang)
+        return Literal(
+            data,
+            datatype=term[0].datatype if not term[0].lang else None,
+            lang=term[0].lang or None
+        )
     else:
         if term[0].type == LSUP_TERM_TYPE_URIREF:
             return URIRef(data)

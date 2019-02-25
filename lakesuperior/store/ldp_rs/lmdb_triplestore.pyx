@@ -13,7 +13,10 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
+from lakesuperior.model.base cimport buffer_dump
+from lakesuperior.model.graph.graph cimport SimpleGraph, Imr
 from lakesuperior.model.graph.term cimport Term
+from lakesuperior.model.graph.triple cimport BufferTriple
 
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
@@ -693,7 +696,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(cur)
 
 
-    cpdef SimpleGraph graph(self, triple_pattern, context=None):
+    cpdef SimpleGraph graph_lookup(self, triple_pattern, context=None):
         """
         Create a SimpleGraph instance from "borrowed" buffers from the store.
 
@@ -713,22 +716,35 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         in.
         """
         cdef:
-            unsigned char spok[TRP_KLEN]
+            unsigned char* spok
             size_t cur = 0
-            lmdb.MDB_val key_v, data_v
             SimpleGraph gr = SimpleGraph()
-            BufferTriple* trp_buffer
 
         logger.debug(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
 
-        match = self.triple_keys(triple_pattern, context)
-        trp_buffer = gr.pool.alloc(len(match), sizeof(BufferTriple))
-        for spok in match:
-            (trp_buffer + cur).s = self.lookup_term(spok[: KLEN])
-            (trp_buffer + cur).p = self.lookup_term(spok[KLEN: DBL_KLEN])
-            (trp_buffer + cur).o = self.lookup_term(spok[DBL_KLEN: TRP_KLEN])
-            gr.add_triple(trp_buffer + cur)
+        spok_a = self.triple_keys(triple_pattern, context)
+        btrp = <BufferTriple*>gr.pool.alloc(spok_a.ct, sizeof(BufferTriple))
+        buffers = <Buffer*>gr.pool.alloc(3 * spok_a.ct, sizeof(Buffer))
+
+        spok_a.iter_init()
+        while spok_a.iter_next(&spok):
+            btrp[cur].s = buffers + cur * 3
+            btrp[cur].p = buffers + cur * 3 + 1
+            btrp[cur].o = buffers + cur * 3 + 2
+
+            #logger.info('Looking up key: {}'.format(spok[:KLEN]))
+            self.lookup_term(spok, buffers + cur * 3)
+            #logger.info(f'Found triple s: {buffer_dump(btrp[cur].s)}')
+            #logger.info('Looking up key: {}'.format(spok[KLEN:DBL_KLEN]))
+            self.lookup_term(spok + KLEN, buffers + cur * 3 + 1)
+            #logger.info(f'Found triple p: {buffer_dump(btrp[cur].p)}')
+            #logger.info('Looking up key: {}'.format(spok[DBL_KLEN:TRP_KLEN]))
+            self.lookup_term(spok + DBL_KLEN, buffers + cur * 3 + 2)
+            #logger.info(f'Found triple o: {buffer_dump(btrp[cur].o)}')
+
+            gr.add_triple(btrp + cur)
+            cur += 1
 
         return gr
 
@@ -1367,12 +1383,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Buffer pk_t
 
-        #self.lookup_term(key, &pk_t)
+        self.lookup_term(key, &pk_t)
 
-        return deserialize_to_rdflib(self.lookup_term(key))
+        return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline Buffer lookup_term(self, const Key key, Buffer *data):
+    cdef inline void lookup_term(self, const Key key, Buffer* data) except *:
         """
         look up a term by key.
 
@@ -1385,11 +1401,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_data = key
         key_v.mv_size = KLEN
 
+        logger.info('So far so good[0].')
+        logger.info(f'Size of mdb_val: {sizeof(lmdb.MDB_val)}; size of buffer: {sizeof(Buffer)}')
         _check(
-                lmdb.mdb_get(self.txn, self.get_dbi('t:st'), &key_v, &data_v),
+                lmdb.mdb_get(
+                    self.txn, self.get_dbi('t:st'), &key_v, &data_v
+                ),
                 f'Error getting data for key \'{key}\'.')
-
-        return <Buffer>data
+        logger.info('So far so good[1].')
+        data.addr = data_v.mv_data
+        data.sz = data_v.mv_size
+        logger.info('Found term: {}'.format(buffer_dump(data)))
 
 
     cdef tuple from_trp_key(self, TripleKey key):

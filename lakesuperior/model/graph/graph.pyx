@@ -16,14 +16,14 @@ from cymem.cymem cimport Pool
 from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.cy_include cimport collections as cc
 from lakesuperior.cy_include cimport spookyhash as sph
+from lakesuperior.model.base cimport Buffer, buffer_dump
 from lakesuperior.model.graph cimport term
-from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
-        KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
-from lakesuperior.model.structures.hash cimport term_hash_seed32
-from lakesuperior.model.structures.keyset cimport Keyset
-from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport hash64
+from lakesuperior.model.structures.hash cimport term_hash_seed32
+from lakesuperior.model.structures.keyset cimport Keyset
+from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
+        KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
 
 cdef extern from 'spookyhash_api.h':
     uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
@@ -303,17 +303,21 @@ cdef class SimpleGraph:
         cdef:
             void *void_p
             cc.HashSetIter ti
-            term.Term s, p, o
+            Buffer* ss, sp, so
 
         graph_set = set()
 
         cc.hashset_iter_init(&ti, self._triples)
         while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
+            logger.info(f'Data loop.')
             if void_p == NULL:
                 logger.warn('Triple is NULL!')
                 break
 
             trp = <BufferTriple *>void_p
+            print(f'trp.s: {buffer_dump(trp.s)}')
+            print(f'trp.p: {buffer_dump(trp.p)}')
+            print(f'trp.o: {buffer_dump(trp.o)}')
             graph_set.add((
                 term.deserialize_to_rdflib(trp.s),
                 term.deserialize_to_rdflib(trp.p),
@@ -761,7 +765,7 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if other.trp_contains(bt):
-                print(self.remove_triple(bt))
+                self.remove_triple(bt)
 
         self |= tmp
 

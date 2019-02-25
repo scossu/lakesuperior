@@ -220,7 +220,7 @@ class RsrcCentricLayout:
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             imr = self.get_imr('/', incl_inbound=False, incl_children=True)
 
         gr = Graph(identifier=imr.uri)
@@ -252,8 +252,7 @@ class RsrcCentricLayout:
 
         :rtype: SimpleGraph
         """
-        return SimpleGraph(
-                store=self.store, lookup=((subject, None, None), ctx))
+        return self.store.graph_lookup((subject, None, None), ctx)
 
 
     def count_rsrc(self):
@@ -295,8 +294,7 @@ class RsrcCentricLayout:
         imr = Imr(uri=nsc['fcres'][uid])
 
         for ctx in contexts:
-            imr |= SimpleGraph(
-                    lookup=((None, None, None), ctx), store=self.store)
+            imr |= self.store.graph_lookup((None, None, None), ctx)
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
@@ -372,25 +370,23 @@ class RsrcCentricLayout:
         # URI with the subject URI. But the concepts of data and metadata in
         # Fedora are quite fluid anyways...
 
-        # Result graph.
-        imr = SimpleGraph(lookup=(
-            (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None),
-                nsc['fcadmin'][uid]), store=self.store)
-
         vmeta = Imr(uri=nsc['fcres'][uid])
 
         #Get version graphs proper.
-        for vtrp in imr:
+        for vtrp in self.store.graph_lookup(
+            (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None),
+            nsc['fcadmin'][uid]
+        ):
             # Add the hasVersion triple to the result graph.
             vmeta.add((vtrp,))
-            vmeta_gr = SimpleGraph(
-                lookup=((
-                    None, nsc['foaf'].primaryTopic, vtrp[2]), HIST_GR_URI),
-                store=self.store)
+            vmeta_gr = self.store.graph_lookup(
+                (None, nsc['foaf'].primaryTopic, vtrp[2]), HIST_GR_URI
+            )
             # Get triples in the meta graph filtering out undesired triples.
             for vmtrp in vmeta_gr:
-                for trp in SimpleGraph(lookup=((
-                        vmtrp[0], None, None), HIST_GR_URI), store=self.store):
+                for trp in self.store.grep_lookup(
+                    (vmtrp[0], None, None), HIST_GR_URI
+                ):
                     if (
                             (trp[1] != nsc['rdf'].type
                             or trp[2] not in self.ignore_vmeta_types)
@@ -415,6 +411,7 @@ class RsrcCentricLayout:
         :return: Inbound triples or subjects.
         """
         # Only return non-historic graphs.
+        # TODO self.store.graph_lookup?
         meta_gr = self.ds.graph(META_GR_URI)
         ptopic_uri = nsc['foaf'].primaryTopic
 
@@ -440,8 +437,9 @@ class RsrcCentricLayout:
         ctx_uri = nsc['fcstruct'][uid]
         cont_p = nsc['ldp'].contains
         def _recurse(dset, s, c):
-            new_dset = SimpleGraph(
-                    lookup=((s, cont_p, None), c), store=self.store)[s : cont_p]
+            new_dset = self.store.graph_lookup(
+                (s, cont_p, None), c
+            )[s : cont_p]
             #new_dset = set(ds.graph(c)[s : cont_p])
             for ss in new_dset:
                 dset.add((ss,))
@@ -460,9 +458,9 @@ class RsrcCentricLayout:
             return _recurse(set(), subj_uri, ctx_uri)
         else:
             #return ds.graph(ctx_uri)[subj_uri : cont_p : ])
-            return SimpleGraph(
-                    lookup=((subj_uri, cont_p, None), ctx_uri),
-                    store=self.store)[subj_uri : cont_p]
+            return self.store.graph_lookup(
+                (subj_uri, cont_p, None), ctx_uri
+            )[subj_uri : cont_p]
 
 
     def get_last_version_uid(self, uid):

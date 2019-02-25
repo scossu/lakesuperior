@@ -112,7 +112,7 @@ cdef class Keyset:
         return self.get_item(i)[: self.itemsize]
 
 
-    def reset(self):
+    def iter_init(self):
         """
         Reset the cursor to the initial position.
         """
@@ -138,7 +138,7 @@ cdef class Keyset:
         return self.data + self.itemsize * i
 
 
-    cdef bint next(self, void *val):
+    cdef bint iter_next(self, unsigned char** val):
         """
         Populate the current value and advance the cursor by 1.
 
@@ -153,7 +153,7 @@ cdef class Keyset:
             val = NULL
             return False
 
-        val = self.data + self.itemsize * self._cur
+        val[0] = self.data + self.itemsize * self._cur
         self._cur += 1
 
         return True
@@ -163,10 +163,10 @@ cdef class Keyset:
         """
         Whether a value exists in the set.
         """
-        cdef void *stored_val
+        cdef unsigned char* stored_val
 
-        self.reset()
-        while self.next(stored_val):
+        self.iter_init()
+        while self.iter_next(&stored_val):
             if memcmp(val, stored_val, self.itemsize) == 0:
                 return True
         return False
