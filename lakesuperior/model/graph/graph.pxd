@@ -31,7 +31,8 @@ cdef class SimpleGraph:
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        inline void add_triple(self, BufferTriple *trp) except *
+        inline BufferTriple* store_triple(self, const BufferTriple* strp)
+        inline void add_triple(self, BufferTriple *trp, bint add=*) except *
         int remove_triple(self, BufferTriple* trp_buf) except -1
         bint trp_contains(self, BufferTriple* btrp)
 

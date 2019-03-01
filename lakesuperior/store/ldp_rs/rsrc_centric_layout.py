@@ -294,11 +294,13 @@ class RsrcCentricLayout:
         imr = Imr(uri=nsc['fcres'][uid])
 
         for ctx in contexts:
-            imr |= self.store.graph_lookup((None, None, None), ctx)
+            gr = self.store.graph_lookup((None, None, None), ctx)
+            imr |= gr
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            imr |= SimpleGraph(data=self.get_inbound_rel(nsc['fcres'][uid]))
+            gr = SimpleGraph(data=self.get_inbound_rel(nsc['fcres'][uid]))
+            imr |= gr
 
         if strict:
             self._check_rsrc_status(imr)

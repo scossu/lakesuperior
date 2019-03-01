@@ -337,12 +337,12 @@ cdef class SimpleGraph:
             cc.HashSetIter it
             void *cur
 
-        terms = {}
+        terms = set()
 
         cc.hashset_iter_init(&it, self._terms)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             s_term = <Buffer*>cur
-            terms.append((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
+            terms.add((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
 
         return terms
 
@@ -577,7 +577,7 @@ cdef class SimpleGraph:
             cc.hashset_iter_init(&it, gr._triples)
             while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
                 bt = <BufferTriple*>cur
-                new_gr.add_triple(bt)
+                new_gr.add_triple(bt, True)
 
         return new_gr
 
@@ -599,7 +599,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            self.add_triple(bt)
+            self.add_triple(bt, True)
 
 
     cpdef intersection(self, SimpleGraph other):
@@ -624,7 +624,7 @@ cdef class SimpleGraph:
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if other.trp_contains(bt):
                 #print('Adding.')
-                new_gr.add_triple(bt)
+                new_gr.add_triple(bt, True)
 
         return new_gr
 
@@ -676,7 +676,7 @@ cdef class SimpleGraph:
             #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if not other.trp_contains(bt):
                 #print('Adding.')
-                new_gr.add_triple(bt)
+                new_gr.add_triple(bt, True)
 
         return new_gr
 
@@ -723,14 +723,14 @@ cdef class SimpleGraph:
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not other.trp_contains(bt):
-                new_gr.add_triple(bt)
+                new_gr.add_triple(bt, True)
 
         # Other way around.
         cc.hashset_iter_init(&it, other._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
             if not self.trp_contains(bt):
-                new_gr.add_triple(bt)
+                new_gr.add_triple(bt, True)
 
         return new_gr
 
@@ -770,13 +770,68 @@ cdef class SimpleGraph:
         self |= tmp
 
 
-    cdef inline void add_triple(self, BufferTriple* trp) except *:
+    cdef inline BufferTriple* store_triple(self, const BufferTriple* strp):
+        """
+        Store triple data in the graph.
+
+        Normally, raw data underlying the triple and terms are only referenced
+        by pointers. If the destination data are garbage collected before the
+        graph is, segfaults are bound to happen.
+
+        This method copies the data to the graph's memory pool, so they are
+        managed with the lifecycle of the graph.
+
+        Note that this method stores items regardless of whether thwy are
+        duplicate or not, so there may be some duplication.
+        """
+        cdef:
+            BufferTriple* dtrp = <BufferTriple*>self.pool.alloc(
+                1, sizeof(BufferTriple)
+            )
+            Buffer* spo = <Buffer*>self.pool.alloc(3, sizeof(Buffer))
+
+        if not dtrp:
+            raise MemoryError()
+        if not spo:
+            raise MemoryError()
+
+        dtrp.s = spo
+        dtrp.p = spo + 1
+        dtrp.o = spo + 2
+
+        spo[0].addr = self.pool.alloc(strp.s.sz, 1)
+        spo[0].sz = strp.s.sz
+        spo[1].addr = self.pool.alloc(strp.p.sz, 1)
+        spo[1].sz = strp.p.sz
+        spo[2].addr = self.pool.alloc(strp.o.sz, 1)
+        spo[2].sz = strp.o.sz
+
+        if not spo[0].addr or not spo[1].addr or not spo[2].addr:
+            raise MemoryError()
+
+        memcpy(dtrp.s.addr, strp.s.addr, strp.s.sz)
+        memcpy(dtrp.p.addr, strp.p.addr, strp.p.sz)
+        memcpy(dtrp.o.addr, strp.o.addr, strp.o.sz)
+
+        return dtrp
+
+
+    cdef inline void add_triple(
+        self, BufferTriple* trp, bint add=False
+    ) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
 
         Each of the terms is added to the term set if not existing. The triple
         also is only added if not existing.
+
+        :param BufferTriple* trp: The triple to add.
+        :param bint add: if ``True``, the triple and term data will be
+            allocated and copied into the graph memory pool.
         """
+        if add:
+            trp = self.store_triple(trp)
+
         logger.info('Inserting terms.')
         cc.hashset_add(self._terms, trp.s)
         cc.hashset_add(self._terms, trp.p)
