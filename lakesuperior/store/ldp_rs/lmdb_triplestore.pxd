@@ -63,7 +63,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef void _remove_graph(self, object gr_uri) except *
     cpdef tuple all_namespaces(self)
     cpdef tuple all_contexts(self, triple=*)
-    cpdef SimpleGraph graph_lookup(self, triple_pattern, context=*)
+    cpdef SimpleGraph graph_lookup(self, triple_pattern, context=*, uri=*)
 
     cdef:
         void _add_graph(self, Buffer *pk_gr) except *

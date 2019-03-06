@@ -422,8 +422,7 @@ class Ldpr(metaclass=ABCMeta):
 
         remove_trp = {
             (self.uri, pred, None) for pred in self.delete_preds_on_replace}
-        add_trp = set(
-            self.provided_imr | self._containment_rel(create))
+        add_trp = {*self.provided_imr} | self._containment_rel(create)
 
         self.modify(ev_type, remove_trp, add_trp)
 

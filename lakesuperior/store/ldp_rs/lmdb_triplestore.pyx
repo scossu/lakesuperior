@@ -696,15 +696,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(cur)
 
 
-    cpdef SimpleGraph graph_lookup(self, triple_pattern, context=None):
+    cpdef SimpleGraph graph_lookup(
+            self, triple_pattern, context=None, uri=None
+    ):
         """
-        Create a SimpleGraph instance from "borrowed" buffers from the store.
+        Create a SimpleGraph or Imr instance from buffers from the store.
 
         The instance is only valid within the LMDB transaction that created it.
 
         :param tuple triple_pattern: 3 RDFLib terms
         :param context: Context graph, if available.
         :type context: rdflib.Graph or None
+        :param str uri: URI for the resource. If provided, the resource
+            returned will be an Imr, otherwise a SimpleGraph.
 
         :rtype: Iterator
         :return: Generator over triples and contexts in which each result has
@@ -718,7 +722,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned char* spok
             size_t cur = 0
-            SimpleGraph gr = SimpleGraph()
+            Buffer* buffers
+            BufferTriple* btrp
+            SimpleGraph gr
+
+        gr = Imr(uri=uri) if uri else SimpleGraph()
 
         logger.debug(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))

@@ -332,10 +332,11 @@ class RsrcCentricLayout:
         logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
-        imr = Imr(
-                uri=nsc['fcres'][uid],
-                lookup=((None, None, None), nsc['fcadmin'][uid]),
-                store=self.store)
+        imr = self.store.graph_lookup(
+            (None, None, None),
+            context=nsc['fcadmin'][uid],
+            uri=nsc['fcres'][uid]
+        )
 
         if strict:
             self._check_rsrc_status(imr)
@@ -354,9 +355,11 @@ class RsrcCentricLayout:
         # graph. If multiple user-provided graphs will be supported, this
         # should use another query to get all of them.
         uri = nsc['fcres'][uid]
-        userdata = Imr(
-                uri=uri, lookup=((uri, None, None),nsc['fcmain'][uid]),
-                store=self.store)
+        userdata = self.store.graph_lookup(
+            (None, None, None),
+            context=nsc['fcmain'][uid],
+            uri=uri
+        )
 
         return userdata
 
@@ -671,6 +674,7 @@ class RsrcCentricLayout:
         """
         Check if a resource is not existing or if it is a tombstone.
         """
+        #import pdb; pdb.set_trace()
         uid = self.uri_to_uid(imr.uri)
         if not len(imr):
             raise ResourceNotExistsError(uid)
