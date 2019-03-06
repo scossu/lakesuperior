@@ -416,7 +416,7 @@ class TestImrOps:
         assert trp[0] in gr3
         assert trp[4] in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
 
     def test_ip_union(self, trp):
@@ -435,7 +435,7 @@ class TestImrOps:
         assert trp[0] in gr1
         assert trp[4] in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
     def test_addition(self, trp):
@@ -454,7 +454,7 @@ class TestImrOps:
         assert trp[0] in gr3
         assert trp[4] in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
 
     def test_ip_addition(self, trp):
@@ -473,7 +473,7 @@ class TestImrOps:
         assert trp[0] in gr1
         assert trp[4] in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
     def test_subtraction(self, trp):
@@ -495,7 +495,7 @@ class TestImrOps:
         assert trp[3] not in gr3
         assert trp[4] not in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
         gr3 = gr2 - gr1
 
@@ -507,7 +507,7 @@ class TestImrOps:
         assert trp[4] in gr3
         assert trp[5] in gr3
 
-        assert gr3.uri == 'http://example.edu/imr02'
+        assert gr3.uri == URIRef('http://example.edu/imr02')
 
 
     def test_ip_subtraction(self, trp):
@@ -529,7 +529,7 @@ class TestImrOps:
         assert trp[3] not in gr1
         assert trp[4] not in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
 
@@ -551,7 +551,7 @@ class TestImrOps:
         assert trp[0] not in gr3
         assert trp[5] not in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
 
     def test_ip_intersect(self, trp):
@@ -572,7 +572,7 @@ class TestImrOps:
         assert trp[0] not in gr1
         assert trp[5] not in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
     def test_xor(self, trp):
@@ -593,7 +593,7 @@ class TestImrOps:
         assert trp[0] in gr3
         assert trp[5] in gr3
 
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
 
     def test_ip_xor(self, trp):
@@ -614,7 +614,7 @@ class TestImrOps:
         assert trp[0] in gr1
         assert trp[5] in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
 @pytest.mark.usefixtures('trp')
@@ -641,7 +641,7 @@ class TestHybridOps:
         assert trp[4] in gr3
 
         assert isinstance(gr3, Imr)
-        assert gr3.uri == 'http://example.edu/imr01'
+        assert gr3.uri == URIRef('http://example.edu/imr01')
 
         gr4 = gr2 | gr1
 
@@ -666,7 +666,7 @@ class TestHybridOps:
         assert trp[0] in gr1
         assert trp[4] in gr1
 
-        assert gr1.uri == 'http://example.edu/imr01'
+        assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
     def test_ip_union_gr(self, trp):

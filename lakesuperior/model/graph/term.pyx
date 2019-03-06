@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from rdflib import URIRef, BNode, Literal
 
 #from cpython.mem cimport PyMem_Malloc, PyMem_Free
@@ -16,6 +18,33 @@ DEF LSUP_TERM_TYPE_BNODE = 2
 DEF LSUP_TERM_TYPE_LITERAL = 3
 DEF LSUP_TERM_PK_FMT = b'csss' # Reflects the Term structure
 DEF LSUP_TERM_STRUCT_PK_FMT = b'S(' + LSUP_TERM_PK_FMT + b')'
+# URI parsing regular expression. Conforms to RFC3986.
+#DEF URI_REGEX_STR = (
+#    b'^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?'
+#)
+
+#cdef char* ptn = URI_REGEX_STR
+#regcomp(&uri_regex, ptn, REG_NOSUB)
+# Compile with no catch groups.
+# TODO This should be properly cleaned up on application shutdown:
+# regfree(&uri_regex)
+
+#cdef int term_new(
+#    Term* term, char type, char* data, char* datatype=NULL, char* lang=NULL
+#) except -1:
+#    if regexec(&uri_regex, data, 0, NULL, 0) == REG_NOMATCH:
+#        raise ValueError('Not a valid URI.')
+#    term.type = type
+#    term.data = (
+#        data # TODO use C UUID v4 (RFC 4122) generator
+#        if term.type == LSUP_TERM_TYPE_BNODE
+#        else data
+#    )
+#    if term.type == LSUP_TERM_TYPE_LITERAL:
+#        term.datatype = datatype
+#        term.lang = lang
+#
+#    return 0
 
 
 cdef int serialize(const Term *term, Buffer *sterm, Pool pool=None) except -1:

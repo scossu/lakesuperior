@@ -2,232 +2,24 @@ import logging
 
 from functools import wraps
 
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.term import Node
 
 from lakesuperior import env
 
-from libc.stdint cimport uint32_t, uint64_t
-from libc.string cimport memcmp, memcpy
+from libc.string cimport memcpy
 from libc.stdlib cimport free
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.cy_include cimport collections as cc
-from lakesuperior.cy_include cimport spookyhash as sph
 from lakesuperior.model.base cimport Buffer, buffer_dump
+from lakesuperior.model.graph cimport callbacks as cb
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
-from lakesuperior.model.structures.hash cimport hash64
 from lakesuperior.model.structures.hash cimport term_hash_seed32
-from lakesuperior.model.structures.keyset cimport Keyset
-from lakesuperior.store.ldp_rs.lmdb_triplestore cimport (
-        KLEN, DBL_KLEN, TRP_KLEN, TripleKey)
-
-cdef extern from 'spookyhash_api.h':
-    uint64_t spookyhash_64(const void *input, size_t input_size, uint64_t seed)
 
 logger = logging.getLogger(__name__)
-
-
-cdef int term_cmp_fn(const void* key1, const void* key2):
-    """
-    Compare function for two Buffer objects.
-
-    :rtype: int
-    :return: 0 if the byte streams are the same, another integer otherwise.
-    """
-    b1 = <Buffer *>key1
-    b2 = <Buffer *>key2
-
-    if b1.sz != b2.sz:
-        logger.info(f'Sizes differ: {b1.sz} != {b2.sz}. Return 1.')
-        return 1
-
-    cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
-    logger.info(f'term memcmp: {cmp}')
-    return cmp
-
-
-cdef int trp_lit_cmp_fn(const void* key1, const void* key2):
-    """
-    Compare function for two triples in a set.
-
-    s, p, o byte data are compared literally.
-
-    :rtype: int
-    :return: 0 if all three terms point to byte-wise identical data in both
-        triples.
-    """
-    t1 = <BufferTriple *>key1
-    t2 = <BufferTriple *>key2
-
-    diff = (
-        term_cmp_fn(t1.o, t2.o) or
-        term_cmp_fn(t1.s, t2.s) or
-        term_cmp_fn(t1.p, t2.p)
-    )
-
-    logger.info(f'Triples match: {not(diff)}')
-    return diff
-
-
-cdef int trp_cmp_fn(const void* key1, const void* key2):
-    """
-    Compare function for two triples in a set.
-
-    Here, pointers to terms are compared for s, p, o. The pointers should be
-    guaranteed to point to unique values (i.e. no two pointers have the same
-    term value within a graph).
-
-    :rtype: int
-    :return: 0 if the addresses of all terms are the same, 1 otherwise.
-    """
-    t1 = <BufferTriple *>key1
-    t2 = <BufferTriple *>key2
-
-    cdef int is_not_equal = (
-        t1.s.addr != t2.s.addr or
-        t1.p.addr != t2.p.addr or
-        t1.o.addr != t2.o.addr
-    )
-
-    logger.info(f'Triples match: {not(is_not_equal)}')
-    return is_not_equal
-
-
-cdef bint graph_eq_fn(SimpleGraph g1, SimpleGraph g2):
-    """
-    Compare 2 graphs for equality.
-
-    Note that this returns the opposite value than the triple and term
-    compare functions: 1 (True) if equal, 0 (False) if not.
-    """
-    cdef:
-        void* el
-        cc.HashSetIter it
-
-    cc.hashset_iter_init(&it, g1._triples)
-    while cc.hashset_iter_next(&it, &el) != cc.CC_ITER_END:
-        if cc.hashset_contains(g2._triples, el):
-            return False
-
-    return True
-
-
-cdef size_t term_hash_fn(const void* key, int l, uint32_t seed):
-    """
-    Hash function for serialized terms (:py:class:`Buffer` objects)
-    """
-    return <size_t>spookyhash_64((<Buffer*>key).addr, (<Buffer*>key).sz, seed)
-
-
-cdef size_t trp_lit_hash_fn(const void* key, int l, uint32_t seed):
-    """
-    Hash function for sets of (serialized) triples.
-
-    This function concatenates the literal terms of the triple as bytes
-    and computes their hash.
-    """
-    trp = <BufferTriple*>key
-    seed64 = <uint64_t>seed
-    seed_dummy = seed64
-
-    cdef sph.spookyhash_context ctx
-
-    sph.spookyhash_context_init(&ctx, seed64, seed_dummy)
-    sph.spookyhash_update(&ctx, trp.s.addr, trp.s.sz)
-    sph.spookyhash_update(&ctx, trp.s.addr, trp.p.sz)
-    sph.spookyhash_update(&ctx, trp.s.addr, trp.o.sz)
-    sph.spookyhash_final(&ctx, &seed64, &seed_dummy)
-
-    return <size_t>seed64
-
-
-cdef size_t trp_hash_fn(const void* key, int l, uint32_t seed):
-    """
-    Hash function for sets of (serialized) triples.
-
-    This function computes the hash of the concatenated pointer values in the
-    s, p, o members of the triple. The triple structure is treated as a byte
-    string. This is safe in spite of byte-wise struct evaluation being a
-    frowned-upon practice (due to padding issues), because it is assumed that
-    the input value is always the same type of structure.
-    """
-    return <size_t>spookyhash_64(key, l, seed)
-
-
-cdef size_t hash_ptr_passthrough(const void* key, int l, uint32_t seed):
-    """
-    No-op function that takes a pointer and does *not* hash it.
-
-    The pointer value is used as the "hash".
-    """
-    return <size_t>key
-
-
-cdef inline bint lookup_none_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    """
-    Dummy callback for queries with all parameters unbound.
-
-    This function always returns ``True`` 
-    """
-    return True
-
-
-cdef inline bint lookup_s_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    """
-    Lookup callback compare function for a given s in a triple.
-
-    The function returns ``True`` if ``t1`` matches the first term.
-
-    ``t2`` is not used and is declared only for compatibility with the
-    other interchangeable functions.
-    """
-    return term_cmp_fn(t1, trp[0].s)
-
-
-cdef inline bint lookup_p_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    return term_cmp_fn(t1, trp[0].p)
-
-
-cdef inline bint lookup_o_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    return term_cmp_fn(t1, trp[0].o)
-
-
-cdef inline bint lookup_sp_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    return (
-            term_cmp_fn(t1, trp[0].s)
-            and term_cmp_fn(t2, trp[0].p))
-
-
-cdef inline bint lookup_so_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    return (
-            term_cmp_fn(t1, trp[0].s)
-            and term_cmp_fn(t2, trp[0].o))
-
-
-cdef inline bint lookup_po_cmp_fn(
-    const BufferTriple *trp, const Buffer *t1, const Buffer *t2
-):
-    return (
-            term_cmp_fn(t1, trp[0].p)
-            and term_cmp_fn(t2, trp[0].o))
-
-
 
 
 cdef class SimpleGraph:
@@ -255,19 +47,19 @@ cdef class SimpleGraph:
         cdef:
             cc.HashSetConf terms_conf, trp_conf
 
-        self.term_cmp_fn = &term_cmp_fn
-        self.trp_cmp_fn = &trp_lit_cmp_fn
+        self.term_cmp_fn = cb.term_cmp_fn
+        self.trp_cmp_fn = cb.trp_cmp_fn
 
         cc.hashset_conf_init(&terms_conf)
         terms_conf.load_factor = 0.85
-        terms_conf.hash = &term_hash_fn
+        terms_conf.hash = cb.term_hash_fn
         terms_conf.hash_seed = term_hash_seed32
         terms_conf.key_compare = self.term_cmp_fn
         terms_conf.key_length = sizeof(Buffer*)
 
         cc.hashset_conf_init(&trp_conf)
         trp_conf.load_factor = 0.75
-        trp_conf.hash = &trp_lit_hash_fn
+        trp_conf.hash = cb.trp_hash_fn
         trp_conf.hash_seed = term_hash_seed32
         trp_conf.key_compare = self.trp_cmp_fn
         trp_conf.key_length = sizeof(BufferTriple)
@@ -296,16 +88,16 @@ cdef class SimpleGraph:
     @property
     def data(self):
         """
-        Triple data as a Python set.
+        Triple data as a Python generator.
 
-        :rtype: set
+        :rtype: generator
         """
         cdef:
             void *void_p
             cc.HashSetIter ti
-            Buffer* ss, sp, so
-
-        graph_set = set()
+            Buffer* ss
+            Buffer* sp
+            Buffer* so
 
         cc.hashset_iter_init(&ti, self._triples)
         while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
@@ -315,16 +107,14 @@ cdef class SimpleGraph:
                 break
 
             trp = <BufferTriple *>void_p
-            print(f'trp.s: {buffer_dump(trp.s)}')
-            print(f'trp.p: {buffer_dump(trp.p)}')
-            print(f'trp.o: {buffer_dump(trp.o)}')
-            graph_set.add((
+            #print(f'trp.s: {buffer_dump(trp.s)}')
+            #print(f'trp.p: {buffer_dump(trp.p)}')
+            #print(f'trp.o: {buffer_dump(trp.o)}')
+            yield (
                 term.deserialize_to_rdflib(trp.s),
                 term.deserialize_to_rdflib(trp.p),
                 term.deserialize_to_rdflib(trp.o),
-            ))
-
-        return graph_set
+            )
 
     @property
     def stored_terms(self):
@@ -368,7 +158,7 @@ cdef class SimpleGraph:
         """
         return (
             f'<{self.__class__.__name__} @{hex(id(self))} '
-            f'length={len(self.data)}>'
+            f'length={len(self)}>'
         )
 
 
@@ -455,7 +245,12 @@ cdef class SimpleGraph:
 
     def __iter__(self):
         """ Graph iterator. It iterates over the set triples. """
-        raise NotImplementedError()
+        yield from self.data
+
+
+    #def __next__(self):
+    #    """ Graph iterator. It iterates over the set triples. """
+    #    return self.data.__next__()
 
 
     # Slicing.
@@ -522,26 +317,15 @@ cdef class SimpleGraph:
         return cc.hashset_size(self._terms)
 
 
-    def remove(self, trp):
+    def remove(self, pattern):
         """
-        Remove one item from the graph.
+        Remove triples by pattern.
 
-        :param tuple item: A 3-tuple of RDFlib terms. Only exact terms, i.e.
-            wildcards are not accepted.
+        The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
         """
-        cdef:
-            Buffer ss, sp, so
-            BufferTriple trp_buf
-
-        term.serialize_from_rdflib(trp[0], &ss, self.pool)
-        term.serialize_from_rdflib(trp[1], &sp, self.pool)
-        term.serialize_from_rdflib(trp[2], &so, self.pool)
-
-        trp_buf.s = &ss
-        trp_buf.p = &sp
-        trp_buf.o = &so
-
-        self.remove_triple(&trp_buf)
+        self._match_ptn_callback(
+            pattern, self, cb.del_trp_callback, NULL
+        )
 
 
     ## CYTHON-ACCESSIBLE BASIC METHODS ##
@@ -817,7 +601,7 @@ cdef class SimpleGraph:
 
 
     cdef inline void add_triple(
-        self, BufferTriple* trp, bint add=False
+        self, const BufferTriple* trp, bint add=False
     ) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
@@ -852,14 +636,14 @@ cdef class SimpleGraph:
             void *cur
 
 
-    cdef int remove_triple(self, BufferTriple* btrp) except -1:
+    cdef int remove_triple(self, const BufferTriple* btrp) except -1:
         """
         Remove one triple from the graph.
         """
         return cc.hashset_remove(self._triples, btrp, NULL)
 
 
-    cdef bint trp_contains(self, BufferTriple* btrp):
+    cdef bint trp_contains(self, const BufferTriple* btrp):
         cdef:
             cc.HashSetIter it
             void* cur
@@ -881,18 +665,6 @@ cdef class SimpleGraph:
             raise ValueError(f'Invalid triple: {trp}')
         self.remove((trp[0], trp[1], None))
         self.add((trp,))
-
-
-    cpdef void remove_triples(self, pattern) except *:
-        """
-        Remove triples by pattern.
-
-        The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
-        """
-        s, p, o = pattern
-        for match in self.lookup(s, p, o):
-            logger.debug(f'Removing from graph: {match}.')
-            self.data.remove(match)
 
 
     def as_rdflib(self):
@@ -936,73 +708,94 @@ cdef class SimpleGraph:
             return (s,p,o) in _data
 
 
-    def lookup(self, s, p, o):
+    def lookup(self, pattern):
         """
         Look up triples by a pattern.
 
         This function converts RDFLib terms into the serialized format stored
         in the graph's internal structure and compares them bytewise.
 
-        Any and all of the lookup terms can be ``None``.
+        Any and all of the lookup terms msy be ``None``.
+
+        :rtype: SimpleGraph
+        "return: New SimpleGraph instance with matching triples.
         """
         cdef:
-            void *void_p
+            void* cur
             BufferTriple trp
-            BufferTriple *trp_p
-            cc.HashSetIter ti
-            Buffer t1
-            Buffer t2
-            lookup_fn_t fn
+            SimpleGraph res_gr = SimpleGraph()
 
-        res = set()
+        self._match_ptn_callback(pattern, res_gr, cb.add_trp_callback, NULL)
+
+        return res_gr
+
+
+    cdef void _match_ptn_callback(
+        self, pattern, SimpleGraph gr,
+        lookup_callback_fn_t callback_fn, void* ctx=NULL
+    ) except *:
+        """
+        Execute an arbitrary function on a list of triples matching a pattern.
+
+        The arbitrary function is appied to each triple found in the current
+        graph, and to a discrete graph that can be the current graph itself
+        or a different one.
+        """
+        cdef:
+            void* cur
+            Buffer t1, t2
+            Buffer ss, sp, so
+            BufferTriple trp
+            BufferTriple* trp_p
+            lookup_fn_t cmp_fn
+            cc.HashSetIter it
+
+        s, p, o = pattern
 
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
-            # Return immediately if 3-term match is requested.
+            logger.info('Looping over one triple only.')
+            # Shortcut for 3-term match.
+            trp.s = &ss
+            trp.p = &sp
+            trp.o = &so
             term.serialize_from_rdflib(s, trp.s, self.pool)
             term.serialize_from_rdflib(p, trp.p, self.pool)
             term.serialize_from_rdflib(o, trp.o, self.pool)
 
             if cc.hashset_contains(self._triples, &trp):
-                res.add((s, p, o))
+                callback_fn(gr, &trp, ctx)
+                return
 
-            return res
-
-        elif s is not None:
+        if s is not None:
             term.serialize_from_rdflib(s, &t1)
             if p is not None:
-                fn = lookup_sp_cmp_fn
+                cmp_fn = cb.lookup_sp_cmp_fn
                 term.serialize_from_rdflib(p, &t2)
             elif o is not None:
-                fn = lookup_so_cmp_fn
+                cmp_fn = cb.lookup_so_cmp_fn
                 term.serialize_from_rdflib(o, &t2)
             else:
-                fn = lookup_s_cmp_fn
+                cmp_fn = cb.lookup_s_cmp_fn
         elif p is not None:
             term.serialize_from_rdflib(p, &t1)
             if o is not None:
-                fn = lookup_po_cmp_fn
+                cmp_fn = cb.lookup_po_cmp_fn
                 term.serialize_from_rdflib(o, &t2)
             else:
-                fn = lookup_p_cmp_fn
+                cmp_fn = cb.lookup_p_cmp_fn
         elif o is not None:
-            fn = lookup_o_cmp_fn
+            cmp_fn = cb.lookup_o_cmp_fn
             term.serialize_from_rdflib(o, &t1)
         else:
-            fn = lookup_none_cmp_fn
+            cmp_fn = cb.lookup_none_cmp_fn
 
         # Iterate over serialized triples.
-        cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
-            if void_p == NULL:
-                trp_p = <BufferTriple *>void_p
-                res.add((
-                    term.deserialize_to_rdflib(trp_p[0].s),
-                    term.deserialize_to_rdflib(trp_p[0].p),
-                    term.deserialize_to_rdflib(trp_p[0].o),
-                ))
-
-        return res
+        cc.hashset_iter_init(&it, self._triples)
+        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+            trp_p = <BufferTriple*>cur
+            if cmp_fn(trp_p, &t1, &t2):
+                callback_fn(gr, trp_p, ctx)
 
 
 
@@ -1034,7 +827,7 @@ cdef class Imr(SimpleGraph):
         :param kwargs: Keyword arguments inherited from
             ``SimpleGraph.__init__``.
         """
-        self.uri = str(uri)
+        self.id = str(uri)
         #super().__init(*args, **kwargs)
 
 
@@ -1045,8 +838,8 @@ cdef class Imr(SimpleGraph):
         This includes the subject URI, number of triples contained and the
         memory address of the instance.
         """
-        return (f'<{self.__class__.__name__} @{hex(id(self))} uri={self.uri}, '
-            f'length={len(self.data)}>')
+        return (f'<{self.__class__.__name__} @{hex(id(self))} id={self.id}, '
+            f'length={len(self)}>')
 
 
     def __getitem__(self, item):
@@ -1061,16 +854,26 @@ cdef class Imr(SimpleGraph):
             # If a Node is given, return all values for that predicate.
             return {
                     r[2] for r in self.data
-                    if r[0] == self.uri and r[1] == item}
+                    if r[0] == self.id and r[1] == item}
         else:
             raise TypeError(f'Wrong slice format: {item}.')
+
+
+    @property
+    def uri(self):
+        """
+        Get resource identifier as a RDFLib URIRef.
+
+        :rtype: rdflib.URIRef.
+        """
+        return URIRef(self.id)
 
 
     cdef Imr empty_copy(self):
         """
         Create an empty instance carrying over some key properties.
         """
-        return self.__class__(uri=self.uri)
+        return self.__class__(uri=self.id)
 
 
     def value(self, p, strict=False):
@@ -1087,7 +890,7 @@ cdef class Imr(SimpleGraph):
 
         if strict and len(values) > 1:
             raise RuntimeError('More than one value found for {}, {}.'.format(
-                    self.uri, p))
+                    self.id, p))
 
         for ret in values:
             return ret
@@ -1106,7 +909,5 @@ cdef class Imr(SimpleGraph):
             gr.add(trp)
 
         return gr.resource(identifier=self.uri)
-
-
 
 

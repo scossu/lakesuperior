@@ -600,7 +600,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param SimpleGraph gr: The graph to validate.
         """
-        offending_subjects = gr.terms('s') & srv_mgd_subjects
+        offending_subjects = gr.terms_by_type('s') & srv_mgd_subjects
         if offending_subjects:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
@@ -612,7 +612,7 @@ class Ldpr(metaclass=ABCMeta):
                         if t[0] == s:
                             gr.remove(t)
 
-        offending_predicates = gr.terms('p') & srv_mgd_predicates
+        offending_predicates = gr.terms_by_type('p') & srv_mgd_predicates
         # Allow some predicates if the resource is being created.
         if offending_predicates:
             if self.handling == 'strict':
@@ -808,8 +808,9 @@ class Ldpr(metaclass=ABCMeta):
         :param create: Whether the resource is being created.
         """
         # Base LDP types.
-        for t in self.base_types:
-            self.provided_imr.add((self.uri, RDF.type, t))
+        self.provided_imr.add(
+            [(self.uri, RDF.type, t) for t in self.base_types]
+        )
 
         # Create and modify timestamp.
         if create:
@@ -900,7 +901,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param rdflib.resource.Resouce cont_rsrc:  The container resource.
         """
-        cont_p = cont_rsrc.metadata.terms('p')
+        cont_p = cont_rsrc.metadata.terms_by_type('p')
 
         logger.info('Checking direct or indirect containment.')
         logger.debug('Parent predicates: {}'.format(cont_p))
