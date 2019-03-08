@@ -1409,17 +1409,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_data = key
         key_v.mv_size = KLEN
 
-        logger.info('So far so good[0].')
-        logger.info(f'Size of mdb_val: {sizeof(lmdb.MDB_val)}; size of buffer: {sizeof(Buffer)}')
+        #logger.info(f'Size of mdb_val: {sizeof(lmdb.MDB_val)}; size of buffer: {sizeof(Buffer)}')
         _check(
                 lmdb.mdb_get(
                     self.txn, self.get_dbi('t:st'), &key_v, &data_v
                 ),
                 f'Error getting data for key \'{key}\'.')
-        logger.info('So far so good[1].')
         data.addr = data_v.mv_data
         data.sz = data_v.mv_size
-        logger.info('Found term: {}'.format(buffer_dump(data)))
+        #logger.info('Found term: {}'.format(buffer_dump(data)))
 
 
     cdef tuple from_trp_key(self, TripleKey key):

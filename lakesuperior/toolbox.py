@@ -194,6 +194,19 @@ class Toolbox:
         return s, p, o
 
 
+    def globalize_imr(self, imr):
+        '''
+        Globalize an Imr.
+
+        :rtype: rdflib.Graph
+        '''
+        g_gr = Graph(identifier=self.globalize_term(imr.uri))
+        for trp in imr:
+            g_gr.add(self.globalize_triple(trp))
+
+        return g_gr
+
+
     def globalize_graph(self, gr):
         '''
         Globalize a graph.

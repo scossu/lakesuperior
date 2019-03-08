@@ -299,7 +299,7 @@ class RsrcCentricLayout:
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            gr = SimpleGraph(data=self.get_inbound_rel(nsc['fcres'][uid]))
+            gr = SimpleGraph({*self.get_inbound_rel(nsc['fcres'][uid])})
             imr |= gr
 
         if strict:
@@ -391,7 +391,7 @@ class RsrcCentricLayout:
             )
             # Get triples in the meta graph filtering out undesired triples.
             for vmtrp in vmeta_gr:
-                for trp in self.store.grep_lookup(
+                for trp in self.store.graph_lookup(
                     (vmtrp[0], None, None), HIST_GR_URI
                 ):
                     if (
@@ -449,7 +449,7 @@ class RsrcCentricLayout:
             )[s : cont_p]
             #new_dset = set(ds.graph(c)[s : cont_p])
             for ss in new_dset:
-                dset.add((ss,))
+                dset.add(ss)
                 cc = URIRef(ss.replace(nsc['fcres'], nsc['fcstruct']))
                 sub_dset = self.store.triples((ss, cont_p, None), cc)
                 #if set(ds.graph(cc)[ss : cont_p]):

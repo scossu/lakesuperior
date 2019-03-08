@@ -179,7 +179,7 @@ def get_resource(uid, out_fmt=None):
     if out_fmt == 'rdf':
         if locals().get('rdf_mimetype', None) is None:
             rdf_mimetype = DEFAULT_RDF_MIMETYPE
-        ggr = g.tbox.globalize_graph(rsrc.out_graph)
+        ggr = g.tbox.globalize_imr(rsrc.out_graph)
         ggr.namespace_manager = nsm
         return _negotiate_content(
                 ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
@@ -217,7 +217,7 @@ def get_version_info(uid):
     """
     rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
-        gr = rsrc_api.get_version_info(uid)
+        imr = rsrc_api.get_version_info(uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -225,7 +225,7 @@ def get_version_info(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_graph(gr), rdf_mimetype)
+        return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
@@ -238,7 +238,7 @@ def get_version(uid, ver_uid):
     """
     rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
-        gr = rsrc_api.get_version(uid, ver_uid)
+        imr = rsrc_api.get_version(uid, ver_uid)
     except ResourceNotExistsError as e:
         return str(e), 404
     except InvalidResourceError as e:
@@ -246,7 +246,7 @@ def get_version(uid, ver_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_graph(gr), rdf_mimetype)
+        return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
 
 
 @ldp.route('/<path:parent_uid>', methods=['POST'], strict_slashes=False)

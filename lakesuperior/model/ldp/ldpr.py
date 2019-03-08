@@ -276,7 +276,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Retun a graph of the resource's IMR formatted for output.
         """
-        out_gr = Graph(identifier=self.uri)
+        out_trp = set()
 
         for t in self.imr:
             if (
@@ -290,9 +290,9 @@ class Ldpr(metaclass=ABCMeta):
                 self._imr_options.get('incl_srv_mgd', True) or
                 not self._is_trp_managed(t)
             ):
-                out_gr.add(t)
+                out_trp.add(t)
 
-        return out_gr
+        return Imr(uri = self.uri, data=out_trp)
 
 
     @property
@@ -586,7 +586,7 @@ class Ldpr(metaclass=ABCMeta):
 
         for t in ver_gr:
             if not self._is_trp_managed(t):
-                self.provided_imr.add((self.uri, t[1], t[2]))
+                self.provided_imr.add(((self.uri, t[1], t[2]),))
             # @TODO Check individual objects: if they are repo-managed URIs
             # and not existing or tombstones, they are not added.
 
@@ -723,7 +723,10 @@ class Ldpr(metaclass=ABCMeta):
         self._clear_cache()
         # Reload IMR because if we exit the LMDB txn we lose access to stored
         # memory locations.
-        self.imr
+        try:
+            self.imr
+        except:
+            pass
 
         if (
                 ev_type is not None and
@@ -803,7 +806,7 @@ class Ldpr(metaclass=ABCMeta):
             logger.info(
                 'Removing link to non-existent repo resource: {}'
                 .format(obj))
-            self.provided_imr.remove_triples((None, None, obj))
+            self.provided_imr.remove((None, None, obj))
 
 
     def _add_srv_mgd_triples(self, create=False):
