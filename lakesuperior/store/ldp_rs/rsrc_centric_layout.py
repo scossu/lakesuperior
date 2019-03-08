@@ -252,7 +252,7 @@ class RsrcCentricLayout:
 
         :rtype: SimpleGraph
         """
-        return self.store.graph_lookup((subject, None, None), ctx)
+        return self.store.graph_lookup((subject, None, None), ctx, copy=True)
 
 
     def count_rsrc(self):
@@ -294,7 +294,7 @@ class RsrcCentricLayout:
         imr = Imr(uri=nsc['fcres'][uid])
 
         for ctx in contexts:
-            gr = self.store.graph_lookup((None, None, None), ctx)
+            gr = self.store.graph_lookup((None, None, None), ctx, copy=True)
             imr |= gr
 
         # Include inbound relationships.
@@ -335,7 +335,8 @@ class RsrcCentricLayout:
         imr = self.store.graph_lookup(
             (None, None, None),
             context=nsc['fcadmin'][uid],
-            uri=nsc['fcres'][uid]
+            uri=nsc['fcres'][uid],
+            copy=True
         )
 
         if strict:
@@ -358,7 +359,8 @@ class RsrcCentricLayout:
         userdata = self.store.graph_lookup(
             (None, None, None),
             context=nsc['fcmain'][uid],
-            uri=uri
+            uri=uri,
+            copy=True
         )
 
         return userdata
@@ -464,7 +466,8 @@ class RsrcCentricLayout:
         else:
             #return ds.graph(ctx_uri)[subj_uri : cont_p : ])
             return self.store.graph_lookup(
-                (subj_uri, cont_p, None), ctx_uri
+                (subj_uri, cont_p, None), ctx_uri,
+                copy=True
             )[subj_uri : cont_p]
 
 

@@ -601,7 +601,7 @@ cdef class SimpleGraph:
 
 
     cdef inline void add_triple(
-        self, const BufferTriple* trp, bint add=False
+        self, const BufferTriple* trp, bint copy=False
     ) except *:
         """
         Add a triple from 3 (TPL) serialized terms.
@@ -610,10 +610,10 @@ cdef class SimpleGraph:
         also is only added if not existing.
 
         :param BufferTriple* trp: The triple to add.
-        :param bint add: if ``True``, the triple and term data will be
+        :param bint copy: if ``True``, the triple and term data will be
             allocated and copied into the graph memory pool.
         """
-        if add:
+        if copy:
             trp = self.store_triple(trp)
 
         logger.info('Inserting terms.')
@@ -886,7 +886,9 @@ cdef class Imr(SimpleGraph):
             the first found result is returned.
         :rtype: rdflib.term.Node
         """
-        values = self[p]
+        # TODO use slice.
+        values = {trp[2] for trp in self.lookup((self.uri, p, None))}
+        logger.info(f'Values found: {values}')
 
         if strict and len(values) > 1:
             raise RuntimeError('More than one value found for {}, {}.'.format(

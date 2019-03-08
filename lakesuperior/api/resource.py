@@ -274,8 +274,8 @@ def update_delta(uid, remove_trp, add_trp):
         add, as 3-tuples of RDFLib terms.
     """
     rsrc = LdpFactory.from_stored(uid)
-    remove_trp = rsrc.check_mgd_terms(SimpleGraph(remove_trp))
-    add_trp = rsrc.check_mgd_terms(SimpleGraph(add_trp))
+    remove_trp = rsrc.check_mgd_terms(remove_trp)
+    add_trp = rsrc.check_mgd_terms(add_trp)
 
     return rsrc.modify(RES_UPDATED, remove_trp, add_trp)
 

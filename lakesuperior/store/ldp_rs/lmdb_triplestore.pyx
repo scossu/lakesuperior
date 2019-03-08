@@ -697,7 +697,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cpdef SimpleGraph graph_lookup(
-            self, triple_pattern, context=None, uri=None
+            self, triple_pattern, context=None, uri=None, copy=False
     ):
         """
         Create a SimpleGraph or Imr instance from buffers from the store.
@@ -751,7 +751,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self.lookup_term(spok + DBL_KLEN, buffers + cur * 3 + 2)
             #logger.info(f'Found triple o: {buffer_dump(btrp[cur].o)}')
 
-            gr.add_triple(btrp + cur)
+            gr.add_triple(btrp + cur, copy)
             cur += 1
 
         return gr

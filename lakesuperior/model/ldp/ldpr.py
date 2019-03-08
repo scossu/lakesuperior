@@ -593,39 +593,43 @@ class Ldpr(metaclass=ABCMeta):
         return self.create_or_replace(create_only=False)
 
 
-    def check_mgd_terms(self, gr):
+    def check_mgd_terms(self, trp):
         """
         Check whether server-managed terms are in a RDF payload.
 
-        :param SimpleGraph gr: The graph to validate.
+        :param SimpleGraph trp: The graph to validate.
         """
-        offending_subjects = gr.terms_by_type('s') & srv_mgd_subjects
+        offending_subjects = (
+            {t[0] for t in trp if t[0] is not None} & srv_mgd_subjects
+        )
         if offending_subjects:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
-                gr_set = set(gr)
                 for s in offending_subjects:
                     logger.info('Removing offending subj: {}'.format(s))
-                    for t in gr_set:
+                    for t in trp:
                         if t[0] == s:
-                            gr.remove(t)
+                            trp.remove(t)
 
-        offending_predicates = gr.terms_by_type('p') & srv_mgd_predicates
+        offending_predicates = (
+            {t[1] for t in trp if t[1] is not None} & srv_mgd_predicates
+        )
         # Allow some predicates if the resource is being created.
         if offending_predicates:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
-                gr_set = set(gr)
                 for p in offending_predicates:
                     logger.info('Removing offending pred: {}'.format(p))
-                    for t in gr_set:
+                    for t in trp:
                         if t[1] == p:
-                            gr.remove(t)
+                            trp.remove(t)
 
-        types = {t[2] for t in gr if t[1] == RDF.type}
-        offending_types = types & srv_mgd_types
+        offending_types = (
+            {t[2] for t in trp if t[1] == RDF.type and t[2] is not None}
+            & srv_mgd_types
+        )
         if not self.is_stored:
             offending_types -= self.smt_allow_on_create
         if offending_types:
@@ -634,11 +638,11 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 for to in offending_types:
                     logger.info('Removing offending type: {}'.format(to))
-                    gr.remove_triples((None, RDF.type, to))
+                    trp.remove_triples((None, RDF.type, to))
 
-        #logger.debug('Sanitized graph: {}'.format(gr.serialize(
+        #logger.debug('Sanitized graph: {}'.format(trp.serialize(
         #    format='turtle').decode('utf-8')))
-        return gr
+        return trp
 
 
     def sparql_delta(self, qry_str):
@@ -671,16 +675,15 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = self.imr.graph
-        post_rdfgr = Graph(identifier=self.uri)
-        post_rdfgr += pre_gr
+        pre_gr = self.imr.as_rdflib().graph
+        post_gr = Graph(identifier=self.uri)
+        post_gr |= pre_gr
 
-        post_rdfgr.update(qry_str)
-        post_gr = SimpleGraph(data=set(post_rdfgr))
+        post_gr.update(qry_str)
 
         # FIXME Fix and  use SimpleGraph's native subtraction operation.
-        remove_gr = self.check_mgd_terms(SimpleGraph(pre_gr.data - post_gr.data))
-        add_gr = self.check_mgd_terms(SimpleGraph(post_gr.data - pre_gr.data))
+        remove_gr = self.check_mgd_terms(SimpleGraph(set(pre_gr - post_gr)))
+        add_gr = self.check_mgd_terms(SimpleGraph(set(post_gr - pre_gr)))
 
         return remove_gr, add_gr
 
@@ -718,6 +721,9 @@ class Ldpr(metaclass=ABCMeta):
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
         self._clear_cache()
+        # Reload IMR because if we exit the LMDB txn we lose access to stored
+        # memory locations.
+        self.imr
 
         if (
                 ev_type is not None and
