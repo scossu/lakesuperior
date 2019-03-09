@@ -23,11 +23,11 @@ cdef int term_cmp_fn(const void* key1, const void* key2):
     b2 = <Buffer *>key2
 
     if b1.sz != b2.sz:
-        logger.info(f'Sizes differ: {b1.sz} != {b2.sz}. Return 1.')
+        #logger.info(f'Sizes differ: {b1.sz} != {b2.sz}. Return 1.')
         return 1
 
     cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
-    logger.info(f'term memcmp: {cmp}')
+    #logger.info(f'term memcmp: {cmp}')
     return cmp
 
 
@@ -50,7 +50,7 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
         term_cmp_fn(t1.p, t2.p)
     )
 
-    logger.info(f'Triples match: {not(diff)}')
+    #logger.info(f'Triples match: {not(diff)}')
     return diff
 
 
@@ -241,9 +241,9 @@ cdef inline void del_trp_callback(
     """
     Remove a triple from a graph as a result of a lookup callback.
     """
-    logger.info('removing triple: {} {} {}'.format(
-        buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
-    ))
+    #logger.info('removing triple: {} {} {}'.format(
+        #buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
+    #))
     gr.remove_triple(trp)
 
 

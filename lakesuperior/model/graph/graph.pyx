@@ -101,9 +101,9 @@ cdef class SimpleGraph:
 
         cc.hashset_iter_init(&ti, self._triples)
         while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
-            logger.info(f'Data loop.')
+            #logger.info(f'Data loop.')
             if void_p == NULL:
-                logger.warn('Triple is NULL!')
+                #logger.warn('Triple is NULL!')
                 break
 
             trp = <BufferTriple *>void_p
@@ -616,20 +616,20 @@ cdef class SimpleGraph:
         if copy:
             trp = self.store_triple(trp)
 
-        logger.info('Inserting terms.')
+        #logger.info('Inserting terms.')
         cc.hashset_add(self._terms, trp.s)
         cc.hashset_add(self._terms, trp.p)
         cc.hashset_add(self._terms, trp.o)
-        logger.info('inserted terms.')
-        logger.info(f'Terms set size: {cc.hashset_size(self._terms)}')
+        #logger.info('inserted terms.')
+        #logger.info(f'Terms set size: {cc.hashset_size(self._terms)}')
 
         cdef size_t trp_sz = cc.hashset_size(self._triples)
-        logger.info(f'Triples set size before adding: {trp_sz}')
+        #logger.info(f'Triples set size before adding: {trp_sz}')
 
         r = cc.hashset_add(self._triples, trp)
 
         trp_sz = cc.hashset_size(self._triples)
-        logger.info(f'Triples set size after adding: {trp_sz}')
+        #logger.info(f'Triples set size after adding: {trp_sz}')
 
         cdef:
             cc.HashSetIter ti
@@ -688,7 +688,7 @@ cdef class SimpleGraph:
         """
         _data = self.data
 
-        logger.debug(f'Slicing graph by: {s}, {p}, {o}.')
+        #logger.debug(f'Slicing graph by: {s}, {p}, {o}.')
         if s is None and p is None and o is None:
             return _data
         elif s is None and p is None:
@@ -754,7 +754,7 @@ cdef class SimpleGraph:
 
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
-            logger.info('Looping over one triple only.')
+            #logger.info('Looping over one triple only.')
             # Shortcut for 3-term match.
             trp.s = &ss
             trp.p = &sp
@@ -888,7 +888,7 @@ cdef class Imr(SimpleGraph):
         """
         # TODO use slice.
         values = {trp[2] for trp in self.lookup((self.uri, p, None))}
-        logger.info(f'Values found: {values}')
+        #logger.info(f'Values found: {values}')
 
         if strict and len(values) > 1:
             raise RuntimeError('More than one value found for {}, {}.'.format(
