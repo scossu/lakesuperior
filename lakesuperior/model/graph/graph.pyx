@@ -852,9 +852,7 @@ cdef class Imr(SimpleGraph):
 
         elif isinstance(item, Node):
             # If a Node is given, return all values for that predicate.
-            return {
-                    r[2] for r in self.data
-                    if r[0] == self.id and r[1] == item}
+            return self._slice(self.uri, item, None)
         else:
             raise TypeError(f'Wrong slice format: {item}.')
 
