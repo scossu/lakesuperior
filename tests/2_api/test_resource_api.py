@@ -70,7 +70,9 @@ class TestResourceCRUD:
         assert isinstance(gr, SimpleGraph)
         assert len(gr) == 9
         assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
-        assert not gr[gr.uri : nsc['dcterms'].title : "Repository Root"]
+        assert not gr[
+            gr.uri : nsc['dcterms'].title : Literal("Repository Root")
+        ]
 
 
     def test_get_root_node(self):

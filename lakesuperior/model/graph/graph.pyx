@@ -686,26 +686,35 @@ cdef class SimpleGraph:
 
         This behaves like the rdflib.Graph slicing policy.
         """
-        _data = self.data
+        #logger.info(f'Slicing graph by: {s}, {p}, {o}.')
+        # If no terms are unbound, check for containment.
+        if s is not None and p is not None and o is not None: # s p o
+            return (s, p, o) in self
 
-        #logger.debug(f'Slicing graph by: {s}, {p}, {o}.')
-        if s is None and p is None and o is None:
-            return _data
-        elif s is None and p is None:
-            return {(r[0], r[1]) for r in _data if r[2] == o}
-        elif s is None and o is None:
-            return {(r[0], r[2]) for r in _data if r[1] == p}
-        elif p is None and o is None:
-            return {(r[1], r[2]) for r in _data if r[0] == s}
-        elif s is None:
-            return {r[0] for r in _data if r[1] == p and r[2] == o}
-        elif p is None:
-            return {r[1] for r in _data if r[0] == s and r[2] == o}
-        elif o is None:
-            return {r[2] for r in _data if r[0] == s and r[1] == p}
-        else:
-            # all given
-            return (s,p,o) in _data
+        # If some terms are unbound, do a lookup.
+        res = self.lookup((s, p, o))
+        if s is not None:
+            if p is not None: # s p ?
+                return {r[2] for r in res}
+
+            if o is not None: # s ? o
+                return {r[1] for r in res}
+
+            # s ? ?
+            return {(r[1], r[2]) for r in res}
+
+        if p is not None:
+            if o is not None: # ? p o
+                return {r[0] for r in res}
+
+            # ? p ?
+            return {(r[0], r[2]) for r in res}
+
+        if o is not None: # ? ? o
+            return {(r[0], r[1]) for r in res}
+
+        # ? ? ?
+        return res
 
 
     def lookup(self, pattern):
