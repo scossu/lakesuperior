@@ -29,10 +29,9 @@ cdef class SimpleGraph:
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
 
-    A SimpleGraph can be instantiated from a store lookup or obtained from a
-    :py:class:`lakesuperior.store.keyset.Keyset`. This makes it possible to use
-    a Keyset to perform initial filtering via identity by key, then the
-    filtered Keyset can be converted into a set of meaningful terms.
+    A SimpleGraph can be instantiated from a store lookup. This makes it
+    possible to use a Keyset to perform initial filtering via identity by key,
+    then the filtered Keyset can be converted into a set of meaningful terms.
 
     An instance of this class can also be converted to and from a
     ``rdflib.Graph`` instance.
