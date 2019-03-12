@@ -1,26 +1,14 @@
 cimport lakesuperior.cy_include.cylmdb as lmdb
 cimport lakesuperior.cy_include.cytpl as tpl
 
-from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.base cimport (
+    KeyIdx, Key, DoubleKey, TripleKey, Buffer
+)
 from lakesuperior.model.graph.graph cimport SimpleGraph
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 
-# NOTE This may change in the future, e.g. if a different key size is to
-# be forced.
-ctypedef size_t KeyIdx
-
-ctypedef KeyIdx Key[1]
-ctypedef KeyIdx DoubleKey[2]
-ctypedef KeyIdx TripleKey[3]
-ctypedef KeyIdx QuadKey[4]
-
 cdef enum:
-    KLEN = sizeof(Key)
-    DBL_KLEN = sizeof(DoubleKey)
-    TRP_KLEN = sizeof(TripleKey)
-    QUAD_KLEN = sizeof(QuadKey)
-
     IDX_OP_ADD = 1
     IDX_OP_REMOVE = -1
 

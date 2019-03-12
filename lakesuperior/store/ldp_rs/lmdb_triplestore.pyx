@@ -13,14 +13,17 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.cylmdb as lmdb
-from lakesuperior.model.base cimport buffer_dump
+from lakesuperior.model.base cimport (
+    KLEN, DBL_KLEN, TRP_KLEN, QUAD_KLEN,
+    KeyIdx, Key, DoubleKey, TripleKey,
+    Buffer, buffer_dump
+)
 from lakesuperior.model.graph.graph cimport SimpleGraph, Imr
 from lakesuperior.model.graph.term cimport Term
 from lakesuperior.model.graph.triple cimport BufferTriple
 
 from lakesuperior.store.base_lmdb_store cimport (
         BaseLmdbStore, data_v, dbi, key_v)
-from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.term cimport (
         deserialize_to_rdflib, serialize_from_rdflib)
 from lakesuperior.model.structures.keyset cimport Keyset
@@ -1355,7 +1358,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                     i += 1
 
-            return ret.to_tuple()
+            # FIXME This needs to get the triples and convert them.
+            return ret
 
         finally:
             #pass
