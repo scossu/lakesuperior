@@ -35,13 +35,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef void _remove(self, tuple triple_pattern, context=*) except *
     cpdef void _remove_graph(self, object gr_uri) except *
     cpdef tuple all_namespaces(self)
-    cpdef tuple all_contexts(self, triple=*)
     cpdef SimpleGraph graph_lookup(
         self, triple_pattern, context=*, uri=*, copy=*
     )
 
     cdef:
-        void _add_graph(self, Buffer *pk_gr) except *
+        void _add_graph(self, Buffer* pk_gr) except *
         void _index_triple(self, str op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
         Keyset _all_term_keys(self, term_type)
@@ -54,7 +53,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         tuple from_trp_key(self, TripleKey key)
         Key _to_key(self, term)
         void _to_triple_key(
-                self, tuple terms, TripleKey *tkey) except *
+                self, tuple terms, TripleKey* tkey) except *
+        void all_contexts(self, cc.Array* ctx, triple=*) except *
         KeyIdx _append(
                 self, Buffer *value,
                 unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,

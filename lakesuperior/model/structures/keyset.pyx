@@ -9,18 +9,6 @@ from lakesuperior.model.base cimport (
 cdef class BaseKeyset:
     """
     Pre-allocated result set.
-
-    Data in the set are stored as a 1D contiguous array of characters.
-    Access to elements at an arbitrary index position is achieved by using the
-    ``itemsize`` property multiplied by the index number.
-
-    Key properties:
-
-    ``ct``: number of elements in the set.
-    ``itemsize``: size of each element, in bytes. All elements have the same
-        size.
-    ``size``: Total size, in bytes, of the data set. This is the product of
-        ``itemsize`` and ``ct``.
     """
     def __cinit__(self, size_t ct):
         """
@@ -28,23 +16,15 @@ cdef class BaseKeyset:
 
         :param size_t ct: Number of elements to be accounted for.
         """
-        self.conf.capacity = ct
         self.itemsize = self.get_itemsize() # Set this in concrete classes
-        self.size = self.itemsize * self.conf.capacity
 
         cc.array_conf_init(&self.conf)
-        self.conf.capacity = self.conf.capacity
-        cc.array_init_conf(&self.data
+        self.conf.capacity = ct
+        self.conf.exp_factor = .5
+
+        cc.array_init_conf(&self.conf, &self.data)
         if not self.data:
             raise MemoryError()
-        self._cur = 0
-
-        #logger.debug('Got malloc sizes: {}, {}'.format(ct, itemsize))
-        #logger.debug(
-        #    'Allocating {0} ({1}x{2}) bytes of Keyset data...'.format(
-        #        self.size, self.conf.capacity, self.itemsize))
-        #logger.debug('...done allocating @ {0:x}.'.format(
-        #        <unsigned long>self.data))
 
 
     def __dealloc__(self):
@@ -54,28 +34,13 @@ cdef class BaseKeyset:
         This is called when the Python instance is garbage collected, which
         makes it handy to safely pass a Keyset instance across functions.
         """
-        #logger.debug(
-        #    'Releasing {0} ({1}x{2}) bytes of Keyset @ {3:x}...'.format(
-        #        self.size, self.conf.capacity, self.itemsize,
-        #        <unsigned long>self.data))
         PyMem_Free(self.data)
-        #logger.debug('...done releasing.')
 
 
     # Access methods.
 
-    def iter_init(self):
-        """
-        Reset the cursor to the initial position.
-        """
-        self._cur = 0
-
-
-    def tell(self):
-        """
-        Tell the position of the cursor in the keyset.
-        """
-        return self._cur
+    cdef size_t get_itemsize(self):
+        raise NotImplementedError()
 
 
     cdef unsigned char *get_item(self, i):
@@ -137,3 +102,65 @@ class DoubleKeyset(BaseKeyset):
 class TripleKeyset(BaseKeyset):
     cdef size_t get_itemsize():
         return TRP_KLEN
+
+    cdef TripleKeyset lookup(
+            self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok
+    ):
+        """
+        Look up triple keys in a similar way that the ``SimpleGraph`` and
+        ``LmdbStore`` methods work.
+
+        Any and all the terms may be NULL. A NULL term is treated as unbound.
+
+        :param const KeyIdx* sk: s key pointer.
+        :param const KeyIdx* pk: p key pointer.
+        :param const KeyIdx* ok: o key pointer.
+        """
+        cdef:
+            void* cur
+            cc.ArrayIter it
+            TripleKey spok
+            TripleKeyset ret
+            KeyIdx bk1 = NULL, bk2 = NULL
+
+        cc.array_iter_init(&it, self.data)
+
+        if sk and pk and ok: # s p o
+            pass # TODO
+
+        elif sk:
+            bt1 = sk[0]
+            if pk: # s p ?
+                bt2 = pk[0]
+                cmp_fn = cb.lookup_skpk_cmp_fn
+
+            elif ok: # s ? o
+                bt2 = ok[0]
+                cmp_fn = cb.lookup_skok_cmp_fn
+
+            else: # s ? ?
+                cmp_fn = cb.lookup_sk_cmp_fn
+
+        elif pk:
+            bt1 = pk[0]
+            if ok: # ? p o
+                bt2 = ok[0]
+                cmp_fn = cb.lookup_pkok_cmp_fn
+
+            else: # ? p ?
+                cmp_fn = cb.lookup_pk_cmp_fn
+
+        elif ok: # ? ? o
+            bt1 = ok[0]
+            cmp_fn = cb.lookup_ok_cmp_fn
+
+        else: # ? ? ?
+            return self # TODO Placeholder. This should actually return a copy.
+
+        ret = TripleKeyset(256) # TODO Totally arbitrary.
+        while cc.array_iter_next(&it, &cur) != cc.CC_ITER_END:
+            if cmp_fn(<TripleKey*>spok, t1, t2):
+                if cc.array_add(ret.data, spok) != cc.CC_OK:
+                    raise RuntimeError('Error adding triple key.')
+
+        return ret

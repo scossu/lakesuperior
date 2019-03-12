@@ -1298,45 +1298,59 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(dcur)
 
 
-    cpdef tuple all_contexts(self, triple=None):
+    cdef void all_contexts(
+        self, KeyIdx** ctx, size_t* sz, triple=None
+    ) except *:
         """
         Get a list of all contexts.
 
         :rtype: Iterator(lakesuperior.model.graph.graph.Imr)
         """
         cdef:
+            lmdb.MDB_cursor_op seek_op, scan_op
             lmdb.MDB_stat stat
-            size_t i = 0
-            lmdb.MDB_cursor_op op
             TripleKey spok
 
         cur = (
                 self._cur_open('spo:c') if triple and all(triple)
                 else self._cur_open('c:'))
-        try:
-            if triple and all(triple):
-                _check(lmdb.mdb_stat(
-                    self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
-                ret = Keyset(stat.ms_entries, 1)
 
-                self._to_triple_key(triple, &spok)
-                key_v.mv_data = spok
-                key_v.mv_size = TRP_KLEN
+        if triple and all(triple):
+            lmdb_seek_op = MDB_SET_KEY
+            lmdb_scan_op = MDB_NEXT_DUP
+            self._to_triple_key(triple, &spok)
+            key_v.mv_data = spok
+            key_v.mv_size = TRP_KLEN
+        else:
+            lmdb_seek_op = MDB_FIRST
+            lmdb_scan_op = MDB_NEXT
+            key_v = NULL
+
+        try:
+            _check(lmdb.mdb_stat(
+                self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
+
+            try:
+                _check(lmdb.mdb_cursor_get(
+                        cur, &key_v, &data_v, seek_op))
+            except KeyNotFoundError:
+                return tuple()
+
+            ctx[0] = <KeyIdx*>PyMem_Malloc(stat.ms_entries * KLEN)
+            sz[0] = 0
+
+            while True:
+                ctx[0][sz[0]] = data_v.mv_data
                 try:
                     _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, &data_v, lmdb.MDB_SET_KEY))
+                        cur, &key_v, &data_v, scan_op))
                 except KeyNotFoundError:
-                    return tuple()
+                    break
 
-                while True:
-                    ret.data[i] = data_v.mv_data
-                    try:
-                        _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
-                    except KeyNotFoundError:
-                        break
+                sz[0] += 1
 
-                    i += 1
+
+                    # # # # #
             else:
                 _check(lmdb.mdb_stat(
                     self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
