@@ -119,6 +119,9 @@ extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join(tpl_src_dir, 'tpl.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),

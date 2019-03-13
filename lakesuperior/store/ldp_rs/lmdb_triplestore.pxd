@@ -1,3 +1,4 @@
+cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.cy_include.cylmdb as lmdb
 cimport lakesuperior.cy_include.cytpl as tpl
 
@@ -43,7 +44,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         void _add_graph(self, Buffer* pk_gr) except *
         void _index_triple(self, str op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
-        Keyset _all_term_keys(self, term_type)
+        void _all_term_keys(self, term_type, cc.HashSet* tkeys) except *
         inline void lookup_term(self, const Key key, Buffer* data) except *
         Keyset _lookup(self, tuple triple_pattern)
         Keyset _lookup_1bound(self, unsigned char idx, term)

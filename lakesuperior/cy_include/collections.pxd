@@ -24,42 +24,42 @@ cdef extern from "common.h":
 #
 #    int cc_common_cmp_ptr(const void* key1, const void* key2)
 
-#cdef extern from "array.h":
+cdef extern from "array.h":
 
-#    ctypedef struct Array:
-#        pass
-#
-#    ctypedef struct ArrayConf:
-#        size_t          capacity
-#        float           exp_factor
-#        mem_alloc_ft  mem_alloc
-#        mem_calloc_ft mem_calloc
-#        mem_free_ft   mem_free
-#
-#    ctypedef struct ArrayIter:
-#        Array* ar
-#        size_t index
-#        bint last_removed
-#
+    ctypedef struct Array:
+        pass
+
+    ctypedef struct ArrayConf:
+        size_t          capacity
+        float           exp_factor
+        mem_alloc_ft  mem_alloc
+        mem_calloc_ft mem_calloc
+        mem_free_ft   mem_free
+
+    ctypedef struct ArrayIter:
+        Array* ar
+        size_t index
+        bint last_removed
+
 #    ctypedef struct ArrayZipIter:
 #        Array* ar1
 #        Array* ar2
 #        size_t index
 #        bint last_removed
 #
-#    cc_stat array_new(Array** out)
-#
-#    cc_stat array_new_conf(ArrayConf* conf, Array** out)
-#
-#    void array_conf_init(ArrayConf* conf)
-#
-#    void array_destroy(Array* ar)
-#
+    cc_stat array_new(Array** out)
+
+    cc_stat array_new_conf(ArrayConf* conf, Array** out)
+
+    void array_conf_init(ArrayConf* conf)
+
+    void array_destroy(Array* ar)
+
 #    ctypedef void (*_array_destroy_cb_cb_ft)(void*)
 #
 #    void array_destroy_cb(Array* ar, _array_destroy_cb_cb_ft cb)
 #
-#    #cc_stat array_add(Array* ar, void* element)
+    cc_stat array_add(Array* ar, void* element)
 #
 #    #cc_stat array_add_at(Array* ar, void* element, size_t index)
 #
@@ -125,9 +125,9 @@ cdef extern from "common.h":
 #
 #    cc_stat array_filter(Array* ar, _array_filter_predicate_ft predicate, Array** out)
 #
-#    void array_iter_init(ArrayIter* iter, Array* ar)
-#
-#    cc_stat array_iter_next(ArrayIter* iter, void** out)
+    void array_iter_init(ArrayIter* iter, Array* ar)
+
+    cc_stat array_iter_next(ArrayIter* iter, void** out)
 #
 #    cc_stat array_iter_remove(ArrayIter* iter, void** out)
 #

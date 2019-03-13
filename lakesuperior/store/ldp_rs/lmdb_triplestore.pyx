@@ -12,8 +12,9 @@ from cython.parallel import prange
 from libc.stdlib cimport free
 from libc.string cimport memcpy
 
-from lakesuperior.cy_include cimport collections as cc
-from lakesuperior.cy_include cimport cylmdb as lmdb
+cimport lakesuperior.cy_include.collections as cc
+cimport lakesuperior.cy_include.cylmdb as lmdb
+
 from lakesuperior.model.base cimport (
     KLEN, DBL_KLEN, TRP_KLEN, QUAD_KLEN,
     KeyIdx, Key, DoubleKey, TripleKey,
@@ -770,6 +771,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # TODO: Improve performance by allowing passing contexts as a tuple.
         cdef:
             size_t ct = 0, flt_j = 0, i = 0, j = 0, c_size
+            void* cur
+            cc.ArrayIterator it
             lmdb.MDB_cursor *icur
             lmdb.MDB_val key_v, data_v
             Key tk, ck
@@ -857,17 +860,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     try:
                         res = self._lookup(triple_pattern)
                     except KeyNotFoundError:
-                        return Keyset(0, 3)
+                        return Keyset(0)
 
                     #logger.debug('Allocating for context filtering.')
                     key_v.mv_data = ck
                     key_v.mv_size = KLEN
                     data_v.mv_size = TRP_KLEN
 
-                    flt_res = Keyset(res.ct, res.items)
-                    while j < res.ct:
+                    flt_res = Keyset(res.ct)
+                    cc.hashset_iter_init(&it, res.data)
+                    while cc.array_iter_next(&it, &cur) != cc.CC_ITER_END:
                         #logger.debug('Checking row #{}'.format(flt_j))
-                        data_v.mv_data = res.data[j]
+                        data_v.mv_data = cur
                         #logger.debug('Checking c:spo {}, {}'.format(
                         #    (<unsigned char *>key_v.mv_data)[: key_v.mv_size],
                         #    (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
@@ -880,17 +884,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             #logger.debug('Discarding source[{}].'.format(j))
                             continue
                         else:
-                            #logger.debug('Copying source[{}] to dest[{}].'.format(
-                            #    j, flt_j))
-                            flt_res.data[flt_j] = res.data[j]
+                            cc.hashset_add(flt_res_data, cur)
 
-                            flt_j += 1
-                        finally:
-                            j += 1
-
-                    # Resize result set to the size of context matches.
-                    # This crops the memory block without copying it.
-                    flt_res.resize(flt_j)
                     return flt_res
             finally:
                 self._cur_close(icur)
@@ -901,7 +896,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             try:
                 res = self._lookup(triple_pattern)
             except KeyNotFoundError:
-                return Keyset(0, 3)
+                return Keyset()
             #logger.debug('Res data before triple_keys return: {}'.format(
             #    res.data[: res.size]))
             return res
@@ -933,10 +928,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('spo:c'), &spok_v, &ck_v))
                     except KeyNotFoundError:
-                        return Keyset(0, 3)
+                        return Keyset()
 
-                    matches = Keyset(1, 3)
-                    matches.data[0] = spok
+                    matches = Keyset(1)
+                    cc.array_add(matches.data, &spok)
                     return matches
                 # s p ?
                 else:
@@ -967,21 +962,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     dcur = self._cur_open('spo:c')
 
                     try:
-                        _check(lmdb.mdb_stat(
-                                self.txn, lmdb.mdb_cursor_dbi(dcur), &db_stat),
-                            'Error gathering DB stats.')
+                        _check(
+                            lmdb.mdb_stat(
+                                self.txn, lmdb.mdb_cursor_dbi(dcur), &db_stat
+                            ), 'Error gathering DB stats.'
+                        )
                         ct = db_stat.ms_entries
-                        ret = Keyset(ct, 3)
+                        ret = Keyset(ct)
                         #logger.debug(f'Triples found: {ct}')
                         if ct == 0:
-                            return Keyset(0, 3)
+                            return Keyset()
 
                         _check(lmdb.mdb_cursor_get(
                                 dcur, &key_v, &data_v, lmdb.MDB_FIRST))
                         while True:
-                            #logger.debug(f'i in 0bound: {i}')
-                            ret.data[i] = <TripleKey>key_v.mv_data
-                            #memcpy(ret.data[i], key_v.mv_data, TRP_KLEN)
+                            cc.array_add(ret.data, key_v.mv_data)
 
                             try:
                                 _check(lmdb.mdb_cursor_get(
@@ -990,11 +985,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                                 break
 
                             i += 1
-                        # Size is guessed from all entries. Unique keys will be
-                        # much less than that.
-                        ret.resize(i + 1)
 
-                        #logger.debug('Assembled data: {}'.format(ret.data[:ret.size]))
                         return ret
                     finally:
                         self._cur_close(dcur)
@@ -1023,7 +1014,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             luk = self._to_key(term)
         except KeyNotFoundError:
-            return Keyset(0, 3)
+            return Keyset()
         logging.debug('luk: {}'.format(luk))
 
         term_order = lookup_ordering[idx]
@@ -1039,7 +1030,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             _check(lmdb.mdb_cursor_count(icur, &ct))
 
             # Allocate memory for results.
-            ret = Keyset(ct, 3)
+            ret = Keyset(ct)
             #logger.debug(f'Entries for {self.lookup_indices[idx]}: {ct}')
             #logger.debug(f'Allocated {ret.size} bytes of data.')
             #logger.debug('First row: {}'.format(
@@ -1128,7 +1119,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             luk1 = self._to_key(term1)
             luk2 = self._to_key(term2)
         except KeyNotFoundError:
-            return Keyset(0, 3)
+            return Keyset()
         logging.debug('luk1: {}'.format(luk1))
         logging.debug('luk2: {}'.format(luk2))
 
@@ -1169,7 +1160,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             # Count duplicates for key and allocate memory for result set.
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
             _check(lmdb.mdb_cursor_count(icur, &ct))
-            ret = Keyset(ct, 3)
+            ret = Keyset(ct)
             #logger.debug('Entries for {}: {}'.format(self.lookup_indices[idx], ct))
             #logger.debug('First row: {}'.format(
             #        (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
@@ -1220,40 +1211,45 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(icur)
 
 
-    cdef Keyset _all_term_keys(self, term_type):
+    cdef void _all_term_keys(self, term_type, cc.HashSet* tkeys) except *:
         """
         Return all keys of a (``s:po``, ``p:so``, ``o:sp``) index.
         """
         cdef:
             size_t i = 0
             lmdb.MDB_stat stat
+            cc.HashSetConf tkeys_conf
 
         idx_label = self.lookup_indices['spo'.index(term_type)]
         #logger.debug('Looking for all terms in index: {}'.format(idx_label))
         icur = self._cur_open(idx_label)
         try:
             _check(lmdb.mdb_stat(self.txn, lmdb.mdb_cursor_dbi(icur), &stat))
-            # TODO: This may allocate memory for several times the amount
-            # needed. Even though it is resized later, we need to know how
-            # performance is affected by this.
-            ret = Keyset(stat.ms_entries, 1)
+
+            cc.hash_conf_init(&tkeys_conf)
+            tkeys_conf.initial_capacity = 1024
+            tkeys_conf.load_factor = .75
+            tkeys_conf.key_length = KLEN
+            tkeys_conf.key_compare = cc.CMP_POINTER
+            tkeys_conf.hash = cc.POINTER_HASH
+
+            cc.hashset_new_conf(&tkeys_conf, &tkeys)
 
             try:
                 _check(lmdb.mdb_cursor_get(
                     icur, &key_v, NULL, lmdb.MDB_FIRST))
             except KeyNotFoundError:
-                return Keyset()
+                return
 
             while True:
-                memcpy(ret.data + ret.itemsize * i, key_v.mv_data, KLEN)
+                cc.hashset_add(tkeys, key_v.mv_data)
 
                 rc = lmdb.mdb_cursor_get(
                     icur, &key_v, NULL, lmdb.MDB_NEXT_NODUP)
                 try:
                     _check(rc)
                 except KeyNotFoundError:
-                    ret.resize(i + 1)
-                    return ret
+                    return
                 i += 1
         finally:
             #pass
@@ -1264,9 +1260,23 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Return all terms of a type (``s``, ``p``, or ``o``) in the store.
         """
-        for key in self._all_term_keys(term_type).to_tuple():
-            #logger.debug('Yielding: {}'.format(key))
-            yield self.from_key(key)
+        cdef:
+            void* cur
+            cc.HashSet tkeys
+            cc.HashSetIterator it
+
+        ret = set()
+
+        try:
+            self._all_term_keys(term_type, &tkeys)
+            cc.hashset_iter(&it, &tkeys)
+            while hashset_iter_next(&it, &cur):
+                #logger.debug('Yielding: {}'.format(key))
+                ret.add(self.from_key(<Key*>cur))
+        finally:
+            free(tkeys)
+
+        return ret
 
 
     cpdef tuple all_namespaces(self):
@@ -1364,7 +1374,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     # Key conversion methods.
 
-    cdef object from_key(self, const Key key):
+    cdef object from_key(self, const Key* key):
         """
         Convert a single key into one term.
 
@@ -1377,7 +1387,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline void lookup_term(self, const Key key, Buffer* data) except *:
+    cdef inline void lookup_term(self, const Key* key, Buffer* data) except *:
         """
         look up a term by key.
 
@@ -1401,7 +1411,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.info('Found term: {}'.format(buffer_dump(data)))
 
 
-    cdef tuple from_trp_key(self, TripleKey key):
+    cdef tuple from_trp_key(self, const TripleKey* key):
         """
         Convert a triple key into a tuple of 3 terms.
 
