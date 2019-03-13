@@ -12,7 +12,8 @@ from cython.parallel import prange
 from libc.stdlib cimport free
 from libc.string cimport memcpy
 
-cimport lakesuperior.cy_include.cylmdb as lmdb
+from lakesuperior.cy_include cimport collections as cc
+from lakesuperior.cy_include cimport cylmdb as lmdb
 from lakesuperior.model.base cimport (
     KLEN, DBL_KLEN, TRP_KLEN, QUAD_KLEN,
     KeyIdx, Key, DoubleKey, TripleKey,
@@ -623,8 +624,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         :rtype: Iterator(lakesuperior.model.graph.graph.Imr)
         """
-        for ctx_uri in self.all_contexts(triple):
-            yield Imr(uri=self.from_key(ctx_uri), store=self)
+        cdef:
+            size_t sz, i = 0
+            KeyIdx* match
+
+        self.all_contexts(&match, &sz, triple)
+        while i < sz:
+            yield URIRef(self.from_key(match[i]))
+            cur += 1
 
 
     def triples(self, triple_pattern, context=None):
@@ -762,7 +769,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         # TODO: Improve performance by allowing passing contexts as a tuple.
         cdef:
-            size_t ct = 0, flt_j = 0, i = 0, j = 0, pg_offset = 0, c_size
+            size_t ct = 0, flt_j = 0, i = 0, j = 0, c_size
             lmdb.MDB_cursor *icur
             lmdb.MDB_val key_v, data_v
             Key tk, ck
@@ -775,7 +782,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 ck = self._to_key(context)
             except KeyNotFoundError:
                 # Context not found.
-                return Keyset(0, 3)
+                return Keyset()
 
             icur = self._cur_open('c:spo')
 
@@ -791,10 +798,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             tk = self._to_key(term)
                         except KeyNotFoundError:
                             # Context not found.
-                            return Keyset(0, 3)
+                            return Keyset()
                         if tk is NULL:
                             # A term in the triple is not found.
-                            return Keyset(0, 3)
+                            return Keyset()
                         spok[i] = tk[0]
                     data_v.mv_data = spok
                     data_v.mv_size = TRP_KLEN
@@ -808,9 +815,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     except KeyNotFoundError:
                         # Triple not found.
                         #logger.debug('spok / ck pair not found.')
-                        return Keyset(0, 3)
-                    ret = Keyset(1, 3)
-                    ret.data[0] = spok
+                        return Keyset()
+                    ret = Keyset(1)
+                    cc.array_add(ret.data, &spok)
 
                     return ret
 
@@ -823,10 +830,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             icur, &key_v, &data_v, lmdb.MDB_SET))
                     except KeyNotFoundError:
                         # Triple not found.
-                        return Keyset(0, 3)
+                        return Keyset()
 
                     _check(lmdb.mdb_cursor_count(icur, &ct))
-                    ret = Keyset(ct, 3)
+                    ret = Keyset(ct)
                     #logger.debug(f'Entries in c:spo: {ct}')
                     #logger.debug(f'Allocated {ret.size} bytes.')
 
@@ -835,11 +842,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     _check(lmdb.mdb_cursor_get(
                         icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
                     while True:
-                        #logger.debug(f'Data offset: {pg_offset} Page size: {data_v.mv_size} bytes')
                         #logger.debug('Data page: {}'.format(
                         #        (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                        memcpy(ret.data + pg_offset, data_v.mv_data, data_v.mv_size)
-                        pg_offset += data_v.mv_size
+                        cc.array_add(ret.data, data_v.mv_data)
 
                         try:
                             _check(lmdb.mdb_cursor_get(
@@ -1237,7 +1242,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(lmdb.mdb_cursor_get(
                     icur, &key_v, NULL, lmdb.MDB_FIRST))
             except KeyNotFoundError:
-                return Keyset(0, 2)
+                return Keyset()
 
             while True:
                 memcpy(ret.data + ret.itemsize * i, key_v.mv_data, KLEN)
@@ -1348,29 +1353,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     break
 
                 sz[0] += 1
-
-
-                    # # # # #
-            else:
-                _check(lmdb.mdb_stat(
-                    self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
-                ret = Keyset(stat.ms_entries, 1)
-
-                try:
-                    _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, &data_v, lmdb.MDB_FIRST))
-                except KeyNotFoundError:
-                    return tuple()
-
-                while True:
-                    ret.data[i] = key_v.mv_data
-                    try:
-                        _check(lmdb.mdb_cursor_get(
-                            cur, &key_v, NULL, lmdb.MDB_NEXT))
-                    except KeyNotFoundError:
-                        break
-
-                    i += 1
 
             # FIXME This needs to get the triples and convert them.
             return ret

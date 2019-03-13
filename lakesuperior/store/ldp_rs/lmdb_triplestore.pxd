@@ -54,7 +54,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Key _to_key(self, term)
         void _to_triple_key(
                 self, tuple terms, TripleKey* tkey) except *
-        void all_contexts(self, cc.Array* ctx, triple=*) except *
+        void all_contexts(self, KeyIdx** ctx, size_t* sz, triple=*) except *
         KeyIdx _append(
                 self, Buffer *value,
                 unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,
