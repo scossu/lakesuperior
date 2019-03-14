@@ -17,7 +17,7 @@ cdef:
     unsigned char lookup_rank[3]
     unsigned char lookup_ordering[3][3]
     unsigned char lookup_ordering_2bound[3][3]
-    unsigned int MDB_INT_KEY_MASK = (
+    unsigned int INT_KEY_MASK = (
         lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERKEY
         | lmdb.MDB_REVERSEKEY # TODO Check endianness.
     )
@@ -42,19 +42,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     cdef:
         void _add_graph(self, Buffer* pk_gr) except *
-        void _index_triple(self, str op, TripleKey spok) except *
+        void _index_triple(self, int op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
         void _all_term_keys(self, term_type, cc.HashSet* tkeys) except *
-        inline void lookup_term(self, const Key key, Buffer* data) except *
+        void lookup_term(self, const Key tk, Buffer* data) except *
         Keyset _lookup(self, tuple triple_pattern)
         Keyset _lookup_1bound(self, unsigned char idx, term)
         Keyset _lookup_2bound(
                 self, unsigned char idx1, term1, unsigned char idx2, term2)
-        object from_key(self, const Key key)
-        tuple from_trp_key(self, TripleKey key)
-        Key _to_key(self, term)
-        void _to_triple_key(
-                self, tuple terms, TripleKey* tkey) except *
+        object from_key(self, const Key tk)
+        tuple from_trp_key(self, const TripleKey spok)
+        KeyIdx _to_key_idx(self, term)
         void all_contexts(self, KeyIdx** ctx, size_t* sz, triple=*) except *
         KeyIdx _append(
                 self, Buffer *value,
