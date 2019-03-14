@@ -5,12 +5,8 @@ from lakesuperior.model.base cimport (
 cdef class Keyset:
     cdef:
         readonly size_t ct, size
-        readonly cc.Array* data
-        readonly cc.ArrayConf conf
-
-        unsigned char *get_item(self, i)
-        bint iter_next(self, unsigned char** val)
-        bint contains(self, const void *val)
+        cc.Array* data
+        cc.ArrayConf conf
 
         Keyset lookup(
             self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok

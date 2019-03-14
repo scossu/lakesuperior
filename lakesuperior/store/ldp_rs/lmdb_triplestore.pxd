@@ -13,19 +13,19 @@ cdef enum:
     IDX_OP_ADD = 1
     IDX_OP_REMOVE = -1
 
-    INT_KEY_MASK = (
-        lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERKEY
-        | lmdb.MDB_REVERSEKEY # TODO Check endianness.
-    )
-    INT_DUP_MASK = (
-        lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERDUP
-        | lmdb.MDB_REVERSEDUP # TODO Check endianness.
-    )
-
 cdef:
     unsigned char lookup_rank[3]
     unsigned char lookup_ordering[3][3]
     unsigned char lookup_ordering_2bound[3][3]
+    unsigned int MDB_INT_KEY_MASK = (
+        lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERKEY
+        | lmdb.MDB_REVERSEKEY # TODO Check endianness.
+    )
+    unsigned int INT_DUP_MASK = (
+        lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERDUP
+        | lmdb.MDB_REVERSEDUP # TODO Check endianness.
+    )
+
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):

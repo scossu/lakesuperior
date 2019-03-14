@@ -1,9 +1,11 @@
 from libc.string cimport memcmp
-from libc.mem cimport free
+from libc.stdlib cimport free
 
-from lakesuperior.cy_include cimport collections as cc
+cimport lakesuperior.cy_include.collections as cc
+cimport lakesuperior.model.structures.callbacks as cb
+
 from lakesuperior.model.base cimport (
-    KeyIdx, Key, DoubleKey, TripleKey, Buffer
+    TRP_KLEN, KeyIdx, Key, DoubleKey, TripleKey, Buffer
 )
 
 cdef class Keyset:
@@ -22,7 +24,7 @@ cdef class Keyset:
         self.conf.capacity = ct
         self.conf.exp_factor = .5
 
-        cc.array_init_conf(&self.conf, &self.data)
+        cc.array_new_conf(&self.conf, &self.data)
         if not self.data:
             raise MemoryError()
 
@@ -60,7 +62,8 @@ cdef class Keyset:
             cc.ArrayIter it
             TripleKey spok
             Keyset ret
-            KeyIdx k1 = NULL, k2 = NULL
+            KeyIdx* k1 = NULL
+            KeyIdx* k2 = NULL
 
         cc.array_iter_init(&it, self.data)
 
@@ -68,29 +71,29 @@ cdef class Keyset:
             pass # TODO
 
         elif sk:
-            k1 = sk[0]
+            k1 = sk
             if pk: # s p ?
-                k2 = pk[0]
+                k2 = pk
                 cmp_fn = cb.lookup_skpk_cmp_fn
 
             elif ok: # s ? o
-                k2 = ok[0]
+                k2 = ok
                 cmp_fn = cb.lookup_skok_cmp_fn
 
             else: # s ? ?
                 cmp_fn = cb.lookup_sk_cmp_fn
 
         elif pk:
-            k1 = pk[0]
+            k1 = pk
             if ok: # ? p o
-                k2 = ok[0]
+                k2 = ok
                 cmp_fn = cb.lookup_pkok_cmp_fn
 
             else: # ? p ?
                 cmp_fn = cb.lookup_pk_cmp_fn
 
         elif ok: # ? ? o
-            k1 = ok[0]
+            k1 = ok
             cmp_fn = cb.lookup_ok_cmp_fn
 
         else: # ? ? ?

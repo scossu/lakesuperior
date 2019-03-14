@@ -557,7 +557,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         self.lookup_indices[i + 3],
                         <DoubleKey>dbl_key_v.mv_data,
                         <Key>key_v.mv_data[0]
-                    )
+                    ))
 
                     try:
                         _check(lmdb.mdb_cursor_put(
@@ -1473,9 +1473,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
 
     cdef KeyIdx _append(
-            self, Buffer *value,
-            unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL,
-            unsigned int flags=0)
+        self, Buffer *value,
+        unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL,
+        unsigned int flags=0
+    ):
         """
         Append one or more keys and values to the end of a database.
 
