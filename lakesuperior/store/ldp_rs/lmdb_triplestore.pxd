@@ -44,7 +44,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         void _add_graph(self, Buffer* pk_gr) except *
         void _index_triple(self, int op, TripleKey spok) except *
         Keyset triple_keys(self, tuple triple_pattern, context=*)
-        void _all_term_keys(self, term_type, cc.HashSet* tkeys) except *
+        void _all_term_keys(self, term_type, cc.HashSet** tkeys) except *
         void lookup_term(self, const Key tk, Buffer* data) except *
         Keyset _lookup(self, tuple triple_pattern)
         Keyset _lookup_1bound(self, unsigned char idx, term)

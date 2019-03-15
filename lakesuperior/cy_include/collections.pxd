@@ -19,6 +19,10 @@ cdef extern from "common.h":
         CC_ERR_VALUE_NOT_FOUND
         CC_ERR_OUT_OF_RANGE
         CC_ITER_END
+
+cdef:
+    key_compare_ft CC_CMP_STRING
+    key_compare_ft CC_CMP_POINTER
 #
 #    int cc_common_cmp_str(const void* key1, const void* key2)
 #
@@ -54,6 +58,10 @@ cdef extern from "array.h":
     void array_conf_init(ArrayConf* conf)
 
     void array_destroy(Array* ar)
+
+    hash_ft CC_GENERAL_HASH
+    hash_ft CC_STRING_HASH
+    hash_ft CC_POINTER_HASH
 
 #    ctypedef void (*_array_destroy_cb_cb_ft)(void*)
 #
