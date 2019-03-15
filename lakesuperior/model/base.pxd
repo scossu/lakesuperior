@@ -1,4 +1,4 @@
-from lakesuperior.cy_include cimport cytpl as tpl
+cimport lakesuperior.cy_include.cytpl as tpl
 
 ctypedef tpl.tpl_bin Buffer
 
@@ -12,9 +12,9 @@ ctypedef KeyIdx TripleKey[3]
 ctypedef KeyIdx QuadKey[4]
 
 cdef enum:
-    KLEN = sizeof(Key)
-    DBL_KLEN = sizeof(DoubleKey)
-    TRP_KLEN = sizeof(TripleKey)
-    QUAD_KLEN = sizeof(QuadKey)
+    KLEN = sizeof(KeyIdx)
+    DBL_KLEN = 2 * sizeof(KeyIdx)
+    TRP_KLEN = 3 * sizeof(KeyIdx)
+    QUAD_KLEN = 4 * sizeof(KeyIdx)
 
 cdef bytes buffer_dump(Buffer* buf)

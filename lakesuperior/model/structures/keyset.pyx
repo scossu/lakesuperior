@@ -12,16 +12,14 @@ cdef class Keyset:
     """
     Pre-allocated result set.
     """
-    def __cinit__(self, size_t ct=0):
+    def __cinit__(self, size_t ct=1):
         """
         Initialize and allocate memory for the data set.
 
         :param size_t ct: Number of elements to be accounted for.
         """
-        self.itemsize = TRP_KLEN
-
         cc.array_conf_init(&self.conf)
-        self.conf.capacity = ct
+        self.conf.capacity = ct or 1
         self.conf.exp_factor = .5
 
         cc.array_new_conf(&self.conf, &self.data)
@@ -64,6 +62,7 @@ cdef class Keyset:
             Keyset ret
             KeyIdx* k1 = NULL
             KeyIdx* k2 = NULL
+            key_cmp_fn_t cmp_fn
 
         cc.array_iter_init(&it, self.data)
 

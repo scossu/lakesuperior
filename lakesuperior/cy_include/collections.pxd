@@ -9,7 +9,7 @@ ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
 
 cdef extern from "common.h":
 
-    cdef enum cc_stat:
+    enum cc_stat:
         CC_OK
         CC_ERR_ALLOC
         CC_ERR_INVALID_CAPACITY
@@ -20,7 +20,6 @@ cdef extern from "common.h":
         CC_ERR_OUT_OF_RANGE
         CC_ITER_END
 
-cdef:
     key_compare_ft CC_CMP_STRING
     key_compare_ft CC_CMP_POINTER
 #
@@ -58,10 +57,6 @@ cdef extern from "array.h":
     void array_conf_init(ArrayConf* conf)
 
     void array_destroy(Array* ar)
-
-    hash_ft CC_GENERAL_HASH
-    hash_ft CC_STRING_HASH
-    hash_ft CC_POINTER_HASH
 
 #    ctypedef void (*_array_destroy_cb_cb_ft)(void*)
 #
@@ -189,6 +184,10 @@ cdef extern from "hashtable.h":
         TableEntry* prev_entry
         TableEntry* next_entry
 
+    hash_ft GENERAL_HASH
+    hash_ft STRING_HASH
+    hash_ft POINTER_HASH
+
 #    size_t get_table_index(HashTable *table, void *key)
 #
 #    void hashtable_conf_init(HashTableConf* conf)
@@ -217,10 +216,10 @@ cdef extern from "hashtable.h":
 #
 #    cc_stat hashtable_get_values(HashTable* table, Array** out)
 #
-#    size_t hashtable_hash_string(void* key, int len, uint32_t seed)
-#
-#    size_t hashtable_hash(void* key, int len, uint32_t seed)
-#
+    size_t hashtable_hash_string(void* key, int len, uint32_t seed)
+
+    size_t hashtable_hash(void* key, int len, uint32_t seed)
+
     size_t hashtable_hash_ptr(void* key, int len, uint32_t seed)
 #
 #    ctypedef void (*_hashtable_foreach_key_op_ft)(void*)

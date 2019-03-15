@@ -1,4 +1,4 @@
-cimport lakesuperior.cy_include.cylmdb as lmdb
+from lakesuperior.cy_include cimport cylmdb as lmdb
 
 cdef:
     int rc
