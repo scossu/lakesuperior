@@ -16,7 +16,7 @@ from os import path
 import lakesuperior
 
 # Use this version to build C files from .pyx sources.
-CYTHON_VERSION='0.29'
+CYTHON_VERSION='0.29.6'
 
 KLEN = 5 # TODO Move somewhere else (config?)
 
