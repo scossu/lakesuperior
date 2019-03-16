@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from cython.parallel import prange
 from rdflib import Graph
@@ -33,6 +34,23 @@ from lakesuperior.model.structures.hash cimport (
         HLEN_128 as HLEN, Hash128, hash128)
 
 
+# Integer keys and values are stored in the system's native byte order.
+# Therefore they must be parsed left-to-right if the system is big-endian,
+# and right-to-left if little-endian, in order to maintain the correct
+# sorting order.
+BIG_ENDIAN = sys.byteorder == 'big'
+LSUP_REVERSEKEY = 0 if BIG_ENDIAN else lmdb.MDB_REVERSEKEY
+LSUP_REVERSEDUP = 0 if BIG_ENDIAN else lmdb.MDB_REVERSEDUP
+
+INT_KEY_MASK = lmdb.MDB_INTEGERKEY | LSUP_REVERSEKEY
+INT_DUP_KEY_MASK = (
+    lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERKEY
+    | LSUP_REVERSEKEY | LSUP_REVERSEDUP
+)
+INT_DUP_MASK = (
+    lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERDUP
+    | LSUP_REVERSEKEY | LSUP_REVERSEDUP
+)
 
 lookup_rank = [0, 2, 1]
 """
@@ -110,16 +128,18 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     ]
 
     dbi_flags = {
-        'c': lmdb.MDB_INTEGERKEY,
-        's:po': INT_KEY_MASK,
-        'p:so': INT_KEY_MASK,
-        'o:sp': INT_KEY_MASK,
+        'c': INT_KEY_MASK,
+        't:st': INT_KEY_MASK,
+        's:po': INT_DUP_KEY_MASK,
+        'p:so': INT_DUP_KEY_MASK,
+        'o:sp': INT_DUP_KEY_MASK,
         'po:s': INT_DUP_MASK,
         'so:p': INT_DUP_MASK,
         'sp:o': INT_DUP_MASK,
-        'c:spo': INT_KEY_MASK,
+        'c:spo': INT_DUP_KEY_MASK,
         'spo:c': INT_DUP_MASK,
     }
+    logger.info(f'DBI flags: {dbi_flags}')
 
     flags = 0
 
@@ -1523,8 +1543,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         except KeyNotFoundError:
             new_idx = 0
         else:
-            new_idx = (<Key>key_v.mv_data)[0]
-            new_idx += 1
+            new_idx = (<Key>key_v.mv_data)[0] + 1
         finally:
             #pass
             self._cur_close(cur)
