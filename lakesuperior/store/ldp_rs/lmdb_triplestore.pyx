@@ -188,7 +188,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             lmdb.MDB_cursor *icur
-            lmdb.MDB_val spo_v, c_v, null_v
+            lmdb.MDB_val spo_v, c_v, null_v, key_v, data_v
             unsigned char i
             Hash128 thash
             QuadKey spock
@@ -215,19 +215,19 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('th:t'), &key_v, &data_v))
                     spock[i] = (<Key>data_v.mv_data)[0]
-                    #logger.debug('Hash {} found. Not adding.'.format(thash[: HLEN]))
+                    logger.info('Hash {} with key {} found. Not adding.'.format(thash[:HLEN], spock[i]))
                 except KeyNotFoundError:
                     # If term_obj is not found, add it...
-                    #logger.debug('Hash {} not found. Adding to DB.'.format(
-                    #        thash[: HLEN]))
+                    logger.info('Hash {} not found. Adding to DB.'.format(
+                            thash[: HLEN]))
                     spock[i] = self._append(&pk_t, dblabel=b't:st')
 
                     # ...and index it.
-                    #logger.debug('Indexing on th:t: {}: {}'.format(
-                    #        thash[: HLEN], spock[i])
+                    logger.info('Indexing on th:t: {}: {}'.format(
+                            thash[: HLEN], spock[i]))
                     key_v.mv_data = thash
                     key_v.mv_size = HLEN
-                    data_v.mv_data = spock + i * KLEN
+                    data_v.mv_data = spock + i
                     data_v.mv_size = KLEN
                     _check(
                         lmdb.mdb_cursor_put(icur, &key_v, &data_v, 0),
@@ -237,9 +237,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(icur)
             #logger.debug('Triple add action completed.')
 
-        spo_v.mv_data = spock
-        spo_v.mv_size = TRP_KLEN
-        c_v.mv_data = spock + TRP_KLEN
+        spo_v.mv_data = spock # address of sk in spock
+        logger.info('Inserting quad: {}'.format([spock[0], spock[1], spock[2], spock[3]]))
+        spo_v.mv_size = TRP_KLEN # Grab 3 keys
+        c_v.mv_data = spock + 3 # address of ck in spock
         c_v.mv_size = KLEN
         null_v.mv_data = b''
         null_v.mv_size = 0
@@ -254,6 +255,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added c:.')
         try:
             # Add triple:context association.
+            #logger.info('Adding spo:c: {}, {}'.format((<unsigned char*>spo_v.mv_data)[:TRP_KLEN], (<unsigned char*>c_v.mv_data)[:KLEN]))
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('spo:c'), &spo_v, &c_v,
                 lmdb.MDB_NODUPDATA))
@@ -262,6 +264,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added spo:c.')
         try:
             # Index context:triple association.
+            #logger.info('Adding c:spo: {}, {}'.format((<unsigned char*>c_v.mv_data)[:KLEN], (<unsigned char*>spo_v.mv_data)[:TRP_KLEN]))
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:spo'), &c_v, &spo_v,
                 lmdb.MDB_NODUPDATA))
@@ -270,6 +273,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added c:spo.')
 
         #logger.debug('All main data entered. Indexing.')
+        logger.info(f'indexing add: {[spock[0], spock[1], spock[2]]}')
         self._index_triple(IDX_OP_ADD, [spock[0], spock[1], spock[2]])
 
 
@@ -326,7 +330,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 #logger.debug('Working in existing RW transaction.')
                 # Use existing R/W transaction.
                 # Main entry.
-                ck[0] = self._append(pk_gr, b't:st', txn=tmp_txn)
+                ck = [self._append(pk_gr, b't:st', txn=tmp_txn)]
+                logger.info(f'Added new ck with key#: {ck[0]}')
                 # Index.
 
                 key_v.mv_data = chash
@@ -492,31 +497,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             [spok[2]], # ok
         ]
 
-        #keys[0] = spok[:1] # sk
-        #keys[1] = spok[1:2] # pk
-        #keys[2] = spok[2:3] # ok
-
         dbl_keys = [
             [spok[1], spok[2]], # pok
             [spok[0], spok[2]], # sok
             [spok[0], spok[1]], # spk
         ]
-        #dbl_keys[0] = spok[1:3] # pok
-        #dbl_keys[1] = [spok[0], spok[2]] # sok
-        #dbl_keys[2] = spok[:2] # spk
 
-        #logger.debug('''Indices:
-        #spok: {}
-        #sk: {}
-        #pk: {}
-        #ok: {}
-        #pok: {}
-        #sok: {}
-        #spk: {}
-        #'''.format(
-        #        spok[:TRP_KLEN],
-        #        keys[0][:KLEN], keys[1][:KLEN], keys[2][:KLEN],
-        #        dbl_keys[0][:DBL_KLEN], dbl_keys[1][:DBL_KLEN], dbl_keys[2][:DBL_KLEN]))
+        logger.info(f'''Indices:
+        spok: {[spok[0], spok[1], spok[2]]}
+        sk: {keys[0]}
+        pk: {keys[1]}
+        ok: {keys[2]}
+        pok: {dbl_keys[0]}
+        sok: {dbl_keys[1]}
+        spk: {dbl_keys[2]}
+        ''')
         key_v.mv_size = KLEN
         dbl_key_v.mv_size = DBL_KLEN
 
@@ -1516,6 +1511,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_cursor *cur
             KeyIdx new_idx
             Key key
+            lmdb.MDB_val key_v, data_v
 
         if txn is NULL:
             txn = self.txn
@@ -1535,15 +1531,20 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         key = [new_idx]
         key_v.mv_data = key
+        logger.info('Key: {}'.format(key[0]))
+        logger.info(f'Key addr: 0x{<size_t>key:02x}')
+        logger.info('Key data inserted: {}'.format((<unsigned char*>key_v.mv_data)[:KLEN]))
         key_v.mv_size = KLEN
         data_v.mv_data = value.addr
         data_v.mv_size = value.sz
-        #logger.debug('Appending value {} to db {} with key: {}'.format(
-        #    value[: vlen], dblabel.decode(), key[0]))
+        logger.info('Appending value {} to db {} with key: {}'.format(
+            buffer_dump(value), dblabel.decode(), key[0]))
         #logger.debug('data size: {}'.format(data_v.mv_size))
         lmdb.mdb_put(
                 txn, self.get_dbi(dblabel), &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)
+
+        return new_idx
 
 
     #cdef inline KeyIdx bytes_to_idx(self, const unsigned char* bs):
