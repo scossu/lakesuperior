@@ -1,3 +1,5 @@
+import sys
+
 cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.cy_include.cylmdb as lmdb
 cimport lakesuperior.cy_include.cytpl as tpl
@@ -9,6 +11,15 @@ from lakesuperior.model.graph.graph cimport SimpleGraph
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 
+# Integer keys and values are stored in the system's native byte order.
+# Therefore they must be parsed left-to-right if the system is big-endian,
+# and right-to-left if little-endian, in order to maintain the correct
+# sorting order.
+cdef bint BIG_ENDIAN = sys.byteorder == 'big'
+cdef unsigned int LSUP_REVERSEKEY = 0 if BIG_ENDIAN else lmdb.MDB_REVERSEKEY
+cdef unsigned int LSUP_REVERSEDUP = 0 if BIG_ENDIAN else lmdb.MDB_REVERSEDUP
+
+
 cdef enum:
     IDX_OP_ADD = 1
     IDX_OP_REMOVE = -1
@@ -19,11 +30,11 @@ cdef:
     unsigned char lookup_ordering_2bound[3][3]
     unsigned int INT_KEY_MASK = (
         lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERKEY
-        | lmdb.MDB_REVERSEKEY # TODO Check endianness.
+        | LSUP_REVERSEKEY
     )
     unsigned int INT_DUP_MASK = (
         lmdb.MDB_DUPSORT | lmdb.MDB_DUPFIXED | lmdb.MDB_INTEGERDUP
-        | lmdb.MDB_REVERSEDUP # TODO Check endianness.
+        | LSUP_REVERSEDUP
     )
 
 
@@ -58,3 +69,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 self, Buffer *value,
                 unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,
                 unsigned int flags=*)
+
+        #KeyIdx bytes_to_idx(self, const unsigned char* bs)
+        #unsigned char* idx_to_bytes(KeyIdx idx)

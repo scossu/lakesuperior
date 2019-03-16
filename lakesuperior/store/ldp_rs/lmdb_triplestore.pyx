@@ -1527,7 +1527,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         except KeyNotFoundError:
             new_idx = 0
         else:
-            memcpy(&new_idx, key_v.mv_data, KLEN)
+            new_idx = (<Key>key_v.mv_data)[0]
             new_idx += 1
         finally:
             #pass

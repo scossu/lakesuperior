@@ -13,6 +13,7 @@ cdef:
 cdef class BaseLmdbStore:
     cdef:
         readonly bint is_txn_open
+        readonly bint is_txn_rw
         public bint _open
         unsigned int _readers
         readonly str env_path
