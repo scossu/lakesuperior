@@ -139,7 +139,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         'c:spo': INT_DUP_KEY_MASK,
         'spo:c': INT_DUP_MASK,
     }
-    logger.info(f'DBI flags: {dbi_flags}')
+    logger.debug(f'DBI flags: {dbi_flags}')
 
     flags = 0
 
@@ -275,7 +275,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added c:.')
         try:
             # Add triple:context association.
-            #logger.info('Adding spo:c: {}, {}'.format((<unsigned char*>spo_v.mv_data)[:TRP_KLEN], (<unsigned char*>c_v.mv_data)[:KLEN]))
+            #logger.debug('Adding spo:c: {}, {}'.format((<unsigned char*>spo_v.mv_data)[:TRP_KLEN], (<unsigned char*>c_v.mv_data)[:KLEN]))
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('spo:c'), &spo_v, &c_v,
                 lmdb.MDB_NODUPDATA))
@@ -284,7 +284,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #logger.debug('Added spo:c.')
         try:
             # Index context:triple association.
-            #logger.info('Adding c:spo: {}, {}'.format((<unsigned char*>c_v.mv_data)[:KLEN], (<unsigned char*>spo_v.mv_data)[:TRP_KLEN]))
+            #logger.debug('Adding c:spo: {}, {}'.format((<unsigned char*>c_v.mv_data)[:KLEN], (<unsigned char*>spo_v.mv_data)[:TRP_KLEN]))
             _check(lmdb.mdb_put(
                 self.txn, self.get_dbi('c:spo'), &c_v, &spo_v,
                 lmdb.MDB_NODUPDATA))
@@ -553,10 +553,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 cur1, &key_v, &dbl_key_v, lmdb.MDB_GET_BOTH))
-                        logger.debug(
+                        logger.info(
                                 f'Removed: {keys[i]}, {dbl_keys[i]}')
                     except KeyNotFoundError:
-                        logger.debug(
+                        logger.info(
                                 f'Not found: {keys[i]}, {dbl_keys[i]}')
                         pass
                     else:
@@ -568,16 +568,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     try:
                         _check(lmdb.mdb_cursor_get(
                                 cur2, &dbl_key_v, &key_v, lmdb.MDB_GET_BOTH))
-                        logger.debug(f'Removed: {dbl_keys[i]}, {keys[i]}')
+                        logger.info(f'Removed: {dbl_keys[i]}, {keys[i]}')
                     except KeyNotFoundError:
-                        logger.debug(f'Not found: {dbl_keys[i]}, {keys[i]}')
+                        logger.info(f'Not found: {dbl_keys[i]}, {keys[i]}')
                         pass
                     else:
                         _check(lmdb.mdb_cursor_del(cur2, 0))
 
                 # Addition op indexing.
                 elif op == IDX_OP_ADD:
-                    logger.debug('Adding to index `{}`: {}, {}'.format(
+                    logger.info('Adding to index `{}`: {}, {}'.format(
                         self.lookup_indices[i],
                         <Key>key_v.mv_data,
                         <DoubleKey>dbl_key_v.mv_data
@@ -587,10 +587,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         _check(lmdb.mdb_cursor_put(
                                 cur1, &key_v, &dbl_key_v, lmdb.MDB_NODUPDATA))
                     except KeyExistsError:
-                        logger.debug(f'Key {keys[i]} exists already.')
+                        logger.info(f'Key {keys[i]} exists already.')
                         pass
 
-                    logger.debug('Adding to index `{}`: {}, {}'.format(
+                    logger.info('Adding to index `{}`: {}, {}'.format(
                         self.lookup_indices[i + 3],
                         <DoubleKey>dbl_key_v.mv_data,
                         <Key>key_v.mv_data
@@ -600,7 +600,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                         _check(lmdb.mdb_cursor_put(
                                 cur2, &dbl_key_v, &key_v, lmdb.MDB_NODUPDATA))
                     except KeyExistsError:
-                        logger.debug(f'Double key {dbl_keys[i]} exists already.')
+                        logger.info(f'Double key {dbl_keys[i]} exists already.')
                         pass
                 else:
                     raise ValueError(
@@ -705,7 +705,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # but anyway...
         context = self._normalize_context(context)
 
-        logger.debug(
+        logger.info(
                 'Getting triples for: {}, {}'.format(triple_pattern, context))
         rset = self.triple_keys(triple_pattern, context)
 
@@ -734,8 +734,14 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
                 #logger.debug('Triple keys before yield: {}: {}.'.format(
                 #    (<TripleKey>key_v.mv_data)[:TRP_KLEN], tuple(contexts)))
-                yield self.from_trp_key(
-                    (<TripleKey>key_v.mv_data)), tuple(contexts)
+                yield (
+                    (
+                        self.from_key(<Key>key_v.mv_data),
+                        self.from_key(<Key>key_v.mv_data + 1),
+                        self.from_key(<Key>key_v.mv_data + 2),
+                    ),
+                    tuple(contexts)
+                )
                 #logger.debug('After yield.')
         finally:
             self._cur_close(cur)
@@ -1464,23 +1470,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Buffer pk_t
 
+        logger.info(f'Looking up key: {tk[0]}')
         self.lookup_term(tk, &pk_t)
+        logger.info(f'Serialized term found: {buffer_dump(&pk_t)}')
 
         # TODO Make Term a class and return that.
         return deserialize_to_rdflib(&pk_t)
-
-
-    cdef tuple from_trp_key(self, const TripleKey spok):
-        """
-        Convert a triple key into a tuple of 3 terms.
-
-        :param TripleKey spok: The triple key to be converted.
-        """
-        #logger.debug(f'From triple key: {key[: TRP_KLEN]}')
-        return (
-                self.from_key(spok),
-                self.from_key(spok + KLEN),
-                self.from_key(spok + DBL_KLEN))
 
 
     cdef inline KeyIdx _to_key_idx(self, term):
@@ -1541,18 +1536,20 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             _check(lmdb.mdb_cursor_get(cur, &key_v, NULL, lmdb.MDB_LAST))
         except KeyNotFoundError:
+            logger.debug('First key inserted here.')
             new_idx = 0
         else:
             new_idx = (<Key>key_v.mv_data)[0] + 1
+            logger.debug(f'New index value: {new_idx}')
         finally:
             #pass
             self._cur_close(cur)
 
         key = [new_idx]
         key_v.mv_data = key
-        logger.info('Key: {}'.format(key[0]))
-        logger.info(f'Key addr: 0x{<size_t>key:02x}')
-        logger.info('Key data inserted: {}'.format((<unsigned char*>key_v.mv_data)[:KLEN]))
+        logger.debug(f'Key: {key[0]}')
+        logger.debug(f'Key addr: 0x{<size_t>key:02x}')
+        logger.debug('Key data inserted: {}'.format((<unsigned char*>key_v.mv_data)[:KLEN]))
         key_v.mv_size = KLEN
         data_v.mv_data = value.addr
         data_v.mv_size = value.sz

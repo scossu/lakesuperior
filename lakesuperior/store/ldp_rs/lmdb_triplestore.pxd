@@ -43,7 +43,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Keyset _lookup_2bound(
                 self, unsigned char idx1, term1, unsigned char idx2, term2)
         object from_key(self, const Key tk)
-        tuple from_trp_key(self, const TripleKey spok)
         KeyIdx _to_key_idx(self, term)
         void all_contexts(self, KeyIdx** ctx, size_t* sz, triple=*) except *
         KeyIdx _append(
