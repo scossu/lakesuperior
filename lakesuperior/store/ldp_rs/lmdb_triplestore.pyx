@@ -716,8 +716,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key_v.mv_size = TRP_KLEN
             cc.array_iter_init(&it, rset.data)
             while cc.array_iter_next(&it, &it_cur) != cc.CC_ITER_END:
-                #logger.debug('Checking contexts for triples: {}'.format(
-                #    (rset.data + i * TRP_KLEN)[:TRP_KLEN]))
+                logger.info('Checking contexts for triples: {} {} {}'.format(
+                    (<TripleKey>it_cur)[0],
+                    (<TripleKey>it_cur)[1],
+                    (<TripleKey>it_cur)[2],
+                ))
                 key_v.mv_data = it_cur
                 # Get contexts associated with each triple.
                 contexts = []
@@ -823,7 +826,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         # TODO: Improve performance by allowing passing contexts as a tuple.
         cdef:
-            size_t ct = 0, flt_j = 0, i = 0, j = 0, c_size
+            size_t ct = 0, i = 0
             void* cur
             cc.ArrayIter it
             lmdb.MDB_cursor *icur
@@ -833,7 +836,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Keyset flt_res, ret
 
         if context is not None:
-            #serialize(context, &pk_c, &c_size)
             try:
                 ck = [self._to_key_idx(context)]
             except KeyNotFoundError:
@@ -913,7 +915,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     try:
                         res = self._lookup(triple_pattern)
                     except KeyNotFoundError:
-                        return Keyset(0)
+                        return Keyset()
 
                     #logger.debug('Allocating for context filtering.')
                     key_v.mv_data = ck
@@ -934,7 +936,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                             _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_GET_BOTH))
                         except KeyNotFoundError:
-                            #logger.debug('Discarding source[{}].'.format(j))
                             continue
                         else:
                             cc.array_add(flt_res.data, cur)
@@ -963,25 +964,35 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :return: Matching triple keys.
         """
         cdef:
-            TripleKey spok
-            lmdb.MDB_stat db_stat
             size_t ct = 0, i = 0
+            lmdb.MDB_stat db_stat
             lmdb.MDB_val spok_v, ck_v
+            TripleKey spok
+            Key sk, pk, ok, tk1, tk2, tk3
 
         s, p, o = triple_pattern
 
-        if s is not None:
+        try:
+            if s is not None:
+                sk = [self._to_key_idx(s)]
             if p is not None:
+                pk = [self._to_key_idx(p)]
+            if o is not None:
+                ok = [self._to_key_idx(o)]
+        except KeyNotFoundError:
+            return Keyset()
+
+        if s is not None:
+            tk1 = sk
+            if p is not None:
+                tk2 = pk
                 # s p o
                 if o is not None:
+                    tk3 = ok
                     spok_v.mv_data = spok
                     spok_v.mv_size = TRP_KLEN
                     try:
-                        spok = [
-                            self._to_key_idx(triple_pattern[0]),
-                            self._to_key_idx(triple_pattern[1]),
-                            self._to_key_idx(triple_pattern[2]),
-                        ]
+                        spok = [tk1[0], tk2[0], tk3[0]]
                         _check(lmdb.mdb_get(
                             self.txn, self.get_dbi('spo:c'), &spok_v, &ck_v))
                     except KeyNotFoundError:
@@ -990,65 +1001,66 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     matches = Keyset(1)
                     cc.array_add(matches.data, &spok)
                     return matches
+
                 # s p ?
-                else:
-                    return self._lookup_2bound(0, s, 1, p)
-            else:
-                # s ? o
-                if o is not None:
-                    return self._lookup_2bound(0, s, 2, o)
-                # s ? ?
-                else:
-                    return self._lookup_1bound(0, s)
-        else:
-            if p is not None:
-                # ? p o
-                if o is not None:
-                    return self._lookup_2bound(1, p, 2, o)
-                # ? p ?
-                else:
-                    return self._lookup_1bound(1, p)
-            else:
-                # ? ? o
-                if o is not None:
-                    return self._lookup_1bound(2, o)
-                # ? ? ?
-                else:
-                    # Get all triples in the database.
-                    #logger.debug('Getting all DB triples.')
-                    dcur = self._cur_open('spo:c')
+                return self._lookup_2bound(0, tk1, 1, tk2)
 
-                    try:
-                        _check(
-                            lmdb.mdb_stat(
-                                self.txn, lmdb.mdb_cursor_dbi(dcur), &db_stat
-                            ), 'Error gathering DB stats.'
-                        )
-                        ct = db_stat.ms_entries
-                        ret = Keyset(ct)
-                        #logger.debug(f'Triples found: {ct}')
-                        if ct == 0:
-                            return Keyset()
+            if o is not None: # s ? o
+                tk2 = pk
+                return self._lookup_2bound(0, tk1, 2, tk2)
 
-                        _check(lmdb.mdb_cursor_get(
-                                dcur, &key_v, &data_v, lmdb.MDB_FIRST))
-                        while True:
-                            cc.array_add(ret.data, key_v.mv_data)
+            # s ? ?
+            return self._lookup_1bound(0, tk1)
 
-                            try:
-                                _check(lmdb.mdb_cursor_get(
-                                    dcur, &key_v, &data_v, lmdb.MDB_NEXT_NODUP))
-                            except KeyNotFoundError:
-                                break
+        if p is not None:
+            tk1 = pk
+            if o is not None: # ? p o
+                tk2 = ok
+                return self._lookup_2bound(1, tk1, 2, tk2)
 
-                            i += 1
+            # ? p ?
+            return self._lookup_1bound(1, tk1)
 
-                        return ret
-                    finally:
-                        self._cur_close(dcur)
+        if o is not None: # ? ? o
+            tk1 = ok
+            return self._lookup_1bound(2, tk1)
+
+        # ? ? ?
+        # Get all triples in the database.
+        #logger.debug('Getting all DB triples.')
+        dcur = self._cur_open('spo:c')
+
+        try:
+            _check(
+                lmdb.mdb_stat(
+                    self.txn, lmdb.mdb_cursor_dbi(dcur), &db_stat
+                ), 'Error gathering DB stats.'
+            )
+            ct = db_stat.ms_entries
+            ret = Keyset(ct)
+            #logger.debug(f'Triples found: {ct}')
+            if ct == 0:
+                return Keyset()
+
+            _check(lmdb.mdb_cursor_get(
+                    dcur, &key_v, &data_v, lmdb.MDB_FIRST))
+            while True:
+                cc.array_add(ret.data, key_v.mv_data)
+
+                try:
+                    _check(lmdb.mdb_cursor_get(
+                        dcur, &key_v, &data_v, lmdb.MDB_NEXT_NODUP))
+                except KeyNotFoundError:
+                    break
+
+                i += 1
+
+            return ret
+        finally:
+            self._cur_close(dcur)
 
 
-    cdef Keyset _lookup_1bound(self, unsigned char idx, term):
+    cdef Keyset _lookup_1bound(self, unsigned char idx, Key luk):
         """
         Lookup triples for a pattern with one bound term.
 
@@ -1062,19 +1074,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         cdef:
             unsigned int dbflags
             unsigned char term_order[3]
-            size_t ct, ret_offset = 0, src_pos, ret_pos
-            size_t j # Must be signed for older OpenMP versions
+            size_t ct, i
             lmdb.MDB_cursor *icur
             lmdb.MDB_val key_v, data_v
-            Key luk
+            DoubleKey* lu_dset
             TripleKey spok
 
-        #logger.debug(f'lookup 1bound: {idx}, {term}')
-        try:
-            luk = [self._to_key_idx(term)]
-        except KeyNotFoundError:
-            return Keyset()
-        logging.debug('luk: {}'.format(luk))
+        logger.info(f'lookup 1bound: {idx}, {luk[0]}')
 
         term_order = lookup_ordering[idx]
         icur = self._cur_open(self.lookup_indices[idx])
@@ -1095,52 +1101,27 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             #logger.debug('First row: {}'.format(
             #        (<unsigned char *>data_v.mv_data)[:DBL_KLEN]))
 
-            #logger.debug('asm_rng: {}'.format(asm_rng[:3]))
-            #logger.debug('luk: {}'.format(luk))
-
             _check(lmdb.mdb_cursor_get(icur, &key_v, &data_v, lmdb.MDB_SET))
             _check(lmdb.mdb_cursor_get(
                 icur, &key_v, &data_v, lmdb.MDB_GET_MULTIPLE))
             while True:
-                #logger.debug('ret_offset: {}'.format(ret_offset))
-                #logger.debug(f'Page size: {data_v.mv_size}')
-                #logger.debug(
-                #        'Got data in 1bound ({}): {}'.format(
-                #            data_v.mv_size,
-                #            (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                for j in range(data_v.mv_size // DBL_KLEN):
-                    src_pos = DBL_KLEN * j
+                lu_dset = <DoubleKey*>data_v.mv_data
+                for i in range(data_v.mv_size // DBL_KLEN):
+                    logger.info('Got 2-terms in lookup_1bound: {} {}'.format(
+                        lu_dset[i][0], lu_dset[i][1]))
                     spok[term_order[0]] = luk[0]
-                    spok[term_order[1]] = <KeyIdx>(data_v.mv_data + src_pos)
-                    spok[term_order[2]] = <KeyIdx>(
-                            data_v.mv_data + src_pos + KLEN)
+                    spok[term_order[1]] = lu_dset[i][0]
+                    spok[term_order[2]] = lu_dset[i][1]
+                    logger.info('Assembled triple in lookup_1bound: {} {} {}'.format(
+                        spok[0], spok[1], spok[2]))
 
                     cc.array_add(ret.data, spok)
-                    #ret_pos = ret_offset + ret.itemsize * j
-                    ## TODO Try to fit this in the Key / TripleKey schema.
-                    #memcpy(ret.data + ret_pos + asm_rng[0], luk, KLEN)
-                    #memcpy(ret.data + ret_pos + asm_rng[1],
-                    #        data_v.mv_data + src_pos, KLEN)
-                    #memcpy(ret.data + ret_pos + asm_rng[2],
-                    #        data_v.mv_data + src_pos + KLEN, KLEN)
-
-
-                # Increment MUST be done before MDB_NEXT_MULTIPLE otherwise
-                # data_v.mv_size will be overwritten with the *next* page size
-                # and cause corruption in the output data.
-                #ret_offset += data_v.mv_size // DBL_KLEN * ret.itemsize
 
                 try:
                     # Get results by the page.
                     _check(lmdb.mdb_cursor_get(
                             icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
                 except KeyNotFoundError:
-                    # For testing only. Errors will be caught in triples()
-                    # when looking for a context.
-                    #if ret_offset + ret.itemsize < ret.size:
-                    #    raise RuntimeError(
-                    #        'Retrieved less values than expected: {} of {}.'
-                    #        .format(src_offset, ret.size))
                     return ret
 
             #logger.debug('Assembled data in 1bound ({}): {}'.format(ret.size, ret.data[: ret.size]))
