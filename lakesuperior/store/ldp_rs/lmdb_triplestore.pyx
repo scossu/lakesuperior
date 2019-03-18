@@ -984,7 +984,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 return self._lookup_2bound(0, 1, [tk1, tk2])
 
             if o is not None: # s ? o
-                tk2 = pk
+                tk2 = ok
                 return self._lookup_2bound(0, 2, [tk1, tk2])
 
             # s ? ?
@@ -1156,11 +1156,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         logger.info('LUK offsets: {}, {}'.format(luk1_offset, luk2_offset))
         luk[luk1_offset] = tks[0]
         luk[luk2_offset] = tks[1]
-
-        #logger.debug('Lookup key: {}'.format(luk))
+        logger.info(f'luk: {luk[0]} {luk[1]}')
 
         icur = self._cur_open(dblabel)
-        #logger.debug('Database label: {}'.format(dblabel))
+        logger.debug('Database label: {}'.format(dblabel))
 
         try:
             key_v.mv_data = luk
@@ -1183,7 +1182,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             while True:
                 lu_dset = <Key*>data_v.mv_data
                 for i in range(data_v.mv_size // KLEN):
-                    logger.info('Got term in lookup_2bound: {lu_dset[i]}')
+                    logger.info(f'Got term in lookup_2bound: {lu_dset[i]}')
                     spok[term_order[0]] = luk[0]
                     spok[term_order[1]] = luk[1]
                     spok[term_order[2]] = lu_dset[i]
