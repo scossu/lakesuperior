@@ -1,9 +1,9 @@
 from lakesuperior.model.base cimport (
-    KeyIdx, Key, DoubleKey, TripleKey, Buffer
+    Key, Key, DoubleKey, TripleKey, Buffer
 )
 
 ctypedef bint (*key_cmp_fn_t)(
-    const TripleKey* spok, const KeyIdx* k1, const KeyIdx* k2
+    const TripleKey* spok, const Key* k1, const Key* k2
 )
 
 cdef class Keyset:
@@ -22,5 +22,5 @@ cdef class Keyset:
         Keyset copy(self)
         void resize(self, size_t size=*) except *
         Keyset lookup(
-            self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok
+            self, const Key* sk, const Key* pk, const Key* ok
         )

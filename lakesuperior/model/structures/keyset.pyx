@@ -158,7 +158,7 @@ cdef class Keyset:
 
 
     cdef Keyset lookup(
-            self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok
+            self, const Key* sk, const Key* pk, const Key* ok
     ):
         """
         Look up triple keys.
@@ -168,15 +168,15 @@ cdef class Keyset:
 
         Any and all the terms may be NULL. A NULL term is treated as unbound.
 
-        :param const KeyIdx* sk: s key pointer.
-        :param const KeyIdx* pk: p key pointer.
-        :param const KeyIdx* ok: o key pointer.
+        :param const Key* sk: s key pointer.
+        :param const Key* pk: p key pointer.
+        :param const Key* ok: o key pointer.
         """
         cdef:
             TripleKey spok
             Keyset ret = Keyset(self.ct)
-            KeyIdx* k1 = NULL
-            KeyIdx* k2 = NULL
+            Key* k1 = NULL
+            Key* k2 = NULL
             key_cmp_fn_t cmp_fn
 
         if sk and pk and ok: # s p o
