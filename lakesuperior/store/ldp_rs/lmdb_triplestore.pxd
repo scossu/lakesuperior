@@ -39,11 +39,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         void _all_term_keys(self, term_type, cc.HashSet** tkeys) except *
         void lookup_term(self, const KeyIdx* tk, Buffer* data) except *
         Keyset _lookup(self, tuple triple_pattern)
-        Keyset _lookup_1bound(self, unsigned char idx, Key luk)
+        Keyset _lookup_1bound(self, unsigned char idx, KeyIdx luk)
         Keyset _lookup_2bound(
-                self, unsigned char idx1, term1, unsigned char idx2, term2)
+            self, unsigned char idx1, unsigned char idx2, DoubleKey tks
+        )
         object from_key(self, const Key tk)
-        KeyIdx _to_key_idx(self, term)
+        KeyIdx _to_key_idx(self, term) except -1
         void all_contexts(self, KeyIdx** ctx, size_t* sz, triple=*) except *
         KeyIdx _append(
                 self, Buffer *value,
