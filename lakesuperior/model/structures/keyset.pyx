@@ -1,7 +1,9 @@
 import logging
 
 from libc.string cimport memcmp, memcpy
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+
+cimport lakesuperior.model.structures.callbacks as cb
 
 from lakesuperior.model.base cimport TripleKey, TRP_KLEN
 
@@ -11,19 +13,7 @@ logger = logging.getLogger(__name__)
 
 cdef class Keyset:
     """
-    Pre-allocated result set.
-
-    Data in the set are stored as a 1D contiguous array of characters.
-    Access to elements at an arbitrary index position is achieved by using the
-    ``itemsize`` property multiplied by the index number.
-
-    Key properties:
-
-    ``ct``: number of elements in the set.
-    ``itemsize``: size of each element, in bytes. All elements have the same
-        size.
-    ``size``: Total size, in bytes, of the data set. This is the product of
-        ``itemsize`` and ``ct``.
+    Pre-allocated array (not set, as the name may suggest) of ``TripleKey``s.
     """
     def __cinit__(self, size_t ct=0):
         """
@@ -111,10 +101,6 @@ cdef class Keyset:
         """
         Add a triple key to the array.
         """
-        logger.info('Adding triple to key set.')
-        logger.info(f'triple: {val[0][0]} {val[0][1]} {val[0][2]}')
-        logger.info(f'_free_i: {self._free_i}')
-
         if self._free_i >= self.ct:
             raise MemoryError('No slots left in key set.')
 
@@ -134,3 +120,102 @@ cdef class Keyset:
             if memcmp(val, stored_val, TRP_KLEN) == 0:
                 return True
         return False
+
+
+    cdef Keyset copy(self):
+        """
+        Copy a Keyset.
+        """
+        cdef Keyset new_ks = Keyset(self.ct)
+        memcpy(new_ks.data, self.data, self.ct * TRP_KLEN)
+        new_ks.seek()
+
+        return new_ks
+
+
+    cdef void resize(self, size_t size=0) except *:
+        """
+        Change the array capacity.
+
+        :param size_t size: The new capacity size. If not specified or 0, the
+            array is shrunk to the last used item. The resulting size
+            therefore will always be greater than 0. The only exception
+            to this is if the specified size is 0 and no items have been added
+            to the array, in which case the array will be effectively shrunk
+            to 0.
+        """
+        if not size:
+            size = self._free_i
+
+        tmp = <TripleKey*>PyMem_Realloc(self.data, size * TRP_KLEN)
+
+        if not tmp:
+            raise MemoryError('Could not reallocate Keyset data.')
+
+        self.data = tmp
+        self.ct = size
+        self.seek()
+
+
+    cdef Keyset lookup(
+            self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok
+    ):
+        """
+        Look up triple keys.
+
+        This works in a similar way that the ``SimpleGraph`` and ``LmdbStore``
+        methods work.
+
+        Any and all the terms may be NULL. A NULL term is treated as unbound.
+
+        :param const KeyIdx* sk: s key pointer.
+        :param const KeyIdx* pk: p key pointer.
+        :param const KeyIdx* ok: o key pointer.
+        """
+        cdef:
+            TripleKey spok
+            Keyset ret = Keyset(self.ct)
+            KeyIdx* k1 = NULL
+            KeyIdx* k2 = NULL
+            key_cmp_fn_t cmp_fn
+
+        if sk and pk and ok: # s p o
+            pass # TODO
+
+        elif sk:
+            k1 = sk
+            if pk: # s p ?
+                k2 = pk
+                cmp_fn = cb.lookup_skpk_cmp_fn
+
+            elif ok: # s ? o
+                k2 = ok
+                cmp_fn = cb.lookup_skok_cmp_fn
+
+            else: # s ? ?
+                cmp_fn = cb.lookup_sk_cmp_fn
+
+        elif pk:
+            k1 = pk
+            if ok: # ? p o
+                k2 = ok
+                cmp_fn = cb.lookup_pkok_cmp_fn
+
+            else: # ? p ?
+                cmp_fn = cb.lookup_pk_cmp_fn
+
+        elif ok: # ? ? o
+            k1 = ok
+            cmp_fn = cb.lookup_ok_cmp_fn
+
+        else: # ? ? ?
+            return self.copy()
+
+        self.seek()
+        while self.get_next(&spok):
+            if cmp_fn(<TripleKey*>spok, k1, k2):
+                ret.add(&spok)
+
+        ret.resize()
+
+        return ret
