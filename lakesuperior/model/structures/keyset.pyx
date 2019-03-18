@@ -1,30 +1,44 @@
-from libc.string cimport memcmp
-from libc.stdlib cimport free
+import logging
 
-cimport lakesuperior.cy_include.collections as cc
-cimport lakesuperior.model.structures.callbacks as cb
+from libc.string cimport memcmp, memcpy
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
-from lakesuperior.model.base cimport (
-    TRP_KLEN, KeyIdx, Key, DoubleKey, TripleKey, Buffer
-)
+from lakesuperior.model.base cimport TripleKey, TRP_KLEN
+
+
+logger = logging.getLogger(__name__)
+
 
 cdef class Keyset:
     """
     Pre-allocated result set.
+
+    Data in the set are stored as a 1D contiguous array of characters.
+    Access to elements at an arbitrary index position is achieved by using the
+    ``itemsize`` property multiplied by the index number.
+
+    Key properties:
+
+    ``ct``: number of elements in the set.
+    ``itemsize``: size of each element, in bytes. All elements have the same
+        size.
+    ``size``: Total size, in bytes, of the data set. This is the product of
+        ``itemsize`` and ``ct``.
     """
-    def __cinit__(self, size_t ct=1):
+    def __cinit__(self, size_t ct=0):
         """
         Initialize and allocate memory for the data set.
 
         :param size_t ct: Number of elements to be accounted for.
         """
-        cc.array_conf_init(&self.conf)
-        self.conf.capacity = ct or 1
-        self.conf.exp_factor = .5
+        self.ct = ct
+        self.data = <TripleKey*>PyMem_Malloc(self.ct * TRP_KLEN)
+        logger.info(f'data address: 0x{<size_t>self.data:02x}')
+        if ct and not self.data:
+            raise MemoryError('Error allocating Keyset data.')
 
-        cc.array_new_conf(&self.conf, &self.data)
-        if not self.data:
-            raise MemoryError()
+        self._cur = 0
+        self._free_i = 0
 
 
     def __dealloc__(self):
@@ -34,74 +48,89 @@ cdef class Keyset:
         This is called when the Python instance is garbage collected, which
         makes it handy to safely pass a Keyset instance across functions.
         """
-        if self.data:
-            free(self.data)
+        #logger.debug(
+        #    'Releasing {0} ({1}x{2}) bytes of Keyset @ {3:x}...'.format(
+        #        self.size, self.conf.capacity, self.itemsize,
+        #        <unsigned long>self.data))
+        PyMem_Free(self.data)
+        #logger.debug('...done releasing.')
 
 
     # Access methods.
 
-    cdef Keyset lookup(
-            self, const KeyIdx* sk, const KeyIdx* pk, const KeyIdx* ok
-    ):
+    cdef void seek(self, size_t idx=0):
         """
-        Look up triple keys.
-
-        This works in a similar way that the ``SimpleGraph`` and ``LmdbStore``
-        methods work.
-
-        Any and all the terms may be NULL. A NULL term is treated as unbound.
-
-        :param const KeyIdx* sk: s key pointer.
-        :param const KeyIdx* pk: p key pointer.
-        :param const KeyIdx* ok: o key pointer.
+        Place the cursor at a certain index, 0 by default.
         """
-        cdef:
-            void* cur
-            cc.ArrayIter it
-            TripleKey spok
-            Keyset ret
-            KeyIdx* k1 = NULL
-            KeyIdx* k2 = NULL
-            key_cmp_fn_t cmp_fn
+        self._cur = idx
 
-        cc.array_iter_init(&it, self.data)
 
-        if sk and pk and ok: # s p o
-            pass # TODO
+    cdef size_t tell(self):
+        """
+        Tell the position of the cursor in the keyset.
+        """
+        return self._cur
 
-        elif sk:
-            k1 = sk
-            if pk: # s p ?
-                k2 = pk
-                cmp_fn = cb.lookup_skpk_cmp_fn
 
-            elif ok: # s ? o
-                k2 = ok
-                cmp_fn = cb.lookup_skok_cmp_fn
+    cdef bint get_at(self, size_t i, TripleKey* item):
+        """
+        Get an item at a given index position. Cython-level method.
 
-            else: # s ? ?
-                cmp_fn = cb.lookup_sk_cmp_fn
+        :rtype: TripleKey
+        """
+        if i >= self._free_i:
+            return False
 
-        elif pk:
-            k1 = pk
-            if ok: # ? p o
-                k2 = ok
-                cmp_fn = cb.lookup_pkok_cmp_fn
+        self._cur = i
+        item[0] = self.data[i]
 
-            else: # ? p ?
-                cmp_fn = cb.lookup_pk_cmp_fn
+        return True
 
-        elif ok: # ? ? o
-            k1 = ok
-            cmp_fn = cb.lookup_ok_cmp_fn
 
-        else: # ? ? ?
-            return self # TODO Placeholder. This should actually return a copy.
+    cdef bint get_next(self, TripleKey* item):
+        """
+        Populate the current value and advance the cursor by 1.
 
-        ret = Keyset(256) # TODO Totally arbitrary.
-        while cc.array_iter_next(&it, &cur) != cc.CC_ITER_END:
-            if cmp_fn(<TripleKey*>spok, k1, k2):
-                if cc.array_add(ret.data, spok) != cc.CC_OK:
-                    raise RuntimeError('Error adding triple key.')
+        :param void *val: Addres of value returned. It is NULL if
+            the end of the buffer was reached.
 
-        return ret
+        :rtype: bint
+        :return: True if a value was found, False if the end of the buffer
+            has been reached.
+        """
+        if self._cur >= self._free_i:
+            return False
+
+        item[0] = self.data[self._cur]
+        self._cur += 1
+
+        return True
+
+
+    cdef void add(self, const TripleKey* val) except *:
+        """
+        Add a triple key to the array.
+        """
+        logger.info('Adding triple to key set.')
+        logger.info(f'triple: {val[0][0]} {val[0][1]} {val[0][2]}')
+        logger.info(f'_free_i: {self._free_i}')
+
+        if self._free_i >= self.ct:
+            raise MemoryError('No slots left in key set.')
+
+        self.data[self._free_i] = val[0]
+
+        self._free_i += 1
+
+
+    cdef bint contains(self, const TripleKey* val):
+        """
+        Whether a value exists in the set.
+        """
+        cdef TripleKey stored_val
+
+        self.seek()
+        while self.get_next(&stored_val):
+            if memcmp(val, stored_val, TRP_KLEN) == 0:
+                return True
+        return False
