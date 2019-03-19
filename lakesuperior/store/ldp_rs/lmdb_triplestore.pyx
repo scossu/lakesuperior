@@ -1316,53 +1316,66 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef:
             size_t ct
-            lmdb.MDB_cursor_op seek_op, scan_op
             lmdb.MDB_stat stat
-            lmdb.MDB_val key_v
+            lmdb.MDB_val key_v, data_v
             TripleKey spok
 
         cur = (
                 self._cur_open('spo:c') if triple and all(triple)
                 else self._cur_open('c:'))
-
-        key_v.mv_data = &spok
-        if triple and all(triple):
-            lmdb_seek_op = lmdb.MDB_SET_KEY
-            lmdb_scan_op = lmdb.MDB_NEXT_DUP
-            spok = [
-                self._to_key_idx(triple[0]),
-                self._to_key_idx(triple[1]),
-                self._to_key_idx(triple[2]),
-            ]
-            key_v.mv_size = TRP_KLEN
-        else:
-            lmdb_seek_op = lmdb.MDB_FIRST
-            lmdb_scan_op = lmdb.MDB_NEXT
-            key_v.mv_size = 0
-
         try:
-            _check(lmdb.mdb_stat(
-                self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
+            if triple and all(triple):
+                _check(lmdb.mdb_stat(
+                    self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
 
-            try:
-                _check(lmdb.mdb_cursor_get(
-                        cur, &key_v, &data_v, seek_op))
-            except KeyNotFoundError:
-                ctx[0] = NULL
-                return
+                spok = [
+                    self._to_key_idx(triple[0]),
+                    self._to_key_idx(triple[1]),
+                    self._to_key_idx(triple[2]),
+                ]
+                key_v.mv_data = spok
+                key_v.mv_size = TRP_KLEN
 
-            ctx[0] = <Key*>malloc(stat.ms_entries * KLEN)
-            sz[0] = 0
-
-            while True:
-                ctx[0][sz[0]] = (<Key*>data_v.mv_data)[0]
                 try:
                     _check(lmdb.mdb_cursor_get(
-                        cur, &key_v, &data_v, scan_op))
+                            cur, &key_v, &data_v, lmdb.MDB_SET_KEY))
                 except KeyNotFoundError:
-                    break
+                    ctx[0] = NULL
+                    return
 
-                sz[0] += 1
+                ctx[0] = <Key*>malloc(stat.ms_entries * KLEN)
+                sz[0] = 0
+
+                while True:
+                    ctx[0][sz[0]] = (<Key*>data_v.mv_data)[0]
+                    sz[0] += 1
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                            cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
+                    except KeyNotFoundError:
+                        break
+            else:
+                _check(lmdb.mdb_stat(
+                    self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
+
+                try:
+                    _check(lmdb.mdb_cursor_get(
+                            cur, &key_v, &data_v, lmdb.MDB_FIRST))
+                except KeyNotFoundError:
+                    ctx[0] = NULL
+                    return
+
+                ctx[0] = <Key*>malloc(stat.ms_entries * KLEN)
+                sz[0] = 0
+
+                while True:
+                    ctx[0][sz[0]] = (<Key*>key_v.mv_data)[0]
+                    sz[0] += 1
+                    try:
+                        _check(lmdb.mdb_cursor_get(
+                            cur, &key_v, NULL, lmdb.MDB_NEXT))
+                    except KeyNotFoundError:
+                        break
 
         finally:
             self._cur_close(cur)

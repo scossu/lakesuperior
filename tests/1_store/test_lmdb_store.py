@@ -649,7 +649,7 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
 
 
     def test_add_graph_with_triple(self, store):
@@ -664,7 +664,7 @@ class TestContext:
             store.add(trp, ctx_uri)
 
         with store.txn_ctx():
-            assert ctx_uri in {gr.uri for gr in store.contexts(trp)}
+            assert ctx_uri in store.contexts(trp)
 
 
     def test_empty_context(self, store):
@@ -675,10 +675,10 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.uri for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_context_ro_txn(self, store):
@@ -698,10 +698,10 @@ class TestContext:
         # allow a lookup in the same transaction, but this does not seem to be
         # possible.
         with store.txn_ctx():
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.uri for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_add_trp_to_ctx(self, store):
@@ -732,7 +732,7 @@ class TestContext:
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
-            assert gr2_uri in {gr.uri for gr in store.contexts()}
+            assert gr2_uri in store.contexts()
             assert trp1 in _clean(store.triples((None, None, None)))
             assert trp1 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
