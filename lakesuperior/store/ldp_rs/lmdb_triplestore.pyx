@@ -879,10 +879,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     while True:
                         #logger.debug('Data page: {}'.format(
                         #        (<unsigned char *>data_v.mv_data)[: data_v.mv_size]))
-                        spok = <TripleKey>data_v.mv_data
-                        ret.add(&spok)
+                        # Loop over page data.
+                        spok_page = <TripleKey*>data_v.mv_data
+                        for i in range(data_v.mv_size // TRP_KLEN):
+                            ret.add(spok_page + i)
 
                         try:
+                            # Get next page.
                             _check(lmdb.mdb_cursor_get(
                                 icur, &key_v, &data_v, lmdb.MDB_NEXT_MULTIPLE))
                         except KeyNotFoundError:
