@@ -259,6 +259,42 @@ class TestBasicOps:
 
 
 @pytest.mark.usefixtures('store', 'bogus_trp')
+class TestExtendedOps:
+    '''
+    Test additional store operations.
+    '''
+
+    def test_all_terms(self, store, bogus_trp):
+        """
+        Test the "all terms" mehods.
+        """
+        with store.txn_ctx(True):
+            for trp in bogus_trp:
+                store.add(trp)
+
+        with store.txn_ctx():
+            all_s = store.all_terms('s')
+            all_p = store.all_terms('p')
+            all_o = store.all_terms('o')
+
+        assert len(all_s) == 1
+        assert len(all_p) == 100
+        assert len(all_o) == 1000
+
+        assert URIRef('urn:test_mp:s1') in all_s
+        assert URIRef('urn:test_mp:s1') not in all_p
+        assert URIRef('urn:test_mp:s1') not in all_o
+
+        assert URIRef('urn:test_mp:p10') not in all_s
+        assert URIRef('urn:test_mp:p10') in all_p
+        assert URIRef('urn:test_mp:p10') not in all_o
+
+        assert URIRef('urn:test_mp:o99') not in all_s
+        assert URIRef('urn:test_mp:o99') not in all_p
+        assert URIRef('urn:test_mp:o99') in all_o
+
+
+@pytest.mark.usefixtures('store', 'bogus_trp')
 class TestEntryCount:
     '''
     Count number of entries in databases.
@@ -649,7 +685,7 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
 
 
     def test_add_graph_with_triple(self, store):
@@ -664,7 +700,7 @@ class TestContext:
             store.add(trp, ctx_uri)
 
         with store.txn_ctx():
-            assert ctx_uri in {gr.uri for gr in store.contexts(trp)}
+            assert ctx_uri in store.contexts(trp)
 
 
     def test_empty_context(self, store):
@@ -675,10 +711,10 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.uri for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_context_ro_txn(self, store):
@@ -698,10 +734,10 @@ class TestContext:
         # allow a lookup in the same transaction, but this does not seem to be
         # possible.
         with store.txn_ctx():
-            assert gr_uri in {gr.uri for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.uri for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_add_trp_to_ctx(self, store):
@@ -732,7 +768,7 @@ class TestContext:
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
-            assert gr2_uri in {gr.uri for gr in store.contexts()}
+            assert gr2_uri in store.contexts()
             assert trp1 in _clean(store.triples((None, None, None)))
             assert trp1 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))

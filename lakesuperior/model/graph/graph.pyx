@@ -12,9 +12,10 @@ from libc.stdlib cimport free
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include cimport collections as cc
+cimport lakesuperior.cy_include.collections as cc
+cimport lakesuperior.model.graph.callbacks as cb
+
 from lakesuperior.model.base cimport Buffer, buffer_dump
-from lakesuperior.model.graph cimport callbacks as cb
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
@@ -29,10 +30,9 @@ cdef class SimpleGraph:
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
 
-    A SimpleGraph can be instantiated from a store lookup or obtained from a
-    :py:class:`lakesuperior.store.keyset.Keyset`. This makes it possible to use
-    a Keyset to perform initial filtering via identity by key, then the
-    filtered Keyset can be converted into a set of meaningful terms.
+    A SimpleGraph can be instantiated from a store lookup. This makes it
+    possible to use a Keyset to perform initial filtering via identity by key,
+    then the filtered Keyset can be converted into a set of meaningful terms.
 
     An instance of this class can also be converted to and from a
     ``rdflib.Graph`` instance.

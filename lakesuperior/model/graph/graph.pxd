@@ -2,7 +2,8 @@ from libc.stdint cimport uint32_t, uint64_t
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include cimport collections as cc
+cimport lakesuperior.cy_include.collections as cc
+
 from lakesuperior.model.base cimport Buffer
 from lakesuperior.model.graph.triple cimport BufferTriple
 

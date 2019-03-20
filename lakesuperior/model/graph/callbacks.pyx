@@ -3,8 +3,9 @@ import logging
 from libc.stdint cimport uint32_t, uint64_t
 from libc.string cimport memcmp
 
-from lakesuperior.cy_include cimport collections as cc
-from lakesuperior.cy_include cimport spookyhash as sph
+cimport lakesuperior.cy_include.collections as cc
+cimport lakesuperior.cy_include.spookyhash as sph
+
 from lakesuperior.model.base cimport Buffer, buffer_dump
 from lakesuperior.model.graph cimport graph
 from lakesuperior.model.graph.triple cimport BufferTriple

@@ -9,7 +9,7 @@ ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
 
 cdef extern from "common.h":
 
-    cdef enum cc_stat:
+    enum cc_stat:
         CC_OK
         CC_ERR_ALLOC
         CC_ERR_INVALID_CAPACITY
@@ -19,47 +19,50 @@ cdef extern from "common.h":
         CC_ERR_VALUE_NOT_FOUND
         CC_ERR_OUT_OF_RANGE
         CC_ITER_END
+
+    key_compare_ft CC_CMP_STRING
+    key_compare_ft CC_CMP_POINTER
 #
 #    int cc_common_cmp_str(const void* key1, const void* key2)
 #
 #    int cc_common_cmp_ptr(const void* key1, const void* key2)
 
-#cdef extern from "array.h":
+cdef extern from "array.h":
 
-#    ctypedef struct Array:
-#        pass
-#
-#    ctypedef struct ArrayConf:
-#        size_t          capacity
-#        float           exp_factor
-#        mem_alloc_ft  mem_alloc
-#        mem_calloc_ft mem_calloc
-#        mem_free_ft   mem_free
-#
-#    ctypedef struct ArrayIter:
-#        Array* ar
-#        size_t index
-#        bint last_removed
-#
+    ctypedef struct Array:
+        pass
+
+    ctypedef struct ArrayConf:
+        size_t          capacity
+        float           exp_factor
+        mem_alloc_ft  mem_alloc
+        mem_calloc_ft mem_calloc
+        mem_free_ft   mem_free
+
+    ctypedef struct ArrayIter:
+        Array* ar
+        size_t index
+        bint last_removed
+
 #    ctypedef struct ArrayZipIter:
 #        Array* ar1
 #        Array* ar2
 #        size_t index
 #        bint last_removed
 #
-#    cc_stat array_new(Array** out)
-#
-#    cc_stat array_new_conf(ArrayConf* conf, Array** out)
-#
-#    void array_conf_init(ArrayConf* conf)
-#
-#    void array_destroy(Array* ar)
-#
+    cc_stat array_new(Array** out)
+
+    cc_stat array_new_conf(ArrayConf* conf, Array** out)
+
+    void array_conf_init(ArrayConf* conf)
+
+    void array_destroy(Array* ar)
+
 #    ctypedef void (*_array_destroy_cb_cb_ft)(void*)
 #
 #    void array_destroy_cb(Array* ar, _array_destroy_cb_cb_ft cb)
 #
-#    #cc_stat array_add(Array* ar, void* element)
+    cc_stat array_add(Array* ar, void* element)
 #
 #    #cc_stat array_add_at(Array* ar, void* element, size_t index)
 #
@@ -125,9 +128,9 @@ cdef extern from "common.h":
 #
 #    cc_stat array_filter(Array* ar, _array_filter_predicate_ft predicate, Array** out)
 #
-#    void array_iter_init(ArrayIter* iter, Array* ar)
-#
-#    cc_stat array_iter_next(ArrayIter* iter, void** out)
+    void array_iter_init(ArrayIter* iter, Array* ar)
+
+    cc_stat array_iter_next(ArrayIter* iter, void** out)
 #
 #    cc_stat array_iter_remove(ArrayIter* iter, void** out)
 #
@@ -181,6 +184,10 @@ cdef extern from "hashtable.h":
         TableEntry* prev_entry
         TableEntry* next_entry
 
+    hash_ft GENERAL_HASH
+    hash_ft STRING_HASH
+    hash_ft POINTER_HASH
+
 #    size_t get_table_index(HashTable *table, void *key)
 #
 #    void hashtable_conf_init(HashTableConf* conf)
@@ -209,10 +216,10 @@ cdef extern from "hashtable.h":
 #
 #    cc_stat hashtable_get_values(HashTable* table, Array** out)
 #
-#    size_t hashtable_hash_string(void* key, int len, uint32_t seed)
-#
-#    size_t hashtable_hash(void* key, int len, uint32_t seed)
-#
+    size_t hashtable_hash_string(void* key, int len, uint32_t seed)
+
+    size_t hashtable_hash(void* key, int len, uint32_t seed)
+
     size_t hashtable_hash_ptr(void* key, int len, uint32_t seed)
 #
 #    ctypedef void (*_hashtable_foreach_key_op_ft)(void*)

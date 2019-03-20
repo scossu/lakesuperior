@@ -16,7 +16,7 @@ from os import path
 import lakesuperior
 
 # Use this version to build C files from .pyx sources.
-CYTHON_VERSION='0.29'
+CYTHON_VERSION='0.29.6'
 
 KLEN = 5 # TODO Move somewhere else (config?)
 
@@ -91,8 +91,8 @@ extensions = [
             path.join(spookyhash_src_dir, 'spookyhash.c'),
             path.join(coll_src_dir, 'common.c'),
             path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashset.c'),
             path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -108,8 +108,8 @@ extensions = [
             path.join(spookyhash_src_dir, 'spookyhash.c'),
             path.join(coll_src_dir, 'common.c'),
             path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashset.c'),
             path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
@@ -119,6 +119,10 @@ extensions = [
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join(tpl_src_dir, 'tpl.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
@@ -129,6 +133,10 @@ extensions = [
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join(
