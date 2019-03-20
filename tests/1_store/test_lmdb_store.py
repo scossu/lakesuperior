@@ -273,7 +273,6 @@ class TestExtendedOps:
                 store.add(trp)
 
         with store.txn_ctx():
-            import pdb; pdb.set_trace()
             all_s = store.all_terms('s')
             all_p = store.all_terms('p')
             all_o = store.all_terms('o')

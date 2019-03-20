@@ -1222,8 +1222,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             tkeys_conf.initial_capacity = 1024
             tkeys_conf.load_factor = .75
             tkeys_conf.key_length = KLEN
-            #tkeys_conf.key_compare = cc.CC_CMP_POINTER
-            #tkeys_conf.hash = cc.POINTER_HASH
+            tkeys_conf.key_compare = cc.CC_CMP_POINTER
+            tkeys_conf.hash = cc.POINTER_HASH
 
             cc.hashset_new_conf(&tkeys_conf, tkeys)
 
@@ -1264,7 +1264,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             cc.hashset_iter_init(&it, tkeys)
             logger.info(f'All terms size: {cc.hashset_size(tkeys)}')
             while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-                logger.info('Yielding: {}'.format((<Key*>cur)[0]))
+                #logger.info('Yielding: {}'.format((<Key*>cur)[0]))
                 ret.add(self.from_key((<Key*>cur)[0]))
         finally:
             if tkeys:
@@ -1415,9 +1415,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         cdef Buffer pk_t
 
-        logger.info(f'Looking up key: {tk}')
+        #logger.info(f'Looking up key: {tk}')
         self.lookup_term(&tk, &pk_t)
-        logger.info(f'Serialized term found: {buffer_dump(&pk_t)}')
+        #logger.info(f'Serialized term found: {buffer_dump(&pk_t)}')
 
         # TODO Make Term a class and return that.
         return deserialize_to_rdflib(&pk_t)
