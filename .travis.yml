@@ -10,7 +10,7 @@ matrix:
       sudo: true
 
 install:
-  - pip install Cython==0.29 cymem
+  - pip install Cython==0.29.6 cymem
   - pip install -e .
 script:
   - python setup.py test
