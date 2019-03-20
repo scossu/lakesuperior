@@ -1,27 +1,26 @@
-from lakesuperior.cy_includes cimport collections as cc
 from lakesuperior.model.base cimport (
-    KeyIdx, Key, DoubleKey, TripleKey, Buffer
+    Key, Key, DoubleKey, TripleKey, Buffer
 )
-cdef class BaseKeyset:
+
+ctypedef bint (*key_cmp_fn_t)(
+    const TripleKey* spok, const Key* k1, const Key* k2
+)
+
+cdef class Keyset:
     cdef:
-        readonly cc.Array data
-        readonly size_t ct, size
-        size_t _cur
-        cc.ArrayConf conf
+        TripleKey* data
+        size_t ct
+        size_t _cur # Index cursor used to look up values.
+        size_t _free_i # Index of next free slot.
 
-        void resize(self, size_t ct) except *
-        unsigned char *get_item(self, i)
-        bint iter_next(self, unsigned char** val)
-        bint contains(self, const void *val)
-
-
-cdef class Keyset(BaseKeyset):
-    cdef size_t get_itemsize()
-
-
-cdef class DoubleKeyset(BaseKeyset):
-    cdef size_t get_itemsize()
-
-
-cdef class TripleKeyset(BaseKeyset):
-    cdef size_t get_itemsize()
+        void seek(self, size_t idx=*)
+        size_t tell(self)
+        bint get_at(self, size_t i, TripleKey* item)
+        bint get_next(self, TripleKey* item)
+        void add(self, const TripleKey* val) except *
+        bint contains(self, const TripleKey* val)
+        Keyset copy(self)
+        void resize(self, size_t size=*) except *
+        Keyset lookup(
+            self, const Key* sk, const Key* pk, const Key* ok
+        )

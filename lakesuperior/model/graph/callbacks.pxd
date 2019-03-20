@@ -13,6 +13,7 @@ cdef:
     int trp_cmp_fn(const void* key1, const void* key2)
     size_t term_hash_fn(const void* key, int l, uint32_t seed)
     size_t trp_hash_fn(const void* key, int l, uint32_t seed)
+
     bint lookup_none_cmp_fn(
         const BufferTriple *trp, const Buffer *t1, const Buffer *t2
     )

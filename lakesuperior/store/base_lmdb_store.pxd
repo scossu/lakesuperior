@@ -1,4 +1,4 @@
-cimport lakesuperior.cy_include.cylmdb as lmdb
+from lakesuperior.cy_include cimport cylmdb as lmdb
 
 cdef:
     int rc
@@ -13,6 +13,7 @@ cdef:
 cdef class BaseLmdbStore:
     cdef:
         readonly bint is_txn_open
+        readonly bint is_txn_rw
         public bint _open
         unsigned int _readers
         readonly str env_path

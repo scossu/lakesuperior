@@ -12,9 +12,10 @@ from libc.stdlib cimport free
 
 from cymem.cymem cimport Pool
 
-from lakesuperior.cy_include cimport collections as cc
+cimport lakesuperior.cy_include.collections as cc
+cimport lakesuperior.model.graph.callbacks as cb
+
 from lakesuperior.model.base cimport Buffer, buffer_dump
-from lakesuperior.model.graph cimport callbacks as cb
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
