@@ -113,8 +113,8 @@ extensions = [
             path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
     ),
     Extension(
         'lakesuperior.store.base_lmdb_store',

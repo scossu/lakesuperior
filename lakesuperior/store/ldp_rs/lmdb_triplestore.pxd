@@ -50,6 +50,3 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 self, Buffer *value,
                 unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,
                 unsigned int flags=*)
-
-        #Key bytes_to_idx(self, const unsigned char* bs)
-        #unsigned char* idx_to_bytes(Key idx)

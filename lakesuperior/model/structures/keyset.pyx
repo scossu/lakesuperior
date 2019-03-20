@@ -23,7 +23,6 @@ cdef class Keyset:
         """
         self.ct = ct
         self.data = <TripleKey*>PyMem_Malloc(self.ct * TRP_KLEN)
-        logger.info(f'data address: 0x{<size_t>self.data:02x}')
         if ct and not self.data:
             raise MemoryError('Error allocating Keyset data.')
 

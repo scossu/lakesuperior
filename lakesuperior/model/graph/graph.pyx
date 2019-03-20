@@ -101,15 +101,7 @@ cdef class SimpleGraph:
 
         cc.hashset_iter_init(&ti, self._triples)
         while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
-            #logger.info(f'Data loop.')
-            if void_p == NULL:
-                #logger.warn('Triple is NULL!')
-                break
-
             trp = <BufferTriple *>void_p
-            #print(f'trp.s: {buffer_dump(trp.s)}')
-            #print(f'trp.p: {buffer_dump(trp.p)}')
-            #print(f'trp.o: {buffer_dump(trp.o)}')
             yield (
                 term.deserialize_to_rdflib(trp.s),
                 term.deserialize_to_rdflib(trp.p),
@@ -246,11 +238,6 @@ cdef class SimpleGraph:
     def __iter__(self):
         """ Graph iterator. It iterates over the set triples. """
         yield from self.data
-
-
-    #def __next__(self):
-    #    """ Graph iterator. It iterates over the set triples. """
-    #    return self.data.__next__()
 
 
     # Slicing.
@@ -404,10 +391,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-            #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if other.trp_contains(bt):
-                #print('Adding.')
                 new_gr.add_triple(bt, True)
 
         return new_gr
@@ -456,10 +440,7 @@ cdef class SimpleGraph:
         cc.hashset_iter_init(&it, self._triples)
         while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
             bt = <BufferTriple*>cur
-            #print('Checking: <0x{:02x}> <0x{:02x}> <0x{:02x}>'.format(
-            #    <size_t>bt.s, <size_t>bt.p, <size_t>bt.o))
             if not other.trp_contains(bt):
-                #print('Adding.')
                 new_gr.add_triple(bt, True)
 
         return new_gr
@@ -616,24 +597,12 @@ cdef class SimpleGraph:
         if copy:
             trp = self.store_triple(trp)
 
-        #logger.info('Inserting terms.')
         cc.hashset_add(self._terms, trp.s)
         cc.hashset_add(self._terms, trp.p)
         cc.hashset_add(self._terms, trp.o)
-        #logger.info('inserted terms.')
-        #logger.info(f'Terms set size: {cc.hashset_size(self._terms)}')
 
-        cdef size_t trp_sz = cc.hashset_size(self._triples)
-        #logger.info(f'Triples set size before adding: {trp_sz}')
-
-        r = cc.hashset_add(self._triples, trp)
-
-        trp_sz = cc.hashset_size(self._triples)
-        #logger.info(f'Triples set size after adding: {trp_sz}')
-
-        cdef:
-            cc.HashSetIter ti
-            void *cur
+        if cc.hashset_add(self._triples, trp) != cc.CC_OK:
+            raise RuntimeError('Error inserting triple in graph.')
 
 
     cdef int remove_triple(self, const BufferTriple* btrp) except -1:
@@ -686,7 +655,6 @@ cdef class SimpleGraph:
 
         This behaves like the rdflib.Graph slicing policy.
         """
-        #logger.info(f'Slicing graph by: {s}, {p}, {o}.')
         # If no terms are unbound, check for containment.
         if s is not None and p is not None and o is not None: # s p o
             return (s, p, o) in self
@@ -763,7 +731,6 @@ cdef class SimpleGraph:
 
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
-            #logger.info('Looping over one triple only.')
             # Shortcut for 3-term match.
             trp.s = &ss
             trp.p = &sp
@@ -895,7 +862,6 @@ cdef class Imr(SimpleGraph):
         """
         # TODO use slice.
         values = {trp[2] for trp in self.lookup((self.uri, p, None))}
-        #logger.info(f'Values found: {values}')
 
         if strict and len(values) > 1:
             raise RuntimeError('More than one value found for {}, {}.'.format(
