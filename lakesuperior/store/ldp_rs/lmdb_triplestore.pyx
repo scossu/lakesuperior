@@ -359,7 +359,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = &ck
                 data_v.mv_size = KLEN
                 _check(lmdb.mdb_put(
-                    self.txn, self.get_dbi(b'th:t'), &key_v, &data_v, 0
+                    tmp_txn, self.get_dbi(b'th:t'), &key_v, &data_v, 0
                 ))
 
                 # Add to list of contexts.
@@ -368,7 +368,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = &ck # Whatever, length is zero anyways
                 data_v.mv_size = 0
                 _check(lmdb.mdb_put(
-                    self.txn, self.get_dbi(b'c:'), &key_v, &data_v, 0
+                    tmp_txn, self.get_dbi(b'c:'), &key_v, &data_v, 0
                 ))
                 if not self.is_txn_rw:
                     _check(lmdb.mdb_txn_commit(tmp_txn))
@@ -1222,8 +1222,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             tkeys_conf.initial_capacity = 1024
             tkeys_conf.load_factor = .75
             tkeys_conf.key_length = KLEN
-            tkeys_conf.key_compare = cc.CC_CMP_POINTER
-            tkeys_conf.hash = cc.POINTER_HASH
+            #tkeys_conf.key_compare = cc.CC_CMP_POINTER
+            #tkeys_conf.hash = cc.POINTER_HASH
 
             cc.hashset_new_conf(&tkeys_conf, tkeys)
 
@@ -1262,9 +1262,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             self._all_term_keys(term_type, &tkeys)
             cc.hashset_iter_init(&it, tkeys)
-            while cc.hashset_iter_next(&it, &cur):
-                #logger.debug('Yielding: {}'.format(key))
-                ret.add(self.from_key(<Key>cur))
+            logger.info(f'All terms size: {cc.hashset_size(tkeys)}')
+            while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
+                logger.info('Yielding: {}'.format((<Key*>cur)[0]))
+                ret.add(self.from_key((<Key*>cur)[0]))
         finally:
             if tkeys:
                 free(tkeys)
@@ -1493,9 +1494,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_size = KLEN
         data_v.mv_data = value.addr
         data_v.mv_size = value.sz
-        logger.info('Appending value {} to db {} with key: {}'.format(
-            buffer_dump(value), dblabel.decode(), new_idx))
-        #logger.debug('data size: {}'.format(data_v.mv_size))
+        #logger.debug('Appending value {} to db {} with key: {}'.format(
+        #    buffer_dump(value), dblabel.decode(), new_idx))
         lmdb.mdb_put(
                 txn, self.get_dbi(dblabel), &key_v, &data_v,
                 flags | lmdb.MDB_APPEND)

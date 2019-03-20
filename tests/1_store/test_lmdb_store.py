@@ -259,6 +259,43 @@ class TestBasicOps:
 
 
 @pytest.mark.usefixtures('store', 'bogus_trp')
+class TestExtendedOps:
+    '''
+    Test additional store operations.
+    '''
+
+    def test_all_terms(self, store, bogus_trp):
+        """
+        Test the "all terms" mehods.
+        """
+        with store.txn_ctx(True):
+            for trp in bogus_trp:
+                store.add(trp)
+
+        with store.txn_ctx():
+            import pdb; pdb.set_trace()
+            all_s = store.all_terms('s')
+            all_p = store.all_terms('p')
+            all_o = store.all_terms('o')
+
+        assert len(all_s) == 1
+        assert len(all_p) == 100
+        assert len(all_o) == 1000
+
+        assert URIRef('urn:test_mp:s1') in all_s
+        assert URIRef('urn:test_mp:s1') not in all_p
+        assert URIRef('urn:test_mp:s1') not in all_o
+
+        assert URIRef('urn:test_mp:p10') not in all_s
+        assert URIRef('urn:test_mp:p10') in all_p
+        assert URIRef('urn:test_mp:p10') not in all_o
+
+        assert URIRef('urn:test_mp:o99') not in all_s
+        assert URIRef('urn:test_mp:o99') not in all_p
+        assert URIRef('urn:test_mp:o99') in all_o
+
+
+@pytest.mark.usefixtures('store', 'bogus_trp')
 class TestEntryCount:
     '''
     Count number of entries in databases.
