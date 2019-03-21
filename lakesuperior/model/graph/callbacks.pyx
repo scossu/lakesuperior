@@ -24,12 +24,9 @@ cdef int term_cmp_fn(const void* key1, const void* key2):
     b2 = <Buffer *>key2
 
     if b1.sz != b2.sz:
-        #logger.info(f'Sizes differ: {b1.sz} != {b2.sz}. Return 1.')
         return 1
 
-    cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
-    #logger.info(f'term memcmp: {cmp}')
-    return cmp
+    return memcmp(b1.addr, b2.addr, b1.sz)
 
 
 cdef int trp_cmp_fn(const void* key1, const void* key2):
@@ -45,14 +42,11 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
 
-    diff = (
+    return (
         term_cmp_fn(t1.o, t2.o) or
         term_cmp_fn(t1.s, t2.s) or
         term_cmp_fn(t1.p, t2.p)
     )
-
-    #logger.info(f'Triples match: {not(diff)}')
-    return diff
 
 
 #cdef int trp_cmp_fn(const void* key1, const void* key2):
@@ -79,7 +73,7 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
 #    return is_not_equal
 
 
-cdef bint graph_eq_fn(graph.SimpleGraph g1, graph.SimpleGraph g2):
+cdef bint graph_eq_fn(graph.Graph g1, graph.Graph g2):
     """
     Compare 2 graphs for equality.
 
@@ -228,16 +222,16 @@ cdef inline bint lookup_po_cmp_fn(
 ## LOOKUP CALLBACK FUNCTIONS
 
 cdef inline void add_trp_callback(
-    graph.SimpleGraph gr, const BufferTriple* trp, void* ctx
+    graph.Graph gr, const TripleKey spok, void* ctx
 ):
     """
     Add a triple to a graph as a result of a lookup callback.
     """
-    gr.add_triple(trp, True)
+    gr.add(trp)
 
 
 cdef inline void del_trp_callback(
-    graph.SimpleGraph gr, const BufferTriple* trp, void* ctx
+    graph.Graph gr, const TripleKey spok, void* ctx
 ):
     """
     Remove a triple from a graph as a result of a lookup callback.
@@ -245,6 +239,6 @@ cdef inline void del_trp_callback(
     #logger.info('removing triple: {} {} {}'.format(
         #buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
     #))
-    gr.remove_triple(trp)
+    gr.remove(spok)
 
 

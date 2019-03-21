@@ -15,13 +15,14 @@ cdef class Keyset:
     """
     Pre-allocated array (not set, as the name may suggest) of ``TripleKey``s.
     """
-    def __cinit__(self, size_t ct=0):
+    def __cinit__(self, size_t ct=0, expand_ratio=.5, *args, **kwargs):
         """
         Initialize and allocate memory for the data set.
 
         :param size_t ct: Number of elements to be accounted for.
         """
         self.ct = ct
+        self.expand_ratio = expand_ratio
         self.data = <TripleKey*>PyMem_Malloc(self.ct * TRP_KLEN)
         if ct and not self.data:
             raise MemoryError('Error allocating Keyset data.')
@@ -37,12 +38,7 @@ cdef class Keyset:
         This is called when the Python instance is garbage collected, which
         makes it handy to safely pass a Keyset instance across functions.
         """
-        #logger.debug(
-        #    'Releasing {0} ({1}x{2}) bytes of Keyset @ {3:x}...'.format(
-        #        self.size, self.conf.capacity, self.itemsize,
-        #        <unsigned long>self.data))
         PyMem_Free(self.data)
-        #logger.debug('...done releasing.')
 
 
     # Access methods.
@@ -96,12 +92,21 @@ cdef class Keyset:
         return True
 
 
-    cdef void add(self, const TripleKey* val) except *:
+    cdef void add(self, const TripleKey* val, check_dup=False) except *:
         """
         Add a triple key to the array.
         """
-        if self._free_i >= self.ct:
-            raise MemoryError('No slots left in key set.')
+        # Optionally check for duplicates.
+        if check_dup and self.contains(val):
+            return
+
+        if self._free_i >= self.threshod:
+            if self.expand_ratio > 0:
+                # In some edge casees, a very small ratio may round down to a
+                # zero increase, so the baseline increase is 1 element.
+                self.resize(1 + self.ct * (1 + self.expand_ratio))
+            else:
+                raise MemoryError('No space left in key set.')
 
         self.data[self._free_i] = val[0]
 

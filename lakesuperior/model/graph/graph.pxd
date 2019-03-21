@@ -14,13 +14,13 @@ ctypedef bint (*lookup_fn_t)(
 
 # Callback for an iterator.
 ctypedef void (*lookup_callback_fn_t)(
-    SimpleGraph gr, const BufferTriple* trp, void* ctx
+    Graph gr, const BufferTriple* trp, void* ctx
 )
 
 ctypedef Buffer SPOBuffer[3]
 ctypedef Buffer *BufferPtr
 
-cdef class SimpleGraph:
+cdef class Graph:
     cdef:
         cc.HashSet *_terms # Set of unique serialized terms.
         cc.HashSet *_triples # Set of unique triples.
@@ -38,24 +38,24 @@ cdef class SimpleGraph:
         bint trp_contains(self, const BufferTriple* btrp)
 
         # Basic graph operations.
-        void ip_union(self, SimpleGraph other) except *
-        void ip_subtraction(self, SimpleGraph other) except *
-        void ip_intersection(self, SimpleGraph other) except *
-        void ip_xor(self, SimpleGraph other) except *
-        SimpleGraph empty_copy(self)
+        void ip_union(self, Graph other) except *
+        void ip_subtraction(self, Graph other) except *
+        void ip_intersection(self, Graph other) except *
+        void ip_xor(self, Graph other) except *
+        Graph empty_copy(self)
         void _match_ptn_callback(
-            self, pattern, SimpleGraph gr,
+            self, pattern, Graph gr,
             lookup_callback_fn_t callback_fn, void* ctx=*
         ) except *
 
-    cpdef union_(self, SimpleGraph other)
-    cpdef subtraction(self, SimpleGraph other)
-    cpdef intersection(self, SimpleGraph other)
-    cpdef xor(self, SimpleGraph other)
+    cpdef union_(self, Graph other)
+    cpdef subtraction(self, Graph other)
+    cpdef intersection(self, Graph other)
+    cpdef xor(self, Graph other)
     cpdef void set(self, tuple trp) except *
 
 
-cdef class Imr(SimpleGraph):
+cdef class Imr(Graph):
     cdef:
         readonly str id
         Imr empty_copy(self)

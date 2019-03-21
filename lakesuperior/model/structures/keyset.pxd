@@ -12,6 +12,11 @@ cdef class Keyset:
         size_t ct
         size_t _cur # Index cursor used to look up values.
         size_t _free_i # Index of next free slot.
+        float expand_ratio # By how much storage is automatically expanded when
+                           # full. 1 means the size doubles, 0.5 a 50%
+                           # increase. 0 means that storage won't be
+                           # automatically expanded and adding above capacity
+                           # will raise an error.
 
         void seek(self, size_t idx=*)
         size_t tell(self)

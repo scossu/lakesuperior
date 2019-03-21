@@ -252,7 +252,7 @@ class RsrcCentricLayout:
 
         :rtype: SimpleGraph
         """
-        return self.store.graph_lookup((subject, None, None), ctx, copy=True)
+        return self.store.triple_keys((subject, None, None), ctx)
 
 
     def count_rsrc(self):
@@ -294,7 +294,7 @@ class RsrcCentricLayout:
         imr = Imr(uri=nsc['fcres'][uid])
 
         for ctx in contexts:
-            gr = self.store.graph_lookup((None, None, None), ctx, copy=True)
+            gr = self.store.triple_keys((None, None, None), ctx)
             imr |= gr
 
         # Include inbound relationships.
@@ -332,11 +332,10 @@ class RsrcCentricLayout:
         logger.debug('Getting metadata for: {}'.format(uid))
         if ver_uid:
             uid = self.snapshot_uid(uid, ver_uid)
-        imr = self.store.graph_lookup(
+        imr = self.store.triple_keys(
             (None, None, None),
             context=nsc['fcadmin'][uid],
-            uri=nsc['fcres'][uid],
-            copy=True
+            uri=nsc['fcres'][uid]
         )
 
         if strict:
@@ -356,11 +355,10 @@ class RsrcCentricLayout:
         # graph. If multiple user-provided graphs will be supported, this
         # should use another query to get all of them.
         uri = nsc['fcres'][uid]
-        userdata = self.store.graph_lookup(
+        userdata = self.store.triple_keys(
             (None, None, None),
             context=nsc['fcmain'][uid],
-            uri=uri,
-            copy=True
+            uri=uri
         )
 
         return userdata
@@ -380,18 +378,18 @@ class RsrcCentricLayout:
         vmeta = Imr(uri=nsc['fcres'][uid])
 
         #Get version graphs proper.
-        for vtrp in self.store.graph_lookup(
+        for vtrp in self.store.triple_keys(
             (nsc['fcres'][uid], nsc['fcrepo'].hasVersion, None),
             nsc['fcadmin'][uid]
         ):
             # Add the hasVersion triple to the result graph.
             vmeta.add((vtrp,))
-            vmeta_gr = self.store.graph_lookup(
+            vmeta_gr = self.store.triple_keys(
                 (None, nsc['foaf'].primaryTopic, vtrp[2]), HIST_GR_URI
             )
             # Get triples in the meta graph filtering out undesired triples.
             for vmtrp in vmeta_gr:
-                for trp in self.store.graph_lookup(
+                for trp in self.store.triple_keys(
                     (vmtrp[0], None, None), HIST_GR_URI
                 ):
                     if (
@@ -418,7 +416,7 @@ class RsrcCentricLayout:
         :return: Inbound triples or subjects.
         """
         # Only return non-historic graphs.
-        # TODO self.store.graph_lookup?
+        # TODO self.store.triple_keys?
         meta_gr = self.ds.graph(META_GR_URI)
         ptopic_uri = nsc['foaf'].primaryTopic
 
@@ -444,7 +442,7 @@ class RsrcCentricLayout:
         ctx_uri = nsc['fcstruct'][uid]
         cont_p = nsc['ldp'].contains
         def _recurse(dset, s, c):
-            new_dset = self.store.graph_lookup(
+            new_dset = self.store.triple_keys(
                 (s, cont_p, None), c
             )[s : cont_p]
             #new_dset = set(ds.graph(c)[s : cont_p])
@@ -465,9 +463,8 @@ class RsrcCentricLayout:
             return _recurse(set(), subj_uri, ctx_uri)
         else:
             #return ds.graph(ctx_uri)[subj_uri : cont_p : ])
-            return self.store.graph_lookup(
-                (subj_uri, cont_p, None), ctx_uri,
-                copy=True
+            return self.store.triple_keys(
+                (subj_uri, cont_p, None), ctx_uri
             )[subj_uri : cont_p]
 
 

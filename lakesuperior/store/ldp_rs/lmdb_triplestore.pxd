@@ -5,7 +5,7 @@ cimport lakesuperior.cy_include.cytpl as tpl
 from lakesuperior.model.base cimport (
     Key, DoubleKey, TripleKey, Buffer
 )
-from lakesuperior.model.graph.graph cimport SimpleGraph
+from lakesuperior.model.graph.graph cimport Graph
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 
@@ -28,7 +28,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     cpdef void _remove(self, tuple triple_pattern, context=*) except *
     cpdef void _remove_graph(self, object gr_uri) except *
     cpdef tuple all_namespaces(self)
-    cpdef SimpleGraph graph_lookup(
+    cpdef Graph graph_lookup(
         self, triple_pattern, context=*, uri=*, copy=*
     )
 
@@ -44,7 +44,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self, unsigned char idx1, unsigned char idx2, DoubleKey tks
         )
         object from_key(self, const Key tk)
-        Key _to_key(self, term) except -1
+        Key to_key(self, term) except -1
         void all_contexts(self, Key** ctx, size_t* sz, triple=*) except *
         Key _append(
                 self, Buffer *value,

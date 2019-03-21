@@ -21,7 +21,7 @@ from lakesuperior.model.base cimport (
     Key, DoubleKey, TripleKey, QuadKey,
     Buffer, buffer_dump
 )
-from lakesuperior.model.graph.graph cimport SimpleGraph, Imr
+from lakesuperior.model.graph.graph cimport Graph, Imr
 from lakesuperior.model.graph.term cimport Term
 from lakesuperior.model.graph.triple cimport BufferTriple
 
@@ -172,7 +172,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Key ck
 
         if context is not None:
-            ck = self._to_key(context)
+            ck = self.to_key(context)
             key_v.mv_data = &ck
             key_v.mv_size = KLEN
 
@@ -364,7 +364,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         if context is not None:
             try:
-                ck = self._to_key(context)
+                ck = self.to_key(context)
             except KeyNotFoundError:
                 # If context is specified but not found, return to avoid
                 # deleting the wrong triples.
@@ -563,7 +563,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Gather information on the graph prior to deletion.
         try:
-            ck = self._to_key(gr_uri)
+            ck = self.to_key(gr_uri)
         except KeyNotFoundError:
             return
 
@@ -677,55 +677,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self._cur_close(cur)
 
 
-    cpdef SimpleGraph graph_lookup(
-            self, triple_pattern, context=None, uri=None, copy=False
-    ):
-        """
-        Create a SimpleGraph or Imr instance from buffers from the store.
-
-        The instance is only valid within the LMDB transaction that created it.
-
-        :param tuple triple_pattern: 3 RDFLib terms
-        :param context: Context graph, if available.
-        :type context: rdflib.Graph or None
-        :param str uri: URI for the resource. If provided, the resource
-            returned will be an Imr, otherwise a SimpleGraph.
-
-        :rtype: Iterator
-        :return: Generator over triples and contexts in which each result has
-            the following format::
-
-                (s, p, o), generator(contexts)
-
-        Where the contexts generator lists all context that the triple appears
-        in.
-        """
-        cdef:
-            Buffer buffers[3]
-            BufferTriple btrp
-            SimpleGraph gr
-            TripleKey spok
-
-        btrp.s = buffers
-        btrp.p = buffers + 1
-        btrp.o = buffers + 2
-
-        gr = Imr(uri=uri) if uri else SimpleGraph()
-
-        match = self.triple_keys(triple_pattern, context)
-
-        match.seek()
-        while match.get_next(&spok):
-            self.lookup_term(spok, buffers)
-            self.lookup_term(spok + 1, buffers + 1)
-            self.lookup_term(spok + 2, buffers + 2)
-
-            gr.add_triple(&btrp, True)
-
-        return gr
-
-
-    cdef Keyset triple_keys(self, tuple triple_pattern, context=None):
+    cdef Keyset triple_keys(self, tuple triple_pattern, context=None, uri):
         """
         Top-level lookup method.
 
@@ -748,7 +700,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         if context is not None:
             try:
-                ck = self._to_key(context)
+                ck = self.to_key(context)
             except KeyNotFoundError:
                 # Context not found.
                 return Keyset()
@@ -763,7 +715,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if all(triple_pattern):
                     for i, term in enumerate(triple_pattern):
                         try:
-                            tk = self._to_key(term)
+                            tk = self.to_key(term)
                         except KeyNotFoundError:
                             # A term key was not found.
                             return Keyset()
@@ -866,11 +818,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         try:
             if s is not None:
-                sk = self._to_key(s)
+                sk = self.to_key(s)
             if p is not None:
-                pk = self._to_key(p)
+                pk = self.to_key(p)
             if o is not None:
-                ok = self._to_key(o)
+                ok = self.to_key(o)
         except KeyNotFoundError:
             return Keyset()
 
@@ -1209,9 +1161,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
 
                 spok = [
-                    self._to_key(triple[0]),
-                    self._to_key(triple[1]),
-                    self._to_key(triple[2]),
+                    self.to_key(triple[0]),
+                    self.to_key(triple[1]),
+                    self.to_key(triple[2]),
                 ]
                 key_v.mv_data = spok
                 key_v.mv_size = TRP_KLEN
@@ -1300,15 +1252,12 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline Key _to_key(self, term) except -1:
+    cdef inline Key to_key(self, term) except -1:
         """
-        Convert a triple, quad or term into a key index (bare number).
-
-        The key is the checksum of the serialized object, therefore unique for
-        that object.
+        Convert a term into a key index (bare number).
 
         :param rdflib.Term term: An RDFLib term (URIRef, BNode, Literal).
-        :param Key key: Pointer to the key that will be produced.
+        :param Key key: Key that will be produced.
 
         :rtype: void
         """
@@ -1340,7 +1289,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param list(bytes) values: Value(s) to append.
 
         :rtype: Key
-        :return: Index of key inserted.
+        :return: Key inserted.
         """
         cdef:
             lmdb.MDB_cursor *cur

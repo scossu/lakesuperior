@@ -16,6 +16,7 @@ cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.model.graph.callbacks as cb
 
 from lakesuperior.model.base cimport Buffer, buffer_dump
+from lakesuperior.model.structures.keyset import Keyset
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
@@ -23,14 +24,14 @@ from lakesuperior.model.structures.hash cimport term_hash_seed32
 logger = logging.getLogger(__name__)
 
 
-cdef class SimpleGraph:
+cdef class Graph(Keyset):
     """
     Fast and simple implementation of a graph.
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
 
-    A SimpleGraph can be instantiated from a store lookup. This makes it
+    A Graph can be instantiated from a store lookup. This makes it
     possible to use a Keyset to perform initial filtering via identity by key,
     then the filtered Keyset can be converted into a set of meaningful terms.
 
@@ -38,34 +39,12 @@ cdef class SimpleGraph:
     ``rdflib.Graph`` instance.
     """
 
-    def __cinit__(self, set data=set(), *args, **kwargs):
+    def __cinit__(self, *args, str uri=None, set data=set(), **kwargs):
         """
         Initialize the graph, optionally with Python data.
 
         :param set data: Initial data as a set of 3-tuples of RDFLib terms.
         """
-        cdef:
-            cc.HashSetConf terms_conf, trp_conf
-
-        self.term_cmp_fn = cb.term_cmp_fn
-        self.trp_cmp_fn = cb.trp_cmp_fn
-
-        cc.hashset_conf_init(&terms_conf)
-        terms_conf.load_factor = 0.85
-        terms_conf.hash = cb.term_hash_fn
-        terms_conf.hash_seed = term_hash_seed32
-        terms_conf.key_compare = self.term_cmp_fn
-        terms_conf.key_length = sizeof(Buffer*)
-
-        cc.hashset_conf_init(&trp_conf)
-        trp_conf.load_factor = 0.75
-        trp_conf.hash = cb.trp_hash_fn
-        trp_conf.hash_seed = term_hash_seed32
-        trp_conf.key_compare = self.trp_cmp_fn
-        trp_conf.key_length = sizeof(BufferTriple)
-
-        cc.hashset_new_conf(&terms_conf, &self._terms)
-        cc.hashset_new_conf(&trp_conf, &self._triples)
 
         self.pool = Pool()
 
@@ -75,69 +54,39 @@ cdef class SimpleGraph:
             self.add(data)
 
 
-    def __dealloc__(self):
-        """
-        Free the triple pointers.
-        """
-        free(self._triples)
-        free(self._terms)
-
-
     ## PROPERTIES ##
 
     @property
     def data(self):
         """
-        Triple data as a Python generator.
+        Triple data as a Python set.
 
-        :rtype: generator
+        :rtype: set
         """
-        cdef:
-            void *void_p
-            cc.HashSetIter ti
-            Buffer* ss
-            Buffer* sp
-            Buffer* so
+        cdef TripleKey spok
 
-        cc.hashset_iter_init(&ti, self._triples)
-        while cc.hashset_iter_next(&ti, &void_p) != cc.CC_ITER_END:
-            trp = <BufferTriple *>void_p
-            yield (
-                term.deserialize_to_rdflib(trp.s),
-                term.deserialize_to_rdflib(trp.p),
-                term.deserialize_to_rdflib(trp.o),
-            )
+        ret = set()
 
-    @property
-    def stored_terms(self):
-        """
-        All terms in the graph with their memory address.
+        self.seek()
+        while self.get_next(&spok):
+            ret.add((
+                self.store.from_key(trp[0]),
+                self.store.from_key(trp[1]),
+                self.store.from_key(trp[2])
+            ))
 
-        For debugging purposes.
-        """
-        cdef:
-            cc.HashSetIter it
-            void *cur
-
-        terms = set()
-
-        cc.hashset_iter_init(&it, self._terms)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            s_term = <Buffer*>cur
-            terms.add((f'0x{<size_t>cur:02x}', term.deserialize_to_rdflib(s_term)))
-
-        return terms
+        return ret
 
 
     ## MAGIC METHODS ##
 
     def __len__(self):
         """ Number of triples in the graph. """
-        return cc.hashset_size(self._triples)
+        return self._free_i
 
 
     def __eq__(self, other):
-        """ Equality operator between ``SimpleGraph`` instances. """
+        """ Equality operator between ``Graph`` instances. """
         return len(self ^ other) == 0
 
 
@@ -272,31 +221,18 @@ cdef class SimpleGraph:
         return {r[i] for r in self.data}
 
 
-    def add(self, trp):
+    def add_triples(self, trp):
         """
         Add triples to the graph.
 
         :param iterable triples: iterable of 3-tuple triples.
         """
-        cdef size_t cur = 0, trp_cur = 0
-
-        trp_ct = len(trp)
-        term_buf = <Buffer*>self.pool.alloc(3 * trp_ct, sizeof(Buffer))
-        trp_buf = <BufferTriple*>self.pool.alloc(trp_ct, sizeof(BufferTriple))
-
-        for s, p, o in trp:
-            term.serialize_from_rdflib(s, term_buf + cur, self.pool)
-            term.serialize_from_rdflib(p, term_buf + cur + 1, self.pool)
-            term.serialize_from_rdflib(o, term_buf + cur + 2, self.pool)
-
-            (trp_buf + trp_cur).s = term_buf + cur
-            (trp_buf + trp_cur).p = term_buf + cur + 1
-            (trp_buf + trp_cur).o = term_buf + cur + 2
-
-            self.add_triple(trp_buf + trp_cur)
-
-            trp_cur += 1
-            cur += 3
+        for s, p, o in triples:
+            self.add([
+                self.store.to_key(s),
+                self.store.to_key(p),
+                self.store.to_key(o),
+            ])
 
 
     def len_terms(self):
@@ -317,7 +253,7 @@ cdef class SimpleGraph:
 
     ## CYTHON-ACCESSIBLE BASIC METHODS ##
 
-    cdef SimpleGraph empty_copy(self):
+    cdef Graph empty_copy(self):
         """
         Create an empty copy carrying over some key properties.
 
@@ -326,16 +262,16 @@ cdef class SimpleGraph:
         return self.__class__()
 
 
-    cpdef union_(self, SimpleGraph other):
+    cpdef union_(self, Graph other):
         """
-        Perform set union resulting in a new SimpleGraph instance.
+        Perform set union resulting in a new Graph instance.
 
         TODO Allow union of multiple graphs at a time.
 
-        :param SimpleGraph other: The other graph to merge.
+        :param Graph other: The other graph to merge.
 
-        :rtype: SimpleGraph
-        :return: A new SimpleGraph instance.
+        :rtype: Graph
+        :return: A new Graph instance.
         """
         cdef:
             void *cur
@@ -353,13 +289,13 @@ cdef class SimpleGraph:
         return new_gr
 
 
-    cdef void ip_union(self, SimpleGraph other) except *:
+    cdef void ip_union(self, Graph other) except *:
         """
         Perform an in-place set union that adds triples to this instance
 
         TODO Allow union of multiple graphs at a time.
 
-        :param SimpleGraph other: The other graph to merge.
+        :param Graph other: The other graph to merge.
 
         :rtype: void
         """
@@ -373,14 +309,14 @@ cdef class SimpleGraph:
             self.add_triple(bt, True)
 
 
-    cpdef intersection(self, SimpleGraph other):
+    cpdef intersection(self, Graph other):
         """
         Graph intersection.
 
-        :param SimpleGraph other: The other graph to intersect.
+        :param Graph other: The other graph to intersect.
 
-        :rtype: SimpleGraph
-        :return: A new SimpleGraph instance.
+        :rtype: Graph
+        :return: A new Graph instance.
         """
         cdef:
             void *cur
@@ -397,14 +333,14 @@ cdef class SimpleGraph:
         return new_gr
 
 
-    cdef void ip_intersection(self, SimpleGraph other) except *:
+    cdef void ip_intersection(self, Graph other) except *:
         """
         In-place graph intersection.
 
         Triples not in common with another graph are removed from the current
         one.
 
-        :param SimpleGraph other: The other graph to intersect.
+        :param Graph other: The other graph to intersect.
 
         :rtype: void
         """
@@ -419,17 +355,17 @@ cdef class SimpleGraph:
                 self.remove_triple(bt)
 
 
-    cpdef subtraction(self, SimpleGraph other):
+    cpdef subtraction(self, Graph other):
         """
         Graph set-theoretical subtraction.
 
         Create a new graph with the triples of this graph minus the ones in
         common with the other graph.
 
-        :param SimpleGraph other: The other graph to subtract to this.
+        :param Graph other: The other graph to subtract to this.
 
-        :rtype: SimpleGraph
-        :return: A new SimpleGraph instance.
+        :rtype: Graph
+        :return: A new Graph instance.
         """
         cdef:
             void *cur
@@ -446,13 +382,13 @@ cdef class SimpleGraph:
         return new_gr
 
 
-    cdef void ip_subtraction(self, SimpleGraph other) except *:
+    cdef void ip_subtraction(self, Graph other) except *:
         """
         In-place graph subtraction.
 
         Triples in common with another graph are removed from the current one.
 
-        :param SimpleGraph other: The other graph to intersect.
+        :param Graph other: The other graph to intersect.
 
         :rtype: void
         """
@@ -467,14 +403,14 @@ cdef class SimpleGraph:
                 self.remove_triple(bt)
 
 
-    cpdef xor(self, SimpleGraph other):
+    cpdef xor(self, Graph other):
         """
         Graph Exclusive disjunction (XOR).
 
-        :param SimpleGraph other: The other graph to perform XOR with.
+        :param Graph other: The other graph to perform XOR with.
 
-        :rtype: SimpleGraph
-        :return: A new SimpleGraph instance.
+        :rtype: Graph
+        :return: A new Graph instance.
         """
         cdef:
             void *cur
@@ -500,14 +436,14 @@ cdef class SimpleGraph:
         return new_gr
 
 
-    cdef void ip_xor(self, SimpleGraph other) except *:
+    cdef void ip_xor(self, Graph other) except *:
         """
         In-place graph XOR.
 
         Triples in common with another graph are removed from the current one,
         and triples not in common will be added from the other one.
 
-        :param SimpleGraph other: The other graph to perform XOR with.
+        :param Graph other: The other graph to perform XOR with.
 
         :rtype: void
         """
@@ -516,7 +452,7 @@ cdef class SimpleGraph:
             cc.HashSetIter it
             # TODO This could be more efficient to stash values in a simple
             # array, but how urgent is it to improve an in-place XOR?
-            SimpleGraph tmp = SimpleGraph()
+            Graph tmp = Graph()
 
         # Add *to the tmp graph* triples in other graph and not in this graph.
         cc.hashset_iter_init(&it, other._triples)
@@ -579,37 +515,6 @@ cdef class SimpleGraph:
         memcpy(dtrp.o.addr, strp.o.addr, strp.o.sz)
 
         return dtrp
-
-
-    cdef inline void add_triple(
-        self, const BufferTriple* trp, bint copy=False
-    ) except *:
-        """
-        Add a triple from 3 (TPL) serialized terms.
-
-        Each of the terms is added to the term set if not existing. The triple
-        also is only added if not existing.
-
-        :param BufferTriple* trp: The triple to add.
-        :param bint copy: if ``True``, the triple and term data will be
-            allocated and copied into the graph memory pool.
-        """
-        if copy:
-            trp = self.store_triple(trp)
-
-        cc.hashset_add(self._terms, trp.s)
-        cc.hashset_add(self._terms, trp.p)
-        cc.hashset_add(self._terms, trp.o)
-
-        if cc.hashset_add(self._triples, trp) != cc.CC_OK:
-            raise RuntimeError('Error inserting triple in graph.')
-
-
-    cdef int remove_triple(self, const BufferTriple* btrp) except -1:
-        """
-        Remove one triple from the graph.
-        """
-        return cc.hashset_remove(self._triples, btrp, NULL)
 
 
     cdef bint trp_contains(self, const BufferTriple* btrp):
@@ -694,13 +599,13 @@ cdef class SimpleGraph:
 
         Any and all of the lookup terms msy be ``None``.
 
-        :rtype: SimpleGraph
-        "return: New SimpleGraph instance with matching triples.
+        :rtype: Graph
+        "return: New Graph instance with matching triples.
         """
         cdef:
             void* cur
             BufferTriple trp
-            SimpleGraph res_gr = SimpleGraph()
+            Graph res_gr = Graph()
 
         self._match_ptn_callback(pattern, res_gr, cb.add_trp_callback, NULL)
 
@@ -708,7 +613,7 @@ cdef class SimpleGraph:
 
 
     cdef void _match_ptn_callback(
-        self, pattern, SimpleGraph gr,
+        self, pattern, Graph gr,
         lookup_callback_fn_t callback_fn, void* ctx=NULL
     ) except *:
         """
@@ -775,11 +680,11 @@ cdef class SimpleGraph:
 
 
 
-cdef class Imr(SimpleGraph):
+cdef class Imr(Graph):
     """
     In-memory resource data container.
 
-    This is an extension of :py:class:`~SimpleGraph` that adds a subject URI to
+    This is an extension of :py:class:`~Graph` that adds a subject URI to
     the data set and some convenience methods.
 
     An instance of this class can be converted to a ``rdflib.Resource``
@@ -799,9 +704,9 @@ cdef class Imr(SimpleGraph):
         :param rdflib.URIRef uri: The graph URI.
             This will serve as the subject for some queries.
         :param args: Positional arguments inherited from
-            ``SimpleGraph.__init__``.
+            ``Graph.__init__``.
         :param kwargs: Keyword arguments inherited from
-            ``SimpleGraph.__init__``.
+            ``Graph.__init__``.
         """
         self.id = str(uri)
         #super().__init(*args, **kwargs)
