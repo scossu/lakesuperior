@@ -13,7 +13,7 @@ from lakesuperior.model.graph.triple cimport BufferTriple
 logger = logging.getLogger(__name__)
 
 
-cdef int term_cmp_fn(const void* key1, const void* key2):
+cdef inline int term_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two Buffer objects.
 
@@ -27,12 +27,10 @@ cdef int term_cmp_fn(const void* key1, const void* key2):
         #logger.info(f'Sizes differ: {b1.sz} != {b2.sz}. Return 1.')
         return 1
 
-    cdef int cmp = memcmp(b1.addr, b2.addr, b1.sz)
-    #logger.info(f'term memcmp: {cmp}')
-    return cmp
+    return memcmp(b1.addr, b2.addr, b1.sz)
 
 
-cdef int trp_cmp_fn(const void* key1, const void* key2):
+cdef inline int trp_cmp_fn(const void* key1, const void* key2):
     """
     Compare function for two triples in a set.
 
@@ -45,14 +43,12 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
     t1 = <BufferTriple *>key1
     t2 = <BufferTriple *>key2
 
-    diff = (
+    # Compare in order of probability (largest sets first).
+    return (
         term_cmp_fn(t1.o, t2.o) or
         term_cmp_fn(t1.s, t2.s) or
         term_cmp_fn(t1.p, t2.p)
     )
-
-    #logger.info(f'Triples match: {not(diff)}')
-    return diff
 
 
 #cdef int trp_cmp_fn(const void* key1, const void* key2):

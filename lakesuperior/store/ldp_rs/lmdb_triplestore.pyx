@@ -782,9 +782,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         #        'Getting triples for: {}, {}'.format(triple_pattern, context))
 
         match = self.triple_keys(triple_pattern, context)
-        logger.info(f'Matches in graph_lookup: {match.ct}')
-        #btrp = <BufferTriple*>gr.pool.alloc(match.ct, sizeof(BufferTriple))
-        #buffers = <Buffer*>gr.pool.alloc(3 * match.ct, sizeof(Buffer))
+        logger.debug(f'Matches in graph_lookup: {match.ct}')
 
         match.seek()
         while match.get_next(&spok):
