@@ -44,7 +44,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             self, unsigned char idx1, unsigned char idx2, DoubleKey tks
         )
         object from_key(self, const Key tk)
-        Key _to_key_idx(self, term) except -1
+        Key _to_key(self, term) except -1
         void all_contexts(self, Key** ctx, size_t* sz, triple=*) except *
         Key _append(
                 self, Buffer *value,

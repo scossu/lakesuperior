@@ -172,7 +172,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Key ck
 
         if context is not None:
-            ck = self._to_key_idx(context)
+            ck = self._to_key(context)
             key_v.mv_data = &ck
             key_v.mv_size = KLEN
 
@@ -364,7 +364,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         if context is not None:
             try:
-                ck = self._to_key_idx(context)
+                ck = self._to_key(context)
             except KeyNotFoundError:
                 # If context is specified but not found, return to avoid
                 # deleting the wrong triples.
@@ -563,7 +563,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # Gather information on the graph prior to deletion.
         try:
-            ck = self._to_key_idx(gr_uri)
+            ck = self._to_key(gr_uri)
         except KeyNotFoundError:
             return
 
@@ -748,7 +748,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         if context is not None:
             try:
-                ck = self._to_key_idx(context)
+                ck = self._to_key(context)
             except KeyNotFoundError:
                 # Context not found.
                 return Keyset()
@@ -763,7 +763,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 if all(triple_pattern):
                     for i, term in enumerate(triple_pattern):
                         try:
-                            tk = self._to_key_idx(term)
+                            tk = self._to_key(term)
                         except KeyNotFoundError:
                             # A term key was not found.
                             return Keyset()
@@ -866,11 +866,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         try:
             if s is not None:
-                sk = self._to_key_idx(s)
+                sk = self._to_key(s)
             if p is not None:
-                pk = self._to_key_idx(p)
+                pk = self._to_key(p)
             if o is not None:
-                ok = self._to_key_idx(o)
+                ok = self._to_key(o)
         except KeyNotFoundError:
             return Keyset()
 
@@ -1209,9 +1209,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     self.txn, lmdb.mdb_cursor_dbi(cur), &stat))
 
                 spok = [
-                    self._to_key_idx(triple[0]),
-                    self._to_key_idx(triple[1]),
-                    self._to_key_idx(triple[2]),
+                    self._to_key(triple[0]),
+                    self._to_key(triple[1]),
+                    self._to_key(triple[2]),
                 ]
                 key_v.mv_data = spok
                 key_v.mv_size = TRP_KLEN
@@ -1300,7 +1300,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         return deserialize_to_rdflib(&pk_t)
 
 
-    cdef inline Key _to_key_idx(self, term) except -1:
+    cdef inline Key _to_key(self, term) except -1:
         """
         Convert a triple, quad or term into a key index (bare number).
 
