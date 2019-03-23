@@ -7,8 +7,6 @@ from lakesuperior import env
 from libc.string cimport memcpy
 from libc.stdlib cimport free
 
-from cymem.cymem cimport Pool
-
 cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.model.structures.callbacks as cb
 cimport lakesuperior.model.structures.keyset as kset
@@ -51,7 +49,7 @@ cdef class Graph:
     """
 
     def __cinit__(
-        self, store, size_t ct=0, str uri=None, set data=set()
+        self, store=None, size_t ct=0, str uri=None, set data=set()
     ):
         """
         Initialize the graph, optionally from Python/RDFlib data.
@@ -70,8 +68,6 @@ cdef class Graph:
             set is created from a set of 3-tuples of :py:class:``rdflib.Term``
             instances.
         """
-
-        self.pool = Pool()
 
         if not store:
             store = env.app_globals.rdf_store

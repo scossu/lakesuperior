@@ -24,7 +24,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.model.graph.graph import Graph, Imr
+from lakesuperior.model.graph.graph import Graph
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -291,7 +291,7 @@ class RsrcCentricLayout:
         if not incl_children:
             contexts.remove(nsc['fcstruct'][uid])
 
-        imr = Imr(uri=nsc['fcres'][uid])
+        imr = Graph(self.store, uri=nsc['fcres'][uid])
 
         for ctx in contexts:
             gr = self.store.triple_keys((None, None, None), ctx)
@@ -299,7 +299,9 @@ class RsrcCentricLayout:
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            gr = Graph({*self.get_inbound_rel(nsc['fcres'][uid])})
+            gr = Graph(
+                self.store, data={*self.get_inbound_rel(nsc['fcres'][uid])}
+            )
             imr |= gr
 
         if strict:
@@ -375,7 +377,7 @@ class RsrcCentricLayout:
         # URI with the subject URI. But the concepts of data and metadata in
         # Fedora are quite fluid anyways...
 
-        vmeta = Imr(uri=nsc['fcres'][uid])
+        vmeta = Graph(self.store, uri=nsc['fcres'][uid])
 
         #Get version graphs proper.
         for vtrp in self.store.triple_keys(

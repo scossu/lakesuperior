@@ -26,7 +26,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.model.graph.graph import Graph as SimpleGraph, Imr
+from lakesuperior.model.graph.graph import Graph as Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -233,7 +233,7 @@ class Ldpr(metaclass=ABCMeta):
         :param v: New set of triples to populate the IMR with.
         :type v: set or rdflib.Graph
         """
-        self._imr = Imr(self.uri, data=set(data))
+        self._imr = Graph(uri=self.uri, data=set(data))
 
 
     @imr.deleter
@@ -266,8 +266,8 @@ class Ldpr(metaclass=ABCMeta):
         """
         Set resource metadata.
         """
-        if not isinstance(rsrc, Imr):
-            raise TypeError('Provided metadata is not an Imr object.')
+        if not isinstance(rsrc, Graph):
+            raise TypeError('Provided metadata is not a Graph object.')
         self._metadata = rsrc
 
 
@@ -292,7 +292,7 @@ class Ldpr(metaclass=ABCMeta):
             ):
                 out_trp.add(t)
 
-        return Imr(uri = self.uri, data=out_trp)
+        return Graph(uri=self.uri, data=out_trp)
 
 
     @property
@@ -304,7 +304,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 self._version_info = rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
-                self._version_info = Imr(uri=self.uri)
+                self._version_info = Graph(uri=self.uri)
 
         return self._version_info
 
@@ -582,7 +582,7 @@ class Ldpr(metaclass=ABCMeta):
 
         ver_gr = rdfly.get_imr(
             self.uid, ver_uid=ver_uid, incl_children=False)
-        self.provided_imr = Imr(uri=self.uri)
+        self.provided_imr = Graph(uri=self.uri)
 
         for t in ver_gr:
             if not self._is_trp_managed(t):

@@ -4,7 +4,7 @@ from shutil import rmtree
 
 from rdflib import Graph, Namespace, URIRef
 
-from lakesuperior.model.graph.graph import SimpleGraph, Imr
+from lakesuperior.model.graph.graph import Graph
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
 
 
@@ -49,7 +49,7 @@ class TestGraphInit:
         """
         Test creation of an empty graph.
         """
-        gr = SimpleGraph()
+        gr = Graph()
 
         assert len(gr) == 0
 
@@ -58,7 +58,7 @@ class TestGraphInit:
         """
         Test creation using a Python set.
         """
-        gr = SimpleGraph(data=set(trp))
+        gr = Graph(data=set(trp))
 
         assert len(gr) == 6
 
@@ -91,7 +91,7 @@ class TestGraphOps:
         """
         Test the length of a graph with and without duplicates.
         """
-        gr = SimpleGraph()
+        gr = Graph()
         assert len(gr) == 0
 
         gr.add((trp[0],))
@@ -111,7 +111,7 @@ class TestGraphOps:
         """
         Test operations with duplicate triples.
         """
-        gr = SimpleGraph()
+        gr = Graph()
         #import pdb; pdb.set_trace()
 
         gr.add((trp[0],))
@@ -123,7 +123,7 @@ class TestGraphOps:
         """
         Test adding and removing triples.
         """
-        gr = SimpleGraph()
+        gr = Graph()
 
         gr.add(trp)
         gr.remove(trp[0])
@@ -147,8 +147,8 @@ class TestGraphOps:
         """
         Test graph union.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -164,8 +164,8 @@ class TestGraphOps:
         """
         Test graph in-place union.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -181,8 +181,8 @@ class TestGraphOps:
         """
         Test graph addition.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -198,8 +198,8 @@ class TestGraphOps:
         """
         Test graph in-place addition.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -215,8 +215,8 @@ class TestGraphOps:
         """
         Test graph addition.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -245,8 +245,8 @@ class TestGraphOps:
         """
         Test graph in-place addition.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -266,8 +266,8 @@ class TestGraphOps:
         """
         Test graph intersextion.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -285,8 +285,8 @@ class TestGraphOps:
         """
         Test graph intersextion.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -304,8 +304,8 @@ class TestGraphOps:
         """
         Test graph intersextion.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -323,8 +323,8 @@ class TestGraphOps:
         """
         Test graph intersextion.
         """
-        gr1 = SimpleGraph()
-        gr2 = SimpleGraph()
+        gr1 = Graph()
+        gr2 = Graph()
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -340,15 +340,15 @@ class TestGraphOps:
 
 
 @pytest.mark.usefixtures('trp')
-class TestImrOps:
+class TestNamedGraphOps:
     """
-    Test various graph operations.
+    Test various operations on a named graph.
     """
     def test_len(self, trp):
         """
         Test the length of a graph with and without duplicates.
         """
-        imr = Imr(uri='http://example.edu/imr01')
+        imr = Graph(uri='http://example.edu/imr01')
         assert len(imr) == 0
 
         imr.add((trp[0],))
@@ -368,7 +368,7 @@ class TestImrOps:
         """
         Test operations with duplicate triples.
         """
-        imr = Imr(uri='http://example.edu/imr01')
+        imr = Graph(uri='http://example.edu/imr01')
         #import pdb; pdb.set_trace()
 
         imr.add((trp[0],))
@@ -380,7 +380,7 @@ class TestImrOps:
         """
         Test adding and removing triples.
         """
-        imr = Imr(uri='http://example.edu/imr01')
+        imr = Graph(uri='http://example.edu/imr01')
 
         imr.add(trp)
         imr.remove(trp[0])
@@ -404,8 +404,8 @@ class TestImrOps:
         """
         Test graph union.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -423,8 +423,8 @@ class TestImrOps:
         """
         Test graph in-place union.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -442,8 +442,8 @@ class TestImrOps:
         """
         Test graph addition.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -461,8 +461,8 @@ class TestImrOps:
         """
         Test graph in-place addition.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -480,8 +480,8 @@ class TestImrOps:
         """
         Test graph addition.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -514,8 +514,8 @@ class TestImrOps:
         """
         Test graph in-place addition.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -537,8 +537,8 @@ class TestImrOps:
         """
         Test graph intersextion.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -558,8 +558,8 @@ class TestImrOps:
         """
         Test graph intersextion.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -579,8 +579,8 @@ class TestImrOps:
         """
         Test graph intersextion.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -600,8 +600,8 @@ class TestImrOps:
         """
         Test graph intersextion.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = Imr(uri='http://example.edu/imr02')
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph(uri='http://example.edu/imr02')
 
         gr1.add(trp[0:4])
         gr2.add(trp[2:6])
@@ -628,8 +628,8 @@ class TestHybridOps:
         """
         Test hybrid IMR + graph union.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = SimpleGraph()
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -640,12 +640,12 @@ class TestHybridOps:
         assert trp[0] in gr3
         assert trp[4] in gr3
 
-        assert isinstance(gr3, Imr)
+        assert isinstance(gr3, Graph)
         assert gr3.uri == URIRef('http://example.edu/imr01')
 
         gr4 = gr2 | gr1
 
-        assert isinstance(gr4, SimpleGraph)
+        assert isinstance(gr4, Graph)
 
         assert gr3 == gr4
 
@@ -654,8 +654,8 @@ class TestHybridOps:
         """
         Test IMR + graph in-place union.
         """
-        gr1 = Imr(uri='http://example.edu/imr01')
-        gr2 = SimpleGraph()
+        gr1 = Graph(uri='http://example.edu/imr01')
+        gr2 = Graph()
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -673,8 +673,8 @@ class TestHybridOps:
         """
         Test graph + IMR in-place union.
         """
-        gr1 = SimpleGraph()
-        gr2 = Imr(uri='http://example.edu/imr01')
+        gr1 = Graph()
+        gr2 = Graph(uri='http://example.edu/imr01')
 
         gr1.add(trp[0:3])
         gr2.add(trp[2:6])
@@ -685,4 +685,4 @@ class TestHybridOps:
         assert trp[0] in gr1
         assert trp[4] in gr1
 
-        assert isinstance(gr1, SimpleGraph)
+        assert isinstance(gr1, Graph)

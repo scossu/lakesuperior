@@ -8,7 +8,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
-from lakesuperior.model.graph.graph import Imr
+from lakesuperior.model.graph.graph import Graph
 
 
 @pytest.fixture(scope='class')
@@ -784,11 +784,11 @@ class TestContext:
             res_no_ctx = store.triples(trp3)
             res_ctx = store.triples(trp3, gr2_uri)
             for res in res_no_ctx:
-                assert Imr(uri=gr_uri) in res[1]
-                assert Imr(uri=gr2_uri) in res[1]
+                assert Graph(uri=gr_uri) in res[1]
+                assert Graph(uri=gr2_uri) in res[1]
             for res in res_ctx:
-                assert Imr(uri=gr_uri) in res[1]
-                assert Imr(uri=gr2_uri) in res[1]
+                assert Graph(uri=gr_uri) in res[1]
+                assert Graph(uri=gr2_uri) in res[1]
 
 
     def test_delete_from_ctx(self, store):

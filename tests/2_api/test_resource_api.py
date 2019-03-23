@@ -14,7 +14,7 @@ from lakesuperior.exceptions import (
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldp.ldpr import Ldpr
-from lakesuperior.model.graph.graph import SimpleGraph, Imr
+from lakesuperior.model.graph.graph import Graph
 
 
 @pytest.fixture(scope='module')
@@ -67,7 +67,7 @@ class TestResourceCRUD:
         The ``dcterms:title`` property should NOT be included.
         """
         gr = rsrc_api.get_metadata('/')
-        assert isinstance(gr, SimpleGraph)
+        assert isinstance(gr, Graph)
         assert len(gr) == 9
         assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
         assert not gr[

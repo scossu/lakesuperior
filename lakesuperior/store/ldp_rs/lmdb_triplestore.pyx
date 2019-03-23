@@ -6,7 +6,6 @@ import rdflib
 from cython.parallel import prange
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 
-from lakesuperior.model.graph.graph import Imr
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
 from lakesuperior.store.base_lmdb_store cimport _check
@@ -1112,8 +1111,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     ) except *:
         """
         Get a list of all contexts.
-
-        :rtype: Iterator(lakesuperior.model.graph.graph.Imr)
         """
         cdef:
             size_t ct

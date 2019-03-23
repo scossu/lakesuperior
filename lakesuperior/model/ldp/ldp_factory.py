@@ -16,7 +16,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.model.graph.graph import Imr
+from lakesuperior.model.graph.graph import Graph
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource
@@ -37,7 +37,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = Ldpc(uid, provided_imr=Imr(uri=nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Graph(uri=nsc['fcres'][uid]))
 
         return rsrc
 
@@ -107,7 +107,7 @@ class LdpFactory:
         else:
             data = set()
 
-        provided_imr = Imr(uri=uri, data=data)
+        provided_imr = Graph(uri=uri, data=data)
         #logger.debug('Provided graph: {}'.format(
         #        pformat(set(provided_imr))))
 
