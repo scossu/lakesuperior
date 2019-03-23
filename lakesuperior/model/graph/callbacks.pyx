@@ -237,7 +237,7 @@ cdef inline void del_trp_callback(
     Remove a triple from a graph as a result of a lookup callback.
     """
     #logger.info('removing triple: {} {} {}'.format(
-        #buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
+    #    buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
     #))
     gr.keys.remove(spok_p)
 

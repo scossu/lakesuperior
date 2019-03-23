@@ -23,6 +23,7 @@ cdef class Keyset:
         size_t tell(self)
         bint get_next(self, TripleKey* item)
         void add(self, const TripleKey* val) except *
+        void remove(self, const TripleKey* val) except *
         bint contains(self, const TripleKey* val)
         Keyset copy(self)
         void resize(self, size_t size=*) except *

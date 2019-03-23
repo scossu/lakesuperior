@@ -108,11 +108,12 @@ cdef class Graph:
         """
         String representation of the graph.
 
-        It provides the number of triples in the graph and memory address of
-            the instance.
+        This includes the subject URI, number of triples contained and the
+        memory address of the instance.
         """
+        id_repr = f' id={self.id},' if self.id else ''
         return (
-            f'<{self.__class__.__name__} @{hex(id(self))} '
+                f'<{self.__class__.__name__} @0x{id(self):02x}{id_repr} '
             f'length={len(self)}>'
         )
 
@@ -210,15 +211,45 @@ cdef class Graph:
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
+        elif self.id and isinstance(item, rdflib.Node):
+            # If a Node is given, return all values for that predicate.
+            return self._slice(self.uri, item, None)
         else:
             raise TypeError(f'Wrong slice format: {item}.')
 
 
     def __hash__(self):
-        return 23465
+        """ TODO Bogus """
+        return self.id
 
 
     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
+
+    def value(self, p, strict=False):
+        """
+        Get an individual value.
+
+        :param rdflib.termNode p: Predicate to search for.
+        :param bool strict: If set to ``True`` the method raises an error if
+            more than one value is found. If ``False`` (the default) only
+            the first found result is returned.
+        :rtype: rdflib.term.Node
+        """
+        if not self.id:
+            raise ValueError('Cannot use `value` on a non-named graph.')
+
+        # TODO use slice.
+        values = {trp[2] for trp in self.lookup((self.uri, p, None))}
+
+        if strict and len(values) > 1:
+            raise RuntimeError('More than one value found for {}, {}.'.format(
+                    self.id, p))
+
+        for ret in values:
+            return ret
+
+        return None
+
 
     def terms_by_type(self, type):
         """
@@ -234,19 +265,16 @@ cdef class Graph:
         """
         Add triples to the graph.
 
+        This method checks for duplicates.
+
         :param iterable triples: iterable of 3-tuple triples.
         """
         for s, p, o in triples:
-            self.add([
+            self.keys.add([
                 self.store.to_key(s),
                 self.store.to_key(p),
                 self.store.to_key(o),
-            ])
-
-
-    def len_terms(self):
-        """ Number of terms in the graph. """
-        return cc.hashset_size(self._terms)
+            ], True)
 
 
     def remove(self, pattern):
@@ -510,7 +538,7 @@ cdef class Graph:
 
         :rtype: rdflib.Graph
         """
-        gr = Graph()
+        gr = Graph(identifier=self.id)
         for trp in self.data:
             gr.add(trp)
 
@@ -641,103 +669,4 @@ cdef class Graph:
             trp_p = <BufferTriple*>cur
             if cmp_fn(trp_p, &t1, &t2):
                 callback_fn(gr, trp_p, ctx)
-
-
-
-cdef class Imr(Graph):
-    """
-    In-memory resource data container.
-
-    This is an extension of :py:class:`~Graph` that adds a subject URI to
-    the data set and some convenience methods.
-
-    An instance of this class can be converted to a ``rdflib.Resource``
-    instance.
-
-    Some set operations that produce a new object (``-``, ``|``, ``&``, ``^``)
-    will create a new ``Imr`` instance with the same subject URI.
-    """
-    def __init__(self, uri, *args, **kwargs):
-        """
-        Initialize the graph with pre-existing data or by looking up a store.
-
-        Either ``data``, or ``lookup`` *and* ``store``, can be provide.
-        ``lookup`` and ``store`` have precedence. If none of them is specified,
-        an empty graph is initialized.
-
-        :param rdflib.URIRef uri: The graph URI.
-            This will serve as the subject for some queries.
-        :param args: Positional arguments inherited from
-            ``Graph.__init__``.
-        :param kwargs: Keyword arguments inherited from
-            ``Graph.__init__``.
-        """
-        self.id = str(uri)
-        #super().__init(*args, **kwargs)
-
-
-    def __repr__(self):
-        """
-        String representation of an Imr.
-
-        This includes the subject URI, number of triples contained and the
-        memory address of the instance.
-        """
-        return (f'<{self.__class__.__name__} @{hex(id(self))} id={self.id}, '
-            f'length={len(self)}>')
-
-
-    def __getitem__(self, item):
-        """
-        Supports slicing notation.
-        """
-        if isinstance(item, slice):
-            s, p, o = item.start, item.stop, item.step
-            return self._slice(s, p, o)
-
-        elif isinstance(item, rdflib.Node):
-            # If a Node is given, return all values for that predicate.
-            return self._slice(self.uri, item, None)
-        else:
-            raise TypeError(f'Wrong slice format: {item}.')
-
-
-    def value(self, p, strict=False):
-        """
-        Get an individual value.
-
-        :param rdflib.termNode p: Predicate to search for.
-        :param bool strict: If set to ``True`` the method raises an error if
-            more than one value is found. If ``False`` (the default) only
-            the first found result is returned.
-        :rtype: rdflib.term.Node
-        """
-        if not self.id:
-            raise ValueError('Cannot use `value` on a non-named graph.')
-
-        # TODO use slice.
-        values = {trp[2] for trp in self.lookup((self.uri, p, None))}
-
-        if strict and len(values) > 1:
-            raise RuntimeError('More than one value found for {}, {}.'.format(
-                    self.id, p))
-
-        for ret in values:
-            return ret
-
-        return None
-
-
-    cpdef as_rdflib(self):
-        """
-        Return the IMR as a RDFLib Resource.
-
-        :rtype: rdflib.Resource
-        """
-        gr = Graph()
-        for trp in self.data:
-            gr.add(trp)
-
-        return gr.resource(identifier=self.uri)
-
 

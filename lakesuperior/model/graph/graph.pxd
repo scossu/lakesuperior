@@ -32,9 +32,6 @@ cdef class Graph:
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        void add(self, TripleKey* spok_p) except *
-        void remove(self, TripleKey* spok_p) except *
-        int remove_triple(self, const BufferTriple* trp_buf) except -1
         bint trp_contains(self, const BufferTriple* btrp)
 
         # Basic graph operations.
@@ -53,11 +50,3 @@ cdef class Graph:
     cpdef intersection(self, Graph other)
     cpdef xor(self, Graph other)
     cpdef void set(self, tuple trp) except *
-
-
-cdef class Imr(Graph):
-    cdef:
-        readonly str id
-        Imr empty_copy(self)
-
-    cpdef as_rdflib(self)
