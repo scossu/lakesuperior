@@ -10,13 +10,14 @@ from libc.stdlib cimport free
 from cymem.cymem cimport Pool
 
 cimport lakesuperior.cy_include.collections as cc
-cimport lakesuperior.model.graph.callbacks as cb
+cimport lakesuperior.model.structures.callbacks as cb
+cimport lakesuperior.model.structures.keyset as kset
 
-from lakesuperior.model.base cimport Buffer, buffer_dump
-from lakesuperior.model.structures.keyset cimport Keyset
+from lakesuperior.model.base cimport Key, TripleKey
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
+from lakesuperior.model.structures.keyset cimport Keyset
 
 logger = logging.getLogger(__name__)
 
@@ -28,27 +29,52 @@ cdef class Graph:
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
 
-    A Graph can be instantiated from a store lookup. This makes it
-    possible to use a Keyset to perform initial filtering via identity by key,
-    then the filtered Keyset can be converted into a set of meaningful terms.
+    A Graph contains a :py:class:`lakesuperior.model.structures.keyset.Keyset`
+    at its core and is bound to a
+    :py:class:`~lakesuperior.store.ldp_rs.lmdb_triplestore.LmdbTriplestore`.
+    This makes lookups and boolean operations very efficient because all these
+    operations are performed on an array of integers.
 
-    An instance of this class can also be converted to and from a
-    ``rdflib.Graph`` instance.
+    In order to retrieve RDF values from a ``Graph``, the underlying store
+    must be looked up. This can be done in a different transaction than the
+    one used to create or otherwise manipulate the graph.
+
+    Every time a term is looked up or added to even a temporary graph, that
+    term is added to the store and creates a key. This is because in the
+    majority of cases that term is bound to be stored permanently anyway, and
+    it's more efficient to hash it and allocate it immediately. A cleanup
+    function to remove all orphaned terms (not in any triple or context index)
+    can be later devised to compact the database.
+
+    An instance of this class can also be converted to a ``rdflib.Graph``
+    instance.
     """
 
     def __cinit__(
         self, store, size_t ct=0, str uri=None, set data=set()
     ):
         """
-        Initialize the graph, optionally with Python data.
+        Initialize the graph, optionally from Python/RDFlib data.
 
-        :param set data: Initial data as a set of 3-tuples of RDFLib terms.
+        :type store: lakesuperior.store.ldp_rs.lmdb_triplestore.LmdbTriplestore
+        :param store: Triplestore where keys are mapped to terms. By default
+            this is the default application store
+            (``env.app_globals.rdf_store``).
+
+        :param size_t ct: Initial number of allocated triples.
+
+        :param str uri: If specified, the graph becomes a named graph and can
+            utilize the :py:meth:`value()` method and special slicing notation.
+
+        :param set data: If specified, ``ct`` is ignored and an initial key
+            set is created from a set of 3-tuples of :py:class:``rdflib.Term``
+            instances.
         """
 
         self.pool = Pool()
 
         if not store:
-            store = env.app_globals.ldprs_store
+            store = env.app_globals.rdf_store
         # Initialize empty data set.
         if data:
             # Populate with provided Python set.
@@ -73,7 +99,7 @@ cdef class Graph:
     @property
     def data(self):
         """
-        Triple data as a Python set.
+        Triple data as a Python/RDFlib set.
 
         :rtype: set
         """
@@ -82,11 +108,11 @@ cdef class Graph:
         ret = set()
 
         self.seek()
-        while self.get_next(&spok):
-            ret.add((
-                self.store.from_key(trp[0]),
-                self.store.from_key(trp[1]),
-                self.store.from_key(trp[2])
+        while self.keys.get_next(&spok):
+            ret.keys.add((
+                self.store.from_key(spok[0]),
+                self.store.from_key(spok[1]),
+                self.store.from_key(spok[2])
             ))
 
         return ret
@@ -101,7 +127,7 @@ cdef class Graph:
 
     def __eq__(self, other):
         """ Equality operator between ``Graph`` instances. """
-        return len(self ^ other) == 0
+        return len(self & other) == 0
 
 
     def __repr__(self):
@@ -125,55 +151,74 @@ cdef class Graph:
 
     def __add__(self, other):
         """ Alias for set-theoretical union. """
-        return self.union_(other)
+        return self.__or__(other)
 
 
     def __iadd__(self, other):
         """ Alias for in-place set-theoretical union. """
-        self.ip_union(other)
-        return self
+        return self.__ior__(other)
 
 
     def __sub__(self, other):
         """ Set-theoretical subtraction. """
-        return self.subtraction(other)
+        cdef Graph gr3 = self.empty_copy()
+
+        gr3.keys = kset.subtract(self.keys, other.keys)
+
+        return gr3
 
 
     def __isub__(self, other):
         """ In-place set-theoretical subtraction. """
-        self.ip_subtraction(other)
+        self.keys = kset.subtract(self.keys, other.keys)
+
         return self
 
     def __and__(self, other):
         """ Set-theoretical intersection. """
-        return self.intersection(other)
+        cdef Graph gr3 = self.empty_copy()
+
+        gr3.keys = kset.intersect(self.keys, other.keys)
+
+        return gr3
 
 
     def __iand__(self, other):
         """ In-place set-theoretical intersection. """
-        self.ip_intersection(other)
+        self.keys = kset.intersect(self.keys, other.keys)
+
         return self
 
 
     def __or__(self, other):
         """ Set-theoretical union. """
-        return self.union_(other)
+        cdef Graph gr3 = self.copy()
+
+        gr3.keys = kset.merge(self.keys, other.keys)
+
+        return gr3
 
 
     def __ior__(self, other):
         """ In-place set-theoretical union. """
-        self.ip_union(other)
+        self.keys = kset.merge(self.keys, other.keys)
+
         return self
 
 
     def __xor__(self, other):
         """ Set-theoretical exclusive disjunction (XOR). """
-        return self.xor(other)
+        cdef Graph gr3 = self.empty_copy()
+
+        gr3.keys = kset.xor(self.keys, other.keys)
+
+        return gr3
 
 
     def __ixor__(self, other):
         """ In-place set-theoretical exclusive disjunction (XOR). """
-        self.ip_xor(other)
+        self.keys = kset.xor(self.keys, other.keys)
+
         return self
 
 
@@ -191,7 +236,7 @@ cdef class Graph:
             self.store.to_key(trp[2]),
         ]
 
-        return self.data.contains(&spok)
+        return self.keys.contains(&spok)
 
 
     def __iter__(self):
@@ -261,7 +306,7 @@ cdef class Graph:
         return {r[i] for r in self.data}
 
 
-    def add_triples(self, trp):
+    def add_triples(self, triples):
         """
         Add triples to the graph.
 
@@ -269,12 +314,15 @@ cdef class Graph:
 
         :param iterable triples: iterable of 3-tuple triples.
         """
+        cdef TripleKey spok
+
         for s, p, o in triples:
-            self.keys.add([
+            spok = [
                 self.store.to_key(s),
                 self.store.to_key(p),
                 self.store.to_key(o),
-            ], True)
+            ]
+            self.keys.add(&spok, True)
 
 
     def remove(self, pattern):
@@ -284,240 +332,32 @@ cdef class Graph:
         The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
         """
         self._match_ptn_callback(
-            pattern, self, cb.del_trp_callback, NULL
+            pattern, self, del_trp_callback, NULL
         )
 
 
     ## CYTHON-ACCESSIBLE BASIC METHODS ##
 
-    cdef Graph empty_copy(self):
+    cdef Graph copy(self, str uri=None):
         """
-        Create an empty copy carrying over some key properties.
+        Create copy of the graph with a different (or no) URI.
 
-        Override in subclasses to accommodate for different init properties.
+        :param str uri: URI of the new graph. This should be different from
+            the original.
         """
-        return self.__class__(self.ct, self.store, uri=self.id)
+        cdef Graph new_gr = Graph(self.store, self.ct, uri=uri)
+
+        new_gr.keys = self.keys.copy()
 
 
-    cpdef union_(self, Graph other):
+    cdef Graph empty_copy(self, str uri=None):
         """
-        Perform set union resulting in a new Graph instance.
+        Create an empty copy with same capacity and store binding.
 
-        TODO Allow union of multiple graphs at a time.
-
-        :param Graph other: The other graph to merge.
-
-        :rtype: Graph
-        :return: A new Graph instance.
+        :param str uri: URI of the new graph. This should be different from
+            the original.
         """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-            BufferTriple *trp
-
-        new_gr = self.empty_copy()
-
-        for gr in (self, other):
-            cc.hashset_iter_init(&it, gr._triples)
-            while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-                bt = <BufferTriple*>cur
-                new_gr.add_triple(bt, True)
-
-        return new_gr
-
-
-    cdef void ip_union(self, Graph other) except *:
-        """
-        Perform an in-place set union that adds triples to this instance
-
-        TODO Allow union of multiple graphs at a time.
-
-        :param Graph other: The other graph to merge.
-
-        :rtype: void
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-
-        cc.hashset_iter_init(&it, other._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            self.add_triple(bt, True)
-
-
-    cpdef intersection(self, Graph other):
-        """
-        Graph intersection.
-
-        :param Graph other: The other graph to intersect.
-
-        :rtype: Graph
-        :return: A new Graph instance.
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-
-        new_gr = self.empty_copy()
-
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if other.trp_contains(bt):
-                new_gr.add_triple(bt, True)
-
-        return new_gr
-
-
-    cdef void ip_intersection(self, Graph other) except *:
-        """
-        In-place graph intersection.
-
-        Triples not in common with another graph are removed from the current
-        one.
-
-        :param Graph other: The other graph to intersect.
-
-        :rtype: void
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if not other.trp_contains(bt):
-                self.remove_triple(bt)
-
-
-    cpdef subtraction(self, Graph other):
-        """
-        Graph set-theoretical subtraction.
-
-        Create a new graph with the triples of this graph minus the ones in
-        common with the other graph.
-
-        :param Graph other: The other graph to subtract to this.
-
-        :rtype: Graph
-        :return: A new Graph instance.
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-
-        new_gr = self.empty_copy()
-
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if not other.trp_contains(bt):
-                new_gr.add_triple(bt, True)
-
-        return new_gr
-
-
-    cdef void ip_subtraction(self, Graph other) except *:
-        """
-        In-place graph subtraction.
-
-        Triples in common with another graph are removed from the current one.
-
-        :param Graph other: The other graph to intersect.
-
-        :rtype: void
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if other.trp_contains(bt):
-                self.remove_triple(bt)
-
-
-    cpdef xor(self, Graph other):
-        """
-        Graph Exclusive disjunction (XOR).
-
-        :param Graph other: The other graph to perform XOR with.
-
-        :rtype: Graph
-        :return: A new Graph instance.
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-            BufferTriple* bt
-
-        new_gr = self.empty_copy()
-
-        # Add triples in this and not in other.
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if not other.trp_contains(bt):
-                new_gr.add_triple(bt, True)
-
-        # Other way around.
-        cc.hashset_iter_init(&it, other._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if not self.trp_contains(bt):
-                new_gr.add_triple(bt, True)
-
-        return new_gr
-
-
-    cdef void ip_xor(self, Graph other) except *:
-        """
-        In-place graph XOR.
-
-        Triples in common with another graph are removed from the current one,
-        and triples not in common will be added from the other one.
-
-        :param Graph other: The other graph to perform XOR with.
-
-        :rtype: void
-        """
-        cdef:
-            void *cur
-            cc.HashSetIter it
-            # TODO This could be more efficient to stash values in a simple
-            # array, but how urgent is it to improve an in-place XOR?
-            Graph tmp = Graph()
-
-        # Add *to the tmp graph* triples in other graph and not in this graph.
-        cc.hashset_iter_init(&it, other._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if not self.trp_contains(bt):
-                tmp.add_triple(bt)
-
-        # Remove triples in common.
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            bt = <BufferTriple*>cur
-            if other.trp_contains(bt):
-                self.remove_triple(bt)
-
-        self |= tmp
-
-
-    cdef bint trp_contains(self, const BufferTriple* btrp):
-        cdef:
-            cc.HashSetIter it
-            void* cur
-
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            if self.trp_cmp_fn(cur, btrp) == 0:
-                return True
-        return False
+        return Graph(self.store, self.ct, uri=uri)
 
 
     cpdef void set(self, tuple trp) except *:
@@ -594,11 +434,10 @@ cdef class Graph:
         "return: New Graph instance with matching triples.
         """
         cdef:
-            void* cur
-            BufferTriple trp
-            Graph res_gr = Graph()
+            Graph res_gr = self.empty_copy()
 
-        self._match_ptn_callback(pattern, res_gr, cb.add_trp_callback, NULL)
+        self._match_ptn_callback(pattern, res_gr, add_trp_callback, NULL)
+        res_gr.data.resize()
 
         return res_gr
 
@@ -615,14 +454,8 @@ cdef class Graph:
         or a different one.
         """
         cdef:
-            void* cur
-            Buffer t1, t2
-            Buffer ss, sp, so
-            BufferTriple trp
-            BufferTriple* trp_p
-            lookup_fn_t cmp_fn
-            cc.HashSetIter it
-
+            kset.key_cmp_fn_t cmp_fn
+            Key k1, k2, sk, pk, ok
             TripleKey spok
 
         s, p, o = pattern
@@ -636,37 +469,59 @@ cdef class Graph:
                 self.store.to_key(o),
             ]
 
-            if self.keys.contains(spok):
+            if self.keys.contains(&spok):
                 callback_fn(gr, &spok, ctx)
                 return
 
         if s is not None:
-            term.serialize_from_rdflib(s, &t1)
+            k1 = self.store.to_key(s)
             if p is not None:
-                cmp_fn = cb.lookup_sp_cmp_fn
-                term.serialize_from_rdflib(p, &t2)
+                cmp_fn = cb.lookup_skpk_cmp_fn
+                k2 = self.store.to_key(p)
             elif o is not None:
-                cmp_fn = cb.lookup_so_cmp_fn
-                term.serialize_from_rdflib(o, &t2)
+                cmp_fn = cb.lookup_skok_cmp_fn
+                k2 = self.store.to_key(o)
             else:
-                cmp_fn = cb.lookup_s_cmp_fn
+                cmp_fn = cb.lookup_sk_cmp_fn
         elif p is not None:
-            term.serialize_from_rdflib(p, &t1)
+            k1 = self.store.to_key(p)
             if o is not None:
-                cmp_fn = cb.lookup_po_cmp_fn
-                term.serialize_from_rdflib(o, &t2)
+                cmp_fn = cb.lookup_pkok_cmp_fn
+                k2 = self.store.to_key(o)
             else:
-                cmp_fn = cb.lookup_p_cmp_fn
+                cmp_fn = cb.lookup_pk_cmp_fn
         elif o is not None:
-            cmp_fn = cb.lookup_o_cmp_fn
-            term.serialize_from_rdflib(o, &t1)
+            cmp_fn = cb.lookup_ok_cmp_fn
+            k1 = self.store.to_key(o)
         else:
             cmp_fn = cb.lookup_none_cmp_fn
 
         # Iterate over serialized triples.
-        cc.hashset_iter_init(&it, self._triples)
-        while cc.hashset_iter_next(&it, &cur) != cc.CC_ITER_END:
-            trp_p = <BufferTriple*>cur
-            if cmp_fn(trp_p, &t1, &t2):
-                callback_fn(gr, trp_p, ctx)
+        while self.keys.get_next(&spok):
+            if cmp_fn(&spok, k1, k2):
+                callback_fn(gr, &spok, ctx)
+
+
+
+## LOOKUP CALLBACK FUNCTIONS
+
+cdef inline void add_trp_callback(
+    Graph gr, const TripleKey* spok_p, void* ctx
+):
+    """
+    Add a triple to a graph as a result of a lookup callback.
+    """
+    gr.keys.add(spok_p)
+
+
+cdef inline void del_trp_callback(
+    Graph gr, const TripleKey* spok_p, void* ctx
+):
+    """
+    Remove a triple from a graph as a result of a lookup callback.
+    """
+    #logger.info('removing triple: {} {} {}'.format(
+    #    buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
+    #))
+    gr.keys.remove(spok_p)
 

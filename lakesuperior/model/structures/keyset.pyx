@@ -15,7 +15,7 @@ cdef class Keyset:
     """
     Pre-allocated array (not set, as the name may suggest) of ``TripleKey``s.
     """
-    def __cinit__(self, size_t ct=0, expand_ratio=.5, *args, **kwargs):
+    def __cinit__(self, size_t ct=0, expand_ratio=.5):
         """
         Initialize and allocate memory for the data set.
 
@@ -67,7 +67,7 @@ cdef class Keyset:
         return self._cur
 
 
-    cdef bint get_next(self, TripleKey* item):
+    cdef bint get_next(self, TripleKey* val):
         """
         Populate the current value and advance the cursor by 1.
 
@@ -81,25 +81,25 @@ cdef class Keyset:
         if self._cur >= self._free_i:
             return False
 
-        item[0] = self.data[self._cur]
+        val[0] = self.data[self._cur]
         self._cur += 1
 
         return True
 
 
-    cdef void add(self, const TripleKey* val, check_dup=False) except *:
+    cdef void add(self, const TripleKey* val, bint check_dup=False) except *:
         """
         Add a triple key to the array.
         """
-        # Optionally check for duplicates.
-        if check_dup and self.contains(val):
+        # Check for deleted triples and optionally duplicates.
+        if val[0] == NULL_TRP or (check_dup and self.contains(val)):
             return
 
         if self._free_i >= self.threshod:
             if self.expand_ratio > 0:
                 # In some edge casees, a very small ratio may round down to a
                 # zero increase, so the baseline increase is 1 element.
-                self.resize(1 + self.ct * (1 + self.expand_ratio))
+                self.resize(1 + <size_t>(self.ct * (1 + self.expand_ratio)))
             else:
                 raise MemoryError('No space left in key set.')
 
@@ -117,30 +117,13 @@ cdef class Keyset:
         forseen, using :py:meth:`subtract`_ is advised.
         """
 
-        cdef TripleKey stored_val
+        cdef TripleKey* stored_val
 
         self.seek()
-        while self.get_next(&stored_val):
+        while self.get_next(stored_val):
             if memcmp(val, stored_val, TRP_KLEN) == 0:
                 stored_val[0] = NULL_TRP
                 return
-
-
-    cdef Keyset subtract(self, const Keyset* other):
-        """
-        Create a Keyset by subtracting an``other`` Keyset from the current one.
-
-        :rtype: Keyset
-        """
-        cdef Keyset res = Keyset(self.ct)
-
-        self.seek()
-        while self.get_next(&val):
-            if not other.contains(val):
-                res.add(val)
-        res.resize()
-
-        return res
 
 
     cdef bint contains(self, const TripleKey* val):
@@ -160,9 +143,30 @@ cdef class Keyset:
         """
         Copy a Keyset.
         """
-        cdef Keyset new_ks = Keyset(self.ct)
+        cdef Keyset new_ks = Keyset(self.ct, expand_ratio=self.expand_ratio)
         memcpy(new_ks.data, self.data, self.ct * TRP_KLEN)
         new_ks.seek()
+
+        return new_ks
+
+
+    cdef Keyset sparse_copy(self):
+        """
+        Copy a Keyset and plug holes.
+
+        ``NULL_TRP`` values left from removing triple keys are skipped in the
+        copy and the set is shrunk to its used size.
+        """
+        cdef:
+            TripleKey val
+            Keyset new_ks = Keyset(self.ct, self.expand_ratio)
+
+        self.seek()
+        while self.get_next(&val):
+            if val != NULL_TRP:
+                new_ks.add(&val)
+
+        new_ks.resize()
 
         return new_ks
 
@@ -191,9 +195,7 @@ cdef class Keyset:
         self.seek()
 
 
-    cdef Keyset lookup(
-            self, const Key* sk, const Key* pk, const Key* ok
-    ):
+    cdef Keyset lookup(self, const Key sk, const Key pk, const Key ok):
         """
         Look up triple keys.
 
@@ -209,8 +211,7 @@ cdef class Keyset:
         cdef:
             TripleKey spok
             Keyset ret = Keyset(self.ct)
-            Key* k1 = NULL
-            Key* k2 = NULL
+            Key k1, k2
             key_cmp_fn_t cmp_fn
 
         if sk and pk and ok: # s p o
@@ -247,9 +248,98 @@ cdef class Keyset:
 
         self.seek()
         while self.get_next(&spok):
-            if cmp_fn(<TripleKey*>spok, k1, k2):
+            if cmp_fn(&spok, k1, k2):
                 ret.add(&spok)
 
         ret.resize()
 
         return ret
+
+
+
+## Boolean operations.
+
+cdef Keyset merge(Keyset ks1, Keyset ks2):
+    """
+    Create a Keyset by merging an``ks2`` Keyset with the current one.
+
+    :rtype: Keyset
+    """
+    cdef:
+        TripleKey val
+        Keyset ks3 = ks1.copy()
+
+    ks2.seek()
+    while ks2.get_next(&val):
+        ks3.add(&val, True)
+
+    ks3.resize()
+
+    return ks3
+
+
+cdef Keyset subtract(Keyset ks1, Keyset ks2):
+    """
+    Create a Keyset by subtracting an``ks2`` Keyset from the current one.
+
+    :rtype: Keyset
+    """
+    cdef:
+        TripleKey val
+        Keyset ks3 = Keyset(ks1.ct)
+
+    ks1.seek()
+    while ks1.get_next(&val):
+        if val != NULL_TRP and not ks2.contains(&val):
+            ks3.add(&val)
+
+    ks3.resize()
+
+    return ks3
+
+
+cdef Keyset intersect(Keyset ks1, Keyset ks2):
+    """
+    Create a Keyset by intersection with an``ks2`` Keyset.
+
+    :rtype: Keyset
+    """
+    cdef:
+        TripleKey val
+        Keyset ks3 = Keyset(ks1.ct)
+
+    ks1.seek()
+    while ks1.get_next(&val):
+        if val != NULL_TRP and ks2.contains(&val):
+            ks3.add(&val)
+
+    ks3.resize()
+
+    return ks3
+
+
+cdef Keyset xor(Keyset ks1, Keyset ks2):
+    """
+    Create a Keyset by disjunction (XOR) with an``ks2`` Keyset.
+
+    :rtype: Keyset
+    """
+    cdef:
+        TripleKey val
+        Keyset ks3 = Keyset(ks1.ct + ks2.ct)
+
+    ks1.seek()
+    while ks1.get_next(&val):
+        if val != NULL_TRP and not ks2.contains(&val):
+            ks3.add(&val)
+
+    ks2.seek()
+    while ks2.get_next(&val):
+        if val != NULL_TRP and not ks1.contains(&val):
+            ks3.add(&val)
+
+    ks3.resize()
+
+    return ks3
+
+

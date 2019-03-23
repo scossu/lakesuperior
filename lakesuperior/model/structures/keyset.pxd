@@ -3,7 +3,7 @@ from lakesuperior.model.base cimport (
 )
 
 ctypedef bint (*key_cmp_fn_t)(
-    const TripleKey* spok, const Key* k1, const Key* k2
+    const TripleKey* spok, const Key k1, const Key k2
 )
 
 cdef class Keyset:
@@ -22,11 +22,16 @@ cdef class Keyset:
         size_t size(self)
         size_t tell(self)
         bint get_next(self, TripleKey* item)
-        void add(self, const TripleKey* val) except *
+        void add(self, const TripleKey* val, bint check_dup=*) except *
         void remove(self, const TripleKey* val) except *
         bint contains(self, const TripleKey* val)
         Keyset copy(self)
+        Keyset sparse_copy(self)
         void resize(self, size_t size=*) except *
-        Keyset lookup(
-            self, const Key* sk, const Key* pk, const Key* ok
-        )
+        Keyset lookup(self, const Key sk, const Key pk, const Key ok)
+
+cdef:
+    Keyset merge(Keyset ks1, Keyset ks2)
+    Keyset subtract(Keyset ks1, Keyset ks2)
+    Keyset intersect(Keyset ks1, Keyset ks2)
+    Keyset xor(Keyset ks1, Keyset ks2)

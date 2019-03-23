@@ -100,6 +100,20 @@ extensions = [
         #extra_link_args=['-fopenmp']
     ),
     Extension(
+        'lakesuperior.store.base_lmdb_store',
+        [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join(tpl_src_dir, 'tpl.c'),
+            path.join(lmdb_src_dir, 'mdb.c'),
+            path.join(lmdb_src_dir, 'midl.c'),
+            path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
+        ],
+        include_dirs=include_dirs,
+    ),
+    Extension(
         'lakesuperior.model.graph.*',
         [
             path.join(tpl_src_dir, 'tpl.c'),
@@ -115,20 +129,6 @@ extensions = [
         include_dirs=include_dirs,
         #extra_compile_args=['-fopenmp'],
         #extra_link_args=['-fopenmp']
-    ),
-    Extension(
-        'lakesuperior.store.base_lmdb_store',
-        [
-            path.join(coll_src_dir, 'common.c'),
-            path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashtable.c'),
-            path.join(coll_src_dir, 'hashset.c'),
-            path.join(tpl_src_dir, 'tpl.c'),
-            path.join(lmdb_src_dir, 'mdb.c'),
-            path.join(lmdb_src_dir, 'midl.c'),
-            path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
-        ],
-        include_dirs=include_dirs,
     ),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',

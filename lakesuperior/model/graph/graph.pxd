@@ -4,49 +4,34 @@ from cymem.cymem cimport Pool
 
 cimport lakesuperior.cy_include.collections as cc
 
-from lakesuperior.model.base cimport Buffer, TripleKey
+from lakesuperior.model.base cimport Key, TripleKey
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.keyset cimport Keyset
-
-# Lookup function that returns whether a triple contains a match pattern.
-# Return True if the triple exists, False otherwise.
-ctypedef bint (*lookup_fn_t)(
-        const BufferTriple *trp, const Buffer *t1, const Buffer *t2)
+from lakesuperior.store.ldp_rs cimport lmdb_triplestore
 
 # Callback for an iterator.
 ctypedef void (*lookup_callback_fn_t)(
-    Graph gr, const BufferTriple* trp, void* ctx
+    Graph gr, const TripleKey* spok_p, void* ctx
 )
-
-ctypedef Buffer SPOBuffer[3]
-ctypedef Buffer *BufferPtr
 
 cdef class Graph:
     cdef:
-        cc.HashSet *_terms # Set of unique serialized terms.
-        cc.HashSet *_triples # Set of unique triples.
-        # Temp data pool. It gets managed with the object lifecycle via cymem.
-        Pool pool
+        lmdb_triplestore.LmdbTriplestore store
         Keyset keys
 
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        bint trp_contains(self, const BufferTriple* btrp)
-
-        # Basic graph operations.
-        void ip_union(self, Graph other) except *
-        void ip_subtraction(self, Graph other) except *
-        void ip_intersection(self, Graph other) except *
-        void ip_xor(self, Graph other) except *
-        Graph empty_copy(self)
+        Graph copy(self, str uri=*)
+        Graph empty_copy(self, str uri=*)
         void _match_ptn_callback(
             self, pattern, Graph gr,
             lookup_callback_fn_t callback_fn, void* ctx=*
         ) except *
 
-    cpdef union_(self, Graph other)
-    cpdef subtraction(self, Graph other)
-    cpdef intersection(self, Graph other)
-    cpdef xor(self, Graph other)
     cpdef void set(self, tuple trp) except *
+
+
+cdef:
+    void add_trp_callback(Graph gr, const TripleKey* spok_p, void* ctx)
+    void del_trp_callback(Graph gr, const TripleKey* spok_p, void* ctx)
