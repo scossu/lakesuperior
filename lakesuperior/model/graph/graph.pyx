@@ -1,9 +1,6 @@
 import logging
 
-from functools import wraps
-
-from rdflib import Graph, URIRef
-from rdflib.term import Node
+import rdflib
 
 from lakesuperior import env
 
@@ -16,7 +13,7 @@ cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.model.graph.callbacks as cb
 
 from lakesuperior.model.base cimport Buffer, buffer_dump
-from lakesuperior.model.structures.keyset import Keyset
+from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.model.graph cimport term
 from lakesuperior.model.graph.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
@@ -24,7 +21,7 @@ from lakesuperior.model.structures.hash cimport term_hash_seed32
 logger = logging.getLogger(__name__)
 
 
-cdef class Graph(Keyset):
+cdef class Graph:
     """
     Fast and simple implementation of a graph.
 
@@ -39,7 +36,9 @@ cdef class Graph(Keyset):
     ``rdflib.Graph`` instance.
     """
 
-    def __cinit__(self, *args, str uri=None, set data=set(), **kwargs):
+    def __cinit__(
+        self, store, size_t ct=0, str uri=None, set data=set()
+    ):
         """
         Initialize the graph, optionally with Python data.
 
@@ -48,13 +47,28 @@ cdef class Graph(Keyset):
 
         self.pool = Pool()
 
+        if not store:
+            store = env.app_globals.ldprs_store
         # Initialize empty data set.
         if data:
             # Populate with provided Python set.
-            self.add(data)
+            self.keys = Keyset(len(data))
+            self.add_triples(data)
+        else:
+            self.keys = Keyset(ct)
 
 
     ## PROPERTIES ##
+
+    @property
+    def uri(self):
+        """
+        Get resource identifier as a RDFLib URIRef.
+
+        :rtype: rdflib.URIRef.
+        """
+        return rdflib.URIRef(self.id)
+
 
     @property
     def data(self):
@@ -82,7 +96,7 @@ cdef class Graph(Keyset):
 
     def __len__(self):
         """ Number of triples in the graph. """
-        return self._free_i
+        return self.keys.size()
 
 
     def __eq__(self, other):
@@ -168,20 +182,15 @@ cdef class Graph(Keyset):
 
         :rtype: boolean
         """
-        cdef:
-            Buffer ss, sp, so
-            BufferTriple btrp
+        cdef TripleKey spok
 
-        btrp.s = &ss
-        btrp.p = &sp
-        btrp.o = &so
+        spok = [
+            self.store.to_key(trp[0]),
+            self.store.to_key(trp[1]),
+            self.store.to_key(trp[2]),
+        ]
 
-        s, p, o = trp
-        term.serialize_from_rdflib(s, &ss)
-        term.serialize_from_rdflib(p, &sp)
-        term.serialize_from_rdflib(o, &so)
-
-        return self.trp_contains(&btrp)
+        return self.data.contains(&spok)
 
 
     def __iter__(self):
@@ -259,7 +268,7 @@ cdef class Graph(Keyset):
 
         Override in subclasses to accommodate for different init properties.
         """
-        return self.__class__()
+        return self.__class__(self.ct, self.store, uri=self.id)
 
 
     cpdef union_(self, Graph other):
@@ -471,52 +480,6 @@ cdef class Graph(Keyset):
         self |= tmp
 
 
-    cdef inline BufferTriple* store_triple(self, const BufferTriple* strp):
-        """
-        Store triple data in the graph.
-
-        Normally, raw data underlying the triple and terms are only referenced
-        by pointers. If the destination data are garbage collected before the
-        graph is, segfaults are bound to happen.
-
-        This method copies the data to the graph's memory pool, so they are
-        managed with the lifecycle of the graph.
-
-        Note that this method stores items regardless of whether thwy are
-        duplicate or not, so there may be some duplication.
-        """
-        cdef:
-            BufferTriple* dtrp = <BufferTriple*>self.pool.alloc(
-                1, sizeof(BufferTriple)
-            )
-            Buffer* spo = <Buffer*>self.pool.alloc(3, sizeof(Buffer))
-
-        if not dtrp:
-            raise MemoryError()
-        if not spo:
-            raise MemoryError()
-
-        dtrp.s = spo
-        dtrp.p = spo + 1
-        dtrp.o = spo + 2
-
-        spo[0].addr = self.pool.alloc(strp.s.sz, 1)
-        spo[0].sz = strp.s.sz
-        spo[1].addr = self.pool.alloc(strp.p.sz, 1)
-        spo[1].sz = strp.p.sz
-        spo[2].addr = self.pool.alloc(strp.o.sz, 1)
-        spo[2].sz = strp.o.sz
-
-        if not spo[0].addr or not spo[1].addr or not spo[2].addr:
-            raise MemoryError()
-
-        memcpy(dtrp.s.addr, strp.s.addr, strp.s.sz)
-        memcpy(dtrp.p.addr, strp.p.addr, strp.p.sz)
-        memcpy(dtrp.o.addr, strp.o.addr, strp.o.sz)
-
-        return dtrp
-
-
     cdef bint trp_contains(self, const BufferTriple* btrp):
         cdef:
             cc.HashSetIter it
@@ -632,20 +595,21 @@ cdef class Graph(Keyset):
             lookup_fn_t cmp_fn
             cc.HashSetIter it
 
+            TripleKey spok
+
         s, p, o = pattern
 
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
             # Shortcut for 3-term match.
-            trp.s = &ss
-            trp.p = &sp
-            trp.o = &so
-            term.serialize_from_rdflib(s, trp.s, self.pool)
-            term.serialize_from_rdflib(p, trp.p, self.pool)
-            term.serialize_from_rdflib(o, trp.o, self.pool)
+            spok = [
+                self.store.to_key(s),
+                self.store.to_key(p),
+                self.store.to_key(o),
+            ]
 
-            if cc.hashset_contains(self._triples, &trp):
-                callback_fn(gr, &trp, ctx)
+            if self.keys.contains(spok):
+                callback_fn(gr, &spok, ctx)
                 return
 
         if s is not None:
@@ -731,28 +695,11 @@ cdef class Imr(Graph):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
 
-        elif isinstance(item, Node):
+        elif isinstance(item, rdflib.Node):
             # If a Node is given, return all values for that predicate.
             return self._slice(self.uri, item, None)
         else:
             raise TypeError(f'Wrong slice format: {item}.')
-
-
-    @property
-    def uri(self):
-        """
-        Get resource identifier as a RDFLib URIRef.
-
-        :rtype: rdflib.URIRef.
-        """
-        return URIRef(self.id)
-
-
-    cdef Imr empty_copy(self):
-        """
-        Create an empty instance carrying over some key properties.
-        """
-        return self.__class__(uri=self.id)
 
 
     def value(self, p, strict=False):
@@ -765,6 +712,9 @@ cdef class Imr(Graph):
             the first found result is returned.
         :rtype: rdflib.term.Node
         """
+        if not self.id:
+            raise ValueError('Cannot use `value` on a non-named graph.')
+
         # TODO use slice.
         values = {trp[2] for trp in self.lookup((self.uri, p, None))}
 

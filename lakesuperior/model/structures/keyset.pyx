@@ -5,7 +5,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 
 cimport lakesuperior.model.structures.callbacks as cb
 
-from lakesuperior.model.base cimport TripleKey, TRP_KLEN
+from lakesuperior.model.base cimport NULL_TRP, TRP_KLEN, TripleKey
 
 
 logger = logging.getLogger(__name__)
@@ -50,26 +50,21 @@ cdef class Keyset:
         self._cur = idx
 
 
+    cdef size_t size(self):
+        """
+        Size of the object as the number of occupied data slots.
+
+        Note that this is different from :py:data:`ct`_, which indicates
+        the number of allocated items in memory.
+        """
+        return self._free_i
+
+
     cdef size_t tell(self):
         """
         Tell the position of the cursor in the keyset.
         """
         return self._cur
-
-
-    cdef bint get_at(self, size_t i, TripleKey* item):
-        """
-        Get an item at a given index position. Cython-level method.
-
-        :rtype: TripleKey
-        """
-        if i >= self._free_i:
-            return False
-
-        self._cur = i
-        item[0] = self.data[i]
-
-        return True
 
 
     cdef bint get_next(self, TripleKey* item):
@@ -111,6 +106,41 @@ cdef class Keyset:
         self.data[self._free_i] = val[0]
 
         self._free_i += 1
+
+
+    cdef void remove(self, const TripleKey* val) except *:
+        """
+        Remove a triple key.
+
+        This method replaces a triple with NULL_TRP if found. It
+        does not reclaim space. Therefore, if many removal operations are
+        forseen, using :py:meth:`subtract`_ is advised.
+        """
+
+        cdef TripleKey stored_val
+
+        self.seek()
+        while self.get_next(&stored_val):
+            if memcmp(val, stored_val, TRP_KLEN) == 0:
+                stored_val[0] = NULL_TRP
+                return
+
+
+    cdef Keyset subtract(self, const Keyset* other):
+        """
+        Create a Keyset by subtracting an``other`` Keyset from the current one.
+
+        :rtype: Keyset
+        """
+        cdef Keyset res = Keyset(self.ct)
+
+        self.seek()
+        while self.get_next(&val):
+            if not other.contains(val):
+                res.add(val)
+        res.resize()
+
+        return res
 
 
     cdef bint contains(self, const TripleKey* val):
@@ -167,7 +197,7 @@ cdef class Keyset:
         """
         Look up triple keys.
 
-        This works in a similar way that the ``SimpleGraph`` and ``LmdbStore``
+        This works in a similar way that the ``Graph`` and ``LmdbStore``
         methods work.
 
         Any and all the terms may be NULL. A NULL term is treated as unbound.

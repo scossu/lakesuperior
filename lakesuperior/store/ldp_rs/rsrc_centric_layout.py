@@ -9,7 +9,7 @@ from urllib.parse import urldefrag
 
 import arrow
 
-from rdflib import Dataset, Graph, Literal, URIRef, plugin
+from rdflib import Dataset, Literal, URIRef, plugin
 from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 from rdflib.query import ResultException
@@ -24,7 +24,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import  srv_mgd_subjects, \
 from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
-from lakesuperior.model.graph.graph import SimpleGraph, Imr
+from lakesuperior.model.graph.graph import Graph, Imr
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -223,8 +223,8 @@ class RsrcCentricLayout:
             #import pdb; pdb.set_trace()
             imr = self.get_imr('/', incl_inbound=False, incl_children=True)
 
-        gr = Graph(identifier=imr.uri)
-        gr += imr.data
+        #gr = Graph(identifier=imr.uri)
+        #gr += imr.data
         #checksum = to_isomorphic(gr).graph_digest()
         #digest = sha256(str(checksum).encode('ascii')).digest()
 
@@ -250,7 +250,7 @@ class RsrcCentricLayout:
         :param rdflib.term.URIRef ctx: URI of the optional context. If None,
             all named graphs are queried.
 
-        :rtype: SimpleGraph
+        :rtype: Graph
         """
         return self.store.triple_keys((subject, None, None), ctx)
 
@@ -299,7 +299,7 @@ class RsrcCentricLayout:
 
         # Include inbound relationships.
         if incl_inbound and len(imr):
-            gr = SimpleGraph({*self.get_inbound_rel(nsc['fcres'][uid])})
+            gr = Graph({*self.get_inbound_rel(nsc['fcres'][uid])})
             imr |= gr
 
         if strict:
@@ -369,7 +369,7 @@ class RsrcCentricLayout:
         Get all metadata about a resource's versions.
 
         :param string uid: Resource UID.
-        :rtype: SimpleGraph
+        :rtype: Graph
         """
         # **Note:** This pretty much bends the ontology—it replaces the graph
         # URI with the subject URI. But the concepts of data and metadata in

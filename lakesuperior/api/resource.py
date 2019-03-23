@@ -7,7 +7,7 @@ from threading import Lock, Thread
 
 import arrow
 
-from rdflib import Graph, Literal, URIRef
+from rdflib import Literal
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
@@ -16,7 +16,6 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.model.graph.graph import SimpleGraph
 
 
 logger = logging.getLogger(__name__)

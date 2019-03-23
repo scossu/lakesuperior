@@ -4,8 +4,9 @@ from cymem.cymem cimport Pool
 
 cimport lakesuperior.cy_include.collections as cc
 
-from lakesuperior.model.base cimport Buffer
+from lakesuperior.model.base cimport Buffer, TripleKey
 from lakesuperior.model.graph.triple cimport BufferTriple
+from lakesuperior.model.structures.keyset cimport Keyset
 
 # Lookup function that returns whether a triple contains a match pattern.
 # Return True if the triple exists, False otherwise.
@@ -26,14 +27,13 @@ cdef class Graph:
         cc.HashSet *_triples # Set of unique triples.
         # Temp data pool. It gets managed with the object lifecycle via cymem.
         Pool pool
+        Keyset keys
 
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        BufferTriple* store_triple(self, const BufferTriple* strp)
-        void add_triple(
-            self, const BufferTriple *trp, bint copy=*
-        ) except *
+        void add(self, TripleKey* spok_p) except *
+        void remove(self, TripleKey* spok_p) except *
         int remove_triple(self, const BufferTriple* trp_buf) except -1
         bint trp_contains(self, const BufferTriple* btrp)
 

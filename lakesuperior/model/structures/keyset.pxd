@@ -19,8 +19,8 @@ cdef class Keyset:
                            # will raise an error.
 
         void seek(self, size_t idx=*)
+        size_t size(self)
         size_t tell(self)
-        bint get_at(self, size_t i, TripleKey* item)
         bint get_next(self, TripleKey* item)
         void add(self, const TripleKey* val) except *
         bint contains(self, const TripleKey* val)

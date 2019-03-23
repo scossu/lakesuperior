@@ -7,7 +7,7 @@ cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.cy_include.spookyhash as sph
 
 from lakesuperior.model.base cimport Buffer, buffer_dump
-from lakesuperior.model.graph cimport graph
+from lakesuperior.model.graph.graph cimport Graph
 from lakesuperior.model.graph.triple cimport BufferTriple
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ cdef int trp_cmp_fn(const void* key1, const void* key2):
 #    return is_not_equal
 
 
-cdef bint graph_eq_fn(graph.Graph g1, graph.Graph g2):
+cdef bint graph_eq_fn(Graph g1, Graph g2):
     """
     Compare 2 graphs for equality.
 
@@ -222,16 +222,16 @@ cdef inline bint lookup_po_cmp_fn(
 ## LOOKUP CALLBACK FUNCTIONS
 
 cdef inline void add_trp_callback(
-    graph.Graph gr, const TripleKey spok, void* ctx
+    Graph gr, const TripleKey* spok_p, void* ctx
 ):
     """
     Add a triple to a graph as a result of a lookup callback.
     """
-    gr.add(trp)
+    gr.keys.add(spok_p)
 
 
 cdef inline void del_trp_callback(
-    graph.Graph gr, const TripleKey spok, void* ctx
+    Graph gr, const TripleKey* spok_p, void* ctx
 ):
     """
     Remove a triple from a graph as a result of a lookup callback.
@@ -239,6 +239,6 @@ cdef inline void del_trp_callback(
     #logger.info('removing triple: {} {} {}'.format(
         #buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
     #))
-    gr.remove(spok)
+    gr.keys.remove(spok_p)
 
 
