@@ -12,8 +12,9 @@ from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
+import rdflib
 
-from rdflib import Graph, URIRef, Literal
+from rdflib import URIRef, Literal
 from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
@@ -675,15 +676,15 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = self.imr.as_rdflib().graph
-        post_gr = Graph(identifier=self.uri)
+        pre_gr = self.imr.as_rdflib()
+        post_gr = rdflib.Graph(identifier=self.uri)
         post_gr |= pre_gr
 
         post_gr.update(qry_str)
 
         # FIXME Fix and  use SimpleGraph's native subtraction operation.
-        remove_gr = self.check_mgd_terms(SimpleGraph(set(pre_gr - post_gr)))
-        add_gr = self.check_mgd_terms(SimpleGraph(set(post_gr - pre_gr)))
+        remove_gr = self.check_mgd_terms(Graph(data=set(pre_gr - post_gr)))
+        add_gr = self.check_mgd_terms(Graph(data=set(post_gr - pre_gr)))
 
         return remove_gr, add_gr
 

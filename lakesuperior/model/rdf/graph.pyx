@@ -292,7 +292,7 @@ cdef class Graph:
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
-        elif self.uri and isinstance(item, rdflib.Node):
+        elif self.uri and isinstance(item, rdflib.term.Identifier):
             # If a Node is given, return all values for that predicate.
             return self._slice(self.uri, item, None)
         else:
@@ -427,7 +427,7 @@ cdef class Graph:
 
         :rtype: rdflib.Graph
         """
-        gr = Graph(identifier=self.uri)
+        gr = rdflib.Graph(identifier=self.uri)
         for trp in self.data:
             gr.add(trp)
 
