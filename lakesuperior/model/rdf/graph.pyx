@@ -77,7 +77,7 @@ cdef class Graph:
         if data:
             # Populate with provided Python set.
             self.keys = Keyset(len(data))
-            self.add_triples(data)
+            self.add(data)
         else:
             self.keys = Keyset(capacity)
 
@@ -302,7 +302,7 @@ cdef class Graph:
         return {r[i] for r in self.data}
 
 
-    def add_triples(self, triples):
+    def add(self, triples):
         """
         Add triples to the graph.
 
