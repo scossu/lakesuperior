@@ -1,6 +1,6 @@
 #from lakesuperior.cy_include cimport cytpl as tpl
 from lakesuperior.model.base cimport Buffer
-from lakesuperior.model.graph.term cimport Term
+from lakesuperior.model.rdf.term cimport Term
 
 # Triple of Term structs.
 ctypedef struct Triple:

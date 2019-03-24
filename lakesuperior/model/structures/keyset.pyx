@@ -3,7 +3,7 @@ import logging
 from libc.string cimport memcmp, memcpy
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 
-cimport lakesuperior.model.structures.callbacks as cb
+cimport lakesuperior.model.callbacks as cb
 
 from lakesuperior.model.base cimport NULL_TRP, TRP_KLEN, TripleKey
 

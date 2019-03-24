@@ -8,7 +8,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
-from lakesuperior.model.graph.graph import Graph
+from lakesuperior.model.rdf.graph import Graph
 
 
 @pytest.fixture(scope='class')

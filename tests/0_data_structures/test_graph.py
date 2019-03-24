@@ -5,7 +5,7 @@ from shutil import rmtree
 
 from rdflib import Graph, Namespace, URIRef
 
-from lakesuperior.model.graph.graph import Graph
+from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
 
 
@@ -46,12 +46,14 @@ class TestGraphInit:
     """
     Test initialization of graphs with different base data sets.
     """
-    def test_empty(self):
+    def test_empty(self, store):
         """
         Test creation of an empty graph.
         """
-        gr = Graph()
+        with store.txn_ctx():
+            gr = Graph(store)
 
+        # len() should not need a DB transaction open.
         assert len(gr) == 0
 
 

@@ -5,7 +5,7 @@ from cymem.cymem cimport Pool
 cimport lakesuperior.cy_include.collections as cc
 
 from lakesuperior.model.base cimport Key, TripleKey
-from lakesuperior.model.graph.triple cimport BufferTriple
+from lakesuperior.model.rdf.triple cimport BufferTriple
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.ldp_rs cimport lmdb_triplestore
 
@@ -16,7 +16,7 @@ ctypedef void (*lookup_callback_fn_t)(
 
 cdef class Graph:
     cdef:
-        lmdb_triplestore.LmdbTriplestore store
+        readonly lmdb_triplestore.LmdbTriplestore store
         public Keyset keys
         public object uri
 

@@ -8,12 +8,12 @@ from libc.string cimport memcpy
 from libc.stdlib cimport free
 
 cimport lakesuperior.cy_include.collections as cc
-cimport lakesuperior.model.structures.callbacks as cb
+cimport lakesuperior.model.callbacks as cb
 cimport lakesuperior.model.structures.keyset as kset
 
 from lakesuperior.model.base cimport Key, TripleKey
-from lakesuperior.model.graph cimport term
-from lakesuperior.model.graph.triple cimport BufferTriple
+from lakesuperior.model.rdf cimport term
+from lakesuperior.model.rdf.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport term_hash_seed32
 from lakesuperior.model.structures.keyset cimport Keyset
 
@@ -70,7 +70,8 @@ cdef class Graph:
         """
         self.uri = rdflib.URIRef(uri) if uri else None
 
-        self.store = store or env.app_globals.rdf_store
+        self.store = store if store is not None else env.app_globals.rdf_store
+        logger.debug(f'Assigned store at {self.store.env_path}')
 
         # Initialize empty data set.
         if data:
@@ -310,19 +311,16 @@ cdef class Graph:
         :param iterable triples: iterable of 3-tuple triples.
         """
         cdef:
-            Key sk, pk, ok
-            TripleKey spok = [sk, pk, ok]
+            TripleKey spok
 
         for s, p, o in triples:
             logger.info(f'Adding {s} {p} {o} to store: {self.store}')
-            sk = self.store.to_key(s)
-            logger.info(f'sk: {sk}')
-            pk = self.store.to_key(p)
-            logger.info(f'pk: {pk}')
-            ok = self.store.to_key(o)
-            logger.info(f'ok: {ok}')
+            spok = [
+                self.store.to_key(s),
+                self.store.to_key(p),
+                self.store.to_key(o),
+            ]
 
-            logger.info(f'spok: {sk} {pk} {ok}')
             self.keys.add(&spok, True)
 
 

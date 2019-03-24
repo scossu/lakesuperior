@@ -1,11 +1,8 @@
 cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.cy_include.cylmdb as lmdb
-cimport lakesuperior.cy_include.cytpl as tpl
 
-from lakesuperior.model.base cimport (
-    Key, DoubleKey, TripleKey, Buffer
-)
-from lakesuperior.model.graph.graph cimport Graph
+from lakesuperior.model.base cimport Key, DoubleKey, TripleKey, Buffer
+from lakesuperior.model.rdf.graph cimport Graph
 from lakesuperior.model.structures.keyset cimport Keyset
 from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
 

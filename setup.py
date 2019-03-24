@@ -88,6 +88,17 @@ extensions = [
         #extra_link_args=['-fopenmp']
     ),
     Extension(
+        'lakesuperior.model.callbacks',
+        [
+            path.join('lakesuperior', 'model', f'callbacks.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
+    ),
+    Extension(
         'lakesuperior.model.structures.*',
         [
             path.join(spookyhash_src_dir, 'spookyhash.c'),
@@ -120,7 +131,7 @@ extensions = [
         extra_link_args=['-g'],
     ),
     Extension(
-        'lakesuperior.model.graph.*',
+        'lakesuperior.model.rdf.*',
         [
             path.join(tpl_src_dir, 'tpl.c'),
             path.join(spookyhash_src_dir, 'context.c'),
@@ -130,7 +141,7 @@ extensions = [
             path.join(coll_src_dir, 'array.c'),
             path.join(coll_src_dir, 'hashtable.c'),
             path.join(coll_src_dir, 'hashset.c'),
-            path.join('lakesuperior', 'model', 'graph', f'*.{ext}'),
+            path.join('lakesuperior', 'model', 'rdf', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
         #extra_compile_args=['-fopenmp'],

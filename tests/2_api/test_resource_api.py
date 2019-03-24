@@ -14,7 +14,7 @@ from lakesuperior.exceptions import (
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldp.ldpr import Ldpr
-from lakesuperior.model.graph.graph import Graph
+from lakesuperior.model.rdf.graph import Graph
 
 
 @pytest.fixture(scope='module')

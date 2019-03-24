@@ -3,15 +3,13 @@ import sys
 
 import rdflib
 
-from cython.parallel import prange
+#from cython.parallel import prange
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
-from lakesuperior.store.base_lmdb_store cimport _check
 
 from libc.stdlib cimport malloc, free
-from libc.string cimport memcpy
 
 cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.cy_include.cylmdb as lmdb
@@ -21,14 +19,12 @@ from lakesuperior.model.base cimport (
     Key, DoubleKey, TripleKey, QuadKey,
     Buffer, buffer_dump
 )
-from lakesuperior.model.graph.graph cimport Graph
-from lakesuperior.model.graph.term cimport Term
-from lakesuperior.model.graph.triple cimport BufferTriple
-
 from lakesuperior.store.base_lmdb_store cimport (
-        BaseLmdbStore, data_v, dbi, key_v)
-from lakesuperior.model.graph.term cimport (
-        deserialize_to_rdflib, serialize_from_rdflib)
+        _check, BaseLmdbStore, data_v, dbi, key_v)
+from lakesuperior.model.rdf.graph cimport Graph
+from lakesuperior.model.rdf.term cimport (
+        Term, deserialize_to_rdflib, serialize_from_rdflib)
+from lakesuperior.model.rdf.triple cimport BufferTriple
 from lakesuperior.model.structures.hash cimport (
         HLEN_128 as HLEN, Hash128, hash128)
 
