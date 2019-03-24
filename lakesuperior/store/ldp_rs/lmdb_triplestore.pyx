@@ -1238,26 +1238,36 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         key_v.mv_data = thash
         key_v.mv_size = HLEN
 
+        # Unfortunately, we have to open a RW transaction even if the term is
+        # found and we don't have write to the store. Because if we have to,
+        # the term is not found outside of the RW txn until the *parent* RO
+        # txn is committed.
+
+        if self.is_txn_rw:
+            # Use existing R/W transaction.
+            logger.info('Working in existing RW transaction.')
+            _txn = self.txn
+        else:
+            # Open new R/W transaction.
+            logger.info('Opening a temporary RW transaction.')
+            _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &_txn))
+
         try:
-            _check(lmdb.mdb_get(
-                self.txn, self.get_dbi(b'th:t'), &key_v, &data_v)
-            )
-
-            return (<Key*>data_v.mv_data)[0]
-
-        except KeyNotFoundError:
-            logger.info(f'Adding term {term} to store.')
-            # If key is not in the store, add it.
-            if self.is_txn_rw:
-                # Use existing R/W transaction.
-                logger.info('Working in existing RW transaction.')
-                _txn = self.txn
-            else:
-                # Open new R/W transaction.
-                logger.info('Opening a temporary RW transaction.')
-                _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &_txn))
-
             try:
+                logger.info(
+                    f'Check {buffer_dump(&pk_t)} with hash '
+                    f'{(<unsigned char*>thash)[:HLEN]} in store before adding.'
+                )
+                logger.info(f'Store path: {self.env_path}')
+                _check(lmdb.mdb_get(
+                    _txn, self.get_dbi(b'th:t'), &key_v, &data_v)
+                )
+
+                tk = (<Key*>data_v.mv_data)[0]
+
+            except KeyNotFoundError:
+                logger.info(f'Adding term {term} to store.')
+                # If key is not in the store, add it.
                 # Main entry.
                 tk = self._append(&pk_t, b't:st', txn=_txn)
 
@@ -1267,14 +1277,16 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(lmdb.mdb_put(
                     _txn, self.get_dbi(b'th:t'), &key_v, &data_v, 0
                 ))
-                if not self.is_txn_rw:
-                    _check(lmdb.mdb_txn_commit(_txn))
 
-                return tk
-            except:
-                if not self.is_txn_rw:
-                    lmdb.mdb_txn_abort(_txn)
-                raise
+            if not self.is_txn_rw:
+                _check(lmdb.mdb_txn_commit(_txn))
+
+            return tk
+
+        except:
+            if not self.is_txn_rw:
+                lmdb.mdb_txn_abort(_txn)
+            raise
 
 
     cdef Key _append(
