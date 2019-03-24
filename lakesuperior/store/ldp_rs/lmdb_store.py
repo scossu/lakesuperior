@@ -212,43 +212,7 @@ class LmdbStore(LmdbTriplestore, Store):
                 context = None
             else:
                 context = context.identifier
-                #logger.debug('Converted graph into URI: {}'.format(context))
+        elif isinstance(context, str):
+            context = URIRef(context)
 
         return context
-
-
-    ## Convenience methods—not necessary for functioning but useful for
-    ## debugging.
-
-    #def _keys_in_ctx(self, pk_ctx):
-    #    """
-    #    Convenience method to list all keys in a context.
-
-    #    :param bytes pk_ctx: Pickled context URI.
-
-    #    :rtype: Iterator(tuple)
-    #    :return: Generator of triples.
-    #    """
-    #    with self.cur('c:spo') as cur:
-    #        if cur.set_key(pk_ctx):
-    #            tkeys = cur.iternext_dup()
-    #            return {self._key_to_triple(tk) for tk in tkeys}
-    #        else:
-    #            return set()
-
-
-    #def _ctx_for_key(self, tkey):
-    #    """
-    #    Convenience method to list all contexts that a key is in.
-
-    #    :param bytes tkey: Triple key.
-
-    #    :rtype: Iterator(rdflib.URIRef)
-    #    :return: Generator of context URIs.
-    #    """
-    #    with self.cur('spo:c') as cur:
-    #        if cur.set_key(tkey):
-    #            ctx = cur.iternext_dup()
-    #            return {self._unpickle(c) for c in ctx}
-    #        else:
-    #            return set()

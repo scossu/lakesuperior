@@ -15,16 +15,16 @@ cdef class Keyset:
     """
     Pre-allocated array (not set, as the name may suggest) of ``TripleKey``s.
     """
-    def __cinit__(self, size_t ct=0, expand_ratio=.5):
+    def __cinit__(self, size_t capacity=0, expand_ratio=.5):
         """
         Initialize and allocate memory for the data set.
 
-        :param size_t ct: Number of elements to be accounted for.
+        :param size_t capacity: Number of elements to be accounted for.
         """
-        self.ct = ct
+        self.capacity = capacity
         self.expand_ratio = expand_ratio
-        self.data = <TripleKey*>PyMem_Malloc(self.ct * TRP_KLEN)
-        if ct and not self.data:
+        self.data = <TripleKey*>PyMem_Malloc(self.capacity * TRP_KLEN)
+        if capacity and not self.data:
             raise MemoryError('Error allocating Keyset data.')
 
         self._cur = 0
@@ -54,7 +54,7 @@ cdef class Keyset:
         """
         Size of the object as the number of occupied data slots.
 
-        Note that this is different from :py:data:`ct`_, which indicates
+        Note that this is different from :py:data:`capacity`_, which indicates
         the number of allocated items in memory.
         """
         return self._free_i
@@ -95,11 +95,11 @@ cdef class Keyset:
         if val[0] == NULL_TRP or (check_dup and self.contains(val)):
             return
 
-        if self._free_i >= self.threshod:
+        if self._free_i >= self.capacity:
             if self.expand_ratio > 0:
                 # In some edge casees, a very small ratio may round down to a
                 # zero increase, so the baseline increase is 1 element.
-                self.resize(1 + <size_t>(self.ct * (1 + self.expand_ratio)))
+                self.resize(1 + <size_t>(self.capacity * (1 + self.expand_ratio)))
             else:
                 raise MemoryError('No space left in key set.')
 
@@ -143,8 +143,8 @@ cdef class Keyset:
         """
         Copy a Keyset.
         """
-        cdef Keyset new_ks = Keyset(self.ct, expand_ratio=self.expand_ratio)
-        memcpy(new_ks.data, self.data, self.ct * TRP_KLEN)
+        cdef Keyset new_ks = Keyset(self.capacity, expand_ratio=self.expand_ratio)
+        memcpy(new_ks.data, self.data, self.capacity * TRP_KLEN)
         new_ks.seek()
 
         return new_ks
@@ -159,7 +159,7 @@ cdef class Keyset:
         """
         cdef:
             TripleKey val
-            Keyset new_ks = Keyset(self.ct, self.expand_ratio)
+            Keyset new_ks = Keyset(self.capacity, self.expand_ratio)
 
         self.seek()
         while self.get_next(&val):
@@ -191,7 +191,7 @@ cdef class Keyset:
             raise MemoryError('Could not reallocate Keyset data.')
 
         self.data = tmp
-        self.ct = size
+        self.capacity = size
         self.seek()
 
 
@@ -210,7 +210,7 @@ cdef class Keyset:
         """
         cdef:
             TripleKey spok
-            Keyset ret = Keyset(self.ct)
+            Keyset ret = Keyset(self.capacity)
             Key k1, k2
             key_cmp_fn_t cmp_fn
 
@@ -286,7 +286,7 @@ cdef Keyset subtract(Keyset ks1, Keyset ks2):
     """
     cdef:
         TripleKey val
-        Keyset ks3 = Keyset(ks1.ct)
+        Keyset ks3 = Keyset(ks1.capacity)
 
     ks1.seek()
     while ks1.get_next(&val):
@@ -306,7 +306,7 @@ cdef Keyset intersect(Keyset ks1, Keyset ks2):
     """
     cdef:
         TripleKey val
-        Keyset ks3 = Keyset(ks1.ct)
+        Keyset ks3 = Keyset(ks1.capacity)
 
     ks1.seek()
     while ks1.get_next(&val):
@@ -326,7 +326,7 @@ cdef Keyset xor(Keyset ks1, Keyset ks2):
     """
     cdef:
         TripleKey val
-        Keyset ks3 = Keyset(ks1.ct + ks2.ct)
+        Keyset ks3 = Keyset(ks1.capacity + ks2.capacity)
 
     ks1.seek()
     while ks1.get_next(&val):

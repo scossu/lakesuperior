@@ -139,7 +139,9 @@ cdef int serialize_from_rdflib(
         elif isinstance(term_obj, BNode):
             _term.type = LSUP_TERM_TYPE_BNODE
         else:
-            raise ValueError(f'Unsupported term type: {type(term_obj)}')
+            raise ValueError(
+                f'Unsupported term type: {term_obj} {type(term_obj)}'
+            )
 
     serialize(&_term, data, pool)
 
@@ -148,17 +150,17 @@ cdef object to_rdflib(const Term *term):
     """
     Return an RDFLib term.
     """
-    cdef str data = (<bytes>term[0].data).decode()
+    cdef str data = (<bytes>term.data).decode()
     if term[0].type == LSUP_TERM_TYPE_LITERAL:
         return Literal(
             data,
-            datatype=term[0].datatype if not term[0].lang else None,
-            lang=term[0].lang or None
+            datatype=term.datatype if not term.lang else None,
+            lang=term.lang or None
         )
     else:
-        if term[0].type == LSUP_TERM_TYPE_URIREF:
+        if term.type == LSUP_TERM_TYPE_URIREF:
             return URIRef(data)
-        elif term[0].type == LSUP_TERM_TYPE_BNODE:
+        elif term.type == LSUP_TERM_TYPE_BNODE:
             return BNode(data)
         else:
             raise IOError(f'Unknown term type code: {term[0].type}')

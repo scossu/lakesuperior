@@ -17,7 +17,8 @@ ctypedef void (*lookup_callback_fn_t)(
 cdef class Graph:
     cdef:
         lmdb_triplestore.LmdbTriplestore store
-        Keyset keys
+        public Keyset keys
+        public object uri
 
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn

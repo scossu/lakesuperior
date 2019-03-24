@@ -82,6 +82,8 @@ extensions = [
             path.join('lakesuperior', 'model', f'base.{ext}'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
         #extra_compile_args=['-fopenmp'],
         #extra_link_args=['-fopenmp']
     ),
@@ -96,6 +98,8 @@ extensions = [
             path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
         #extra_compile_args=['-fopenmp'],
         #extra_link_args=['-fopenmp']
     ),
@@ -112,6 +116,8 @@ extensions = [
             path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
     ),
     Extension(
         'lakesuperior.model.graph.*',
@@ -143,8 +149,8 @@ extensions = [
                 'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
+        extra_compile_args=['-g', '-fopenmp'],
+        extra_link_args=['-g', '-fopenmp']
     ),
 ]
 
@@ -179,6 +185,7 @@ if USE_CYTHON:
             'boundscheck': False,
             'wraparound': False,
             'profile': True,
+            'embedsignature': True
         }
     )
 

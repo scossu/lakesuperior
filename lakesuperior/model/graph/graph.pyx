@@ -49,7 +49,7 @@ cdef class Graph:
     """
 
     def __cinit__(
-        self, store=None, size_t ct=0, str uri=None, set data=set()
+        self, store=None, size_t capacity=0, uri=None, set data=set()
     ):
         """
         Initialize the graph, optionally from Python/RDFlib data.
@@ -59,59 +59,58 @@ cdef class Graph:
             this is the default application store
             (``env.app_globals.rdf_store``).
 
-        :param size_t ct: Initial number of allocated triples.
+        :param size_t capacity: Initial number of allocated triples.
 
         :param str uri: If specified, the graph becomes a named graph and can
             utilize the :py:meth:`value()` method and special slicing notation.
 
-        :param set data: If specified, ``ct`` is ignored and an initial key
+        :param set data: If specified, ``capacity`` is ignored and an initial key
             set is created from a set of 3-tuples of :py:class:``rdflib.Term``
             instances.
         """
+        self.uri = rdflib.URIRef(uri) if uri else None
 
-        if not store:
-            store = env.app_globals.rdf_store
+        self.store = store or env.app_globals.rdf_store
+
         # Initialize empty data set.
         if data:
             # Populate with provided Python set.
             self.keys = Keyset(len(data))
             self.add_triples(data)
         else:
-            self.keys = Keyset(ct)
+            self.keys = Keyset(capacity)
 
 
     ## PROPERTIES ##
 
-    @property
-    def uri(self):
-        """
-        Get resource identifier as a RDFLib URIRef.
+    property data:
+        def __get__(self):
+            """
+            Triple data as a Python/RDFlib set.
 
-        :rtype: rdflib.URIRef.
-        """
-        return rdflib.URIRef(self.id)
+            :rtype: set
+            """
+            cdef TripleKey spok
+
+            ret = set()
+
+            self.keys.seek()
+            while self.keys.get_next(&spok):
+                ret.add((
+                    self.store.from_key(spok[0]),
+                    self.store.from_key(spok[1]),
+                    self.store.from_key(spok[2])
+                ))
+
+            return ret
 
 
-    @property
-    def data(self):
-        """
-        Triple data as a Python/RDFlib set.
-
-        :rtype: set
-        """
-        cdef TripleKey spok
-
-        ret = set()
-
-        self.seek()
-        while self.keys.get_next(&spok):
-            ret.keys.add((
-                self.store.from_key(spok[0]),
-                self.store.from_key(spok[1]),
-                self.store.from_key(spok[2])
-            ))
-
-        return ret
+    property capacity:
+        def __get__(self):
+            """
+            Total capacity of the underlying Keyset, in number of triples.
+            """
+            return self.keys.capacity
 
 
     ## MAGIC METHODS ##
@@ -133,7 +132,7 @@ cdef class Graph:
         This includes the subject URI, number of triples contained and the
         memory address of the instance.
         """
-        id_repr = f' id={self.id},' if self.id else ''
+        id_repr = f' uri={self.uri},' if self.uri else ''
         return (
                 f'<{self.__class__.__name__} @0x{id(self):02x}{id_repr} '
             f'length={len(self)}>'
@@ -252,7 +251,7 @@ cdef class Graph:
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
             return self._slice(s, p, o)
-        elif self.id and isinstance(item, rdflib.Node):
+        elif self.uri and isinstance(item, rdflib.Node):
             # If a Node is given, return all values for that predicate.
             return self._slice(self.uri, item, None)
         else:
@@ -261,7 +260,7 @@ cdef class Graph:
 
     def __hash__(self):
         """ TODO Bogus """
-        return self.id
+        return self.uri
 
 
     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
@@ -276,7 +275,7 @@ cdef class Graph:
             the first found result is returned.
         :rtype: rdflib.term.Node
         """
-        if not self.id:
+        if not self.uri:
             raise ValueError('Cannot use `value` on a non-named graph.')
 
         # TODO use slice.
@@ -284,7 +283,7 @@ cdef class Graph:
 
         if strict and len(values) > 1:
             raise RuntimeError('More than one value found for {}, {}.'.format(
-                    self.id, p))
+                    self.uri, p))
 
         for ret in values:
             return ret
@@ -310,14 +309,20 @@ cdef class Graph:
 
         :param iterable triples: iterable of 3-tuple triples.
         """
-        cdef TripleKey spok
+        cdef:
+            Key sk, pk, ok
+            TripleKey spok = [sk, pk, ok]
 
         for s, p, o in triples:
-            spok = [
-                self.store.to_key(s),
-                self.store.to_key(p),
-                self.store.to_key(o),
-            ]
+            logger.info(f'Adding {s} {p} {o} to store: {self.store}')
+            sk = self.store.to_key(s)
+            logger.info(f'sk: {sk}')
+            pk = self.store.to_key(p)
+            logger.info(f'pk: {pk}')
+            ok = self.store.to_key(o)
+            logger.info(f'ok: {ok}')
+
+            logger.info(f'spok: {sk} {pk} {ok}')
             self.keys.add(&spok, True)
 
 
@@ -341,7 +346,7 @@ cdef class Graph:
         :param str uri: URI of the new graph. This should be different from
             the original.
         """
-        cdef Graph new_gr = Graph(self.store, self.ct, uri=uri)
+        cdef Graph new_gr = Graph(self.store, self.capacity, uri=uri)
 
         new_gr.keys = self.keys.copy()
 
@@ -353,7 +358,7 @@ cdef class Graph:
         :param str uri: URI of the new graph. This should be different from
             the original.
         """
-        return Graph(self.store, self.ct, uri=uri)
+        return Graph(self.store, self.capacity, uri=uri)
 
 
     cpdef void set(self, tuple trp) except *:
@@ -374,7 +379,7 @@ cdef class Graph:
 
         :rtype: rdflib.Graph
         """
-        gr = Graph(identifier=self.id)
+        gr = Graph(identifier=self.uri)
         for trp in self.data:
             gr.add(trp)
 
@@ -387,12 +392,14 @@ cdef class Graph:
 
         This behaves like the rdflib.Graph slicing policy.
         """
+        logger.info(f'Slicing: {s} {p} {o}')
         # If no terms are unbound, check for containment.
         if s is not None and p is not None and o is not None: # s p o
             return (s, p, o) in self
 
         # If some terms are unbound, do a lookup.
         res = self.lookup((s, p, o))
+        logger.info(f'Slicing results: {res}')
         if s is not None:
             if p is not None: # s p ?
                 return {r[2] for r in res}
@@ -433,7 +440,7 @@ cdef class Graph:
             Graph res_gr = self.empty_copy()
 
         self._match_ptn_callback(pattern, res_gr, add_trp_callback, NULL)
-        res_gr.data.resize()
+        res_gr.keys.resize()
 
         return res_gr
 
@@ -456,6 +463,8 @@ cdef class Graph:
 
         s, p, o = pattern
 
+        logger.info(f'Match Callback pattern: {pattern}')
+
         # Decide comparison logic outside the loop.
         if s is not None and p is not None and o is not None:
             # Shortcut for 3-term match.
@@ -472,28 +481,33 @@ cdef class Graph:
         if s is not None:
             k1 = self.store.to_key(s)
             if p is not None:
-                cmp_fn = cb.lookup_skpk_cmp_fn
                 k2 = self.store.to_key(p)
+                cmp_fn = cb.lookup_skpk_cmp_fn
+                logger.info('SKPK')
             elif o is not None:
-                cmp_fn = cb.lookup_skok_cmp_fn
                 k2 = self.store.to_key(o)
+                cmp_fn = cb.lookup_skok_cmp_fn
+                logger.info('SKOK')
             else:
                 cmp_fn = cb.lookup_sk_cmp_fn
         elif p is not None:
             k1 = self.store.to_key(p)
             if o is not None:
-                cmp_fn = cb.lookup_pkok_cmp_fn
                 k2 = self.store.to_key(o)
+                cmp_fn = cb.lookup_pkok_cmp_fn
             else:
                 cmp_fn = cb.lookup_pk_cmp_fn
         elif o is not None:
-            cmp_fn = cb.lookup_ok_cmp_fn
             k1 = self.store.to_key(o)
+            cmp_fn = cb.lookup_ok_cmp_fn
         else:
             cmp_fn = cb.lookup_none_cmp_fn
 
+        logger.info(f'k1: {k1} k2: {k2}')
         # Iterate over serialized triples.
+        self.keys.seek()
         while self.keys.get_next(&spok):
+            logger.info('Verifying spok: {spok}')
             if cmp_fn(&spok, k1, k2):
                 callback_fn(gr, &spok, ctx)
 

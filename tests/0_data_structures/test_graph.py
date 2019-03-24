@@ -1,3 +1,4 @@
+import pdb
 import pytest
 
 from shutil import rmtree
@@ -54,16 +55,18 @@ class TestGraphInit:
         assert len(gr) == 0
 
 
-    def test_init_triples(self, trp):
+    def test_init_triples(self, trp, store):
         """
         Test creation using a Python set.
         """
-        gr = Graph(data=set(trp))
+        with store.txn_ctx(True):
+            pdb.set_trace()
+            gr = Graph(store, data=set(trp))
 
-        assert len(gr) == 6
+            assert len(gr) == 6
 
-        for t in trp:
-            assert t in gr
+            for t in trp:
+                assert t in gr
 
 
 @pytest.mark.usefixtures('trp')

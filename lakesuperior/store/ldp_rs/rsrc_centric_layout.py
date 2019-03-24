@@ -217,10 +217,11 @@ class RsrcCentricLayout:
         fname = path.join(
                 basedir, 'data', 'bootstrap', 'rsrc_centric_layout.sparql')
         with store.txn_ctx(True):
+            #import pdb; pdb.set_trace()
             with open(fname, 'r') as f:
                 data = Template(f.read())
                 self.ds.update(data.substitute(timestamp=arrow.utcnow()))
-            #import pdb; pdb.set_trace()
+        with store.txn_ctx():
             imr = self.get_imr('/', incl_inbound=False, incl_children=True)
 
         #gr = Graph(identifier=imr.uri)

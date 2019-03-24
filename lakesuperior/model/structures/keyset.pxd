@@ -9,7 +9,7 @@ ctypedef bint (*key_cmp_fn_t)(
 cdef class Keyset:
     cdef:
         TripleKey* data
-        size_t ct
+        size_t capacity
         size_t _cur # Index cursor used to look up values.
         size_t _free_i # Index of next free slot.
         float expand_ratio # By how much storage is automatically expanded when
