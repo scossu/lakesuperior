@@ -27,6 +27,12 @@ cdef void _check(int rc, str message='') except *:
         raise KeyNotFoundError()
     if rc == lmdb.MDB_KEYEXIST:
         raise KeyExistsError()
+    if rc == errno.EINVAL:
+        raise InvalidParamError(
+            'Invalid LMDB parameter error.\n'
+            'Please verify that a transaction is open and valid for the '
+            'current operation.'
+        )
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
                 message + '\nInternal error ({}): '.format(rc)
@@ -42,6 +48,9 @@ class KeyNotFoundError(LmdbError):
     pass
 
 class KeyExistsError(LmdbError):
+    pass
+
+class InvalidParamError(LmdbError):
     pass
 
 
