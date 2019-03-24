@@ -358,9 +358,17 @@ cdef class Graph:
 
         The pattern used is similar to :py:meth:`LmdbTripleStore.delete`.
         """
+        # create an empty copy of the current object.
+        new_gr = self.empty_copy()
+
+        # Reverse lookup: only triples not matching the pattern are added to
+        # the new set.
         self._match_ptn_callback(
-            pattern, self, del_trp_callback, NULL
+            pattern, new_gr, add_trp_callback, False
         )
+
+        # Replace the keyset.
+        self.keys = new_gr.keys
 
 
     ## CYTHON-ACCESSIBLE BASIC METHODS ##
@@ -465,44 +473,66 @@ cdef class Graph:
         cdef:
             Graph res_gr = self.empty_copy()
 
-        self._match_ptn_callback(pattern, res_gr, add_trp_callback, NULL)
+        self._match_ptn_callback(pattern, res_gr, add_trp_callback)
         res_gr.keys.resize()
 
         return res_gr
 
 
     cdef void _match_ptn_callback(
-        self, pattern, Graph gr,
-        lookup_callback_fn_t callback_fn, void* ctx=NULL
+        self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
+        bint callback_cond=True, void* ctx=NULL
     ) except *:
         """
         Execute an arbitrary function on a list of triples matching a pattern.
 
-        The arbitrary function is appied to each triple found in the current
+        The arbitrary function is applied to each triple found in the current
         graph, and to a discrete graph that can be the current graph itself
         or a different one.
+
+        :param tuple pattern: A 3-tuple of rdflib terms or None.
+        :param Graph gr: The graph instance to apply the callback function to.
+        :param lookup_callback_fn_t callback_fn: A callback function to be
+            applied to the target graph using the matching triples.
+        :param bint callback_cond: Whether to apply the callback function if
+            a match is found (``True``) or if it is not found (``False``).
+        :param void* ctx: Pointer to an arbitrary object that can be used by
+            the callback function.
         """
         cdef:
             kset.key_cmp_fn_t cmp_fn
-            Key k1, k2, sk, pk, ok
+            Key k1, k2, k3
             TripleKey spok
 
         s, p, o = pattern
 
         logger.info(f'Match Callback pattern: {pattern}')
 
+        self.keys.seek()
         # Decide comparison logic outside the loop.
-        if s is not None and p is not None and o is not None:
-            # Shortcut for 3-term match.
-            spok = [
-                self.store.to_key(s),
-                self.store.to_key(p),
-                self.store.to_key(o),
-            ]
-
-            if self.keys.contains(&spok):
-                callback_fn(gr, &spok, ctx)
-
+        if all(pattern):
+            if callback_cond:
+                # Shortcut for 3-term match—only if callback_cond is True.
+                spok = [
+                    self.store.to_key(s),
+                    self.store.to_key(p),
+                    self.store.to_key(o),
+                ]
+                if self.keys.contains(&spok):
+                    callback_fn(gr, &spok, ctx)
+            else:
+                # For negative condition (i.e. "apply this function to all keys
+                # except the matching one"), the whole set must be scanned.
+                #logger.info('All terms bound and negative condition.')
+                k1 = self.store.to_key(s)
+                k2 = self.store.to_key(p)
+                k3 = self.store.to_key(o)
+                #logger.info(f'Keys to match: {k1} {k2} {k3}')
+                while self.keys.get_next(&spok):
+                    #logger.info(f'Verifying spok: {spok}')
+                    if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:
+                        logger.info(f'Calling function for spok: {spok}')
+                        callback_fn(gr, &spok, ctx)
             return
 
         if s is not None:
@@ -532,10 +562,9 @@ cdef class Graph:
 
         logger.info(f'k1: {k1} k2: {k2}')
         # Iterate over serialized triples.
-        self.keys.seek()
         while self.keys.get_next(&spok):
             logger.info(f'Verifying spok: {spok}')
-            if cmp_fn(&spok, k1, k2):
+            if cmp_fn(&spok, k1, k2) == callback_cond:
                 callback_fn(gr, &spok, ctx)
 
 
@@ -549,16 +578,3 @@ cdef inline void add_trp_callback(
     Add a triple to a graph as a result of a lookup callback.
     """
     gr.keys.add(spok_p)
-
-
-cdef inline void del_trp_callback(
-    Graph gr, const TripleKey* spok_p, void* ctx
-):
-    """
-    Remove a triple from a graph as a result of a lookup callback.
-    """
-    #logger.info('removing triple: {} {} {}'.format(
-    #    buffer_dump(trp.s), buffer_dump(trp.p), buffer_dump(trp.o)
-    #))
-    gr.keys.remove(spok_p)
-

@@ -26,8 +26,8 @@ cdef class Graph:
         Graph copy(self, str uri=*)
         Graph empty_copy(self, str uri=*)
         void _match_ptn_callback(
-            self, pattern, Graph gr,
-            lookup_callback_fn_t callback_fn, void* ctx=*
+            self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
+            bint callback_cond=*, void* ctx=*
         ) except *
 
     cpdef void set(self, tuple trp) except *
@@ -35,4 +35,3 @@ cdef class Graph:
 
 cdef:
     void add_trp_callback(Graph gr, const TripleKey* spok_p, void* ctx)
-    void del_trp_callback(Graph gr, const TripleKey* spok_p, void* ctx)

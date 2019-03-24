@@ -1232,18 +1232,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Buffer pk_t
             Key tk
 
-        logger.info(f'Serializing term: {term}')
+        #logger.info(f'Serializing term: {term}')
         serialize_from_rdflib(term, &pk_t)
         hash128(&pk_t, &thash)
         key_v.mv_data = thash
         key_v.mv_size = HLEN
 
         try:
-            logger.info(
-                f'Check {buffer_dump(&pk_t)} with hash '
-                f'{(<unsigned char*>thash)[:HLEN]} in store before adding.'
-            )
-            logger.info(f'Store path: {self.env_path}')
+            #logger.debug(
+            #    f'Check {buffer_dump(&pk_t)} with hash '
+            #    f'{(<unsigned char*>thash)[:HLEN]} in store before adding.'
+            #)
             _check(lmdb.mdb_get(
                 self.txn, self.get_dbi(b'th:t'), &key_v, &data_v)
             )
@@ -1251,15 +1250,15 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             return (<Key*>data_v.mv_data)[0]
 
         except KeyNotFoundError:
-            logger.info(f'Adding term {term} to store.')
+            #logger.info(f'Adding term {term} to store.')
             # If key is not in the store, add it.
             if self.is_txn_rw:
                 # Use existing R/W transaction.
-                logger.info('Working in existing RW transaction.')
+                #logger.info('Working in existing RW transaction.')
                 _txn = self.txn
             else:
                 # Open new R/W transaction.
-                logger.info('Opening a temporary RW transaction.')
+                #logger.info('Opening a temporary RW transaction.')
                 _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &_txn))
 
             try:

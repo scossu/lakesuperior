@@ -13,7 +13,17 @@ logger = logging.getLogger(__name__)
 
 cdef class Keyset:
     """
-    Pre-allocated array (not set, as the name may suggest) of ``TripleKey``s.
+    Pre-allocated set of ``TripleKey``s.
+
+    The set is not checked for duplicates all the time: e.g., when creating
+    from a single set of triples coming from the store, the duplicate check
+    is turned off for efficiency. When merging with other sets, duplicate
+    checking should be turned on.
+
+    Since this class is based on a contiguous block of memory, it is best to
+    do very little manipulation. Several operations involve copying the whole
+    data block, so e.g. bulk removal and intersection are much more efficient
+    than individual record operations.
     """
     def __cinit__(self, size_t capacity=0, expand_ratio=.5):
         """
@@ -116,13 +126,14 @@ cdef class Keyset:
         does not reclaim space. Therefore, if many removal operations are
         forseen, using :py:meth:`subtract`_ is advised.
         """
-
-        cdef TripleKey* stored_val
+        cdef:
+            TripleKey stored_val
 
         self.seek()
-        while self.get_next(stored_val):
+        while self.get_next(&stored_val):
+            logger.info(f'Looking up for removal: {stored_val}')
             if memcmp(val, stored_val, TRP_KLEN) == 0:
-                stored_val[0] = NULL_TRP
+                memcpy(&stored_val, NULL_TRP, TRP_KLEN)
                 return
 
 

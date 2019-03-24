@@ -257,7 +257,6 @@ class TestGraphLookup:
                 (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1'))
             )
 
-            pdb.set_trace()
             assert len(flt_gr) == 1
 
             assert trp[5] in flt_gr
