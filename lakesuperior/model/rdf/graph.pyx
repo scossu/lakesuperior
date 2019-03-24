@@ -39,7 +39,7 @@ cdef class Graph:
 
     Every time a term is looked up or added to even a temporary graph, that
     term is added to the store and creates a key. This is because in the
-    majority of cases that term is bound to be stored permanently anyway, and
+    majority of cases that term is likely to be stored permanently anyway, and
     it's more efficient to hash it and allocate it immediately. A cleanup
     function to remove all orphaned terms (not in any triple or context index)
     can be later devised to compact the database.
@@ -53,6 +53,27 @@ cdef class Graph:
     ):
         """
         Initialize the graph, optionally from Python/RDFlib data.
+
+        When initializing a non-empty Graph, a store transaction must be
+        opened::
+
+            >>> from rdflib import URIRef
+            >>> from lakesuperior import env_setup, env
+            >>> store = env.app_globals.rdf_store
+            >>> # Or alternatively:
+            >>> # from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
+            >>> # store = LmdbStore('/tmp/test')
+            >>> trp = {(URIRef('urn:s:0'), URIRef('urn:p:0'), URIRef('urn:o:0'))}
+            >>> with store.txn_ctx():
+            >>>     gr = Graph(store, data=trp)
+
+        Similarly, any operation such as adding, changing or looking up triples
+        needs a store transaction.
+
+        Note that, even though any operation may involve adding new terms to
+        the store, a read-only transaction is sufficient. Lakesuperior will
+        open a write transaction automatically only if necessary and only for
+        the time needed to enter the new terms.
 
         :type store: lakesuperior.store.ldp_rs.lmdb_triplestore.LmdbTriplestore
         :param store: Triplestore where keys are mapped to terms. By default
@@ -114,6 +135,12 @@ cdef class Graph:
             return self.keys.capacity
 
 
+    property txn_ctx:
+        def __get__(self):
+            """ Expose underlying store's ``txn_ctx``. """
+            return self.store.txn_ctx
+
+
     ## MAGIC METHODS ##
 
     def __len__(self):
@@ -123,6 +150,7 @@ cdef class Graph:
 
     def __eq__(self, other):
         """ Equality operator between ``Graph`` instances. """
+        # TODO Use __richcmp__()
         return len(self & other) == 0
 
 
@@ -474,7 +502,8 @@ cdef class Graph:
 
             if self.keys.contains(&spok):
                 callback_fn(gr, &spok, ctx)
-                return
+
+            return
 
         if s is not None:
             k1 = self.store.to_key(s)
@@ -505,7 +534,7 @@ cdef class Graph:
         # Iterate over serialized triples.
         self.keys.seek()
         while self.keys.get_next(&spok):
-            logger.info('Verifying spok: {spok}')
+            logger.info(f'Verifying spok: {spok}')
             if cmp_fn(&spok, k1, k2):
                 callback_fn(gr, &spok, ctx)
 

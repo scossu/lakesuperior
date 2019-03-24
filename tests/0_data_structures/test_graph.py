@@ -50,8 +50,8 @@ class TestGraphInit:
         """
         Test creation of an empty graph.
         """
-        with store.txn_ctx():
-            gr = Graph(store)
+        # No transaction needed to init an empty graph.
+        gr = Graph(store)
 
         # len() should not need a DB transaction open.
         assert len(gr) == 0
@@ -61,8 +61,7 @@ class TestGraphInit:
         """
         Test creation using a Python set.
         """
-        with store.txn_ctx(True):
-            pdb.set_trace()
+        with store.txn_ctx():
             gr = Graph(store, data=set(trp))
 
             assert len(gr) == 6
@@ -72,19 +71,220 @@ class TestGraphInit:
 
 
 @pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
 class TestGraphLookup:
     """
     Test triple lookup.
-
-    TODO
     """
 
-    @pytest.mark.skip(reason='TODO')
-    def test_lookup_pattern(self, trp):
+    def test_lookup_all_unbound(self, trp, store):
         """
-        Test lookup by basic pattern.
+        Test lookup ? ? ? (all unbound)
         """
-        pass
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((None, None, None))
+
+            assert len(flt_gr) == 6
+
+            assert trp[0] in flt_gr
+            assert trp[2] in flt_gr
+            assert trp[3] in flt_gr
+            assert trp[4] in flt_gr
+            assert trp[5] in flt_gr
+            assert trp[6] in flt_gr
+
+
+    def test_lookup_s(self, trp, store):
+        """
+        Test lookup s ? ?
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((URIRef('urn:s:0'), None, None))
+
+            assert len(flt_gr) == 3
+
+            assert trp[0] in flt_gr
+            assert trp[3] in flt_gr
+            assert trp[4] in flt_gr
+
+            assert trp[2] not in flt_gr
+            assert trp[5] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((URIRef('urn:s:8'), None, None))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_p(self, trp, store):
+        """
+        Test lookup ? p ?
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((None, URIRef('urn:p:0'), None))
+
+            assert len(flt_gr) == 2
+
+            assert trp[0] in flt_gr
+            assert trp[2] in flt_gr
+
+            assert trp[3] not in flt_gr
+            assert trp[4] not in flt_gr
+            assert trp[5] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((None, URIRef('urn:p:8'), None))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_o(self, trp, store):
+        """
+        Test lookup ? ? o
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((None, None, URIRef('urn:o:1')))
+
+            assert len(flt_gr) == 2
+
+            assert trp[4] in flt_gr
+            assert trp[5] in flt_gr
+
+            assert trp[0] not in flt_gr
+            assert trp[2] not in flt_gr
+            assert trp[3] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((None, None, URIRef('urn:o:8')))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_sp(self, trp, store):
+        """
+        Test lookup s p ?
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((URIRef('urn:s:0'), URIRef('urn:p:1'), None))
+
+            assert len(flt_gr) == 2
+
+            assert trp[3] in flt_gr
+            assert trp[4] in flt_gr
+
+            assert trp[0] not in flt_gr
+            assert trp[2] not in flt_gr
+            assert trp[5] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((URIRef('urn:s:0'), URIRef('urn:p:2'), None))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_so(self, trp, store):
+        """
+        Test lookup s ? o
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((URIRef('urn:s:0'), None, URIRef('urn:o:0')))
+
+            assert len(flt_gr) == 2
+
+            assert trp[0] in flt_gr
+            assert trp[3] in flt_gr
+
+            assert trp[2] not in flt_gr
+            assert trp[4] not in flt_gr
+            assert trp[5] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((URIRef('urn:s:0'), None, URIRef('urn:o:2')))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_po(self, trp, store):
+        """
+        Test lookup ? p o
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup((None, URIRef('urn:p:1'), URIRef('urn:o:1')))
+
+            assert len(flt_gr) == 2
+
+            assert trp[4] in flt_gr
+            assert trp[5] in flt_gr
+
+            assert trp[0] not in flt_gr
+            assert trp[2] not in flt_gr
+            assert trp[3] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup((None, URIRef('urn:p:1'), URIRef('urn:o:2')))
+
+            assert len(empty_flt_gr) == 0
+
+
+    def test_lookup_spo(self, trp, store):
+        """
+        Test lookup s p o
+        """
+        with store.txn_ctx():
+            gr = Graph(store, data=set(trp))
+
+            flt_gr = gr.lookup(
+                (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1'))
+            )
+
+            pdb.set_trace()
+            assert len(flt_gr) == 1
+
+            assert trp[5] in flt_gr
+
+            assert trp[0] not in flt_gr
+            assert trp[2] not in flt_gr
+            assert trp[3] not in flt_gr
+            assert trp[4] not in flt_gr
+            assert trp[6] not in flt_gr
+
+            # Test for empty results.
+            empty_flt_gr = gr.lookup(
+                (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:2'))
+            )
+
+            assert len(empty_flt_gr) == 0
+
+
+@pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
+class TestGraphSlicing:
+    """
+    Test triple lookup.
+    """
+    # TODO
+    pass
+
 
 
 @pytest.mark.usefixtures('trp')
@@ -92,94 +292,98 @@ class TestGraphOps:
     """
     Test various graph operations.
     """
-    def test_len(self, trp):
+    def test_len(self, trp, store):
         """
         Test the length of a graph with and without duplicates.
         """
-        gr = Graph()
-        assert len(gr) == 0
+        with store.txn_ctx():
+            gr = Graph(store)
+            assert len(gr) == 0
 
-        gr.add((trp[0],))
-        assert len(gr) == 1
+            gr.add((trp[0],))
+            assert len(gr) == 1
 
-        gr.add((trp[1],)) # Same values
-        assert len(gr) == 1
+            gr.add((trp[1],)) # Same values
+            assert len(gr) == 1
 
-        gr.add((trp[2],))
-        assert len(gr) == 2
+            gr.add((trp[2],))
+            assert len(gr) == 2
 
-        gr.add(trp)
-        assert len(gr) == 6
+            gr.add(trp)
+            assert len(gr) == 6
 
 
-    def test_dup(self, trp):
+    def test_dup(self, trp, store):
         """
         Test operations with duplicate triples.
         """
-        gr = Graph()
-        #import pdb; pdb.set_trace()
+        with store.txn_ctx():
+            gr = Graph(store)
 
-        gr.add((trp[0],))
-        assert trp[1] in gr
-        assert trp[2] not in gr
+            gr.add((trp[0],))
+            assert trp[1] in gr
+            assert trp[2] not in gr
 
 
-    def test_remove(self, trp):
+    def test_remove(self, trp, store):
         """
         Test adding and removing triples.
         """
-        gr = Graph()
+        with store.txn_ctx():
+            gr = Graph(store)
 
-        gr.add(trp)
-        gr.remove(trp[0])
-        assert len(gr) == 5
-        assert trp[0] not in gr
-        assert trp[1] not in gr
+            gr.add(trp)
+            gr.remove(trp[0])
+            assert len(gr) == 5
+            assert trp[0] not in gr
+            assert trp[1] not in gr
 
-        # This is the duplicate triple.
-        gr.remove(trp[1])
-        assert len(gr) == 5
+            # This is the duplicate triple.
+            gr.remove(trp[1])
+            assert len(gr) == 5
 
-        # This is the triple in reverse order.
-        gr.remove(trp[2])
-        assert len(gr) == 4
+            # This is the triple in reverse order.
+            gr.remove(trp[2])
+            assert len(gr) == 4
 
-        gr.remove(trp[4])
-        assert len(gr) == 3
+            gr.remove(trp[4])
+            assert len(gr) == 3
 
 
-    def test_union(self, trp):
+    def test_union(self, trp, store):
         """
         Test graph union.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store)
+            gr2 = Graph(store)
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1.add(trp[0:3])
+            gr2.add(trp[2:6])
 
-        gr3 = gr1 | gr2
+            gr3 = gr1 | gr2
 
-        assert len(gr3) == 5
-        assert trp[0] in gr3
-        assert trp[4] in gr3
+            assert len(gr3) == 5
+            assert trp[0] in gr3
+            assert trp[4] in gr3
 
 
-    def test_ip_union(self, trp):
+    def test_ip_union(self, trp, store):
         """
         Test graph in-place union.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store)
+            gr2 = Graph(store)
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1.add(trp[0:3])
+            gr2.add(trp[2:6])
 
-        gr1 |= gr2
+            gr1 |= gr2
 
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
 
     def test_addition(self, trp):
