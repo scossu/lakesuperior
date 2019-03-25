@@ -287,6 +287,7 @@ class TestGraphSlicing:
 
 
 @pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
 class TestGraphOps:
     """
     Test various graph operations.
@@ -354,11 +355,8 @@ class TestGraphOps:
         Test graph union.
         """
         with store.txn_ctx():
-            gr1 = Graph(store)
-            gr2 = Graph(store)
-
-            gr1.add(trp[0:3])
-            gr2.add(trp[2:6])
+            gr1 = Graph(store, data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
             gr3 = gr1 | gr2
 
@@ -372,11 +370,8 @@ class TestGraphOps:
         Test graph in-place union.
         """
         with store.txn_ctx():
-            gr1 = Graph(store)
-            gr2 = Graph(store)
-
-            gr1.add(trp[0:3])
-            gr2.add(trp[2:6])
+            gr1 = Graph(store, data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
             gr1 |= gr2
 
@@ -385,512 +380,471 @@ class TestGraphOps:
             assert trp[4] in gr1
 
 
-    def test_addition(self, trp):
+    def test_addition(self, trp, store):
         """
         Test graph addition.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr3 = gr1 + gr2
 
-        gr3 = gr1 + gr2
-
-        assert len(gr3) == 5
-        assert trp[0] in gr3
-        assert trp[4] in gr3
+            assert len(gr3) == 5
+            assert trp[0] in gr3
+            assert trp[4] in gr3
 
 
-    def test_ip_addition(self, trp):
+    def test_ip_addition(self, trp, store):
         """
         Test graph in-place addition.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1 += gr2
 
-        gr1 += gr2
-
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
 
-    def test_subtraction(self, trp):
+    def test_subtraction(self, trp, store):
         """
         Test graph addition.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 - gr2
 
-        gr3 = gr1 - gr2
+            assert len(gr3) == 1
+            assert trp[0] in gr3
+            assert trp[1] in gr3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[4] not in gr3
 
-        assert len(gr3) == 1
-        assert trp[0] in gr3
-        assert trp[1] in gr3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[4] not in gr3
+            gr3 = gr2 - gr1
 
-        gr3 = gr2 - gr1
-
-        assert len(gr3) == 2
-        assert trp[0] not in gr3
-        assert trp[1] not in gr3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[4] in gr3
-        assert trp[5] in gr3
+            assert len(gr3) == 2
+            assert trp[0] not in gr3
+            assert trp[1] not in gr3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[4] in gr3
+            assert trp[5] in gr3
 
 
-    def test_ip_subtraction(self, trp):
+    def test_ip_subtraction(self, trp, store):
         """
         Test graph in-place addition.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 -= gr2
 
-        gr1 -= gr2
-
-        assert len(gr1) == 1
-        assert trp[0] in gr1
-        assert trp[1] in gr1
-        assert trp[2] not in gr1
-        assert trp[3] not in gr1
-        assert trp[4] not in gr1
+            assert len(gr1) == 1
+            assert trp[0] in gr1
+            assert trp[1] in gr1
+            assert trp[2] not in gr1
+            assert trp[3] not in gr1
+            assert trp[4] not in gr1
 
 
 
-    def test_intersect(self, trp):
+    def test_intersect(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 & gr2
 
-        gr3 = gr1 & gr2
-
-        assert len(gr3) == 2
-        assert trp[2] in gr3
-        assert trp[3] in gr3
-        assert trp[0] not in gr3
-        assert trp[5] not in gr3
+            assert len(gr3) == 2
+            assert trp[2] in gr3
+            assert trp[3] in gr3
+            assert trp[0] not in gr3
+            assert trp[5] not in gr3
 
 
-    def test_ip_intersect(self, trp):
+    def test_ip_intersect(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 &= gr2
 
-        gr1 &= gr2
-
-        assert len(gr1) == 2
-        assert trp[2] in gr1
-        assert trp[3] in gr1
-        assert trp[0] not in gr1
-        assert trp[5] not in gr1
+            assert len(gr1) == 2
+            assert trp[2] in gr1
+            assert trp[3] in gr1
+            assert trp[0] not in gr1
+            assert trp[5] not in gr1
 
 
-    def test_xor(self, trp):
+    def test_xor(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 ^ gr2
 
-        gr3 = gr1 ^ gr2
-
-        assert len(gr3) == 3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[0] in gr3
-        assert trp[5] in gr3
+            assert len(gr3) == 3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[0] in gr3
+            assert trp[5] in gr3
 
 
-    def test_ip_xor(self, trp):
+    def test_ip_xor(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph()
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:4]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 ^= gr2
 
-        gr1 ^= gr2
-
-        assert len(gr1) == 3
-        assert trp[2] not in gr1
-        assert trp[3] not in gr1
-        assert trp[0] in gr1
-        assert trp[5] in gr1
+            assert len(gr1) == 3
+            assert trp[2] not in gr1
+            assert trp[3] not in gr1
+            assert trp[0] in gr1
+            assert trp[5] in gr1
 
 
 
 @pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
 class TestNamedGraphOps:
     """
     Test various operations on a named graph.
     """
-    def test_len(self, trp):
+    def test_len(self, trp, store):
         """
         Test the length of a graph with and without duplicates.
         """
-        imr = Graph(uri='http://example.edu/imr01')
+        imr = Graph(store, uri='http://example.edu/imr01')
         assert len(imr) == 0
 
-        imr.add((trp[0],))
-        assert len(imr) == 1
+        with store.txn_ctx():
+            imr.add((trp[0],))
+            assert len(imr) == 1
 
-        imr.add((trp[1],)) # Same values
-        assert len(imr) == 1
+            imr.add((trp[1],)) # Same values
+            assert len(imr) == 1
 
-        imr.add((trp[2],))
-        assert len(imr) == 2
+            imr.add((trp[2],))
+            assert len(imr) == 2
 
-        imr.add(trp)
-        assert len(imr) == 6
+            imr.add(trp)
+            assert len(imr) == 6
 
 
-    def test_dup(self, trp):
+    def test_dup(self, trp, store):
         """
         Test operations with duplicate triples.
         """
-        imr = Graph(uri='http://example.edu/imr01')
-        #import pdb; pdb.set_trace()
+        imr = Graph(store, uri='http://example.edu/imr01')
 
-        imr.add((trp[0],))
-        assert trp[1] in imr
-        assert trp[2] not in imr
+        with store.txn_ctx():
+            imr.add((trp[0],))
+            assert trp[1] in imr
+            assert trp[2] not in imr
 
 
-    def test_remove(self, trp):
+    def test_remove(self, trp, store):
         """
         Test adding and removing triples.
         """
-        imr = Graph(uri='http://example.edu/imr01')
+        with store.txn_ctx():
+            imr = Graph(store, uri='http://example.edu/imr01', data={*trp})
 
-        imr.add(trp)
-        imr.remove(trp[0])
-        assert len(imr) == 5
-        assert trp[0] not in imr
-        assert trp[1] not in imr
+            imr.remove(trp[0])
+            assert len(imr) == 5
+            assert trp[0] not in imr
+            assert trp[1] not in imr
 
-        # This is the duplicate triple.
-        imr.remove(trp[1])
-        assert len(imr) == 5
+            # This is the duplicate triple.
+            imr.remove(trp[1])
+            assert len(imr) == 5
 
-        # This is the triple in reverse order.
-        imr.remove(trp[2])
-        assert len(imr) == 4
+            # This is the triple in reverse order.
+            imr.remove(trp[2])
+            assert len(imr) == 4
 
-        imr.remove(trp[4])
-        assert len(imr) == 3
+            imr.remove(trp[4])
+            assert len(imr) == 3
 
 
-    def test_union(self, trp):
+    def test_union(self, trp, store):
         """
         Test graph union.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr3 = gr1 | gr2
 
-        gr3 = gr1 | gr2
+            assert len(gr3) == 5
+            assert trp[0] in gr3
+            assert trp[4] in gr3
 
-        assert len(gr3) == 5
-        assert trp[0] in gr3
-        assert trp[4] in gr3
-
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            assert gr3.uri == None
 
 
-    def test_ip_union(self, trp):
+    def test_ip_union(self, trp, store):
         """
         Test graph in-place union.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1 |= gr2
 
-        gr1 |= gr2
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
-    def test_addition(self, trp):
+    def test_addition(self, trp, store):
         """
         Test graph addition.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr3 = gr1 + gr2
 
-        gr3 = gr1 + gr2
+            assert len(gr3) == 5
+            assert trp[0] in gr3
+            assert trp[4] in gr3
 
-        assert len(gr3) == 5
-        assert trp[0] in gr3
-        assert trp[4] in gr3
-
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            assert gr3.uri == None
 
 
-    def test_ip_addition(self, trp):
+    def test_ip_addition(self, trp, store):
         """
         Test graph in-place addition.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1 += gr2
 
-        gr1 += gr2
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
-    def test_subtraction(self, trp):
+    def test_subtraction(self, trp, store):
         """
         Test graph addition.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 - gr2
 
-        gr3 = gr1 - gr2
+            assert len(gr3) == 1
+            assert trp[0] in gr3
+            assert trp[1] in gr3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[4] not in gr3
 
-        assert len(gr3) == 1
-        assert trp[0] in gr3
-        assert trp[1] in gr3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[4] not in gr3
+            assert gr3.uri == None
 
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            gr3 = gr2 - gr1
 
-        gr3 = gr2 - gr1
+            assert len(gr3) == 2
+            assert trp[0] not in gr3
+            assert trp[1] not in gr3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[4] in gr3
+            assert trp[5] in gr3
 
-        assert len(gr3) == 2
-        assert trp[0] not in gr3
-        assert trp[1] not in gr3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[4] in gr3
-        assert trp[5] in gr3
-
-        assert gr3.uri == URIRef('http://example.edu/imr02')
+            assert gr3.uri == None
 
 
-    def test_ip_subtraction(self, trp):
+    def test_ip_subtraction(self, trp, store):
         """
         Test graph in-place addition.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 -= gr2
 
-        gr1 -= gr2
+            assert len(gr1) == 1
+            assert trp[0] in gr1
+            assert trp[1] in gr1
+            assert trp[2] not in gr1
+            assert trp[3] not in gr1
+            assert trp[4] not in gr1
 
-        assert len(gr1) == 1
-        assert trp[0] in gr1
-        assert trp[1] in gr1
-        assert trp[2] not in gr1
-        assert trp[3] not in gr1
-        assert trp[4] not in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
 
-    def test_intersect(self, trp):
+    def test_intersect(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 & gr2
 
-        gr3 = gr1 & gr2
+            assert len(gr3) == 2
+            assert trp[2] in gr3
+            assert trp[3] in gr3
+            assert trp[0] not in gr3
+            assert trp[5] not in gr3
 
-        assert len(gr3) == 2
-        assert trp[2] in gr3
-        assert trp[3] in gr3
-        assert trp[0] not in gr3
-        assert trp[5] not in gr3
-
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            assert gr3.uri == None
 
 
-    def test_ip_intersect(self, trp):
+    def test_ip_intersect(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 &= gr2
 
-        gr1 &= gr2
+            assert len(gr1) == 2
+            assert trp[2] in gr1
+            assert trp[3] in gr1
+            assert trp[0] not in gr1
+            assert trp[5] not in gr1
 
-        assert len(gr1) == 2
-        assert trp[2] in gr1
-        assert trp[3] in gr1
-        assert trp[0] not in gr1
-        assert trp[5] not in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
-    def test_xor(self, trp):
+    def test_xor(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr3 = gr1 ^ gr2
 
-        gr3 = gr1 ^ gr2
+            assert len(gr3) == 3
+            assert trp[2] not in gr3
+            assert trp[3] not in gr3
+            assert trp[0] in gr3
+            assert trp[5] in gr3
 
-        assert len(gr3) == 3
-        assert trp[2] not in gr3
-        assert trp[3] not in gr3
-        assert trp[0] in gr3
-        assert trp[5] in gr3
-
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            assert gr3.uri == None
 
 
-    def test_ip_xor(self, trp):
+    def test_ip_xor(self, trp, store):
         """
         Test graph intersextion.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph(uri='http://example.edu/imr02')
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:4]})
+            gr2 = Graph(store, uri='http://example.edu/imr02', data={*trp[2:6]})
 
-        gr1.add(trp[0:4])
-        gr2.add(trp[2:6])
+            gr1 ^= gr2
 
-        gr1 ^= gr2
+            assert len(gr1) == 3
+            assert trp[2] not in gr1
+            assert trp[3] not in gr1
+            assert trp[0] in gr1
+            assert trp[5] in gr1
 
-        assert len(gr1) == 3
-        assert trp[2] not in gr1
-        assert trp[3] not in gr1
-        assert trp[0] in gr1
-        assert trp[5] in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
 @pytest.mark.usefixtures('trp')
+@pytest.mark.usefixtures('store')
 class TestHybridOps:
     """
     Test operations between IMR and graph.
     """
-
-
-    def test_union(self, trp):
+    def test_hybrid_union(self, trp, store):
         """
         Test hybrid IMR + graph union.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr3 = gr1 | gr2
 
-        gr3 = gr1 | gr2
+            assert len(gr3) == 5
+            assert trp[0] in gr3
+            assert trp[4] in gr3
 
-        assert len(gr3) == 5
-        assert trp[0] in gr3
-        assert trp[4] in gr3
+            assert isinstance(gr3, Graph)
+            assert gr3.uri == None
 
-        assert isinstance(gr3, Graph)
-        assert gr3.uri == URIRef('http://example.edu/imr01')
+            gr4 = gr2 | gr1
 
-        gr4 = gr2 | gr1
+            assert isinstance(gr4, Graph)
 
-        assert isinstance(gr4, Graph)
-
-        assert gr3 == gr4
+            assert gr3 == gr4
 
 
-    def test_ip_union_imr(self, trp):
+    def test_ip_union_imr(self, trp, store):
         """
         Test IMR + graph in-place union.
         """
-        gr1 = Graph(uri='http://example.edu/imr01')
-        gr2 = Graph()
+        with store.txn_ctx():
+            gr1 = Graph(store, uri='http://example.edu/imr01', data={*trp[:3]})
+            gr2 = Graph(store, data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1 |= gr2
 
-        gr1 |= gr2
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
-
-        assert gr1.uri == URIRef('http://example.edu/imr01')
+            assert gr1.uri == URIRef('http://example.edu/imr01')
 
 
-    def test_ip_union_gr(self, trp):
+    def test_ip_union_gr(self, trp, store):
         """
         Test graph + IMR in-place union.
         """
-        gr1 = Graph()
-        gr2 = Graph(uri='http://example.edu/imr01')
+        with store.txn_ctx():
+            gr1 = Graph(store, data={*trp[:3]})
+            gr2 = Graph(store, uri='http://example.edu/imr01', data={*trp[2:6]})
 
-        gr1.add(trp[0:3])
-        gr2.add(trp[2:6])
+            gr1 |= gr2
 
-        gr1 |= gr2
+            assert len(gr1) == 5
+            assert trp[0] in gr1
+            assert trp[4] in gr1
 
-        assert len(gr1) == 5
-        assert trp[0] in gr1
-        assert trp[4] in gr1
-
-        assert isinstance(gr1, Graph)
+            assert isinstance(gr1, Graph)
