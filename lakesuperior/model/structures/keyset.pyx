@@ -154,9 +154,12 @@ cdef class Keyset:
         """
         Copy a Keyset.
         """
-        cdef Keyset new_ks = Keyset(self.capacity, expand_ratio=self.expand_ratio)
+        cdef Keyset new_ks = Keyset(
+            self.capacity, expand_ratio=self.expand_ratio
+        )
         memcpy(new_ks.data, self.data, self.capacity * TRP_KLEN)
         new_ks.seek()
+        new_ks._free_i = self._free_i
 
         return new_ks
 

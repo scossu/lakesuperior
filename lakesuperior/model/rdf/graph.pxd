@@ -23,13 +23,13 @@ cdef class Graph:
         cc.key_compare_ft term_cmp_fn
         cc.key_compare_ft trp_cmp_fn
 
-        Graph copy(self, str uri=*)
-        Graph empty_copy(self, str uri=*)
         void _match_ptn_callback(
             self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
             bint callback_cond=*, void* ctx=*
         ) except *
 
+    cpdef Graph copy(self, str uri=*)
+    cpdef Graph empty_copy(self, str uri=*)
     cpdef void set(self, tuple trp) except *
 
 

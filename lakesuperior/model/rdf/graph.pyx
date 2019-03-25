@@ -216,7 +216,7 @@ cdef class Graph:
 
     def __or__(self, other):
         """ Set-theoretical union. """
-        cdef Graph gr3 = self.copy()
+        cdef Graph gr3 = self.empty_copy()
 
         gr3.keys = kset.merge(self.keys, other.keys)
 
@@ -373,7 +373,7 @@ cdef class Graph:
 
     ## CYTHON-ACCESSIBLE BASIC METHODS ##
 
-    cdef Graph copy(self, str uri=None):
+    cpdef Graph copy(self, str uri=None):
         """
         Create copy of the graph with a different (or no) URI.
 
@@ -384,8 +384,10 @@ cdef class Graph:
 
         new_gr.keys = self.keys.copy()
 
+        return new_gr
 
-    cdef Graph empty_copy(self, str uri=None):
+
+    cpdef Graph empty_copy(self, str uri=None):
         """
         Create an empty copy with same capacity and store binding.
 
