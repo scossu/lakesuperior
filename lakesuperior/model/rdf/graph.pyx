@@ -4,6 +4,7 @@ import rdflib
 
 from lakesuperior import env
 
+from cpython.object cimport Py_LT, Py_EQ, Py_GT, Py_LE, Py_NE, Py_GE
 from libc.string cimport memcpy
 from libc.stdlib cimport free
 
@@ -148,10 +149,21 @@ cdef class Graph:
         return self.keys.size()
 
 
-    def __eq__(self, other):
-        """ Equality operator between ``Graph`` instances. """
-        # TODO Use __richcmp__()
-        return len(self & other) == 0
+    def __richcmp__(self, other, int op):
+        """ Comparators between ``Graph`` instances. """
+        if op == Py_LT:
+            raise NotImplementedError()
+        elif op == Py_EQ:
+            logger.info('Comparing for equality.')
+            return len(self ^ other) == 0
+        elif op == Py_GT:
+            raise NotImplementedError()
+        elif op == Py_LE:
+            raise NotImplementedError()
+        elif op == Py_NE:
+            return len(self ^ other) != 0
+        elif op == Py_GE:
+            raise NotImplementedError()
 
 
     def __repr__(self):
@@ -161,10 +173,10 @@ cdef class Graph:
         This includes the subject URI, number of triples contained and the
         memory address of the instance.
         """
-        id_repr = f' uri={self.uri},' if self.uri else ''
+        uri_repr = f', uri={self.uri}' if self.uri else ''
         return (
-                f'<{self.__class__.__name__} @0x{id(self):02x}{id_repr} '
-            f'length={len(self)}>'
+            f'<{self.__class__.__module__}.{self.__class__.__qualname__} '
+            f'@0x{id(self):02x} length={len(self)}{uri_repr}>'
         )
 
 

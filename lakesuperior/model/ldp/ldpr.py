@@ -26,7 +26,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.model.rdf.graph import Graph as Graph
+from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 

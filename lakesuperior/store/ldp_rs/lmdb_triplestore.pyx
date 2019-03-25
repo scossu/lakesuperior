@@ -283,7 +283,6 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         :param rdflib.URIRef graph: URI of the named graph to add.
         """
-        logger.exception('Called add_graph.')
         cdef:
             lmdb.MDB_txn *_txn
             Buffer _sc
@@ -293,17 +292,17 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             c = c.identifier
 
         ck = self.to_key(c)
-        if not self._key_exists(<unsigned char*>ck, KLEN, b'c:'):
+        if not self._key_exists(<unsigned char*>&ck, KLEN, b'c:'):
             # Insert context term if not existing.
             if self.is_txn_rw:
+                #logger.debug('Working in existing RW transaction.')
                 _txn = self.txn
             else:
+                #logger.debug('Opening a temporary RW transaction.')
                 _check(lmdb.mdb_txn_begin(self.dbenv, NULL, 0, &_txn))
                 # Open new R/W transactions.
-                #logger.debug('Opening a temporary RW transaction.')
 
             try:
-                #logger.debug('Working in existing RW transaction.')
                 # Add to list of contexts.
                 key_v.mv_data = &ck
                 key_v.mv_size = KLEN
@@ -314,6 +313,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 ))
                 if not self.is_txn_rw:
                     _check(lmdb.mdb_txn_commit(_txn))
+                    # Kick the main transaction to see the new terms.
+                    lmdb.mdb_txn_reset(self.txn)
+                    _check(lmdb.mdb_txn_renew(self.txn))
             except:
                 if not self.is_txn_rw:
                     lmdb.mdb_txn_abort(_txn)
@@ -343,7 +345,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         try:
             spok_v.mv_size = TRP_KLEN
             # If context was specified, remove only associations with that context.
-            match_set.seek()
+            match_set.keys.seek()
             if context is not None:
                 ck_v.mv_data = &ck
                 ck_v.mv_size = KLEN
@@ -622,7 +624,9 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 _check(lmdb.mdb_cursor_get(cur, &key_v, &data_v, lmdb.MDB_SET))
                 while True:
                     c_uri = self.from_key((<Key*>data_v.mv_data)[0])
-                    contexts.append(rdflib.Graph(self, uri=c_uri, store=self))
+                    contexts.append(
+                        Graph(self, uri=c_uri)
+                    )
                     try:
                         _check(lmdb.mdb_cursor_get(
                             cur, &key_v, &data_v, lmdb.MDB_NEXT_DUP))
@@ -739,7 +743,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     data_v.mv_size = TRP_KLEN
 
                     flt_res = Graph(self, res.capacity, uri=uri)
-                    res.seek()
+                    res.keys.seek()
                     while res.keys.get_next(&spok):
                         data_v.mv_data = spok
                         try:
