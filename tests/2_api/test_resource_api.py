@@ -4,7 +4,7 @@ import pytest
 from io import BytesIO
 from uuid import uuid4
 
-from rdflib import Graph, Literal, URIRef
+from rdflib import Literal, URIRef
 
 from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
@@ -14,7 +14,7 @@ from lakesuperior.exceptions import (
         TombstoneError)
 from lakesuperior.globals import RES_CREATED, RES_UPDATED
 from lakesuperior.model.ldp.ldpr import Ldpr
-from lakesuperior.model.rdf.graph import Graph
+from lakesuperior.model.rdf.graph import Graph, from_rdf
 
 
 @pytest.fixture(scope='module')
@@ -69,10 +69,11 @@ class TestResourceCRUD:
         gr = rsrc_api.get_metadata('/')
         assert isinstance(gr, Graph)
         assert len(gr) == 9
-        assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
-        assert not gr[
-            gr.uri : nsc['dcterms'].title : Literal("Repository Root")
-        ]
+        with env.app_globals.rdf_store.txn_ctx():
+            assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
+            assert not gr[
+                gr.uri : nsc['dcterms'].title : Literal("Repository Root")
+            ]
 
 
     def test_get_root_node(self):
@@ -85,9 +86,10 @@ class TestResourceCRUD:
         assert isinstance(rsrc, Ldpr)
         gr = rsrc.imr
         assert len(gr) == 10
-        assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
-        assert gr[
-            gr.uri : nsc['dcterms'].title : Literal('Repository Root')]
+        with env.app_globals.rdf_store.txn_ctx():
+            assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
+            assert gr[
+                gr.uri : nsc['dcterms'].title : Literal('Repository Root')]
 
 
     def test_get_nonexisting_node(self):
@@ -104,16 +106,18 @@ class TestResourceCRUD:
         """
         uid = '/rsrc_from_graph'
         uri = nsc['fcres'][uid]
-        gr = Graph().parse(
-            data='<> a <http://ex.org/type#A> .', format='turtle',
-            publicID=uri)
+        with env.app_globals.rdf_store.txn_ctx():
+            gr = from_rdf(
+                data='<> a <http://ex.org/type#A> .', format='turtle',
+                publicID=uri)
         evt, _ = rsrc_api.create_or_replace(uid, graph=gr)
 
         rsrc = rsrc_api.get(uid)
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
 
     def test_create_ldp_nr(self):
@@ -132,32 +136,38 @@ class TestResourceCRUD:
     def test_replace_rsrc(self):
         uid = '/test_replace'
         uri = nsc['fcres'][uid]
-        gr1 = Graph().parse(
-            data='<> a <http://ex.org/type#A> .', format='turtle',
-            publicID=uri)
+        with env.app_globals.rdf_store.txn_ctx():
+            gr1 = from_rdf(
+                data='<> a <http://ex.org/type#A> .', format='turtle',
+                publicID=uri
+            )
         evt, _ = rsrc_api.create_or_replace(uid, graph=gr1)
         assert evt == RES_CREATED
 
         rsrc = rsrc_api.get(uid)
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
-        gr2 = Graph().parse(
-            data='<> a <http://ex.org/type#B> .', format='turtle',
-            publicID=uri)
+        with env.app_globals.rdf_store.txn_ctx():
+            gr2 = from_rdf(
+                data='<> a <http://ex.org/type#B> .', format='turtle',
+                publicID=uri
+            )
         #pdb.set_trace()
         evt, _ = rsrc_api.create_or_replace(uid, graph=gr2)
         assert evt == RES_UPDATED
 
         rsrc = rsrc_api.get(uid)
-        assert not rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#B')]
-        assert rsrc.imr[
-                rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
+        with env.app_globals.rdf_store.txn_ctx():
+            assert not rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#B')]
+            assert rsrc.imr[
+                    rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
 
     def test_replace_incompatible_type(self):
@@ -169,9 +179,10 @@ class TestResourceCRUD:
         uid_rs = '/test_incomp_rs'
         uid_nr = '/test_incomp_nr'
         data = b'mock binary content'
-        gr = Graph().parse(
+        gr = from_rdf(
             data='<> a <http://ex.org/type#A> .', format='turtle',
-            publicID=nsc['fcres'][uid_rs])
+            publicID=nsc['fcres'][uid_rs]
+        )
 
         rsrc_api.create_or_replace(uid_rs, graph=gr)
         rsrc_api.create_or_replace(

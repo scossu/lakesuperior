@@ -3,7 +3,6 @@ import logging
 from pprint import pformat
 from uuid import uuid4
 
-from rdflib import Graph, parser
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
@@ -100,14 +99,15 @@ class LdpFactory:
         """
         uri = nsc['fcres'][uid]
         if rdf_data:
-            data = set(Graph().parse(
-                data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid]))
+            provided_imr = from_rdf(
+                uri=uri, data=rdf_data, format=rdf_fmt,
+                publicID=nsc['fcres'][uid]
+            )
         elif graph:
-            data = set(graph)
+            provided_imr = Graph(uri=uri, data={*graph})
         else:
-            data = set()
+            provided_imr = Graph(uri=uri)
 
-        provided_imr = Graph(uri=uri, data=data)
         #logger.debug('Provided graph: {}'.format(
         #        pformat(set(provided_imr))))
 

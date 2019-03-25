@@ -583,6 +583,31 @@ cdef class Graph:
 
 
 
+## FACTORY METHODS
+
+def from_rdf(store=None, uri=None, *args, **kwargs):
+    """
+    Create a Graph from a serialized RDF string.
+
+    This factory function takes the same arguments as
+    :py:meth:`rdflib.Graph.parse`.
+
+    :param store: see :py:meth:`Graph.__cinit__`.
+
+    :param uri: see :py:meth:`Graph.__cinit__`.
+
+    :param *args: Positional arguments passed to RDFlib's ``parse``.
+
+    :param *kwargs: Keyword arguments passed to RDFlib's ``parse``.
+
+    :rtype: Graph
+    """
+    gr = rdflib.Graph().parse(*args, **kwargs)
+
+    logger.info(f'graph: {set(gr)}')
+    return Graph(store=store, uri=uri, data={*gr})
+
+
 ## LOOKUP CALLBACK FUNCTIONS
 
 cdef inline void add_trp_callback(

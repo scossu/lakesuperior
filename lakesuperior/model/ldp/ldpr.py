@@ -895,8 +895,9 @@ class Ldpr(metaclass=ABCMeta):
         # Only update parent if the resource is new.
         if create:
             add_gr = Graph()
-            add_gr.add(
-                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
+            add_gr.add({
+                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri)
+            })
             parent_rsrc.modify(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
