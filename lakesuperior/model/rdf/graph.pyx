@@ -300,8 +300,8 @@ cdef class Graph:
 
 
     def __hash__(self):
-        """ TODO Bogus """
-        return self.uri
+        """ TODO Not that great of a hash. """
+        return id(self)
 
 
     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
