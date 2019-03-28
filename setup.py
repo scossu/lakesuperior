@@ -16,7 +16,9 @@ from os import path
 import lakesuperior
 
 # Use this version to build C files from .pyx sources.
-CYTHON_VERSION='0.29'
+CYTHON_VERSION='0.29.6'
+
+KLEN = 5 # TODO Move somewhere else (config?)
 
 try:
     import Cython
@@ -24,8 +26,16 @@ try:
 except ImportError:
     USE_CYTHON = False
 else:
-    if Cython.__version__ == CYTHON_VERSION:
+    cy_installed_version = Cython.__version__
+    if cy_installed_version == CYTHON_VERSION:
         USE_CYTHON = True
+    else:
+        raise ImportError(
+            f'The installed Cython version ({cy_installed_version}) '
+            f'does not match the required version ({CYTHON_VERSION}). '
+            'Please insstall the exact required Cython version in order to '
+            'generate the C sources.'
+        )
 
 
 # ``pytest_runner`` is referenced in ``setup_requires``.
@@ -40,11 +50,17 @@ with open(readme_fpath, encoding='utf-8') as f:
     long_description = f.read()
 
 # Extensions directory.
+coll_src_dir = path.join('ext', 'collections-c', 'src')
 lmdb_src_dir = path.join('ext', 'lmdb', 'libraries', 'liblmdb')
-tpl_src_dir = path.join('ext', 'tpl', 'src')
 spookyhash_src_dir = path.join('ext', 'spookyhash', 'src')
+tpl_src_dir = path.join('ext', 'tpl', 'src')
 
-include_dirs = [lmdb_src_dir, tpl_src_dir, spookyhash_src_dir]
+include_dirs = [
+    path.join(coll_src_dir, 'include'),
+    lmdb_src_dir,
+    spookyhash_src_dir,
+    tpl_src_dir,
+]
 
 cy_include_dir = path.join('lakesuperior', 'cy_include')
 
@@ -60,56 +76,125 @@ else:
 
 extensions = [
     Extension(
+        'lakesuperior.model.base',
+        [
+            path.join(tpl_src_dir, 'tpl.c'),
+            path.join('lakesuperior', 'model', f'base.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp', '-g'],
+        extra_link_args=['-fopenmp', '-g']
+    ),
+    Extension(
+        'lakesuperior.model.callbacks',
+        [
+            path.join('lakesuperior', 'model', f'callbacks.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
+    ),
+    Extension(
+        'lakesuperior.model.structures.*',
+        [
+            path.join(spookyhash_src_dir, 'spookyhash.c'),
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        extra_compile_args=['-fopenmp', '-g'],
+        extra_link_args=['-fopenmp', '-g']
+    ),
+    Extension(
         'lakesuperior.store.base_lmdb_store',
         [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join(tpl_src_dir, 'tpl.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=['-g'],
+        extra_link_args=['-g'],
     ),
     Extension(
-        'lakesuperior.store.ldp_rs.term',
+        'lakesuperior.model.rdf.*',
         [
             path.join(tpl_src_dir, 'tpl.c'),
+            path.join(spookyhash_src_dir, 'context.c'),
+            path.join(spookyhash_src_dir, 'globals.c'),
             path.join(spookyhash_src_dir, 'spookyhash.c'),
-            path.join('lakesuperior', 'store', 'ldp_rs', f'term.{ext}'),
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
+            path.join('lakesuperior', 'model', 'rdf', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
+        #extra_compile_args=['-fopenmp'],
+        #extra_link_args=['-fopenmp']
     ),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
         [
+            path.join(coll_src_dir, 'common.c'),
+            path.join(coll_src_dir, 'array.c'),
+            path.join(coll_src_dir, 'hashtable.c'),
+            path.join(coll_src_dir, 'hashset.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join(
                 'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp'],
-        extra_link_args=['-fopenmp']
+        extra_compile_args=['-g', '-fopenmp'],
+        extra_link_args=['-g', '-fopenmp']
     ),
-    # For testing.
-    #Extension(
-    #    '*',
-    #    [
-    #        #path.join(tpl_src_dir, 'tpl.c'),
-    #        path.join(
-    #            path.dirname(lakesuperior.basedir), 'sandbox', f'*.{ext}'),
-    #    ],
-    #    include_dirs=include_dirs,
-    #),
+]
+
+# Great reference read about dependency management:
+# https://caremad.io/posts/2013/07/setup-vs-requirement/
+install_requires = [
+    'CoilMQ',
+    'Flask',
+    'HiYaPyCo',
+    'PyYAML',
+    'arrow',
+    'click',
+    'click-log',
+    'cymem',
+    'gevent',
+    'gunicorn',
+    'rdflib',
+    'rdflib-jsonld',
+    'requests',
+    'requests-toolbelt',
+    'sphinx-rtd-theme',
+    'stomp.py',
 ]
 
 if USE_CYTHON:
-    extensions = cythonize(extensions, include_path=include_dirs, compiler_directives={
-        'language_level': 3,
-        'boundscheck': False,
-        'wraparound': False,
-        'profile': True,
-    })
+    extensions = cythonize(
+        extensions,
+        include_path=include_dirs,
+        annotate=True,
+        compiler_directives={
+            'language_level': 3,
+            'boundscheck': False,
+            'wraparound': False,
+            'profile': True,
+            'embedsignature': True
+        }
+    )
 
 
 setup(
@@ -161,26 +246,7 @@ setup(
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    # Great reference read about dependency management:
-    # https://caremad.io/posts/2013/07/setup-vs-requirement/
-    install_requires=[
-        'CoilMQ',
-        'Flask',
-        'HiYaPyCo',
-        'PyYAML',
-        'arrow',
-        'cchardet',
-        'click',
-        'click-log',
-        'gevent',
-        'gunicorn',
-        'rdflib',
-        'rdflib-jsonld',
-        'requests',
-        'requests-toolbelt',
-        'sphinx-rtd-theme',
-        'stomp.py',
-    ],
+    install_requires=install_requires,
 
     setup_requires=[
         'setuptools>=18.0',

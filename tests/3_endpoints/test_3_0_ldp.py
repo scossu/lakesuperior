@@ -18,7 +18,7 @@ from rdflib.term import Literal, URIRef
 
 from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr
+from lakesuperior.model.ldp.ldpr import Ldpr
 
 
 digest_algo = env.app_globals.config['application']['uuid']['algo']

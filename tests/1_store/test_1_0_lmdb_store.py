@@ -1,12 +1,15 @@
+import pdb
 import pytest
 
 from os import path
 from shutil import rmtree
 
-from rdflib import Graph, Namespace, URIRef
+from rdflib import Namespace, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 from rdflib.namespace import RDF, RDFS
 
+from lakesuperior.model.rdf.graph import Graph
+from lakesuperior.store.base_lmdb_store import LmdbError
 from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
 
 
@@ -67,6 +70,12 @@ class TestStoreInit:
         assert not path.exists(env_path + '-lock')
 
 
+
+@pytest.mark.usefixtures('store')
+class TestTransactionContext:
+    '''
+    Tests for intializing and shutting down store and transactions.
+    '''
     def test_txn(self, store):
         '''
         Test opening and closing the main transaction.
@@ -106,18 +115,78 @@ class TestStoreInit:
         '''
         Test rolling back a transaction.
         '''
+        trp = (
+            URIRef('urn:nogo:s'), URIRef('urn:nogo:p'), URIRef('urn:nogo:o')
+        )
         try:
             with store.txn_ctx(True):
-                store.add((
-                    URIRef('urn:nogo:s'), URIRef('urn:nogo:p'),
-                    URIRef('urn:nogo:o')))
+                store.add(trp)
                 raise RuntimeError() # This should roll back the transaction.
         except RuntimeError:
             pass
 
         with store.txn_ctx():
-            res = set(store.triples((None, None, None)))
+            res = set(store.triples(trp))
         assert len(res) == 0
+
+
+    def test_nested_ro_txn(self, store):
+        """
+        Test two nested RO transactions.
+        """
+        trp = (URIRef('urn:s:0'), URIRef('urn:p:0'), URIRef('urn:o:0'))
+        with store.txn_ctx(True):
+            store.add(trp)
+        with store.txn_ctx():
+            with store.txn_ctx():
+                res = {*store.triples(trp)}
+                assert trp in {q[0] for q in res}
+            assert trp in {q[0] for q in res}
+
+
+    def test_nested_ro_txn_nowrite(self, store):
+        """
+        Test two nested RO transactions.
+        """
+        trp = (URIRef('urn:s:0'), URIRef('urn:p:0'), URIRef('urn:o:0'))
+        with pytest.raises(LmdbError):
+            with store.txn_ctx():
+                with store.txn_ctx():
+                    store.add(trp)
+
+
+    def test_nested_ro_rw_txn(self, store):
+        """
+        Test a RO transaction nested into a RW one.
+        """
+        trp = (URIRef('urn:s:1'), URIRef('urn:p:1'), URIRef('urn:o:1'))
+        with store.txn_ctx():
+            with store.txn_ctx(True):
+                store.add(trp)
+            # Outer txn should now see the new triple.
+            assert trp in {q[0] for q in store.triples(trp)}
+
+
+    def test_nested_rw_ro_txn(self, store):
+        """
+        Test that a RO transaction nested in a RW transaction can write.
+        """
+        trp = (URIRef('urn:s:2'), URIRef('urn:p:2'), URIRef('urn:o:2'))
+        with store.txn_ctx(True):
+            with store.txn_ctx():
+                store.add(trp)
+            assert trp in {q[0] for q in store.triples(trp)}
+
+
+    def test_nested_rw_rw_txn(self, store):
+        """
+        Test that a RW transaction nested in a RW transaction can write.
+        """
+        trp = (URIRef('urn:s:3'), URIRef('urn:p:3'), URIRef('urn:o:3'))
+        with store.txn_ctx(True):
+            with store.txn_ctx():
+                store.add(trp)
+            assert trp in {q[0] for q in store.triples(trp)}
 
 
 @pytest.mark.usefixtures('store')
@@ -255,6 +324,42 @@ class TestBasicOps:
             res2 = set(store.triples((None, None, None)))
             assert len(res2) == 0
 
+
+
+@pytest.mark.usefixtures('store', 'bogus_trp')
+class TestExtendedOps:
+    '''
+    Test additional store operations.
+    '''
+
+    def test_all_terms(self, store, bogus_trp):
+        """
+        Test the "all terms" mehods.
+        """
+        with store.txn_ctx(True):
+            for trp in bogus_trp:
+                store.add(trp)
+
+        with store.txn_ctx():
+            all_s = store.all_terms('s')
+            all_p = store.all_terms('p')
+            all_o = store.all_terms('o')
+
+        assert len(all_s) == 1
+        assert len(all_p) == 100
+        assert len(all_o) == 1000
+
+        assert URIRef('urn:test_mp:s1') in all_s
+        assert URIRef('urn:test_mp:s1') not in all_p
+        assert URIRef('urn:test_mp:s1') not in all_o
+
+        assert URIRef('urn:test_mp:p10') not in all_s
+        assert URIRef('urn:test_mp:p10') in all_p
+        assert URIRef('urn:test_mp:p10') not in all_o
+
+        assert URIRef('urn:test_mp:o99') not in all_s
+        assert URIRef('urn:test_mp:o99') not in all_p
+        assert URIRef('urn:test_mp:o99') in all_o
 
 
 @pytest.mark.usefixtures('store', 'bogus_trp')
@@ -648,7 +753,7 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.identifier for gr in store.contexts()}
+            assert gr_uri in store.contexts()
 
 
     def test_add_graph_with_triple(self, store):
@@ -663,7 +768,7 @@ class TestContext:
             store.add(trp, ctx_uri)
 
         with store.txn_ctx():
-            assert ctx_uri in {gr.identifier for gr in store.contexts(trp)}
+            assert ctx_uri in store.contexts(trp)
 
 
     def test_empty_context(self, store):
@@ -674,10 +779,10 @@ class TestContext:
 
         with store.txn_ctx(True):
             store.add_graph(gr_uri)
-            assert gr_uri in {gr.identifier for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.identifier for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_context_ro_txn(self, store):
@@ -697,10 +802,10 @@ class TestContext:
         # allow a lookup in the same transaction, but this does not seem to be
         # possible.
         with store.txn_ctx():
-            assert gr_uri in {gr.identifier for gr in store.contexts()}
+            assert gr_uri in store.contexts()
         with store.txn_ctx(True):
             store.remove_graph(gr_uri)
-            assert gr_uri not in {gr.identifier for gr in store.contexts()}
+            assert gr_uri not in store.contexts()
 
 
     def test_add_trp_to_ctx(self, store):
@@ -731,7 +836,7 @@ class TestContext:
             assert len(set(store.triples((None, None, None), gr_uri))) == 3
             assert len(set(store.triples((None, None, None), gr2_uri))) == 1
 
-            assert gr2_uri in {gr.identifier for gr in store.contexts()}
+            assert gr2_uri in store.contexts()
             assert trp1 in _clean(store.triples((None, None, None)))
             assert trp1 not in _clean(store.triples((None, None, None),
                     RDFLIB_DEFAULT_GRAPH_URI))
@@ -747,11 +852,11 @@ class TestContext:
             res_no_ctx = store.triples(trp3)
             res_ctx = store.triples(trp3, gr2_uri)
             for res in res_no_ctx:
-                assert Graph(identifier=gr_uri) in res[1]
-                assert Graph(identifier=gr2_uri) in res[1]
+                assert Graph(uri=gr_uri) in res[1]
+                assert Graph(uri=gr2_uri) in res[1]
             for res in res_ctx:
-                assert Graph(identifier=gr_uri) in res[1]
-                assert Graph(identifier=gr2_uri) in res[1]
+                assert Graph(uri=gr_uri) in res[1]
+                assert Graph(uri=gr2_uri) in res[1]
 
 
     def test_delete_from_ctx(self, store):
@@ -823,19 +928,6 @@ class TestContext:
             assert len(set(store.triples(trp1))) == 0
             assert len(set(store.triples(trp2))) == 1
             assert len(set(store.triples(trp3))) == 1
-
-
-
-
-
-
-@pytest.mark.usefixtures('store')
-class TestTransactions:
-    '''
-    Tests for transaction handling.
-    '''
-    # @TODO Test concurrent reads and writes.
-    pass
 
 
 #@pytest.mark.usefixtures('store')

@@ -8,8 +8,8 @@ from rdflib.term import URIRef, Literal, Variable
 
 from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldpr import Ldpr
-from lakesuperior.model.ldp_rs import LdpRs
+from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldp_rs import LdpRs
 
 
 nonrdfly = env.app_globals.nonrdfly

@@ -12,8 +12,9 @@ from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
+import rdflib
 
-from rdflib import Graph, URIRef, Literal
+from rdflib import URIRef, Literal
 from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
@@ -26,7 +27,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph, Imr
+from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -47,7 +48,7 @@ class Ldpr(metaclass=ABCMeta):
     **Note**: Even though LdpNr (which is a subclass of Ldpr) handles binary
     files, it still has an RDF representation in the triplestore. Hence, some
     of the RDF-related methods are defined in this class rather than in
-    :class:`~lakesuperior.model.ldp_rs.LdpRs`.
+    :class:`~lakesuperior.model.ldp.ldp_rs.LdpRs`.
 
     **Note:** Only internal facing (``info:fcres``-prefixed) URIs are handled
     in this class. Public-facing URI conversion is handled in the
@@ -233,7 +234,7 @@ class Ldpr(metaclass=ABCMeta):
         :param v: New set of triples to populate the IMR with.
         :type v: set or rdflib.Graph
         """
-        self._imr = Imr(self.uri, data=set(data))
+        self._imr = Graph(uri=self.uri, data=set(data))
 
 
     @imr.deleter
@@ -266,8 +267,8 @@ class Ldpr(metaclass=ABCMeta):
         """
         Set resource metadata.
         """
-        if not isinstance(rsrc, Imr):
-            raise TypeError('Provided metadata is not an Imr object.')
+        if not isinstance(rsrc, Graph):
+            raise TypeError('Provided metadata is not a Graph object.')
         self._metadata = rsrc
 
 
@@ -276,7 +277,7 @@ class Ldpr(metaclass=ABCMeta):
         """
         Retun a graph of the resource's IMR formatted for output.
         """
-        out_gr = Graph(identifier=self.uri)
+        out_trp = set()
 
         for t in self.imr:
             if (
@@ -290,9 +291,9 @@ class Ldpr(metaclass=ABCMeta):
                 self._imr_options.get('incl_srv_mgd', True) or
                 not self._is_trp_managed(t)
             ):
-                out_gr.add(t)
+                out_trp.add(t)
 
-        return out_gr
+        return Graph(uri=self.uri, data=out_trp)
 
 
     @property
@@ -304,7 +305,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 self._version_info = rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
-                self._version_info = Imr(uri=self.uri)
+                self._version_info = Graph(uri=self.uri)
 
         return self._version_info
 
@@ -422,8 +423,7 @@ class Ldpr(metaclass=ABCMeta):
 
         remove_trp = {
             (self.uri, pred, None) for pred in self.delete_preds_on_replace}
-        add_trp = set(
-            self.provided_imr | self._containment_rel(create))
+        add_trp = {*self.provided_imr} | self._containment_rel(create)
 
         self.modify(ev_type, remove_trp, add_trp)
 
@@ -462,7 +462,7 @@ class Ldpr(metaclass=ABCMeta):
             }
 
         # Bury descendants.
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
         for desc_uri in rdfly.get_descendants(self.uid):
             try:
                 desc_rsrc = LdpFactory.from_stored(
@@ -513,7 +513,7 @@ class Ldpr(metaclass=ABCMeta):
         self.modify(RES_CREATED, remove_trp, add_trp)
 
         # Resurrect descendants.
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
         descendants = env.app_globals.rdfly.get_descendants(self.uid)
         for desc_uri in descendants:
             LdpFactory.from_stored(
@@ -583,50 +583,54 @@ class Ldpr(metaclass=ABCMeta):
 
         ver_gr = rdfly.get_imr(
             self.uid, ver_uid=ver_uid, incl_children=False)
-        self.provided_imr = Imr(uri=self.uri)
+        self.provided_imr = Graph(uri=self.uri)
 
         for t in ver_gr:
             if not self._is_trp_managed(t):
-                self.provided_imr.add((self.uri, t[1], t[2]))
+                self.provided_imr.add(((self.uri, t[1], t[2]),))
             # @TODO Check individual objects: if they are repo-managed URIs
             # and not existing or tombstones, they are not added.
 
         return self.create_or_replace(create_only=False)
 
 
-    def check_mgd_terms(self, gr):
+    def check_mgd_terms(self, trp):
         """
         Check whether server-managed terms are in a RDF payload.
 
-        :param SimpleGraph gr: The graph to validate.
+        :param SimpleGraph trp: The graph to validate.
         """
-        offending_subjects = gr.terms('s') & srv_mgd_subjects
+        offending_subjects = (
+            {t[0] for t in trp if t[0] is not None} & srv_mgd_subjects
+        )
         if offending_subjects:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_subjects, 's')
             else:
-                gr_set = set(gr)
                 for s in offending_subjects:
                     logger.info('Removing offending subj: {}'.format(s))
-                    for t in gr_set:
+                    for t in trp:
                         if t[0] == s:
-                            gr.remove(t)
+                            trp.remove(t)
 
-        offending_predicates = gr.terms('p') & srv_mgd_predicates
+        offending_predicates = (
+            {t[1] for t in trp if t[1] is not None} & srv_mgd_predicates
+        )
         # Allow some predicates if the resource is being created.
         if offending_predicates:
             if self.handling == 'strict':
                 raise ServerManagedTermError(offending_predicates, 'p')
             else:
-                gr_set = set(gr)
                 for p in offending_predicates:
                     logger.info('Removing offending pred: {}'.format(p))
-                    for t in gr_set:
+                    for t in trp:
                         if t[1] == p:
-                            gr.remove(t)
+                            trp.remove(t)
 
-        types = {t[2] for t in gr if t[1] == RDF.type}
-        offending_types = types & srv_mgd_types
+        offending_types = (
+            {t[2] for t in trp if t[1] == RDF.type and t[2] is not None}
+            & srv_mgd_types
+        )
         if not self.is_stored:
             offending_types -= self.smt_allow_on_create
         if offending_types:
@@ -635,11 +639,11 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 for to in offending_types:
                     logger.info('Removing offending type: {}'.format(to))
-                    gr.remove_triples((None, RDF.type, to))
+                    trp.remove_triples((None, RDF.type, to))
 
-        #logger.debug('Sanitized graph: {}'.format(gr.serialize(
+        #logger.debug('Sanitized graph: {}'.format(trp.serialize(
         #    format='turtle').decode('utf-8')))
-        return gr
+        return trp
 
 
     def sparql_delta(self, qry_str):
@@ -672,16 +676,15 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = self.imr.graph
-        post_rdfgr = Graph(identifier=self.uri)
-        post_rdfgr += pre_gr
+        pre_gr = self.imr.as_rdflib()
+        post_gr = rdflib.Graph(identifier=self.uri)
+        post_gr |= pre_gr
 
-        post_rdfgr.update(qry_str)
-        post_gr = SimpleGraph(data=set(post_rdfgr))
+        post_gr.update(qry_str)
 
         # FIXME Fix and  use SimpleGraph's native subtraction operation.
-        remove_gr = self.check_mgd_terms(SimpleGraph(pre_gr.data - post_gr.data))
-        add_gr = self.check_mgd_terms(SimpleGraph(post_gr.data - pre_gr.data))
+        remove_gr = self.check_mgd_terms(Graph(data=set(pre_gr - post_gr)))
+        add_gr = self.check_mgd_terms(Graph(data=set(post_gr - pre_gr)))
 
         return remove_gr, add_gr
 
@@ -719,6 +722,12 @@ class Ldpr(metaclass=ABCMeta):
         rdfly.modify_rsrc(self.uid, remove_trp, add_trp)
 
         self._clear_cache()
+        # Reload IMR because if we exit the LMDB txn we lose access to stored
+        # memory locations.
+        try:
+            self.imr
+        except:
+            pass
 
         if (
                 ev_type is not None and
@@ -798,7 +807,7 @@ class Ldpr(metaclass=ABCMeta):
             logger.info(
                 'Removing link to non-existent repo resource: {}'
                 .format(obj))
-            self.provided_imr.remove_triples((None, None, obj))
+            self.provided_imr.remove((None, None, obj))
 
 
     def _add_srv_mgd_triples(self, create=False):
@@ -808,8 +817,9 @@ class Ldpr(metaclass=ABCMeta):
         :param create: Whether the resource is being created.
         """
         # Base LDP types.
-        for t in self.base_types:
-            self.provided_imr.add((self.uri, RDF.type, t))
+        self.provided_imr.add(
+            [(self.uri, RDF.type, t) for t in self.base_types]
+        )
 
         # Create and modify timestamp.
         if create:
@@ -856,7 +866,7 @@ class Ldpr(metaclass=ABCMeta):
         a LDP-NR has "children" under ``fcr:versions``) by setting this to
         True.
         """
-        from lakesuperior.model.ldp_factory import LdpFactory
+        from lakesuperior.model.ldp.ldp_factory import LdpFactory
 
         if '/' in self.uid.lstrip('/'):
             # Traverse up the hierarchy to find the parent.
@@ -886,8 +896,9 @@ class Ldpr(metaclass=ABCMeta):
         # Only update parent if the resource is new.
         if create:
             add_gr = Graph()
-            add_gr.add(
-                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
+            add_gr.add({
+                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri)
+            })
             parent_rsrc.modify(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.
@@ -900,7 +911,7 @@ class Ldpr(metaclass=ABCMeta):
 
         :param rdflib.resource.Resouce cont_rsrc:  The container resource.
         """
-        cont_p = cont_rsrc.metadata.terms('p')
+        cont_p = cont_rsrc.metadata.terms_by_type('p')
 
         logger.info('Checking direct or indirect containment.')
         logger.debug('Parent predicates: {}'.format(cont_p))
@@ -908,7 +919,7 @@ class Ldpr(metaclass=ABCMeta):
         add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
         if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
-            from lakesuperior.model.ldp_factory import LdpFactory
+            from lakesuperior.model.ldp.ldp_factory import LdpFactory
 
             s = cont_rsrc.metadata.value(self.MBR_RSRC_URI)
             p = cont_rsrc.metadata.value(self.MBR_REL_URI)
