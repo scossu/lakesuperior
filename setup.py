@@ -82,10 +82,8 @@ extensions = [
             path.join('lakesuperior', 'model', f'base.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-g'],
-        extra_link_args=['-g'],
-        #extra_compile_args=['-fopenmp'],
-        #extra_link_args=['-fopenmp']
+        extra_compile_args=['-fopenmp', '-g'],
+        extra_link_args=['-fopenmp', '-g']
     ),
     Extension(
         'lakesuperior.model.callbacks',
@@ -109,10 +107,8 @@ extensions = [
             path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-g'],
-        extra_link_args=['-g'],
-        #extra_compile_args=['-fopenmp'],
-        #extra_link_args=['-fopenmp']
+        extra_compile_args=['-fopenmp', '-g'],
+        extra_link_args=['-fopenmp', '-g']
     ),
     Extension(
         'lakesuperior.store.base_lmdb_store',

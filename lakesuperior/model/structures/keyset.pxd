@@ -10,8 +10,8 @@ cdef class Keyset:
     cdef:
         TripleKey* data
         size_t capacity
-        size_t _cur # Index cursor used to look up values.
-        size_t _free_i # Index of next free slot.
+        size_t cur # Index cursor used to look up values.
+        size_t free_i # Index of next free slot.
         float expand_ratio # By how much storage is automatically expanded when
                            # full. 1 means the size doubles, 0.5 a 50%
                            # increase. 0 means that storage won't be
@@ -24,7 +24,7 @@ cdef class Keyset:
         bint get_next(self, TripleKey* item)
         void add(self, const TripleKey* val, bint check_dup=*) except *
         void remove(self, const TripleKey* val) except *
-        bint contains(self, const TripleKey* val)
+        bint contains(self, const TripleKey* val) nogil
         Keyset copy(self)
         Keyset sparse_copy(self)
         void resize(self, size_t size=*) except *

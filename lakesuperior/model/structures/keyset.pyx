@@ -2,6 +2,7 @@ import logging
 
 from libc.string cimport memcmp, memcpy
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from cython.parallel import prange
 
 cimport lakesuperior.model.callbacks as cb
 
@@ -37,8 +38,8 @@ cdef class Keyset:
         if capacity and not self.data:
             raise MemoryError('Error allocating Keyset data.')
 
-        self._cur = 0
-        self._free_i = 0
+        self.cur = 0
+        self.free_i = 0
 
 
     def __dealloc__(self):
@@ -57,7 +58,7 @@ cdef class Keyset:
         """
         Place the cursor at a certain index, 0 by default.
         """
-        self._cur = idx
+        self.cur = idx
 
 
     cdef size_t size(self):
@@ -67,19 +68,19 @@ cdef class Keyset:
         Note that this is different from :py:data:`capacity`_, which indicates
         the number of allocated items in memory.
         """
-        return self._free_i
+        return self.free_i
 
 
     cdef size_t tell(self):
         """
         Tell the position of the cursor in the keyset.
         """
-        return self._cur
+        return self.cur
 
 
-    cdef bint get_next(self, TripleKey* val):
+    cdef inline bint get_next(self, TripleKey* val):
         """
-        Populate the current value and advance the cursor by 1.
+        Get the current value and advance the cursor by 1.
 
         :param void *val: Addres of value returned. It is NULL if
             the end of the buffer was reached.
@@ -88,11 +89,11 @@ cdef class Keyset:
         :return: True if a value was found, False if the end of the buffer
             has been reached.
         """
-        if self._cur >= self._free_i:
+        if self.cur >= self.free_i:
             return False
 
-        val[0] = self.data[self._cur]
-        self._cur += 1
+        val[0] = self.data[self.cur]
+        self.cur += 1
 
         return True
 
@@ -105,7 +106,7 @@ cdef class Keyset:
         if val[0] == NULL_TRP or (check_dup and self.contains(val)):
             return
 
-        if self._free_i >= self.capacity:
+        if self.free_i >= self.capacity:
             if self.expand_ratio > 0:
                 # In some edge casees, a very small ratio may round down to a
                 # zero increase, so the baseline increase is 1 element.
@@ -113,9 +114,9 @@ cdef class Keyset:
             else:
                 raise MemoryError('No space left in key set.')
 
-        self.data[self._free_i] = val[0]
+        self.data[self.free_i] = val[0]
 
-        self._free_i += 1
+        self.free_i += 1
 
 
     cdef void remove(self, const TripleKey* val) except *:
@@ -131,21 +132,20 @@ cdef class Keyset:
 
         self.seek()
         while self.get_next(&stored_val):
-            logger.info(f'Looking up for removal: {stored_val}')
+            #logger.info(f'Looking up for removal: {stored_val}')
             if memcmp(val, stored_val, TRP_KLEN) == 0:
                 memcpy(&stored_val, NULL_TRP, TRP_KLEN)
                 return
 
 
-    cdef bint contains(self, const TripleKey* val):
+    cdef bint contains(self, const TripleKey* val) nogil:
         """
         Whether a value exists in the set.
         """
-        cdef TripleKey stored_val
+        cdef size_t i
 
-        self.seek()
-        while self.get_next(&stored_val):
-            if memcmp(val, stored_val, TRP_KLEN) == 0:
+        for i in prange(self.free_i):
+            if memcmp(val, self.data + i, TRP_KLEN) == 0:
                 return True
         return False
 
@@ -159,7 +159,7 @@ cdef class Keyset:
         )
         memcpy(new_ks.data, self.data, self.capacity * TRP_KLEN)
         new_ks.seek()
-        new_ks._free_i = self._free_i
+        new_ks.free_i = self.free_i
 
         return new_ks
 
@@ -197,7 +197,7 @@ cdef class Keyset:
             to 0.
         """
         if not size:
-            size = self._free_i
+            size = self.free_i
 
         tmp = <TripleKey*>PyMem_Realloc(self.data, size * TRP_KLEN)
 
