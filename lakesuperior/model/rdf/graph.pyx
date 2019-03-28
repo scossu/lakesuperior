@@ -93,7 +93,7 @@ cdef class Graph:
         self.uri = rdflib.URIRef(uri) if uri else None
 
         self.store = store if store is not None else env.app_globals.rdf_store
-        logger.debug(f'Assigned store at {self.store.env_path}')
+        #logger.debug(f'Assigned store at {self.store.env_path}')
 
         # Initialize empty data set.
         if data:
@@ -154,7 +154,6 @@ cdef class Graph:
         if op == Py_LT:
             raise NotImplementedError()
         elif op == Py_EQ:
-            logger.info('Comparing for equality.')
             return len(self ^ other) == 0
         elif op == Py_GT:
             raise NotImplementedError()
@@ -354,7 +353,7 @@ cdef class Graph:
             TripleKey spok
 
         for s, p, o in triples:
-            logger.info(f'Adding {s} {p} {o} to store: {self.store}')
+            #logger.info(f'Adding {s} {p} {o} to store: {self.store}')
             spok = [
                 self.store.to_key(s),
                 self.store.to_key(p),
@@ -440,14 +439,14 @@ cdef class Graph:
 
         This behaves like the rdflib.Graph slicing policy.
         """
-        logger.info(f'Slicing: {s} {p} {o}')
+        #logger.info(f'Slicing: {s} {p} {o}')
         # If no terms are unbound, check for containment.
         if s is not None and p is not None and o is not None: # s p o
             return (s, p, o) in self
 
         # If some terms are unbound, do a lookup.
         res = self.lookup((s, p, o))
-        logger.info(f'Slicing results: {res}')
+        #logger.info(f'Slicing results: {res}')
         if s is not None:
             if p is not None: # s p ?
                 return {r[2] for r in res}
@@ -520,7 +519,7 @@ cdef class Graph:
 
         s, p, o = pattern
 
-        logger.info(f'Match Callback pattern: {pattern}')
+        #logger.info(f'Match Callback pattern: {pattern}')
 
         self.keys.seek()
         # Decide comparison logic outside the loop.
@@ -545,7 +544,7 @@ cdef class Graph:
                 while self.keys.get_next(&spok):
                     #logger.info(f'Verifying spok: {spok}')
                     if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:
-                        logger.info(f'Calling function for spok: {spok}')
+                        #logger.info(f'Calling function for spok: {spok}')
                         callback_fn(gr, &spok, ctx)
             return
 
@@ -554,11 +553,9 @@ cdef class Graph:
             if p is not None:
                 k2 = self.store.to_key(p)
                 cmp_fn = cb.lookup_skpk_cmp_fn
-                logger.info('SKPK')
             elif o is not None:
                 k2 = self.store.to_key(o)
                 cmp_fn = cb.lookup_skok_cmp_fn
-                logger.info('SKOK')
             else:
                 cmp_fn = cb.lookup_sk_cmp_fn
         elif p is not None:
@@ -574,10 +571,8 @@ cdef class Graph:
         else:
             cmp_fn = cb.lookup_none_cmp_fn
 
-        logger.info(f'k1: {k1} k2: {k2}')
         # Iterate over serialized triples.
         while self.keys.get_next(&spok):
-            logger.info(f'Verifying spok: {spok}')
             if cmp_fn(&spok, k1, k2) == callback_cond:
                 callback_fn(gr, &spok, ctx)
 
@@ -604,7 +599,6 @@ def from_rdf(store=None, uri=None, *args, **kwargs):
     """
     gr = rdflib.Graph().parse(*args, **kwargs)
 
-    logger.info(f'graph: {set(gr)}')
     return Graph(store=store, uri=uri, data={*gr})
 
 

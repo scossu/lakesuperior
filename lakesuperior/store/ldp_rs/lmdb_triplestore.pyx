@@ -1211,10 +1211,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         :param Key key: The key to be converted.
         """
         cdef Buffer pk_t
-        logger.info(f'From key:{tk}')
+        #logger.info(f'From key:{tk}')
 
         self.lookup_term(tk, &pk_t)
-        logger.info(f'from_key buffer: {buffer_dump(&pk_t)}')
+        #logger.info(f'from_key buffer: {buffer_dump(&pk_t)}')
 
         # TODO Make Term a class and return that.
         return deserialize_to_rdflib(&pk_t)
