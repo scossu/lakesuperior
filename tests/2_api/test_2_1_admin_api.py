@@ -4,13 +4,14 @@ import pytest
 from io import BytesIO
 from uuid import uuid4
 
-from rdflib import Graph, URIRef
+from rdflib import URIRef
 
 from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.api import admin as admin_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import ChecksumValidationError
+from lakesuperior.model.rdf.graph import Graph, from_rdf
 
 
 @pytest.mark.usefixtures('db')
@@ -25,9 +26,12 @@ class TestAdminApi:
         """
         uid1 = '/test_refint1'
         uid2 = '/test_refint2'
-        gr = Graph().parse(
-                data='<> <http://ex.org/ns#p1> <info:fcres{}> .'.format(uid1),
-                format='turtle', publicID=nsc['fcres'][uid2])
+        with env.app_globals.rdf_store.txn_ctx():
+            gr = from_rdf(
+                store=env.app_globals.rdf_store,
+                data=f'<> <http://ex.org/ns#p1> <info:fcres{uid1}> .',
+                format='turtle', publicID=nsc['fcres'][uid2]
+            )
         rsrc_api.create_or_replace(uid1, graph=gr)
 
         assert admin_api.integrity_check() == set()
@@ -76,8 +80,9 @@ class TestAdminApi:
 
         _, rsrc = rsrc_api.create_or_replace(uid, stream=content)
 
-        with open(rsrc.local_path, 'wb') as fh:
-            fh.write(uuid4().bytes)
+        with env.app_globals.rdf_store.txn_ctx():
+            with open(rsrc.local_path, 'wb') as fh:
+                fh.write(uuid4().bytes)
 
         with pytest.raises(ChecksumValidationError):
             admin_api.fixity_check(uid)

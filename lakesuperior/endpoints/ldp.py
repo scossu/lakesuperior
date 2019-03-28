@@ -44,6 +44,8 @@ rdf_parsable_mimetypes = {
 }
 """MIMEtypes that can be parsed into RDF."""
 
+store = env.app_globals.rdf_store
+
 rdf_serializable_mimetypes = {
     #mt.name for mt in plugin.plugins()
     #if mt.kind is serializer.Serializer and '/' in mt.name
@@ -166,39 +168,42 @@ def get_resource(uid, out_fmt=None):
 
     rsrc = rsrc_api.get(uid, repr_options)
 
-    if out_fmt is None:
-        rdf_mimetype = _best_rdf_mimetype()
-        out_fmt = (
-                'rdf'
-                if isinstance(rsrc, LdpRs) or rdf_mimetype is not None
-                else 'non_rdf')
-    out_headers.update(_headers_from_metadata(rsrc, out_fmt))
-    uri = g.tbox.uid_to_uri(uid)
+    with store.txn_ctx():
+        if out_fmt is None:
+            rdf_mimetype = _best_rdf_mimetype()
+            out_fmt = (
+                    'rdf'
+                    if isinstance(rsrc, LdpRs) or rdf_mimetype is not None
+                    else 'non_rdf')
+        out_headers.update(_headers_from_metadata(rsrc, out_fmt))
+        uri = g.tbox.uid_to_uri(uid)
 
-    # RDF output.
-    if out_fmt == 'rdf':
-        if locals().get('rdf_mimetype', None) is None:
-            rdf_mimetype = DEFAULT_RDF_MIMETYPE
-        ggr = g.tbox.globalize_imr(rsrc.out_graph)
-        ggr.namespace_manager = nsm
-        return _negotiate_content(
-                ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
+# RDF output.
+        if out_fmt == 'rdf':
+            if locals().get('rdf_mimetype', None) is None:
+                rdf_mimetype = DEFAULT_RDF_MIMETYPE
+            ggr = g.tbox.globalize_imr(rsrc.out_graph)
+            ggr.namespace_manager = nsm
+            return _negotiate_content(
+                    ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
 
-    # Datastream.
-    else:
-        if not getattr(rsrc, 'local_path', False):
-            return ('{} has no binary content.'.format(rsrc.uid), 404)
-
-        logger.debug('Streaming out binary content.')
-        if request.range and request.range.units == 'bytes':
-            # Stream partial response.
-            # This is only true if the header is well-formed. Thanks, Werkzeug.
-            rsp = _parse_range_header(request.range.ranges, rsrc, out_headers)
+# Datastream.
         else:
-            rsp = make_response(send_file(
-                    rsrc.local_path, as_attachment=True,
-                    attachment_filename=rsrc.filename,
-                    mimetype=rsrc.mimetype), 200, out_headers)
+            if not getattr(rsrc, 'local_path', False):
+                return ('{} has no binary content.'.format(rsrc.uid), 404)
+
+            logger.debug('Streaming out binary content.')
+            if request.range and request.range.units == 'bytes':
+                # Stream partial response.
+                # This is only true if the header is well-formed. Thanks, Werkzeug.
+                rsp = _parse_range_header(
+                    request.range.ranges, rsrc, out_headers
+                )
+            else:
+                rsp = make_response(send_file(
+                        rsrc.local_path, as_attachment=True,
+                        attachment_filename=rsrc.filename,
+                        mimetype=rsrc.mimetype), 200, out_headers)
 
         # This seems necessary to prevent Flask from setting an
         # additional ETag.
@@ -225,7 +230,8 @@ def get_version_info(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
+        with store.txn_ctx():
+            return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
 
 
 @ldp.route('/<path:uid>/fcr:versions/<ver_uid>', methods=['GET'])
@@ -246,7 +252,8 @@ def get_version(uid, ver_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
-        return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
+        with store.txn_ctx():
+            return _negotiate_content(g.tbox.globalize_imr(imr), rdf_mimetype)
 
 
 @ldp.route('/<path:parent_uid>', methods=['POST'], strict_slashes=False)
@@ -290,7 +297,8 @@ def post_resource(parent_uid):
         return str(e), 412
 
     uri = g.tbox.uid_to_uri(rsrc.uid)
-    rsp_headers.update(_headers_from_metadata(rsrc))
+    with store.txn_ctx():
+        rsp_headers.update(_headers_from_metadata(rsrc))
     rsp_headers['Location'] = uri
 
     if mimetype and kwargs.get('rdf_fmt') is None:
@@ -346,7 +354,8 @@ def put_resource(uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
 
-    rsp_headers = _headers_from_metadata(rsrc)
+    with store.txn_ctx():
+        rsp_headers = _headers_from_metadata(rsrc)
     rsp_headers['Content-Type'] = 'text/plain; charset=utf-8'
 
     uri = g.tbox.uid_to_uri(uid)
@@ -397,7 +406,8 @@ def patch_resource(uid, is_metadata=False):
     except InvalidResourceError as e:
         return str(e), 415
     else:
-        rsp_headers.update(_headers_from_metadata(rsrc))
+        with store.txn_ctx():
+            rsp_headers.update(_headers_from_metadata(rsrc))
         return '', 204, rsp_headers
 
 
@@ -455,7 +465,7 @@ def tombstone(uid):
     405.
     """
     try:
-        rsrc = rsrc_api.get(uid)
+        rsrc_api.get(uid)
     except TombstoneError as e:
         if request.method == 'DELETE':
             if e.uid == uid:
@@ -764,12 +774,14 @@ def _condition_hdr_match(uid, headers, safe=True):
         req_etags = [
                 et.strip('\'" ') for et in headers.get(cond_hdr).split(',')]
 
-        try:
-            rsrc_meta = rsrc_api.get_metadata(uid)
-        except ResourceNotExistsError:
-            rsrc_meta = Imr(nsc['fcres'][uid])
+        with store.txn_ctx():
+            try:
+                rsrc_meta = rsrc_api.get_metadata(uid)
+            except ResourceNotExistsError:
+                rsrc_meta = Graph(uri=nsc['fcres'][uid])
 
-        digest_prop = rsrc_meta.value(nsc['premis'].hasMessageDigest)
+            digest_prop = rsrc_meta.value(nsc['premis'].hasMessageDigest)
+
         if digest_prop:
             etag, _ = _digest_headers(digest_prop)
             if cond_hdr == 'if-match':
@@ -793,7 +805,8 @@ def _condition_hdr_match(uid, headers, safe=True):
                 'if-unmodified-since': False
             }
 
-        lastmod_str = rsrc_meta.value(nsc['fcrepo'].lastModified)
+        with store.txn_ctx():
+            lastmod_str = rsrc_meta.value(nsc['fcrepo'].lastModified)
         lastmod_ts = arrow.get(lastmod_str)
 
         # If date is not in a RFC 5322 format

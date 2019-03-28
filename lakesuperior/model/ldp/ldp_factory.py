@@ -3,7 +3,6 @@ import logging
 from pprint import pformat
 from uuid import uuid4
 
-from rdflib import Graph, parser
 from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
@@ -16,7 +15,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
-from lakesuperior.model.graph.graph import Imr
+from lakesuperior.model.rdf.graph import Graph, from_rdf
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource
@@ -37,7 +36,7 @@ class LdpFactory:
             raise InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
             raise ResourceExistsError(uid)
-        rsrc = Ldpc(uid, provided_imr=Imr(uri=nsc['fcres'][uid]))
+        rsrc = Ldpc(uid, provided_imr=Graph(uri=nsc['fcres'][uid]))
 
         return rsrc
 
@@ -100,14 +99,15 @@ class LdpFactory:
         """
         uri = nsc['fcres'][uid]
         if rdf_data:
-            data = set(Graph().parse(
-                data=rdf_data, format=rdf_fmt, publicID=nsc['fcres'][uid]))
+            provided_imr = from_rdf(
+                uri=uri, data=rdf_data, format=rdf_fmt,
+                publicID=nsc['fcres'][uid]
+            )
         elif graph:
-            data = set(graph)
+            provided_imr = Graph(uri=uri, data={*graph})
         else:
-            data = set()
+            provided_imr = Graph(uri=uri)
 
-        provided_imr = Imr(uri=uri, data=data)
         #logger.debug('Provided graph: {}'.format(
         #        pformat(set(provided_imr))))
 
