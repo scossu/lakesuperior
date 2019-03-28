@@ -3,6 +3,7 @@ import pytest
 from io import BytesIO
 from uuid import uuid4
 
+from lakesuperior import env
 from lakesuperior.api import resource as rsrc_api
 
 
@@ -42,7 +43,9 @@ class TestAdminApi:
 
         rsrc = rsrc_api.get(f'/{uid}')
 
-        with open(rsrc.local_path, 'wb') as fh:
+        with env.app_globals.rdf_store.txn_ctx():
+            fname = rsrc.local_path
+        with open(fname, 'wb') as fh:
             fh.write(uuid4().bytes)
 
         assert self.client.get(fix_path).status_code == 412

@@ -80,15 +80,16 @@ def fixity_check(uid):
     from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE
 
     rsrc = rsrc_api.get(uid)
-    if LDP_NR_TYPE not in rsrc.ldp_types:
-        raise IncompatibleLdpTypeError()
+    with env.app_globals.rdf_store.txn_ctx():
+        if LDP_NR_TYPE not in rsrc.ldp_types:
+            raise IncompatibleLdpTypeError()
 
-    ref_digest_term = rsrc.metadata.value(nsc['premis'].hasMessageDigest)
-    ref_digest_parts = ref_digest_term.split(':')
-    ref_cksum = ref_digest_parts[-1]
-    ref_cksum_algo = ref_digest_parts[-2]
+        ref_digest_term = rsrc.metadata.value(nsc['premis'].hasMessageDigest)
+        ref_digest_parts = ref_digest_term.split(':')
+        ref_cksum = ref_digest_parts[-1]
+        ref_cksum_algo = ref_digest_parts[-2]
 
-    calc_cksum = hashlib.new(ref_cksum_algo, rsrc.content.read()).hexdigest()
+        calc_cksum = hashlib.new(ref_cksum_algo, rsrc.content.read()).hexdigest()
 
     if calc_cksum != ref_cksum:
         raise ChecksumValidationError(uid, ref_cksum, calc_cksum)

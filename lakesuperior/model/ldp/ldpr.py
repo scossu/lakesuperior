@@ -12,8 +12,9 @@ from urllib.parse import urldefrag
 from uuid import uuid4
 
 import arrow
+import rdflib
 
-from rdflib import Graph, URIRef, Literal
+from rdflib import URIRef, Literal
 from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
@@ -26,7 +27,7 @@ from lakesuperior.dictionaries.srv_mgd_terms import (
 from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
-from lakesuperior.model.graph.graph import SimpleGraph, Imr
+from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.toolbox import Toolbox
 
@@ -233,7 +234,7 @@ class Ldpr(metaclass=ABCMeta):
         :param v: New set of triples to populate the IMR with.
         :type v: set or rdflib.Graph
         """
-        self._imr = Imr(self.uri, data=set(data))
+        self._imr = Graph(uri=self.uri, data=set(data))
 
 
     @imr.deleter
@@ -266,8 +267,8 @@ class Ldpr(metaclass=ABCMeta):
         """
         Set resource metadata.
         """
-        if not isinstance(rsrc, Imr):
-            raise TypeError('Provided metadata is not an Imr object.')
+        if not isinstance(rsrc, Graph):
+            raise TypeError('Provided metadata is not a Graph object.')
         self._metadata = rsrc
 
 
@@ -292,7 +293,7 @@ class Ldpr(metaclass=ABCMeta):
             ):
                 out_trp.add(t)
 
-        return Imr(uri = self.uri, data=out_trp)
+        return Graph(uri=self.uri, data=out_trp)
 
 
     @property
@@ -304,7 +305,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 self._version_info = rdfly.get_version_info(self.uid)
             except ResourceNotExistsError as e:
-                self._version_info = Imr(uri=self.uri)
+                self._version_info = Graph(uri=self.uri)
 
         return self._version_info
 
@@ -582,7 +583,7 @@ class Ldpr(metaclass=ABCMeta):
 
         ver_gr = rdfly.get_imr(
             self.uid, ver_uid=ver_uid, incl_children=False)
-        self.provided_imr = Imr(uri=self.uri)
+        self.provided_imr = Graph(uri=self.uri)
 
         for t in ver_gr:
             if not self._is_trp_managed(t):
@@ -675,15 +676,15 @@ class Ldpr(metaclass=ABCMeta):
         qry_str = (
                 re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
                 .replace('<>', '<{}>'.format(self.uri)))
-        pre_gr = self.imr.as_rdflib().graph
-        post_gr = Graph(identifier=self.uri)
+        pre_gr = self.imr.as_rdflib()
+        post_gr = rdflib.Graph(identifier=self.uri)
         post_gr |= pre_gr
 
         post_gr.update(qry_str)
 
         # FIXME Fix and  use SimpleGraph's native subtraction operation.
-        remove_gr = self.check_mgd_terms(SimpleGraph(set(pre_gr - post_gr)))
-        add_gr = self.check_mgd_terms(SimpleGraph(set(post_gr - pre_gr)))
+        remove_gr = self.check_mgd_terms(Graph(data=set(pre_gr - post_gr)))
+        add_gr = self.check_mgd_terms(Graph(data=set(post_gr - pre_gr)))
 
         return remove_gr, add_gr
 
@@ -895,8 +896,9 @@ class Ldpr(metaclass=ABCMeta):
         # Only update parent if the resource is new.
         if create:
             add_gr = Graph()
-            add_gr.add(
-                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri))
+            add_gr.add({
+                (nsc['fcres'][parent_uid], nsc['ldp'].contains, self.uri)
+            })
             parent_rsrc.modify(RES_UPDATED, add_trp=add_gr)
 
         # Direct or indirect container relationship.

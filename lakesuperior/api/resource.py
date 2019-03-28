@@ -7,7 +7,7 @@ from threading import Lock, Thread
 
 import arrow
 
-from rdflib import Graph, Literal, URIRef
+from rdflib import Literal
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
@@ -16,7 +16,6 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.model.graph.graph import SimpleGraph
 
 
 logger = logging.getLogger(__name__)
@@ -24,36 +23,36 @@ logger = logging.getLogger(__name__)
 __doc__ = """
 Primary API for resource manipulation.
 
-Quickstart:
+Quickstart::
 
->>> # First import default configuration and globals—only done once.
->>> import lakesuperior.default_env
->>> from lakesuperior.api import resource
->>> # Get root resource.
->>> rsrc = resource.get('/')
->>> # Dump graph.
->>> set(rsrc.imr)
-{(rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://purl.org/dc/terms/title'),
-  rdflib.term.Literal('Repository Root')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Container')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#RepositoryRoot')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Resource')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#BasicContainer')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#Container')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
+    >>> # First import default configuration and globals—only done once.
+    >>> import lakesuperior.default_env
+    >>> from lakesuperior.api import resource
+    >>> # Get root resource.
+    >>> rsrc = resource.get('/')
+    >>> # Dump graph.
+    >>> set(rsrc.imr)
+    {(rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://purl.org/dc/terms/title'),
+      rdflib.term.Literal('Repository Root')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Container')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#RepositoryRoot')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Resource')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#BasicContainer')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#Container')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
 """
 
 def transaction(write=False):

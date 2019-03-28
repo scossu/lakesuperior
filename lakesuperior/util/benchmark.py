@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 
 from lakesuperior.util.generators import (
         random_image, random_graph, random_utf8_string)
+from lakesuperior.exceptions import ResourceNotExistsError
 
 __doc__ = '''
 Benchmark script to measure write performance.
@@ -95,6 +96,7 @@ def run(
         parent = '{}/{}'.format(endpoint.strip('/'), parent.strip('/'))
 
         if delete_container:
+            print('Removing previously existing container.')
             requests.delete(parent, headers={'prefer': 'no-tombstone'})
         requests.put(parent)
 
@@ -103,7 +105,11 @@ def run(
         from lakesuperior.api import resource as rsrc_api
 
         if delete_container:
-            rsrc_api.delete(parent, soft=False)
+            try:
+                print('Removing previously existing container.')
+                rsrc_api.delete(parent, soft=False)
+            except ResourceNotExistsError:
+                pass
         rsrc_api.create_or_replace(parent)
     else:
         raise ValueError(f'Mode not supported: {mode}')

@@ -16,4 +16,14 @@ cdef enum:
     TRP_KLEN = 3 * sizeof(Key)
     QUAD_KLEN = 4 * sizeof(Key)
 
+    # "NULL" key, a value that is never user-provided. Used to mark special
+    # values (e.g. deleted records).
+    NULL_KEY = 0
+    # Value of first key inserted in an empty term database.
+    FIRST_KEY = 1
+
 cdef bytes buffer_dump(Buffer* buf)
+
+# "NULL" triple, a value that is never user-provided. Used to mark special
+# values (e.g. deleted records).
+cdef TripleKey NULL_TRP = [NULL_KEY, NULL_KEY, NULL_KEY]
