@@ -144,8 +144,13 @@ cdef class Keyset:
         """
         cdef size_t i
 
-        for i in prange(self.free_i):
-            if memcmp(val, self.data + i, TRP_KLEN) == 0:
+        for i in range(self.free_i):
+            # o is least likely to match.
+            if (
+                val[0][2] == self.data[i][2] and
+                val[0][0] == self.data[i][0] and
+                val[0][1] == self.data[i][1]
+            ):
                 return True
         return False
 
