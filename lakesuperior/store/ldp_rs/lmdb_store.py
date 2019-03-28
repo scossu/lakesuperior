@@ -199,20 +199,3 @@ class LmdbStore(LmdbTriplestore, Store):
 
 
     ## PRIVATE METHODS ##
-
-    def _normalize_context(self, context):
-        """
-        Normalize a context parameter to conform to the model expectations.
-
-        :param context: Context URI or graph.
-        :type context: URIRef or Graph or None
-        """
-        if isinstance(context, Graph):
-            if context == self or isinstance(context.identifier, Variable):
-                context = None
-            else:
-                context = context.identifier
-        elif isinstance(context, str):
-            context = URIRef(context)
-
-        return context

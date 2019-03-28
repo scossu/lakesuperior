@@ -288,8 +288,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             Buffer _sc
             Key ck
 
-        if isinstance(c, rdflib.Graph):
-            c = c.identifier
+        c = self._normalize_context(c)
 
         ck = self.to_key(c)
         if not self._key_exists(<unsigned char*>&ck, KLEN, b'c:'):
@@ -1332,3 +1331,23 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 flags | lmdb.MDB_APPEND)
 
         return new_idx
+
+
+    def _normalize_context(self, context):
+        """
+        Normalize a context parameter to conform to the model expectations.
+
+        :param context: Context URI or graph.
+        :type context: URIRef or Graph or None
+        """
+        if isinstance(context, rdflib.Graph):
+            if context == self or isinstance(
+                context.identifier, rdflib.Variable
+            ):
+                context = None
+            else:
+                context = context.identifier
+        elif isinstance(context, str):
+            context = rdflib.URIRef(context)
+
+        return context
