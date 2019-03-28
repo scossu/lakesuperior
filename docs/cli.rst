@@ -39,10 +39,6 @@ available in Windows. Windows users should look for alternative WSGI servers
 to run the single-threaded service (``lsup-server``) over multiple processes
 and/or threads.
 
-**Note:** This is the only command line tool that is not added to the ``PATH``
-environment variable in Unix systems (beecause it is not cross-platform). It
-must be invoked by using its full path.
-
 ``lsup-admin``
 --------------
 

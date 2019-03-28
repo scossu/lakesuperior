@@ -3,43 +3,44 @@ Lakesuperior
 
 |build status| |docs| |pypi| |codecov|
 
-Lakesuperior is an alternative `Fedora
-Repository <http://fedorarepository.org>`__ implementation.
+Lakesuperior is a Linked Data repository software. It is capable of storing and
+managing  large volumes of files and their metadata regardless of their
+format, size, ethnicity, gender identity or expression.
 
-Fedora is a mature repository software system historically adopted by
-major cultural heritage institutions. It exposes an
-`LDP <https://www.w3.org/TR/ldp-primer/>`__ endpoint to manage
-any type of binary files and their metadata in Linked Data format.
+Lakesuperior is an alternative `Fedora Repository
+<http://fedorarepository.org>`__ implementation. Fedora is a mature repository
+software system historically adopted by major cultural heritage institutions
+which extends the `Linked Data Platform <https://www.w3.org/TR/ldp-primer/>`__
+protocol.
 
 Guiding Principles
 ------------------
 
-Lakesuperior aims at being an uncomplicated, efficient Fedora 4
-implementation.
+Lakesuperior aims at being a reliable and efficient Fedora 4 implementation.
 
 Its main goals are:
 
 -  **Reliability:** Based on solid technologies with stability in mind.
 -  **Efficiency:** Small memory and CPU footprint, high scalability.
--  **Ease of management:** Tools to perform monitoring and maintenance
-   included.
+-  **Ease of management:** Tools to perform migration, monitoring and
+   maintenance included.
 -  **Simplicity of design:** Straight-forward architecture, robustness
    over features.
 
 Key features
 ------------
 
--  Drop-in replacement for Fedora4
--  Very stable persistence layer based on
-   `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
-   ACID-compliant writes guarantee consistency of data.
--  Term-based search and SPARQL Query API + UI
--  No performance penalty for storing many resources under the same
-   container, or having one resource link to many URIs
--  Extensible provenance metadata tracking
--  Multi-modal access: HTTP (REST), command line interface and native Python
-   API.
--  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
+- Stores binary files and RDF metadata in one repository.
+- Multi-modal access: REST/LDP, command line and native Python API.
+- (`almost <fcrepo4_deltas>`_) Drop-in replacement for Fedora4
+- Very stable persistence layer based on
+  `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
+  ACID-compliant writes guarantee consistency of data.
+- Term-based search and SPARQL Query API + UI
+- No performance penalty for storing many resources under the same
+  container, or having one resource link to many URIs
+- Extensible provenance metadata tracking
+- Fits in a pocket: you can carry 50M triples in an 8Gb memory stick.
 
 Installation & Documentation
 ----------------------------
@@ -50,7 +51,7 @@ With Docker::
     cd lakesuperior
     docker-compose up
 
-With pip (assuming you are familiar with it)::
+With pip (requires a C compiler to be installed)::
 
     pip install lakesuperior
 
