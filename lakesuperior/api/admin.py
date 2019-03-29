@@ -27,8 +27,14 @@ def stats():
     """
     import lakesuperior.env_setup
     with env.app_globals.rdf_store.txn_ctx():
-        repo_stats = {'rsrc_stats': env.app_globals.rdfly.count_rsrc()}
-        repo_stats['store_stats'] = env.app_globals.rdf_store.stats()
+        repo_stats = {
+            'rsrc_stats': env.app_globals.rdfly.count_rsrc(),
+            'store_stats': env.app_globals.rdf_store.stats(),
+            'nonrdf_stats': {
+                'ct': env.app_globals.nonrdfly.file_ct,
+                'size': env.app_globals.nonrdfly.store_size,
+            },
+        }
 
     return repo_stats
 

@@ -31,6 +31,7 @@ logging.disable(logging.WARN)
 
 
 @click.command()
+
 @click.option(
     '--mode', '-m', default=def_mode,
     help=(
@@ -40,6 +41,7 @@ logging.disable(logging.WARN)
         f'Default: {def_endpoint}'
     )
 )
+
 @click.option(
     '--endpoint', '-e', default=def_endpoint,
     help=(
@@ -47,18 +49,22 @@ logging.disable(logging.WARN)
         f'Default: {def_endpoint}'
     )
 )
+
 @click.option(
     '--count', '-c', default=def_ct,
     help='Number of resources to ingest. Default: {def_ct}')
+
 @click.option(
     '--parent', '-p', default=def_parent,
     help='Path to the container resource under which the new resources will be '
         'created. It must begin with a slash (`/`) character. '
         f'Default: {def_parent}')
+
 @click.option(
     '--delete-container', '-d', is_flag=True,
     help='Delete container resource and its children if already existing. By '
     'default, the container is not deleted and new resources are added to it.')
+
 @click.option(
     '--method', '-X', default='put',
     help=(
@@ -66,14 +72,17 @@ logging.disable(logging.WARN)
         'Default: PUT'
     )
 )
+
 @click.option(
     '--graph-size', '-s', default=def_gr_size,
     help=f'Number of triples in each graph. Default: {def_gr_size}')
+
 @click.option(
     '--resource-type', '-t', default='r',
     help='Type of resources to ingest. One of `r` (only LDP-RS, i.e. RDF), '
     '`n` (only  LDP-NR, i.e. binaries), or `b` (50/50% of both). '
     'Default: r')
+
 @click.option(
     '--plot', '-P', is_flag=True, help='Plot a graph of ingest timings. '
     'The graph figure is displayed on screen with basic manipulation and save '

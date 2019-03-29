@@ -8,6 +8,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
+from lakesuperior.util.toolbox import get_tree_size
 
 from libc.stdlib cimport malloc, free
 
@@ -150,6 +151,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         Gather statistics about the database."""
         st = self._stats()
         st['num_triples'] = st['db_stats']['spo:c']['ms_entries']
+        st['store_size'] = get_tree_size(self.env_path)
 
         return st
 

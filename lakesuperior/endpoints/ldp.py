@@ -29,7 +29,8 @@ from lakesuperior.model.ldp.ldp_factory import LdpFactory
 from lakesuperior.model.ldp.ldp_nr import LdpNr
 from lakesuperior.model.ldp.ldp_rs import LdpRs
 from lakesuperior.model.ldp.ldpr import Ldpr
-from lakesuperior.toolbox import Toolbox
+from lakesuperior.util import toolbox
+from lakesuperior.util.toolbox import RequestUtils
 
 
 DEFAULT_RDF_MIMETYPE = 'text/turtle'
@@ -112,7 +113,7 @@ def log_request_start():
 
 @ldp.before_request
 def instantiate_req_vars():
-    g.tbox = Toolbox()
+    g.tbox = RequestUtils()
 
 
 @ldp.after_request
@@ -161,7 +162,7 @@ def get_resource(uid, out_fmt=None):
     # Then, business as usual.
     # Evaluate which representation is requested.
     if 'prefer' in request.headers:
-        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
+        prefer = toolbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(pformat(prefer)))
         if 'return' in prefer:
             repr_options = parse_repr_options(prefer['return'])
@@ -445,7 +446,7 @@ def delete_resource(uid):
     headers = std_headers.copy()
 
     if 'prefer' in request.headers:
-        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
+        prefer = toolbox.parse_rfc7240(request.headers['prefer'])
         leave_tstone = 'no-tombstone' not in prefer
     else:
         leave_tstone = True
@@ -608,13 +609,13 @@ def set_post_put_params():
     """
     handling = 'strict'
     if 'prefer' in request.headers:
-        prefer = g.tbox.parse_rfc7240(request.headers['prefer'])
+        prefer = toolbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(prefer))
         if 'handling' in prefer:
             handling = prefer['handling']['value']
 
     try:
-        disposition = g.tbox.parse_rfc7240(
+        disposition = toolbox.parse_rfc7240(
                 request.headers['content-disposition'])
     except KeyError:
         disposition = None
