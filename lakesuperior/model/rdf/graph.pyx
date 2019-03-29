@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 cdef class Graph:
     """
-    Fast and simple implementation of a graph.
+    Fast implementation of a graph.
 
     Most functions should mimic RDFLib's graph with less overhead. It uses
     the same funny but functional slicing notation.
@@ -86,9 +86,9 @@ cdef class Graph:
         :param str uri: If specified, the graph becomes a named graph and can
             utilize the :py:meth:`value()` method and special slicing notation.
 
-        :param set data: If specified, ``capacity`` is ignored and an initial key
-            set is created from a set of 3-tuples of :py:class:``rdflib.Term``
-            instances.
+        :param set data: If specified, ``capacity`` is ignored and an initial
+            key set is created from a set of 3-tuples of
+            :py:class:``rdflib.Term`` instances.
         """
         self.uri = rdflib.URIRef(uri) if uri else None
 
@@ -132,6 +132,8 @@ cdef class Graph:
         def __get__(self):
             """
             Total capacity of the underlying Keyset, in number of triples.
+
+            rtype: int
             """
             return self.keys.capacity
 
@@ -261,6 +263,8 @@ cdef class Graph:
         """
         Whether the graph contains a triple.
 
+        :param tuple(rdflib.Term) trp: A tuple of 3 RDFlib terms to look for.
+
         :rtype: boolean
         """
         cdef TripleKey spok
@@ -285,8 +289,16 @@ cdef class Graph:
         """
         Slicing function.
 
-        It behaves similarly to `RDFLib graph slicing
+        This behaves similarly to `RDFLib graph slicing
         <https://rdflib.readthedocs.io/en/stable/utilities.html#slicing-graphs>`__
+
+        One difference, however, is that if the graph has the ``uri``
+        property set and the slice is only given one element, the behavior
+        is that of theRDFlib ``Resource`` class, which returns the objects of
+        triples that match the graph URI as the subject, and the given term
+        as the predicate.
+
+        :rtype: set
         """
         if isinstance(item, slice):
             s, p, o = item.start, item.stop, item.step
@@ -307,12 +319,13 @@ cdef class Graph:
 
     def value(self, p, strict=False):
         """
-        Get an individual value.
+        Get an individual value for a given predicate.
 
         :param rdflib.termNode p: Predicate to search for.
         :param bool strict: If set to ``True`` the method raises an error if
             more than one value is found. If ``False`` (the default) only
             the first found result is returned.
+
         :rtype: rdflib.term.Node
         """
         if not self.uri:
@@ -609,5 +622,9 @@ cdef inline void add_trp_callback(
 ):
     """
     Add a triple to a graph as a result of a lookup callback.
+
+    :param Graph gr: Graph to add to.
+    :param const TripleKey* spok_p: TripleKey pointer to add.
+    :param void* ctx: Not used.
     """
     gr.keys.add(spok_p)
