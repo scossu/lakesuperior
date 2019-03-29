@@ -27,12 +27,6 @@ cdef void _check(int rc, str message='') except *:
         raise KeyNotFoundError()
     if rc == lmdb.MDB_KEYEXIST:
         raise KeyExistsError()
-    if rc == errno.EINVAL:
-        raise InvalidParamError(
-            'Invalid LMDB parameter error.\n'
-            'Please verify that a transaction is open and valid for the '
-            'current operation.'
-        )
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
                 message + '\nInternal error ({}): '.format(rc)
@@ -48,9 +42,6 @@ class KeyNotFoundError(LmdbError):
     pass
 
 class KeyExistsError(LmdbError):
-    pass
-
-class InvalidParamError(LmdbError):
     pass
 
 
@@ -278,7 +269,7 @@ cdef class BaseLmdbStore:
                     _check(lmdb.mdb_dbi_open(
                             txn, dblabel.encode(), flags, self.dbis + i))
                     dbi = self.dbis[i]
-                    logger.debug(f'Created DB {dblabel}: {dbi}')
+                    logger.info(f'Created DB {dblabel}: {dbi}')
                     # Open and close cursor to initialize the memory slot.
                     _check(lmdb.mdb_cursor_open(
                         txn, dbi, self.curs + dbi))
@@ -344,46 +335,22 @@ cdef class BaseLmdbStore:
         """
         Transaction context manager.
 
-        Open and close a transaction for the duration of the functions in the
-        context. If a transaction has already been opened in the store, a new
-        one is opened only if the current transaction is read-only and the new
-        requested transaction is read-write.
-
-        If a new write transaction is opened, the old one is kept on hold until
-        the new transaction is closed, then restored. All cursors are
-        invalidated and must be restored as well if one needs to reuse them.
-
         :param bool write: Whether a write transaction is to be opened.
 
         :rtype: lmdb.Transaction
         """
-        cdef lmdb.MDB_txn* hold_txn
-
-        will_open = False
-
         if not self.is_open:
             raise LmdbError('Store is not open.')
 
-        # If another transaction is open, only open the new transaction if
-        # the current one is RO and the new one RW.
         if self.is_txn_open:
-            if write:
-                will_open = not self.is_txn_rw
+            logger.debug(
+                    'Transaction is already active. Not opening another one.')
+            #logger.debug('before yield')
+            yield
+            #logger.debug('after yield')
         else:
-            will_open = True
-
-        # If a new transaction needs to be opened and replace the old one,
-        # the old one must be put on hold and swapped out when the new txn
-        # is closed.
-        if will_open:
-            will_reset = self.is_txn_open
-
-        if will_open:
             #logger.debug('Beginning {} transaction.'.format(
             #    'RW' if write else 'RO'))
-            if will_reset:
-                hold_txn = self.txn
-
             try:
                 self._txn_begin(write=write)
                 self.is_txn_rw = write
@@ -392,21 +359,9 @@ cdef class BaseLmdbStore:
                 #logger.debug('In txn_ctx, after yield')
                 self._txn_commit()
                 #logger.debug('after _txn_commit')
-                if will_reset:
-                    lmdb.mdb_txn_reset(hold_txn)
-                    self.txn = hold_txn
-                    _check(lmdb.mdb_txn_renew(self.txn))
-                    self.is_txn_rw = False
             except:
                 self._txn_abort()
                 raise
-        else:
-            logger.info(
-                'Transaction is already active. Not opening another one.'
-            )
-            #logger.debug('before yield')
-            yield
-            #logger.debug('after yield')
 
 
     def begin(self, write=False):

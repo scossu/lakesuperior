@@ -106,25 +106,8 @@ venv.bak/
 # Pytest
 .pytest_cache/
 
-# Default Lakesuperior data directories
-lakesuperior/data/ldprs_store
-lakesuperior/data/ldpnr_store
-
-# Cython business.
-/cython_debug
-/lakesuperior/store/*.c
-/lakesuperior/store/*.html
-/lakesuperior/store/ldp_rs/*.c
-/lakesuperior/store/ldp_rs/*.html
-/lakesuperior/model/*.c
-/lakesuperior/model/*/*.html
-/lakesuperior/model/*/*.c
-/lakesuperior/model/*.html
-/lakesuperior/util/*.c
-/lakesuperior/util/*.html
+# Default LAKEsuperior data directories
+/data
+#/lakesuperior/store/base_lmdb_store.c
+#/lakesuperior/store/ldp_rs/lmdb_triplestore.c
 !ext/lib
-
-# Vim CTags file.
-tags
-
-!.keep

@@ -68,8 +68,8 @@ class Migrator:
 
 
     def __init__(
-            self, src, dest, src_auth=(None, None), clear=False,
-            zero_binaries=False, compact_uris=False, skip_errors=False):
+            self, src, dest, clear=False, zero_binaries=False,
+            compact_uris=False, skip_errors=False):
         """
         Set up base paths and clean up existing directories.
 
@@ -81,8 +81,6 @@ class Migrator:
             it must be a writable directory. It will be deleted and recreated.
             If it does not exist, it will be created along with its parents if
             missing.
-        :param tuple src_auth: if the source repo needs HTTP authentication,
-            specify here username and password as a 2-tuple of strings.
         :param bool clear: Whether to clear any pre-existing data at the
             locations indicated.
         :param bool zero_binaries: Whether to create zero-byte binary files
@@ -101,7 +99,6 @@ class Migrator:
         self.dbpath = '{}/data/ldprs_store'.format(dest)
         self.fpath = '{}/data/ldpnr_store'.format(dest)
         self.config_dir = '{}/etc'.format(dest)
-        self.auth = src_auth
 
         if clear:
             shutil.rmtree(dest, ignore_errors=True)
@@ -199,23 +196,22 @@ class Migrator:
         iuri = ibase + uid
 
         try:
-            rsp = requests.head(uri, auth=self.auth)
-            rsp.raise_for_status()
-        except Exception as e:
-            if self.skip_errors:
-                logger.error(f'Error retrieving resource header: {e}')
-                return
-            else:
-                raise
+            rsp = requests.head(uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(uri))
+            return
+        if rsp:
+            if not self.skip_errors:
+                rsp.raise_for_status()
+            elif rsp.status_code > 399:
+                print('Error retrieving resource {} headers: {} {}'.format(
+                    uri, rsp.status_code, rsp.text))
 
         # Determine LDP type.
         ldp_type = 'ldp_nr'
         try:
-            links_rsp = rsp.headers.get('link')
-            head_links = (
-                requests.utils.parse_header_links(links_rsp)
-                if links_rsp else None)
-            for link in head_links:
+            for link in requests.utils.parse_header_links(
+                    rsp.headers.get('link')):
                 if (
                         link.get('rel') == 'type'
                         and (
@@ -232,23 +228,25 @@ class Migrator:
         # Get the whole RDF document now because we have to know all outbound
         # links.
         get_uri = (
-                uri if ldp_type == 'ldp_rs' else f'{uri}/fcr:metadata')
+                uri if ldp_type == 'ldp_rs' else '{}/fcr:metadata'.format(uri))
         try:
-            get_rsp = requests.get(get_uri, auth=self.auth)
-            get_rsp.raise_for_status()
-        except Exception as e:
-            if self.skip_errors:
-                logger.error(f'Error retrieving resource body: {e}')
-                return
-            else:
-                raise
+            get_rsp = requests.get(get_uri)
+        except:
+            logger.warn('Error retrieving resource {}'.format(get_uri))
+            return
+        if get_rsp:
+            if not self.skip_errors:
+                get_rsp.raise_for_status()
+            elif get_rsp.status_code > 399:
+                print('Error retrieving resource {} body: {} {}'.format(
+                    uri, get_rsp.status_code, get_rsp.text))
 
         data = get_rsp.content.replace(
                 self.src.encode('utf-8'), ibase.encode('utf-8'))
         gr = Graph(identifier=iuri).parse(data=data, format='turtle')
 
         # Store raw graph data. No checks.
-        with self.rdfly.store.txn_ctx(True):
+        with self.rdfly.store.txn_mgr(True):
             self.rdfly.modify_rsrc(uid, add_trp=set(gr))
 
         # Grab binary and set new resource parameters.
@@ -257,21 +255,18 @@ class Migrator:
             if self.zero_binaries:
                 data = b''
             else:
-                try:
-                    bin_rsp = requests.get(uri, auth=self.auth)
+                bin_rsp = requests.get(uri)
+                if not self.skip_errors:
                     bin_rsp.raise_for_status()
-                except Exception as e:
-                    if self.skip_errors:
-                        logger.error(f'Error retrieving binary contents: {e}')
-                        return
-                    else:
-                        raise
+                elif bin_rsp.status_code > 399:
+                    print('Error retrieving resource {} body: {} {}'.format(
+                        uri, bin_rsp.status_code, bin_rsp.text))
                 data = bin_rsp.content
             #import pdb; pdb.set_trace()
             uuid = str(gr.value(
                 URIRef(iuri), nsc['premis'].hasMessageDigest)).split(':')[-1]
             fpath = self.nonrdfly.local_path(
-                    self.nonrdfly.config['location'], uuid)
+                    self.nonrdfly.config['path'], uuid)
             makedirs(path.dirname(fpath), exist_ok=True)
             with open(fpath, 'wb') as fh:
                 fh.write(data)
@@ -285,7 +280,7 @@ class Migrator:
         for pred, obj in gr.predicate_objects():
             #import pdb; pdb.set_trace()
             obj_uid = obj.replace(ibase, '')
-            with self.rdfly.store.txn_ctx(True):
+            with self.rdfly.store.txn_mgr(True):
                 conditions = bool(
                     isinstance(obj, URIRef)
                     and obj.startswith(iuri)

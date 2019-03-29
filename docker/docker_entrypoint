@@ -7,4 +7,4 @@ coilmq &
 if [ ! -d /data/ldpnr_store ] && [ ! -d /data/ldprs_store ]; then
   echo yes | lsup-admin bootstrap
 fi
-exec fcrepo
+exec ./fcrepo
