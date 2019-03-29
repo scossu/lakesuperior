@@ -12,7 +12,6 @@ import arrow
 from lakesuperior import env
 from lakesuperior.api import admin as admin_api
 from lakesuperior.config_parser import config
-from lakesuperior.exceptions import ChecksumValidationError
 from lakesuperior.globals import AppGlobals
 
 __doc__="""
@@ -91,20 +90,11 @@ def stats(human=False):
 
 
 @click.command()
-@click.argument('uid')
 def check_fixity(uid):
     """
-    Check the fixity of a resource.
+    [STUB] Check fixity of a resource.
     """
-    import lakesuperior.env_setup
-
-    try:
-        admin_api.fixity_check(uid)
-    except ChecksumValidationError:
-        print(f'Checksum for {uid} failed.')
-        sys.exit(1)
-
-    print(f'Checksum for {uid} passed.')
+    pass
 
 
 @click.option(
@@ -173,10 +163,6 @@ def cleanup():
 @click.argument('src')
 @click.argument('dest')
 @click.option(
-    '--auth', '-a',
-    help='Colon-separated credentials for HTTP Basic authentication on the '
-    'source repository. E.g. `user:password`.')
-@click.option(
     '--start', '-s', show_default=True,
     help='Starting point for looking for resources in the repository.\n'
     'The default `/` value starts at the root, i.e. migrates the whole '
@@ -197,11 +183,11 @@ def cleanup():
     'quitting. Other exceptions caused by the application will terminate the '
     'process as usual.')
 @click_log.simple_verbosity_option(logger)
-def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
+def migrate(src, dest, start, list_file, zero_binaries, skip_errors):
     """
     Migrate an LDP repository to Lakesuperior.
 
-    This utility creates a fully functional Lakesuperior repository from an
+    This utility creates a fully functional LAKEshore repository from an
     existing repository. The source repo can be Lakesuperior or
     another LDP-compatible implementation.
 
@@ -213,21 +199,17 @@ def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
     """
     logger.info('Migrating {} into a new repository on {}.'.format(
             src, dest))
-    src_auth = tuple(auth.split(':')) if auth else None
     entries = admin_api.migrate(
-        src, dest, src_auth=src_auth, start_pts=start, list_file=list_file,
+            src, dest, start_pts=start, list_file=list_file,
             zero_binaries=zero_binaries, skip_errors=skip_errors)
     logger.info('Migrated {} resources.'.format(entries))
-    logger.info(f'''
-    Migration complete. A new Lakesuperior environment has been created in
-    {dest}. To start the new repository, run:
+    logger.info("""Migration complete. To start the new repository, from the
+    directory you launched this script run:
 
-    FCREPO_CONFIG_DIR="{dest}/etc" fcrepo
-
-    from the directory you launched this script in.
+    FCREPO_CONFIG_DIR="{}/etc" ./fcrepo
 
     Make sure that the default port is not being used by another repository.
-    ''')
+    """.format(dest))
 
 
 admin.add_command(bootstrap)

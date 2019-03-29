@@ -1,17 +1,7 @@
 include README.rst
 include LICENSE
-include bin/*
-include ext/lmdb/libraries/liblmdb/mdb.c
-include ext/lmdb/libraries/liblmdb/lmdb.h
-include ext/lmdb/libraries/liblmdb/midl.c
-include ext/lmdb/libraries/liblmdb/midl.h
-include ext/collections-c/src/*.c
-include ext/collections-c/src/include/*.h
-include ext/tpl/src/tpl.c
-include ext/tpl/src/tpl.h
-include ext/spookyhash/src/*.c
-include ext/spookyhash/src/*.h
-
+include fcrepo
+graft ext
 graft lakesuperior/data/bootstrap
 graft lakesuperior/endpoints/templates
 graft lakesuperior/etc.defaults

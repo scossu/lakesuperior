@@ -49,9 +49,9 @@ class __Defaults:
 
     listen_addr = '0.0.0.0'
     listen_port = 8000
-    preload_app = False
+    preload_app = True
     app_mode = 'prod'
-    worker_class = 'sync'
+    worker_class = 'gevent'
     max_requests = 0
 
     def __init__(self):

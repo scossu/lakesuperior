@@ -23,16 +23,9 @@ data_dir:
 # checksumn of the contents of the file.
 uuid:
     # Algorithm used to calculate the hash that generates the content path.
-    # This can be any one of the Python hashlib functions:
+    # One of: sha1, sha224, sha256, sha384, or sha512, corresponding to the
+    # omonymous hashlib function:
     # https://docs.python.org/3/library/hashlib.html
-    #
-    # This needs to be ``sha1`` if a compatibility with the Fedora4 file layout
-    # is needed, however in security-sensitive environments it is strongly
-    # advised to use a stronger algorithm, since SHA1 is known to be
-    # vulnerable to counterfeiting: see https://shattered.io/
-    #
-    # `blake2b` is a strong, fast cryptographic alternative to SHA2/3:
-    # https://blake2.net/
     algo: sha1
 
 # Data store configuration.

@@ -29,8 +29,9 @@ core_namespaces = {
     'xsd' : rdflib.namespace.XSD,
 }
 
-ns_collection  = {pfx: Namespace(ns) for pfx, ns in config['namespaces'].items()}
-ns_collection.update(core_namespaces)
+ns_collection = core_namespaces.copy()
+custom_ns = {pfx: Namespace(ns) for pfx, ns in config['namespaces'].items()}
+ns_collection.update(custom_ns)
 
 ns_mgr = NamespaceManager(Graph())
 

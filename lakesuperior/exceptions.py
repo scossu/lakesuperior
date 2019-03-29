@@ -24,27 +24,6 @@ class ResourceExistsError(ResourceError):
 
 
 
-class ChecksumValidationError(ResourceError):
-    '''
-    Raised in an attempt to create a resource a URI that already exists and is
-    not supposed to.
-
-    This usually surfaces at the HTTP level as a 409.
-    '''
-    def __init__(self, uid, prov_cksum, calc_cksum, msg=None):
-        self.uid = uid
-        self.prov_cksum = prov_cksum
-        self.calc_cksum = calc_cksum
-        self.msg = msg.format(uid) if msg else None
-
-
-    def __str__(self):
-        return self.msg or (f'Validation failed for resource {self.uid}. '
-                            f'Provided checksum: {self.prov_cksum}; '
-                            f'calculated checksum: {self.calc_cksum}')
-
-
-
 class ResourceNotExistsError(ResourceError):
     '''
     Raised in an attempt to create a resource a URN that does not exist and is
