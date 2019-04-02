@@ -4,37 +4,19 @@ Performance Benchmark Report
 The purpose of this document is to provide very broad performance measurements
 and comparison between Lakesuperior and Fedora/Modeshape implementations.
 
-Lakesuperior v1.0a17 and v1.0a18 were taken into consideration. This is because
-of the extensive reworking of the whole architecture and complete rewrite
-of the storage layer, that led to significant performance gains.
-
 Environment
 -----------
 
 Hardware
 ~~~~~~~~
 
-‘Rather Snappy’ Laptop
-^^^^^^^^^^^^^^^^^^^^^^
-
--  Dell Latitude 7490 Laptop
--  8x Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+-  MacBook Pro14,2
+-  1x Intel(R) Core(TM) i5 @3.1Ghz
 -  16Gb RAM
 -  SSD
--  Arch Linux OS
--  glibc 2.26-11
--  python 3.7.0
+-  OS X 10.13
+-  python 3.7.2
 -  lmdb 0.9.22
-
-The laptop was left alone during the process, but some major applications
-(browser, email client, etc.) were left open.
-
-‘Ole Workhorse’ server
-^^^^^^^^^^^^^^^^^^^^^^
-
--  8x Intel(R) Xeon(R) CPU X5550 @ 2.67GHz
--  16Gb RAM
--  Magnetic drive, XXX RPM
 
 Benchmark script
 ~~~~~~~~~~~~~~~~
@@ -45,7 +27,7 @@ The script was run with default values: resprectively 10,000 and 100,000
 children under the same parent. PUT and POST requests were tested separately.
 
 The script calculates only the timings used for the PUT or POST requests, not
-counting the time used to generate the graphs.
+counting the time used to generate the random data.
 
 Data Set
 ~~~~~~~~
@@ -101,26 +83,21 @@ IPython console::
 
    In [1]: from lakesuperior import env_setup
    In [2]: from lakesuperior.api import resource as rsrc_api
-   In [3]: %timeit x = rsrc_api.get('/pomegranate').imr
+   In [3]: %timeit x = rsrc_api.get('/pomegranate').imr.as_rdflib
 
 Results
 -------
 
-.. _rather-snappy-laptop-1:
-
-‘Rather Snappy’ Laptop
-~~~~~~~~~~~~~~~~~~~~~~
-
 10K Resources
 ^^^^^^^^^^^^^
 
-=========================  ============  ============  ============  ============  ================
-System                     PUT           Store         GET           SPARQL Query  Py-API retrieval
-=========================  ============  ============  ============  ============  ================
-FCREPO / Modeshape 4.7.5   49ms (100%)   3.7Gb (100%)  6.2s (100%)   N/A           N/A
-Lakesuperior 1.0a17        78ms (159%)   298Mb (8%)    2.8s          0m1.194s      Not measured
-Lakesuperior 1.0a18        62ms (126%)   789Mb (21%)   2.2s          0m2.214s      66ms
-=========================  ============  ============  ============  ============  ================
+===============================  =============  =============  ============  ============  ============
+System                           PUT            POST           Store         GET           SPARQL Query
+===============================  =============  =============  ============  ============  ============
+FCREPO / Modeshape 4.7.5         68ms (100%)    XXms (100%)    3.9Gb (100%)  6.2s (100%)   N/A         
+Lakesuperior 1.0a20 REST API     105ms (159%)   XXXms (XXX%)   298Mb (8%)    2.1s          XXXXXXXs    
+Lakesuperior 1.0a20 Python API   53ms (126%)    XXms (XXX%)    789Mb (21%)   381ms         N/A         
+===============================  =============  =============  ============  ============  ============
 
 **Notes:**
 
@@ -138,36 +115,24 @@ Lakesuperior 1.0a18        62ms (126%)   789Mb (21%)   2.2s          0m2.214s   
 100K Resources
 ^^^^^^^^^^^^^^
 
-=========================  ===============  =============  =============  ===============  ============  ================
-System                     PUT              POST           Store          GET              Query         Py-API retrieval
-=========================  ===============  =============  =============  ===============  ============  ================
-FCREPO / Modeshape 4.7.5   500ms* (100%)    38ms (100%)    13Gb (100%)    2m6.7s (100%)    N/A           N/A
-Lakesuperior 1.0a17        104ms (21%)      104ms (273%)   5.3Gb (40%)    0m17.0s (13%)    0m12.481s     3810ms
-Lakesuperior 1.0a18        79ms (15%)       79ms  (207%)   7.5Gb (58%)    0m14.2s (11%)    0m4.214s**    905ms
-=========================  ===============  =============  =============  ===============  ============  ================
+===============================  ===============  ===============  =============  ===============  ==============
+System                           PUT              POST             Store          GET              SPARQL Query  
+===============================  ===============  ===============  =============  ===============  ==============
+FCREPO / Modeshape 4.7.5         500+ms*          65ms (100%)\*\*  12Gb (100%)    3m41s (100%)     N/A           
+Lakesuperior 1.0a20 REST API     104ms (100%)     123ms (189%)     8.7Gb (72%)    30s (14%)        XXXXXXXXs     
+Lakesuperior 1.0a20 Python API   69ms (60%)       XXms  (XXX%)     8.7Gb (72%)    6s (2.7%)        XXXXXXXs\*\*\*
+===============================  ===============  ===============  =============  ===============  ==============
 
-\* POST was stopped at 50K resources. From looking at ingest timings over time
-we can easily infer that ingest time would further increase. This is the
-manifestation of the "many members" issue. The "Store" value is for the PUT
-operation which ran regularly with 100K resources.
+\* POST was stopped at 30K resources after the ingest time reached >1s per
+resource. This is the manifestation of the "many members" issue which is
+visible in the graph below. The "Store" value is for the PUT operation which
+ran regularly with 100K resources.
 
-\*\* Timing based on a warm cache. The first query timed at 0m22.2s.
+\*\* the POST test with 100K resources was conducted with fedora 4.7.5 because
+5.0 would not automatically create a pairtree, thereby resulting in the same
+performance as the PUT method.
 
-.. _ole-workhorse-server-1:
-
-‘Ole Workhorse’ server
-~~~~~~~~~~~~~~~~~~~~~~
-
-10K Resources
-^^^^^^^^^^^^^
-
-=========================  ==============  ==============  ==============  ==============  ==================
-System                     PUT             Store           GET             SPARQL Query    Py-API retrieval
-=========================  ==============  ==============  ==============  ==============  ==================
-FCREPO / Modeshape 4.7.5   285ms (100%)    3.7Gb (100%)    9.6s (100%)     N/A             N/A
-Lakesuperior 1.0a17        446ms           298Mb           5.6s (58%)      0m1.194s        Not measured
-Lakesuperior 1.0a18        Not measured    Not measured    Not measured    Not measured    Not measured
-=========================  ==============  ==============  ==============  ==============  ==================
+\*\*\* Timing based on a warm cache. The first query timed at 0m22.2s.
 
 Conclusions
 -----------
