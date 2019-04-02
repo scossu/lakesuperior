@@ -179,7 +179,7 @@ def get_resource(uid, out_fmt=None):
         out_headers.update(_headers_from_metadata(rsrc, out_fmt))
         uri = g.tbox.uid_to_uri(uid)
 
-# RDF output.
+        # RDF output.
         if out_fmt == 'rdf':
             if locals().get('rdf_mimetype', None) is None:
                 rdf_mimetype = DEFAULT_RDF_MIMETYPE
@@ -188,7 +188,7 @@ def get_resource(uid, out_fmt=None):
             return _negotiate_content(
                     ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
 
-# Datastream.
+        # Datastream.
         else:
             if not getattr(rsrc, 'local_path', False):
                 return ('{} has no binary content.'.format(rsrc.uid), 404)
