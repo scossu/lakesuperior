@@ -111,14 +111,15 @@ logger = logging.getLogger(__name__)
 
 cdef class LmdbTriplestore(BaseLmdbStore):
     """
-    Low-level storage layer.
+    Low-level triplestore layer.
 
-    This class extends the RDFLib-compatible :py:class:`BaseLmdbStore` and maps
-    triples and contexts to key-value records in LMDB.
+    This class extends the general-purpose :py:class:`BaseLmdbStore` and maps
+    triples and contexts to key-value records in LMDB. It can be used in the
+    application context (``env.app_globals.rdf_store``), or an independent
+    instance can be spun up in an arbitrary disk location.
 
-    This class uses the original LMDB C API rather than the Python bindings,
-    because several data manipulations happen after retrieval from the store,
-    which are more efficiently performed at the C level.
+    This class provides the base for the RDFlib-compatible backend in the
+    :py:class:`lakesuperior.store.ldp_rs.lmdb_store.LmdbStore`.
     """
 
     dbi_labels = [
