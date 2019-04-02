@@ -374,14 +374,14 @@ class TestEntryCount:
         List of index labels.
         """
         return [
-            's:po',
-            'p:so',
-            'o:sp',
-            'po:s',
-            'so:p',
-            'sp:o',
-            'spo:c',
-            'c:spo',
+            b's:po___',
+            b'p:so___',
+            b'o:sp___',
+            b'po:s___',
+            b'so:p___',
+            b'sp:o___',
+            b'spo:c__',
+            b'c:spo__',
         ]
 
 
@@ -408,8 +408,8 @@ class TestEntryCount:
             assert stat['db_stats'][idxlabel]['ms_entries'] == 1000
 
         # 1 subject, 100 predicates, 1000 objects, 1 context
-        assert stat['db_stats']['t:st']['ms_entries'] == 1102
-        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+        assert stat['db_stats'][b't:st___']['ms_entries'] == 1102
+        assert stat['db_stats'][b'th:t___']['ms_entries'] == 1102
 
 
     def test_entries_partial(self, store, indices):
@@ -422,8 +422,8 @@ class TestEntryCount:
         with store.txn_ctx():
             stat = store.stats()
 
-        assert stat['db_stats']['t:st']['ms_entries'] == 1102
-        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+        assert stat['db_stats'][b't:st___']['ms_entries'] == 1102
+        assert stat['db_stats'][b'th:t___']['ms_entries'] == 1102
 
 
     def test_entries_empty(self, store, indices):
@@ -439,8 +439,8 @@ class TestEntryCount:
         for idxlabel in indices:
             assert stat['db_stats'][idxlabel]['ms_entries'] == 0
 
-        assert stat['db_stats']['t:st']['ms_entries'] == 1102
-        assert stat['db_stats']['th:t']['ms_entries'] == 1102
+        assert stat['db_stats'][b't:st___']['ms_entries'] == 1102
+        assert stat['db_stats'][b'th:t___']['ms_entries'] == 1102
 
 
 
@@ -619,7 +619,7 @@ class TestCleanup:
 
     def _is_empty(self, store):
         stats = store.stats()['db_stats']
-        for dblabel in ('spo:c', 'c:spo', 's:po', 'p:so', 'o:sp',):
+        for dblabel in (b'spo:c__', b'c:spo__', b's:po___', b'p:so___', b'o:sp___',):
             if stats[dblabel]['ms_entries'] > 0:
                 return False
 

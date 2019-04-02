@@ -8,6 +8,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as RDFLIB_DEFAULT_GRAPH_URI
 
 from lakesuperior.store.base_lmdb_store import (
         KeyExistsError, KeyNotFoundError, LmdbError)
+from lakesuperior.util.toolbox import get_tree_size
 
 from libc.stdlib cimport malloc, free
 
@@ -47,6 +48,32 @@ INT_DUP_MASK = (
     | LSUP_REVERSEKEY | LSUP_REVERSEDUP
 )
 
+cdef:
+    DbLabel DB_T_ST = 't:st___',
+    # Joined triple keys to context key
+    DbLabel DB_SPO_C = 'spo:c__',
+    # This has empty values and is used to keep track of empty contexts.
+    DbLabel DB_C_ = 'c:_____',
+    # Prefix to namespace
+    DbLabel DB_PFX_NS = 'pfx:ns_',
+
+    # Indices
+    # Namespace to prefix
+    DbLabel DB_NS_PFX = 'ns:pfx_',
+    # Term hash to triple key
+    DbLabel DB_TH_T = 'th:t___',
+    # 1-bound lookups
+    DbLabel DB_S_PO = 's:po___',
+    DbLabel DB_P_SO = 'p:so___',
+    DbLabel DB_O_SP = 'o:sp___',
+    # 2-bound lookups
+    DbLabel DB_PO_S = 'po:s___',
+    DbLabel DB_SO_P = 'so:p___',
+    DbLabel DB_SP_O = 'sp:o___',
+    # Context lookup
+    DbLabel DB_C_SPO = 'c:spo__',
+
+
 lookup_rank = [0, 2, 1]
 """
 Order in which keys are looked up if two terms are bound.
@@ -56,10 +83,8 @@ looked up first.
 0 = s:po
 1 = p:so
 2 = o:sp
-
-If we want to get fancy, this can be rebalanced from time to time by
-looking up the number of keys in (s:po, p:so, o:sp).
 """
+
 lookup_ordering = [
     [0, 1, 2], # spo
     [1, 0, 2], # pso
@@ -69,6 +94,15 @@ lookup_ordering_2bound = [
     [1, 2, 0], # po:s
     [0, 2, 1], # so:p
     [0, 1, 2], # sp:o
+]
+
+lookup_indices = [
+    DB_S_PO,
+    DB_P_SO,
+    DB_O_SP,
+    DB_PO_S,
+    DB_SO_P,
+    DB_SP_O,
 ]
 
 
@@ -88,51 +122,32 @@ cdef class LmdbTriplestore(BaseLmdbStore):
     """
 
     dbi_labels = [
-        # Main data
-        # Term key to serialized term content
-        't:st',
-        # Joined triple keys to context key
-        'spo:c',
-        # This has empty values and is used to keep track of empty contexts.
-        'c:',
-        # Prefix to namespace
-        'pfx:ns',
-
-        # Indices
-        # Namespace to prefix
-        'ns:pfx',
-        # Term hash to triple key
-        'th:t',
-        # Lookups
-        's:po',
-        'p:so',
-        'o:sp',
-        'po:s',
-        'so:p',
-        'sp:o',
-        'c:spo',
-    ]
-
-    lookup_indices = [
-        b's:po',
-        b'p:so',
-        b'o:sp',
-        b'po:s',
-        b'so:p',
-        b'sp:o',
+        DB_T_ST,
+        DB_SPO_C,
+        DB_C_,
+        DB_PFX_NS,
+        DB_NS_PFX,
+        DB_TH_T,
+        DB_S_PO,
+        DB_P_SO,
+        DB_O_SP,
+        DB_PO_S,
+        DB_SO_P,
+        DB_SP_O,
+        DB_C_SPO,
     ]
 
     dbi_flags = {
-        'c': INT_KEY_MASK,
-        't:st': INT_KEY_MASK,
-        's:po': INT_DUP_KEY_MASK,
-        'p:so': INT_DUP_KEY_MASK,
-        'o:sp': INT_DUP_KEY_MASK,
-        'po:s': INT_DUP_MASK,
-        'so:p': INT_DUP_MASK,
-        'sp:o': INT_DUP_MASK,
-        'c:spo': INT_DUP_KEY_MASK,
-        'spo:c': INT_DUP_MASK,
+        DB_C_: INT_KEY_MASK,
+        DB_T_ST: INT_KEY_MASK,
+        DB_S_PO: INT_DUP_KEY_MASK,
+        DB_P_SO: INT_DUP_KEY_MASK,
+        DB_O_SP: INT_DUP_KEY_MASK,
+        DB_PO_S: INT_DUP_MASK,
+        DB_SO_P: INT_DUP_MASK,
+        DB_SP_O: INT_DUP_MASK,
+        DB_C_SPO: INT_DUP_KEY_MASK,
+        DB_SPO_C: INT_DUP_MASK,
     }
     logger.debug(f'DBI flags: {dbi_flags}')
 
@@ -149,7 +164,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         """
         Gather statistics about the database."""
         st = self._stats()
-        st['num_triples'] = st['db_stats']['spo:c']['ms_entries']
+        st['num_triples'] = st['db_stats'][DB_SPO_C]['ms_entries']
+        st['store_size'] = get_tree_size(self.env_path)
 
         return st
 
@@ -171,7 +187,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             key_v.mv_data = &ck
             key_v.mv_size = KLEN
 
-            cur = self._cur_open('c:spo')
+            cur = self._cur_open(DB_C_SPO)
             try:
                 _check(lmdb.mdb_cursor_get(
                         cur, &key_v, NULL, lmdb.MDB_SET))
@@ -214,7 +230,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             c = RDFLIB_DEFAULT_GRAPH_URI
 
         s, p, o = triple
-        icur = self._cur_open('th:t')
+        icur = self._cur_open(DB_TH_T)
         try:
             for i, term_obj in enumerate((s, p, o, c)):
                 serialize_from_rdflib(term_obj, &pk_t)
@@ -223,13 +239,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     key_v.mv_data = thash
                     key_v.mv_size = HLEN
                     _check(lmdb.mdb_get(
-                            self.txn, self.get_dbi('th:t'), &key_v, &data_v))
+                            self.txn, self.get_dbi(DB_TH_T), &key_v, &data_v))
                     spock[i] = (<Key*>data_v.mv_data)[0]
                 except KeyNotFoundError:
                     # If term_obj is not found, add it...
                     logger.debug('Hash {} not found. Adding to DB.'.format(
                             thash[: HLEN]))
-                    spock[i] = self._append(&pk_t, dblabel=b't:st')
+                    spock[i] = self._append(&pk_t, dblabel=DB_T_ST)
 
                     # ...and index it.
                     key_v.mv_data = thash
@@ -251,21 +267,21 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         try:
             _check(lmdb.mdb_put(
-                self.txn, self.get_dbi('c:'), &c_v, &null_v,
+                self.txn, self.get_dbi(DB_C_), &c_v, &null_v,
                 lmdb.MDB_NOOVERWRITE))
         except KeyExistsError:
             pass
         try:
             # Add triple:context association.
             _check(lmdb.mdb_put(
-                self.txn, self.get_dbi('spo:c'), &spo_v, &c_v,
+                self.txn, self.get_dbi(DB_SPO_C), &spo_v, &c_v,
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
         try:
             # Index context:triple association.
             _check(lmdb.mdb_put(
-                self.txn, self.get_dbi('c:spo'), &c_v, &spo_v,
+                self.txn, self.get_dbi(DB_C_SPO), &c_v, &spo_v,
                 lmdb.MDB_NODUPDATA))
         except KeyExistsError:
             pass
@@ -291,7 +307,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         c = self._normalize_context(c)
 
         ck = self.to_key(c)
-        if not self._key_exists(<unsigned char*>&ck, KLEN, b'c:'):
+        if not self._key_exists(<unsigned char*>&ck, KLEN, DB_C_):
             # Insert context term if not existing.
             if self.is_txn_rw:
                 #logger.debug('Working in existing RW transaction.')
@@ -308,7 +324,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 data_v.mv_data = &ck # Whatever, length is zero anyways
                 data_v.mv_size = 0
                 _check(lmdb.mdb_put(
-                    _txn, self.get_dbi(b'c:'), &key_v, &data_v, 0
+                    _txn, self.get_dbi(DB_C_), &key_v, &data_v, 0
                 ))
                 if not self.is_txn_rw:
                     _check(lmdb.mdb_txn_commit(_txn))
@@ -338,8 +354,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         # Get the matching pattern.
         match_set = self.triple_keys(triple_pattern, context)
 
-        dcur = self._cur_open('spo:c')
-        icur = self._cur_open('c:spo')
+        dcur = self._cur_open(DB_SPO_C)
+        icur = self._cur_open(DB_C_SPO)
 
         try:
             spok_v.mv_size = TRP_KLEN
@@ -466,8 +482,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             logger.debug(f'Add {spok[0]} to indices.')
 
         while i < 3:
-            cur1 = self._cur_open(self.lookup_indices[i]) # s:po, p:so, o:sp
-            cur2 = self._cur_open(self.lookup_indices[i + 3])# po:s, so:p, sp:o
+            cur1 = self._cur_open(lookup_indices[i]) # s:po, p:so, o:sp
+            cur2 = self._cur_open(lookup_indices[i + 3])# po:s, so:p, sp:o
             try:
                 key_v.mv_data = spok + i
                 dbl_key_v.mv_data = dbl_keys[i]
@@ -546,11 +562,11 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         chash_v.mv_size = HLEN
         try:
             ck_v.mv_data = &ck
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'c:'), &ck_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(DB_C_), &ck_v, NULL))
             ck_v.mv_data = &ck
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b't:st'), &ck_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(DB_T_ST), &ck_v, NULL))
             chash_v.mv_data = chash
-            _check(lmdb.mdb_del(self.txn, self.get_dbi(b'th:t'), &chash_v, NULL))
+            _check(lmdb.mdb_del(self.txn, self.get_dbi(DB_TH_T), &chash_v, NULL))
         except KeyNotFoundError:
             pass
 
@@ -611,7 +627,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         #logger.debug('Triple keys found: {}'.format(rset.data[:rset.size]))
 
-        cur = self._cur_open('spo:c')
+        cur = self._cur_open(DB_SPO_C)
         try:
             key_v.mv_size = TRP_KLEN
             rset.keys.seek()
@@ -673,7 +689,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 # Context not found.
                 return Graph(self, uri=uri)
 
-            icur = self._cur_open('c:spo')
+            icur = self._cur_open(DB_C_SPO)
 
             try:
                 key_v.mv_data = &ck
@@ -806,7 +822,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                     try:
                         spok = [tk1, tk2, tk3]
                         _check(lmdb.mdb_get(
-                            self.txn, self.get_dbi('spo:c'), &spok_v, &ck_v))
+                            self.txn, self.get_dbi(DB_SPO_C), &spok_v, &ck_v))
                     except KeyNotFoundError:
                         return Graph(self)
 
@@ -839,7 +855,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         # ? ? ?
         # Get all triples in the database.
-        dcur = self._cur_open('spo:c')
+        dcur = self._cur_open(DB_SPO_C)
 
         try:
             _check(
@@ -892,8 +908,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         logger.debug(f'lookup 1bound: {idx}, {luk}')
 
         term_order = lookup_ordering[idx]
-        icur = self._cur_open(self.lookup_indices[idx])
-        logging.debug(f'DB label: {self.lookup_indices[idx]}')
+        icur = self._cur_open(lookup_indices[idx])
+        logging.debug(f'DB label: {lookup_indices[idx]}')
         logging.debug('term order: {}'.format(term_order[: 3]))
 
         try:
@@ -963,7 +979,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
                 else:
                     luk1_offset = 1
                     luk2_offset = 0
-                dblabel = self.lookup_indices[i + 3] # skip 1bound index labels
+                dblabel = lookup_indices[i + 3] # skip 1bound index labels
                 break
 
             if i == 2:
@@ -1017,7 +1033,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_stat stat
             cc.HashSetConf tkeys_conf
 
-        idx_label = self.lookup_indices['spo'.index(term_type)]
+        idx_label = lookup_indices['spo'.index(term_type)]
         icur = self._cur_open(idx_label)
         try:
             _check(lmdb.mdb_stat(self.txn, lmdb.mdb_cursor_dbi(icur), &stat))
@@ -1083,7 +1099,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_stat stat
 
         ret = []
-        dcur = self._cur_open('pfx:ns')
+        dcur = self._cur_open(DB_PFX_NS)
         try:
             try:
                 _check(lmdb.mdb_cursor_get(
@@ -1119,8 +1135,8 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             TripleKey spok
 
         cur = (
-                self._cur_open('spo:c') if triple and all(triple)
-                else self._cur_open('c:'))
+                self._cur_open(DB_SPO_C) if triple and all(triple)
+                else self._cur_open(DB_C_))
         try:
             if triple and all(triple):
                 _check(lmdb.mdb_stat(
@@ -1196,7 +1212,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         _check(
             lmdb.mdb_get(
-                self.txn, self.get_dbi('t:st'), &key_v, &data_v
+                self.txn, self.get_dbi(DB_T_ST), &key_v, &data_v
             ),
             f'Error getting data for key \'{tk}\'.'
         )
@@ -1247,7 +1263,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             #    f'{(<unsigned char*>thash)[:HLEN]} in store before adding.'
             #)
             _check(lmdb.mdb_get(
-                self.txn, self.get_dbi(b'th:t'), &key_v, &data_v)
+                self.txn, self.get_dbi(DB_TH_T), &key_v, &data_v)
             )
 
             return (<Key*>data_v.mv_data)[0]
@@ -1266,13 +1282,13 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
             try:
                 # Main entry.
-                tk = self._append(&pk_t, b't:st', txn=_txn)
+                tk = self._append(&pk_t, DB_T_ST, txn=_txn)
 
                 # Index.
                 data_v.mv_data = &tk
                 data_v.mv_size = KLEN
                 _check(lmdb.mdb_put(
-                    _txn, self.get_dbi(b'th:t'), &key_v, &data_v, 0
+                    _txn, self.get_dbi(DB_TH_T), &key_v, &data_v, 0
                 ))
                 if not self.is_txn_rw:
                     _check(lmdb.mdb_txn_commit(_txn))
@@ -1289,7 +1305,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
     cdef Key _append(
         self, Buffer *value,
-        unsigned char *dblabel=b'', lmdb.MDB_txn *txn=NULL,
+        DbLabel dblabel=b'', lmdb.MDB_txn *txn=NULL,
         unsigned int flags=0
         ) except? 0:
         """

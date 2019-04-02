@@ -143,13 +143,15 @@ class LmdbStore(LmdbTriplestore, Store):
         prefix = prefix.encode()
         namespace = namespace.encode()
         if self.is_txn_rw:
-            self.put(prefix, namespace, 'pfx:ns')
-            self.put(namespace, prefix, 'ns:pfx')
+            # FIXME DB labels should be constants but there are problems
+            # imprting them from the Cython module.
+            self.put(prefix, namespace, b'pfx:ns_')
+            self.put(namespace, prefix, b'ns:pfx_')
         else:
             #logger.debug('Opening RW transaction.')
             with self.txn_ctx(write=True) as wtxn:
-                self.put(prefix, namespace, 'pfx:ns')
-                self.put(namespace, prefix, 'ns:pfx')
+                self.put(prefix, namespace, b'pfx:ns_')
+                self.put(namespace, prefix, b'ns:pfx_')
 
 
     def namespace(self, prefix):
@@ -157,7 +159,7 @@ class LmdbStore(LmdbTriplestore, Store):
         Get the namespace for a prefix.
         :param str prefix: Namespace prefix.
         """
-        ns = self.get_data(prefix.encode(), 'pfx:ns')
+        ns = self.get_data(prefix.encode(), b'pfx:ns_')
 
         return Namespace(ns.decode()) if ns is not None else None
 
@@ -173,7 +175,7 @@ class LmdbStore(LmdbTriplestore, Store):
 
         :rtype: str or None
         """
-        prefix = self.get_data(str(namespace).encode(), 'ns:pfx')
+        prefix = self.get_data(str(namespace).encode(), b'ns:pfx_')
 
         return prefix.decode() if prefix is not None else None
 

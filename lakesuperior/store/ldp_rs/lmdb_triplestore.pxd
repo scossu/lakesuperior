@@ -4,7 +4,7 @@ cimport lakesuperior.cy_include.cylmdb as lmdb
 from lakesuperior.model.base cimport Key, DoubleKey, TripleKey, Buffer
 from lakesuperior.model.rdf.graph cimport Graph
 from lakesuperior.model.structures.keyset cimport Keyset
-from lakesuperior.store.base_lmdb_store cimport BaseLmdbStore
+from lakesuperior.store.base_lmdb_store cimport DbLabel, BaseLmdbStore
 
 cdef:
     enum:
@@ -14,10 +14,12 @@ cdef:
     unsigned char lookup_rank[3]
     unsigned char lookup_ordering[3][3]
     unsigned char lookup_ordering_2bound[3][3]
+    char lookup_indices[6][8] # Can't use DbLabel[6] here...
 
 
 
 cdef class LmdbTriplestore(BaseLmdbStore):
+
     cpdef dict stats(self)
     cpdef size_t _len(self, context=*) except -1
     cpdef void add(self, triple, context=*, quoted=*) except *
@@ -41,5 +43,5 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         void all_contexts(self, Key** ctx, size_t* sz, triple=*) except *
         Key _append(
                 self, Buffer *value,
-                unsigned char *dblabel=*, lmdb.MDB_txn *txn=*,
+                DbLabel dblabel=*, lmdb.MDB_txn *txn=*,
                 unsigned int flags=*) except? 0

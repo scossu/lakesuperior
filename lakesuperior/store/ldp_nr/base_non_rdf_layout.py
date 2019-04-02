@@ -1,7 +1,9 @@
 import logging
+import os
 
 from abc import ABCMeta, abstractmethod
 
+from lakesuperior.util.toolbox import get_tree_size
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,17 @@ class BaseNonRdfLayout(metaclass=ABCMeta):
         self.config = config
         self.root = config['location']
 
+
+    @property
+    def store_size(self):
+        """Calculated the store size on disk."""
+        return get_tree_size(self.root)
+
+
+    @property
+    def file_ct(self):
+        """Calculated the store size on disk."""
+        return sum([len(files) for r, d, files in os.walk(self.root)])
 
     ## INTERFACE METHODS ##
 

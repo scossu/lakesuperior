@@ -29,7 +29,7 @@ from lakesuperior.exceptions import (
     ServerManagedTermError, TombstoneError)
 from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
-from lakesuperior.toolbox import Toolbox
+from lakesuperior.util.toolbox import replace_term_domain
 
 
 rdfly = env.app_globals.rdfly
@@ -165,7 +165,6 @@ class Ldpr(metaclass=ABCMeta):
         self.uri = nsc['fcres'][uid]
         # @FIXME Not ideal, should separate app-context dependent functions in
         # a different toolbox.
-        self.tbox = Toolbox()
 
         self.provided_imr = provided_imr
 
@@ -552,7 +551,7 @@ class Ldpr(metaclass=ABCMeta):
                 pass
             else:
                 ver_add_gr.add((
-                    self.tbox.replace_term_domain(t[0], self.uri, ver_uri),
+                    replace_term_domain(t[0], self.uri, ver_uri),
                     t[1], t[2]))
 
         rdfly.modify_rsrc(ver_uid, add_trp=ver_add_gr)

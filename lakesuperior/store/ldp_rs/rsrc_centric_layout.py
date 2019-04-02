@@ -25,6 +25,7 @@ from lakesuperior.globals import ROOT_RSRC_URI
 from lakesuperior.exceptions import (InvalidResourceError,
         ResourceNotExistsError, TombstoneError, PathSegmentError)
 from lakesuperior.model.rdf.graph import Graph
+from lakesuperior.util.toolbox import get_tree_size
 
 
 META_GR_URI = nsc['fcsystem']['meta']
@@ -195,7 +196,6 @@ class RsrcCentricLayout:
                             {term: dest for term in terms})
 
         return self._attr_routes
-
 
 
     def bootstrap(self):

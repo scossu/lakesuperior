@@ -1,5 +1,7 @@
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
+ctypedef char DbLabel[8]
+
 cdef:
     int rc
     size_t i
@@ -29,28 +31,29 @@ cdef class BaseLmdbStore:
         void _txn_commit(self) except *
         void _txn_abort(self) except *
         inline bint _key_exists(
-            self, unsigned char *key, unsigned char klen,
-            unsigned char *dblabel=*) except -1
+            self, unsigned char *key, unsigned char klen, DbLabel dblabel=*
+        ) except -1
 
         size_t _txn_id(self) except -1
         lmdb.MDB_cursor *_cur_open(
-                self, unsigned char *dblabel=*, lmdb.MDB_txn *txn=*) except *
+            self, DbLabel dblabel=*, lmdb.MDB_txn *txn=*
+        ) except *
 
         lmdb.MDB_dbi get_dbi(
-                self, unsigned char *dblabel=*, lmdb.MDB_txn *txn=*)
+                self, DbLabel dblabel=*, lmdb.MDB_txn *txn=*)
 
         void _put(
                 self, unsigned char *key, size_t key_size, unsigned char *data,
-                size_t data_size, unsigned char *dblabel=*,
+                size_t data_size, DbLabel dblabel=*,
                 lmdb.MDB_txn *txn=*, unsigned int flags=*) except *
 
         void _get_data(
                 self, unsigned char *key, size_t klen, lmdb.MDB_val *rv,
-                unsigned char *dblabel=*) except *
+                DbLabel dblabel=*) except *
 
         void _delete(
                 self, unsigned char *key, size_t klen,
-                unsigned char *dblabel=*) except *
+                DbLabel dblabel=*) except *
 
         dict _stats(self)
         #int _reader_list_callback(self, const unsigned char *msg, void *str_)
@@ -59,7 +62,7 @@ cdef class BaseLmdbStore:
     cpdef void destroy(self, _path=*) except *
     #cpdef get_dup_data(self, unsigned char *key, db=*)
     #cpdef get_all_pairs(self, db=*)
-    cpdef bytes get_data(self, key, dblabel=*)
+    cpdef bytes get_data(self, key, DbLabel dblabel=*)
     cpdef dict stats(self)
     cpdef int txn_id(self)
     #cpdef str reader_list(self)

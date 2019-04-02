@@ -26,7 +26,7 @@ cdef class Keyset:
     data block, so e.g. bulk removal and intersection are much more efficient
     than individual record operations.
     """
-    def __cinit__(self, size_t capacity=0, expand_ratio=.5):
+    def __cinit__(self, size_t capacity=0, expand_ratio=.75):
         """
         Initialize and allocate memory for the data set.
 
@@ -98,15 +98,18 @@ cdef class Keyset:
         return True
 
 
-    cdef void add(self, const TripleKey* val, bint check_dup=False) except *:
+    cdef inline int add(
+            self, const TripleKey* val, bint check_dup=False,
+            bint check_cap=True
+    ) except -1:
         """
         Add a triple key to the array.
         """
         # Check for deleted triples and optionally duplicates.
-        if val[0] == NULL_TRP or (check_dup and self.contains(val)):
-            return
+        if check_dup and self.contains(val):
+            return 1
 
-        if self.free_i >= self.capacity:
+        if check_cap and self.free_i >= self.capacity:
             if self.expand_ratio > 0:
                 # In some edge casees, a very small ratio may round down to a
                 # zero increase, so the baseline increase is 1 element.
@@ -115,8 +118,9 @@ cdef class Keyset:
                 raise MemoryError('No space left in key set.')
 
         self.data[self.free_i] = val[0]
-
         self.free_i += 1
+
+        return 0
 
 
     cdef void remove(self, const TripleKey* val) except *:
@@ -138,7 +142,7 @@ cdef class Keyset:
                 return
 
 
-    cdef bint contains(self, const TripleKey* val) nogil:
+    cdef bint contains(self, const TripleKey* val):
         """
         Whether a value exists in the set.
         """

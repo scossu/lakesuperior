@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, render_template
 from lakesuperior.api import admin as admin_api
 from lakesuperior.exceptions import (
     ChecksumValidationError, ResourceNotExistsError, TombstoneError)
+from lakesuperior.util.toolbox import fsize_fmt
 
 
 # Admin interface and REST API.
@@ -18,25 +19,6 @@ def stats():
     """
     Get repository statistics.
     """
-    def fsize_fmt(num, suffix='b'):
-        """
-        Format an integer into 1024-block file size format.
-
-        Adapted from Python 2 code on
-        https://stackoverflow.com/a/1094933/3758232
-
-        :param int num: Size value in bytes.
-        :param str suffix: Suffix label (defaults to ``b``).
-
-        :rtype: str
-        :return: Formatted size to largest fitting unit.
-        """
-        for unit in ['','K','M','G','T','P','E','Z']:
-            if abs(num) < 1024.0:
-                return f'{num:3.1f} {unit}{suffix}'
-            num /= 1024.0
-        return f'{num:.1f} Y{suffix}'
-
     repo_stats = admin_api.stats()
 
     return render_template(
