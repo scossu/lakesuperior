@@ -97,7 +97,8 @@ def run(
 
         if delete_container:
             print('Removing previously existing container.')
-            requests.delete(parent, headers={'prefer': 'no-tombstone'})
+            requests.delete(parent)
+            requests.delete(f'{parent}/fcr:tombstone')
         requests.put(parent)
 
     elif mode == 'python':
@@ -133,7 +134,6 @@ def run(
 
     try:
         for i in range(1, count + 1):
-            #import pdb; pdb.set_trace()
             if mode == 'ldp':
                 dest = (
                     f'{parent}/{uuid4()}' if method == 'put'
@@ -229,7 +229,7 @@ def _ingest_graph_py(method, dest, data, ref):
     if method == 'put':
         _, rsrc = rsrc_api.create_or_replace(dest, **kwargs)
     else:
-        _, rsrc = rsrc_api.create(dest, **kwargs)
+        rsrc = rsrc_api.create(dest, **kwargs)
 
     return rsrc.uid
 

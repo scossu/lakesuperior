@@ -63,7 +63,7 @@ nsc = {
 for pfx, ns in nsc.items():
     nsm.bind(pfx, ns)
 
-def random_graph(size, ref):
+def random_graph(size, ref, subj=''):
     '''
     Generate a synthetic graph.
 
@@ -74,24 +74,24 @@ def random_graph(size, ref):
     gr.namespace_manager = nsm
     for ii in range(floor(size / 4)):
         gr.add((
-            URIRef(''),
-            nsc['intp'][str(ii % size)],
+            URIRef(subj),
+            nsc['intp'][f'u{ii % size}'],
             URIRef(ref)
         ))
         gr.add((
-            URIRef(''),
-            nsc['litp'][str(ii % size)],
-            Literal(random_utf8_string(64))
-        ))
-        gr.add((
-            URIRef(''),
-            nsc['litp'][str(ii % size)],
-            Literal(random_utf8_string(64))
-        ))
-        gr.add((
-            URIRef(''),
-            nsc['extp'][str(ii % size)],
+            URIRef(subj),
+            nsc['extp'][f'u{ii % size}'],
             URIRef('http://example.edu/res/{}'.format(ii // 10))
+        ))
+        gr.add((
+            URIRef(subj),
+            nsc['litp'][f'l{ii % size}'],
+            Literal(random_utf8_string(64))
+        ))
+        gr.add((
+            URIRef(subj),
+            nsc['litp'][f'l{ii % size + size}'],
+            Literal(random_utf8_string(64))
         ))
 
     #print('Graph: {}'.format(gr.serialize(format='turtle').decode('utf-8')))
