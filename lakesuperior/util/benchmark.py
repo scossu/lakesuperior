@@ -26,6 +26,7 @@ def_endpoint = 'http://localhost:8000/ldp'
 def_ct = 10000
 def_parent = '/pomegranate'
 def_gr_size = 200
+def_img_size = 1024
 
 logging.disable(logging.WARN)
 
@@ -75,7 +76,19 @@ logging.disable(logging.WARN)
 
 @click.option(
     '--graph-size', '-s', default=def_gr_size,
-    help=f'Number of triples in each graph. Default: {def_gr_size}')
+    help=(
+        'Number of triples in each random graph, rounded down to a multiple '
+        f'of 8. Default: {def_gr_size}'
+    )
+)
+
+@click.option(
+    '--image-size', '-S', default=def_img_size,
+    help=(
+        'Size of random square image, in pixels for each dimension, rounded '
+        f'down to a multiple of 8. Default: {def_img_size}'
+    )
+)
 
 @click.option(
     '--resource-type', '-t', default='r',
@@ -90,7 +103,7 @@ logging.disable(logging.WARN)
 
 def run(
     mode, endpoint, count, parent, method, delete_container,
-    graph_size, resource_type, plot
+    graph_size, image_size, resource_type, plot
 ):
     """
     Run the benchmark.
@@ -123,6 +136,10 @@ def run(
     else:
         raise ValueError(f'Mode not supported: {mode}')
 
+    if resource_type != 'r':
+        # Set image parameters.
+        ims = max(image_size - image_size % 8, 128)
+        tn = ims // 32
 
     # URI used to establish an in-repo relationship. This is set to
     # the most recently created resource in each loop.
@@ -158,7 +175,7 @@ def run(
                 data = random_graph(graph_size, ref)
                 headers = {'content-type': 'text/turtle'}
             else:
-                img = random_image(name=uuid4(), ts=16, ims=512)
+                img = random_image(tn=tn, ims=ims)
                 data = img['content']
                 data.seek(0)
                 headers = {
@@ -172,12 +189,13 @@ def run(
                 tcounter = ckpt - ckpt
                 prev_tcounter = tcounter
 
+            #import pdb; pdb.set_trace()
             ref = (
-                _ingest_graph_ldp(
-                    method, dest, data.serialize(format='ttl'), headers, ref
+                _ingest_ldp(
+                    method, dest, data, headers, ref
                 )
                 if mode == 'ldp'
-                else _ingest_graph_py(method, dest, data, ref)
+                else _ingest_py(method, dest, data, ref)
             )
             tcounter += (arrow.utcnow() - ckpt)
 
@@ -216,16 +234,18 @@ def run(
         plt.show()
 
 
-def _ingest_graph_ldp(method, uri, data, headers, ref):
+def _ingest_ldp(method, uri, data, headers, ref):
     """
     Ingest the graph via HTTP/LDP.
     """
+    if isinstance(data, rdflib.Graph):
+        data = data.serialize(format='ttl')
     rsp = requests.request(method, uri, data=data, headers=headers)
     rsp.raise_for_status()
     return rsp.headers['location']
 
 
-def _ingest_graph_py(method, dest, data, ref):
+def _ingest_py(method, dest, data, ref):
     from lakesuperior.api import resource as rsrc_api
 
     kwargs = {}

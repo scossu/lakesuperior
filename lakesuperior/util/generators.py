@@ -37,8 +37,14 @@ def random_utf8_string(length):
     return ''.join(random.choice(alphabet) for i in range(length))
 
 
-def random_image(name, ts=8, ims=256):
-    imarray = numpy.random.rand(ts, ts, 3) * 255
+def random_image(tn=8, ims=256):
+    """
+    Generate a random square image with pretty color tiles.
+
+    :param int tn: Number of tiles in each dimension of the image.
+    :param int ims: Size in pixel of each dimension of the image.
+    """
+    imarray = numpy.random.rand(tn, tn, 3) * 255
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im = im.resize((ims, ims), Image.NEAREST)
 
