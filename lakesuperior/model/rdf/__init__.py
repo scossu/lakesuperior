@@ -8,8 +8,8 @@ of large RDF datasets.
 
 See individual modules for detailed documentation:
 
-- :py:module:`lakesuperior.model.rdf.term`
-- :py:module:`lakesuperior.model.rdf.triple`
-- :py:module:`lakesuperior.model.rdf.graph`
+- :py:mod:`lakesuperior.model.rdf.term`
+- :py:mod:`lakesuperior.model.rdf.triple`
+- :py:mod:`lakesuperior.model.rdf.graph`
 
 """

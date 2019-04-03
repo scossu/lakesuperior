@@ -69,7 +69,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'lakesuperior'
-copyright = '2018, Everybody & Nobody'
+copyright = '2019, Knowledge Transfer, LLC'
 author = 'Stefano Cossu'
 
 # The version info for the project you're documenting, acts as replacement for

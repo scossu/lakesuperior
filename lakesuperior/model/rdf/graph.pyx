@@ -524,7 +524,7 @@ cdef class Graph:
         Any and all of the lookup terms msy be ``None``.
 
         :rtype: Graph
-        "return: New Graph instance with matching triples.
+        :return: New Graph instance with matching triples.
         """
         cdef:
             Graph res_gr = self.empty_copy()
@@ -624,7 +624,7 @@ cdef class Graph:
 ## FACTORY METHODS
 
 def from_rdf(store=None, uri=None, *args, **kwargs):
-    """
+    r"""
     Create a Graph from a serialized RDF string.
 
     This factory function takes the same arguments as
@@ -634,9 +634,9 @@ def from_rdf(store=None, uri=None, *args, **kwargs):
 
     :param uri: see :py:meth:`Graph.__cinit__`.
 
-    :param *args: Positional arguments passed to RDFlib's ``parse``.
+    :param \*args: Positional arguments passed to RDFlib's ``parse``.
 
-    :param *kwargs: Keyword arguments passed to RDFlib's ``parse``.
+    :param \*\*kwargs: Keyword arguments passed to RDFlib's ``parse``.
 
     :rtype: Graph
     """

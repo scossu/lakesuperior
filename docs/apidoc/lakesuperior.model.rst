@@ -1,37 +1,29 @@
-lakesuperior\.model package
-===========================
+lakesuperior.model package
+==========================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    lakesuperior.model.rdf
+    lakesuperior.model.structures
 
 Submodules
 ----------
 
-lakesuperior\.model\.ldp\_factory module
-----------------------------------------
+lakesuperior.model.base module
+------------------------------
 
-.. automodule:: lakesuperior.model.ldp.ldp_factory
+.. automodule:: lakesuperior.model.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.model\.ldp\_nr module
+lakesuperior.model.callbacks module
 -----------------------------------
 
-.. automodule:: lakesuperior.model.ldp.ldp_nr
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lakesuperior\.model\.ldp\_rs module
------------------------------------
-
-.. automodule:: lakesuperior.model.ldp.ldp_rs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lakesuperior\.model\.ldpr module
---------------------------------
-
-.. automodule:: lakesuperior.model.ldp.ldpr
+.. automodule:: lakesuperior.model.callbacks
     :members:
     :undoc-members:
     :show-inheritance:

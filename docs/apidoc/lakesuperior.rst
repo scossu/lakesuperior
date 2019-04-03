@@ -7,74 +7,86 @@ Subpackages
 .. toctree::
 
     lakesuperior.api
+    lakesuperior.cy_include
+    lakesuperior.dictionaries
     lakesuperior.endpoints
     lakesuperior.messaging
     lakesuperior.model
     lakesuperior.store
+    lakesuperior.util
+    lakesuperior.wsgi
 
 Submodules
 ----------
 
-lakesuperior\.app module
-------------------------
+lakesuperior.app module
+-----------------------
 
 .. automodule:: lakesuperior.app
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.config\_parser module
------------------------------------
+lakesuperior.config\_parser module
+----------------------------------
 
 .. automodule:: lakesuperior.config_parser
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.env module
-------------------------
-
-.. automodule:: lakesuperior
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lakesuperior\.env\_setup module
--------------------------------
+lakesuperior.env\_setup module
+------------------------------
 
 .. automodule:: lakesuperior.env_setup
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.exceptions module
--------------------------------
+lakesuperior.exceptions module
+------------------------------
 
 .. automodule:: lakesuperior.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.globals module
-----------------------------
+lakesuperior.globals module
+---------------------------
 
 .. automodule:: lakesuperior.globals
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.migrator module
------------------------------
+lakesuperior.lsup\_admin module
+-------------------------------
+
+.. automodule:: lakesuperior.lsup_admin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lakesuperior.migrator module
+----------------------------
 
 .. automodule:: lakesuperior.migrator
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.toolbox module
+lakesuperior.profiler module
 ----------------------------
 
-.. automodule:: lakesuperior.toolbox
+.. automodule:: lakesuperior.profiler
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lakesuperior.server module
+--------------------------
+
+.. automodule:: lakesuperior.server
     :members:
     :undoc-members:
     :show-inheritance:

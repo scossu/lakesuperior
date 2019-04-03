@@ -1,5 +1,5 @@
-Configuration Reference
-=======================
+Application Configuration Reference
+===================================
 
-.. autoyaml:: .
+.. autoyaml:: application.yml
 

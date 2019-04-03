@@ -1,8 +1,9 @@
 About Lakesuperior
 ==================
 
-Lakesuperior is an alternative `Fedora
-Repository <http://fedorarepository.org>`__ implementation.
+Lakesuperior is a repository system to store binary files and their metadata as
+Linked Data. It is a `Fedora Repository <http://fedorarepository.org>`__
+implementation focused on efficiency, stability and integration with Python.
 
 Fedora is a mature repository software system historically adopted by
 major cultural heritage institutions. It exposes an
@@ -37,7 +38,7 @@ Key features
 -  No performance penalty for storing many resources under the same
    container; no `kudzu
    <https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml>`__
-   pairtree segmentation [#]_ 
+   pairtree segmentation.
 -  Extensible :doc:`provenance metadata <model>` tracking
 -  :doc:`Multi-modal access <architecture>`: HTTP
    (REST), command line interface and native Python API.
@@ -80,8 +81,5 @@ issues <https://github.com/scossu/lakesuperior/issues>`__ list for a
 rudimentary road map.
 
 --------------
-
-.. [#] However if your client splits pairtrees upstream, such as Hyrax does,
-   that obviously needs to change to get rid of the path segments.
 
 .. [#] Your mileage may vary depending on the variety of your triples.
