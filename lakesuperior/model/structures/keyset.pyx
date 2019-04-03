@@ -26,7 +26,7 @@ cdef class Keyset:
     data block, so e.g. bulk removal and intersection are much more efficient
     than individual record operations.
     """
-    def __cinit__(self, size_t capacity=0, expand_ratio=.75):
+    def __cinit__(self, size_t capacity=0, float expand_ratio=.75):
         """
         Initialize and allocate memory for the data set.
 
@@ -58,7 +58,7 @@ cdef class Keyset:
         """
         Place the cursor at a certain index, 0 by default.
         """
-        self.cur = idx
+        self.cur = min(idx, self.free_i)
 
 
     cdef size_t size(self):
