@@ -1,5 +1,10 @@
 from lakesuperior.model.base cimport Key, TripleKey
 
+__doc__ = """
+Callback methods for various loop functions.
+"""
+
+
 cdef inline bint lookup_sk_cmp_fn(
     const TripleKey* spok, const Key k1, const Key k2
 ):

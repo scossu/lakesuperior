@@ -14,23 +14,35 @@ logger = logging.getLogger(__name__)
 
 cdef class Keyset:
     """
-    Pre-allocated set of ``TripleKey``s.
+    Memory-contiguous array of ``TripleKey``s.
+
+    The keys are ``size_t`` values that are linked to terms in the triplestore.
+    Therefore, a triplestore lookup is necessary to view or use the terms, but
+    several types of manipulation and filtering can be done very efficiently
+    without looking at the term values.
 
     The set is not checked for duplicates all the time: e.g., when creating
-    from a single set of triples coming from the store, the duplicate check
-    is turned off for efficiency. When merging with other sets, duplicate
-    checking should be turned on.
+    from a single set of triples coming from the store, the duplicate check is
+    turned off for efficiency and because the source is guaranteed to provide
+    unique values. When merging with other sets, duplicate checking should be
+    turned on.
 
-    Since this class is based on a contiguous block of memory, it is best to
-    do very little manipulation. Several operations involve copying the whole
+    Since this class is based on a contiguous block of memory, it is best not
+    to do targeted manipulation. Several operations involve copying the whole
     data block, so e.g. bulk removal and intersection are much more efficient
     than individual record operations.
+
     """
     def __cinit__(self, size_t capacity=0, float expand_ratio=.75):
         """
         Initialize and allocate memory for the data set.
 
         :param size_t capacity: Number of elements to be accounted for.
+
+        :param float expand_ratio: by how much, relatively to the current
+            size, the memory block is expanded when full. A value of 0
+            disables automatic expansion, and inserting beyond capacity will
+            raise an error.
         """
         self.capacity = capacity
         self.expand_ratio = expand_ratio
@@ -56,7 +68,11 @@ cdef class Keyset:
 
     cdef void seek(self, size_t idx=0):
         """
-        Place the cursor at a certain index, 0 by default.
+        Place the cursor at a given index, 0 by default.
+
+        :param size_t idx: Position to place the cursor. The position can be
+            at maximum the next unused slot, any value higher than that will
+            position the cursor at the next unused slot.
         """
         self.cur = min(idx, self.free_i)
 
@@ -99,8 +115,7 @@ cdef class Keyset:
 
 
     cdef inline int add(
-            self, const TripleKey* val, bint check_dup=False,
-            bint check_cap=True
+        self, const TripleKey* val, bint check_dup=False, bint check_cap=True
     ) except -1:
         """
         Add a triple key to the array.
@@ -111,9 +126,12 @@ cdef class Keyset:
 
         if check_cap and self.free_i >= self.capacity:
             if self.expand_ratio > 0:
-                # In some edge casees, a very small ratio may round down to a
-                # zero increase, so the baseline increase is 1 element.
-                self.resize(1 + <size_t>(self.capacity * (1 + self.expand_ratio)))
+                # In some casees, a very small initial value and ratio may
+                # round down to a zero increase, so the baseline increase is
+                # 1 element.
+                self.resize(
+                    1 + <size_t>(self.capacity * (1 + self.expand_ratio))
+                )
             else:
                 raise MemoryError('No space left in key set.')
 

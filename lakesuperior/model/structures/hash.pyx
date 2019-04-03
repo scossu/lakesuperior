@@ -4,6 +4,14 @@ from libc.string cimport memcpy
 from lakesuperior.model.base cimport Buffer
 from lakesuperior.cy_include cimport spookyhash as sph
 
+__doc__ = """
+C hashing functions used with Cython models.
+
+The hashing algorithm is `SpookyHash
+<http://burtleburtle.net/bob/hash/spooky.html>`_ which produces up to 128-bit
+(16-byte) digests.
+"""
+
 
 memcpy(&term_hash_seed32, TERM_HASH_SEED, HLEN_32)
 memcpy(&term_hash_seed64_1, TERM_HASH_SEED, HLEN_64)
@@ -31,10 +39,6 @@ cdef inline int hash64(const Buffer *message, Hash64 *hash) except -1:
 cdef inline int hash128(const Buffer *message, Hash128 *hash) except -1:
     """
     Get the hash value of a byte string with a defined size.
-
-    The hashing algorithm is `SpookyHash
-    <http://burtleburtle.net/bob/hash/spooky.html>`_ which produces 128-bit
-    (16-byte) digests.
 
     Note that this returns a char array while the smaller functions return
     numeric types (uint, ulong).
