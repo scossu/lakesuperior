@@ -1,5 +1,16 @@
 #from lakesuperior.store.ldp_rs cimport term
-#
+
+__doc__ = """
+Triple model.
+
+This is a very light-weight implementation of a Triple model, available as
+C structures only. Two types of structures are defined: ``Triple``, with
+pointers to :py:model:`lakesuperior.model.rdf.term` objects, and
+``BufferTriple``, with pointers to byte buffers of serialized terms.
+
+"""
+
+
 #cdef int serialize(tuple trp, tpl.tpl_bin *data) except -1:
 #    """
 #    Serialize a triple expressed as a tuple of RDFlib terms.

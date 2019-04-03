@@ -21,6 +21,22 @@ DEF LSUP_TERM_STRUCT_PK_FMT = b'S(' + LSUP_TERM_PK_FMT + b')'
 #    b'^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?'
 #)
 
+__doc__ = """
+Term model.
+
+``Term`` is not defined as a Cython or Python class. It is a C structure,
+hence only visible by the Cython layer of the application.
+
+Terms can be converted from/to RDFlib terms, and deserialized from, or
+serialized to, binary buffer structures. This is the form that terms are stored
+in the data store.
+
+If uses require a public API, a proper Term Cython class with a Python API
+could be developed in the future.
+
+"""
+
+
 #cdef char* ptn = URI_REGEX_STR
 #regcomp(&uri_regex, ptn, REG_NOSUB)
 # Compile with no catch groups.

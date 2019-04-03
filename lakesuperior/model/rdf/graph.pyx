@@ -20,6 +20,11 @@ from lakesuperior.model.structures.keyset cimport Keyset
 
 logger = logging.getLogger(__name__)
 
+__doc__ = """
+Graph class and factories.
+
+"""
+
 
 cdef class Graph:
     """
@@ -38,6 +43,14 @@ cdef class Graph:
     must be looked up. This can be done in a different transaction than the
     one used to create or otherwise manipulate the graph.
 
+    Similarly, any operation such as adding, changing or looking up triples
+    needs a store transaction.
+
+    Boolean operations between graphs (union, intersection, etc) and other
+    operations that don't require an explicit term as an input or output
+    (e.g. ``__repr__`` or size calculation) don't require a transaction to
+    be opened.
+
     Every time a term is looked up or added to even a temporary graph, that
     term is added to the store and creates a key. This is because in the
     majority of cases that term is likely to be stored permanently anyway, and
@@ -45,8 +58,15 @@ cdef class Graph:
     function to remove all orphaned terms (not in any triple or context index)
     can be later devised to compact the database.
 
-    An instance of this class can also be converted to a ``rdflib.Graph``
-    instance.
+    Even though any operation may involve adding new terms to the store, a
+    read-only transaction is sufficient. Lakesuperior will open a write
+    transaction automatically only if necessary and only for the time needed to
+    enter the new terms.
+
+    An instance of this class can be created from a RDF python string with the
+    :py:meth:`~lakesuperior.model.rdf.graph.from_rdf` factory function or
+    converted to a ``rdflib.Graph`` instance.
+
     """
 
     def __cinit__(
@@ -54,6 +74,10 @@ cdef class Graph:
     ):
         """
         Initialize the graph, optionally from Python/RDFlib data.
+
+        An instance of this class is always tied to an underlying store because
+        it only keeps index keys of the graph terms. This allows for very fast
+        `lookup and manipulation sucha as boolean operations.
 
         When initializing a non-empty Graph, a store transaction must be
         opened::
@@ -67,14 +91,6 @@ cdef class Graph:
             >>> trp = {(URIRef('urn:s:0'), URIRef('urn:p:0'), URIRef('urn:o:0'))}
             >>> with store.txn_ctx():
             >>>     gr = Graph(store, data=trp)
-
-        Similarly, any operation such as adding, changing or looking up triples
-        needs a store transaction.
-
-        Note that, even though any operation may involve adding new terms to
-        the store, a read-only transaction is sufficient. Lakesuperior will
-        open a write transaction automatically only if necessary and only for
-        the time needed to enter the new terms.
 
         :type store: lakesuperior.store.ldp_rs.lmdb_triplestore.LmdbTriplestore
         :param store: Triplestore where keys are mapped to terms. By default
@@ -140,19 +156,32 @@ cdef class Graph:
 
     property txn_ctx:
         def __get__(self):
-            """ Expose underlying store's ``txn_ctx``. """
+            """
+            Expose underlying store's ``txn_ctx`` context manager.
+
+            See
+            :py:meth:`lakesuperior.store.base_lmdb_Store.BaseLmdbStore.txn_ctx`
+            """
             return self.store.txn_ctx
 
 
     ## MAGIC METHODS ##
 
     def __len__(self):
-        """ Number of triples in the graph. """
+        """
+        Number of triples in the graph.
+
+        :rtype: int
+        """
         return self.keys.size()
 
 
     def __richcmp__(self, other, int op):
-        """ Comparators between ``Graph`` instances. """
+        """
+        Comparators between ``Graph`` instances.
+
+        Only equality and non-equality are supprted.
+        """
         if op == Py_LT:
             raise NotImplementedError()
         elif op == Py_EQ:
@@ -187,12 +216,12 @@ cdef class Graph:
 
 
     def __add__(self, other):
-        """ Alias for set-theoretical union. """
+        """ Alias for :py:meth:`__or__`. """
         return self.__or__(other)
 
 
     def __iadd__(self, other):
-        """ Alias for in-place set-theoretical union. """
+        """ Alias for :py:meth:`__ior__`. """
         return self.__ior__(other)
 
 
@@ -280,6 +309,7 @@ cdef class Graph:
 
     def __iter__(self):
         """ Graph iterator. It iterates over the set triples. """
+        # TODO Could use a faster method.
         yield from self.data
 
 
@@ -311,7 +341,7 @@ cdef class Graph:
 
 
     def __hash__(self):
-        """ TODO Not that great of a hash. """
+        """ FIXME this is a joke of a hash. """
         return id(self)
 
 
