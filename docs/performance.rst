@@ -119,8 +119,8 @@ Lakesuperior 1.0a20 Python API   53ms (126%)    XXms (XXX%)    789Mb (21%)   381
 System                           PUT              POST             Store          GET              SPARQL Query  
 ===============================  ===============  ===============  =============  ===============  ==============
 FCREPO / Modeshape 4.7.5         500+ms*          65ms (100%)\*\*  12Gb (100%)    3m41s (100%)     N/A           
-Lakesuperior 1.0a20 REST API     104ms (100%)     123ms (189%)     8.7Gb (72%)    30s (14%)        XXXXXXXXs     
-Lakesuperior 1.0a20 Python API   69ms (60%)       XXms  (XXX%)     8.7Gb (72%)    6s (2.7%)        XXXXXXXs\*\*\*
+Lakesuperior 1.0a20 REST API     104ms (100%)     123ms (189%)     8.7Gb (72%)    30s (14%)        19.3s (100%)  
+Lakesuperior 1.0a20 Python API   69ms (60%)       58ms (89%)       8.7Gb (72%)    6s (2.7%)        9.17s (47%)
 ===============================  ===============  ===============  =============  ===============  ==============
 
 \* POST was stopped at 30K resources after the ingest time reached >1s per
