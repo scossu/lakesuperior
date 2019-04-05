@@ -1,6 +1,11 @@
 lakesuperior.util package
 =========================
 
+.. automodule:: lakesuperior.util
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -45,10 +50,3 @@ lakesuperior.util.toolbox module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.util
-    :members:
-    :undoc-members:
-    :show-inheritance:

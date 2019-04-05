@@ -49,6 +49,7 @@ Indices and tables
     Content Model <model>
     Storage Implementation <storage>
     Indexing Strategy <indexing_strategy>
+    Scaling Down <rpi>
 
 * :ref:`genindex`
 * :ref:`modindex`

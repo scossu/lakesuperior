@@ -1,6 +1,11 @@
 lakesuperior.api package
 ========================
 
+.. automodule:: lakesuperior.api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -29,10 +34,3 @@ lakesuperior.api.resource module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.api
-    :members:
-    :undoc-members:
-    :show-inheritance:

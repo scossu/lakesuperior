@@ -1,6 +1,11 @@
 lakesuperior.model.rdf package
 ==============================
 
+.. automodule:: lakesuperior.model.rdf
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -29,10 +34,3 @@ lakesuperior.model.rdf.triple module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.model.rdf
-    :members:
-    :undoc-members:
-    :show-inheritance:

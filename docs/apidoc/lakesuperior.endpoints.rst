@@ -1,6 +1,11 @@
 lakesuperior.endpoints package
 ==============================
 
+.. automodule:: lakesuperior.endpoints
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -37,10 +42,3 @@ lakesuperior.endpoints.query module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.endpoints
-    :members:
-    :undoc-members:
-    :show-inheritance:

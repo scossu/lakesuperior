@@ -1,6 +1,11 @@
 lakesuperior.messaging package
 ==============================
 
+.. automodule:: lakesuperior.messaging
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -29,10 +34,3 @@ lakesuperior.messaging.messenger module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.messaging
-    :members:
-    :undoc-members:
-    :show-inheritance:

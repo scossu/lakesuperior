@@ -1,6 +1,11 @@
 lakesuperior.store package
 ==========================
 
+.. automodule:: lakesuperior.store
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -29,10 +34,3 @@ lakesuperior.store.metadata\_store module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.store
-    :members:
-    :undoc-members:
-    :show-inheritance:

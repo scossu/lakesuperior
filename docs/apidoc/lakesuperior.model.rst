@@ -1,6 +1,11 @@
 lakesuperior.model package
 ==========================
 
+.. automodule:: lakesuperior.model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -29,10 +34,3 @@ lakesuperior.model.callbacks module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.model
-    :members:
-    :undoc-members:
-    :show-inheritance:

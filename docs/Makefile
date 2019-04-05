@@ -3,10 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-# Workaround to prevent lmdb from throwing an exception when loaded from Sphinx
-# Does not work with readthedocs unfortunately.
-#SPHINXBUILD   = python -m sphinx
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = python -m sphinx
 SPHINXPROJ    = lakesuperior
 SOURCEDIR     = .
 BUILDDIR      = _build

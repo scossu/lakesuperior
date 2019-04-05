@@ -4,12 +4,12 @@ Lakesuperior on a Raspberry Pi
 .. figure:: assets/fedora_rpi.jpg
    :alt: Raspberry Pi on pinboard. Fedora inside.
 
-   Look, a Fedora!
+   Look, a Fedora implementation!
 
 **Experiment in Progress**
 
 Lakesuperior has been successfully installed and ran on a Raspberry Pi 3 board.
-The software was compiled on Alpine Linux using `musl <http://musl.libc.org>`__
+The software was compiled on Alpine Linux using `musl <http://musl-libc.org>`__
 C libraries. (it also run fine with musl on more conventional hardware, but
 performance benchmarks vis-a-vis libc have not been performed yet.)
 

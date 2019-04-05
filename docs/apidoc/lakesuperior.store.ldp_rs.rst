@@ -1,6 +1,11 @@
 lakesuperior.store.ldp\_rs package
 ==================================
 
+.. automodule:: lakesuperior.store.ldp_rs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -29,10 +34,3 @@ lakesuperior.store.ldp\_rs.rsrc\_centric\_layout module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.store.ldp_rs
-    :members:
-    :undoc-members:
-    :show-inheritance:

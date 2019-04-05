@@ -20,17 +20,6 @@
 import sys
 
 from os import path
-from unittest.mock import MagicMock
-
-class MockModule(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-# LMDB raises an issue if imported by Sphinx. This bypasses the issue.
-# https://github.com/dw/py-lmdb/issues/172
-MOCK_MODULES = ['lmdb']
-sys.modules.update((mod_name, MockModule()) for mod_name in MOCK_MODULES)
 
 import lakesuperior
 import lakesuperior.env_setup

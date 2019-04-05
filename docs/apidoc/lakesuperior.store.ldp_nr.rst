@@ -1,6 +1,11 @@
 lakesuperior.store.ldp\_nr package
 ==================================
 
+.. automodule:: lakesuperior.store.ldp_nr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -21,10 +26,3 @@ lakesuperior.store.ldp\_nr.default\_layout module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.store.ldp_nr
-    :members:
-    :undoc-members:
-    :show-inheritance:

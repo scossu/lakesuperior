@@ -1,6 +1,11 @@
 lakesuperior package
 ====================
 
+.. automodule:: lakesuperior
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -92,10 +97,3 @@ lakesuperior.server module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior
-    :members:
-    :undoc-members:
-    :show-inheritance:

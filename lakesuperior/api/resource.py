@@ -31,7 +31,8 @@ Quickstart::
     >>> # Get root resource.
     >>> rsrc = resource.get('/')
     >>> # Dump graph.
-    >>> set(rsrc.imr)
+    >>> with rsrc.imr.store.txn_ctx():
+    >>>     print({*rsrc.imr.as_rdflib()})
     {(rdflib.term.URIRef('info:fcres/'),
       rdflib.term.URIRef('http://purl.org/dc/terms/title'),
       rdflib.term.Literal('Repository Root')),

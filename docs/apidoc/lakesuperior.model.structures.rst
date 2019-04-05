@@ -1,6 +1,11 @@
 lakesuperior.model.structures package
 =====================================
 
+.. automodule:: lakesuperior.model.structures
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -21,10 +26,3 @@ lakesuperior.model.structures.keyset module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.model.structures
-    :members:
-    :undoc-members:
-    :show-inheritance:

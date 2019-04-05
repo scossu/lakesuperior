@@ -1,6 +1,11 @@
 lakesuperior.dictionaries package
 =================================
 
+.. automodule:: lakesuperior.dictionaries
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -21,10 +26,3 @@ lakesuperior.dictionaries.srv\_mgd\_terms module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.dictionaries
-    :members:
-    :undoc-members:
-    :show-inheritance:

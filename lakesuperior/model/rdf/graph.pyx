@@ -525,6 +525,7 @@ cdef class Graph:
 
         :rtype: Graph
         :return: New Graph instance with matching triples.
+
         """
         cdef:
             Graph res_gr = self.empty_copy()
@@ -639,6 +640,7 @@ def from_rdf(store=None, uri=None, *args, **kwargs):
     :param \*\*kwargs: Keyword arguments passed to RDFlib's ``parse``.
 
     :rtype: Graph
+
     """
     gr = rdflib.Graph().parse(*args, **kwargs)
 

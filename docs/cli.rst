@@ -30,6 +30,10 @@ was installed in (if it was)—i.e.::
 
 must be run before running the server.
 
+Note that if ``app_mode`` is set to ``prod`` in :doc:`application.yml
+<config>`, the server will just print the configuration and immediately go in
+the background without logging anything on screen (daemon mode).
+
 In the case an init script is used, ``coilmq`` (belonging to a 3rd party
 package) needs to be launched as well; unless a message broker is already set
 up, or if messaging is disabled in the configuration.
