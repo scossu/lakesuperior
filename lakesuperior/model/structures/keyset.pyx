@@ -154,7 +154,6 @@ cdef class Keyset:
 
         self.seek()
         while self.get_next(&stored_val):
-            #logger.info(f'Looking up for removal: {stored_val}')
             if memcmp(val, stored_val, TRP_KLEN) == 0:
                 memcpy(&stored_val, NULL_TRP, TRP_KLEN)
                 return

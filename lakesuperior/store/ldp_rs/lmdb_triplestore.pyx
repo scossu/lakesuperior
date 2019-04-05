@@ -477,10 +477,10 @@ cdef class LmdbTriplestore(BaseLmdbStore):
         dbl_key_v.mv_size = DBL_KLEN
 
         #logger.debug('Start indexing: {}.'.format(spok[: TRP_KLEN]))
-        if op == IDX_OP_REMOVE:
-            logger.debug(f'Remove {spok[0]} from indices.')
-        else:
-            logger.debug(f'Add {spok[0]} to indices.')
+        #if op == IDX_OP_REMOVE:
+        #    logger.debug(f'Remove {spok[0]} from indices.')
+        #else:
+        #    logger.debug(f'Add {spok[0]} to indices.')
 
         while i < 3:
             cur1 = self._cur_open(lookup_indices[i]) # s:po, p:so, o:sp
@@ -906,7 +906,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
             lmdb.MDB_val key_v, data_v
             TripleKey spok
 
-        logger.debug(f'lookup 1bound: {idx}, {luk}')
+        #logger.debug(f'lookup 1bound: {idx}, {luk}')
 
         term_order = lookup_ordering[idx]
         icur = self._cur_open(lookup_indices[idx])
@@ -1339,7 +1339,7 @@ cdef class LmdbTriplestore(BaseLmdbStore):
 
         key_v.mv_data = &new_idx
         logger.debug(f'New index: {new_idx}')
-        logger.debug('Key data inserted: {}'.format((<unsigned char*>key_v.mv_data)[:KLEN]))
+        #logger.debug('Key data inserted: {}'.format((<unsigned char*>key_v.mv_data)[:KLEN]))
         key_v.mv_size = KLEN
         data_v.mv_data = value.addr
         data_v.mv_size = value.sz
