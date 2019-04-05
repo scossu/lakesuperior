@@ -75,27 +75,39 @@ This command is used to run performance tests in a predictable way.
 
 The command line options can be queried with the ``--help`` option::
 
-   Usage: lsup-benchmark [OPTIONS]
+    Usage: lsup-benchmark [OPTIONS]
 
-   Options:
-   -e, --endpoint TEXT       LDP endpoint. Default: http://localhost:8000/ldp
-   -c, --count INTEGER       Number of resources to ingest. Default: {def_ct}
-   -p, --parent TEXT         Path to the container resource under which the new
-                             resources will be created. It must begin with a
-                             slash (`/`) character. Default: /pomegranate
-   -d, --delete-container    Delete container resource and its children if
-                             already existing. By default, the container is not
-                             deleted and new resources are added to it.
-   -m, --method TEXT         HTTP method to use. Case insensitive. Either PUT
-                             or POST. Default: PUT
-   -s, --graph-size INTEGER  Number of triples in each graph. Default: 200
-   -t, --resource-type TEXT  Type of resources to ingest. One of `r` (only LDP-
-                             RS, i.e. RDF), `n` (only  LDP-NR, i.e. binaries),
-                             or `b` (50/50% of both). Default: r
-   -p, --plot                Plot a graph of ingest timings. The graph figure
-                             is displayed on screen with basic manipulation and
-                             save options.
-   --help                    Show this message and exit.
+      Run the benchmark.
+
+    Options:
+      -m, --mode TEXT           Mode of ingestion. One of `ldp`, `python`. With
+                                the former, the HTTP/LDP web server is used. With
+                                the latter, the Python API is used, in which case
+                                the server need not be running. Default:
+                                http://localhost:8000/ldp
+      -e, --endpoint TEXT       LDP endpoint. Only meaningful with `ldp` mode.
+                                Default: http://localhost:8000/ldp
+      -c, --count INTEGER       Number of resources to ingest. Default: {def_ct}
+      -p, --parent TEXT         Path to the container resource under which the new
+                                resources will be created. It must begin with a
+                                slash (`/`) character. Default: /pomegranate
+      -d, --delete-container    Delete container resource and its children if
+                                already existing. By default, the container is not
+                                deleted and new resources are added to it.
+      -X, --method TEXT         HTTP method to use. Case insensitive. Either PUT
+                                or POST. Default: PUT
+      -s, --graph-size INTEGER  Number of triples in each random graph, rounded
+                                down to a multiple of 8. Default: 200
+      -S, --image-size INTEGER  Size of random square image, in pixels for each
+                                dimension, rounded down to a multiple of 8.
+                                Default: 1024
+      -t, --resource-type TEXT  Type of resources to ingest. One of `r` (only LDP-
+                                RS, i.e. RDF), `n` (only  LDP-NR, i.e. binaries),
+                                or `b` (50/50% of both). Default: r
+      -P, --plot                Plot a graph of ingest timings. The graph figure
+                                is displayed on screen with basic manipulation and
+                                save options.
+      --help                    Show this message and exit.
 
 The benchmark tool is able to create RDF sources, or non-RDF, or an equal mix
 of them, via POST or PUT, in a given lDP endpoint. It runs single threaded.
@@ -109,8 +121,8 @@ The non-RDF sources are randomly generated 1024x1024 pixel PNG images.
 You are warmly encouraged to run the script and share the performance results (
 *TODO add template for posting results*).
 
-``profiler``
-------------
+``lsup-profiler``
+-----------------
 
 This command launches a single-threaded HTTP server (Flask) on port 5000 that
 logs profiling information. This is useful for analyzing application
@@ -121,3 +133,13 @@ For more information, consult the `Python profilers guide
 
 Do not launch this while a WSGI server (``fcrepo``) is already running, because
 that also launches a Flask server on port 5000.
+
+Locust (experimental)
+---------------------
+
+`Locust <http://locust.io>`__ is an HTTP load tester. It can launch many
+requests on an HTTP endpoint. A rudimentary Locust file is currently available.
+
+To run Locust against Lakesuperior or FCREPO, run in the project root::
+
+    locust -f lakesuperior/util/locustfile.py http://localhost:8000/

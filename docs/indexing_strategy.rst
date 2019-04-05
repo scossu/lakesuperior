@@ -335,3 +335,5 @@ second ("filter") term. This approach, instead, only looks up the relevant
 keys and composes the results. It is slower on writes and nearly doubles the
 size of the indices, but it makes reads faster and more memory-efficient.
 
+Alpha20 uses the same strategy but keys are treated as ``size_t`` integers
+rather than ``char*`` strings, thus making the code much cleaner.

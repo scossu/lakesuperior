@@ -1,8 +1,8 @@
 About Lakesuperior
 ==================
 
-Lakesuperior is a repository system to store binary files and their metadata as
-Linked Data. It is a `Fedora Repository <http://fedorarepository.org>`__
+Lakesuperior is a repository system that stores binary files and their metadata
+as Linked Data. It is a `Fedora Repository <http://fedorarepository.org>`__
 implementation focused on efficiency, stability and integration with Python.
 
 Fedora is a mature repository software system historically adopted by
@@ -13,8 +13,7 @@ any type of binary files and their metadata in Linked Data format.
 Guiding Principles
 ------------------
 
-Lakesuperior aims at being an uncomplicated, efficient Fedora 4
-implementation.
+Lakesuperior aims at being an efficient and flexible Fedora 4 implementation.
 
 Its main goals are:
 
@@ -28,9 +27,7 @@ Its main goals are:
 Key features
 ------------
 
--  Drop-in replacement for Fedora4 (with some
-   :doc:`caveats <fcrepo4_deltas>`); currently being tested
-   with Hyrax 2
+-  Drop-in replacement for Fedora4 (with some :doc:`caveats <fcrepo4_deltas>`)
 -  Very stable persistence layer based on
    `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
    ACID-compliant writes guarantee consistency of data.
@@ -42,12 +39,11 @@ Key features
 -  Extensible :doc:`provenance metadata <model>` tracking
 -  :doc:`Multi-modal access <architecture>`: HTTP
    (REST), command line interface and native Python API.
--  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick [#]_.
+-  Fits in a pocket: you can carry 64M triples in a 32Gb memory stick [#]_.
 
 Implementation of the official `Fedora API
-specs <https://fedora.info/spec/>`__ (Fedora 5.x and beyond) is not
-foreseen in the short term, however it would be a natural evolution of
-this project if it gains support.
+specs <https://fedora.info/spec/>`__ and OCFL are currently being
+considered as the next major development steps.
 
 Please make sure you read the :doc:`Delta document <fcrepo4_deltas>` for
 divergences with the official Fedora4 implementation.

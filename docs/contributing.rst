@@ -2,7 +2,7 @@ Contributing to Lakesuperior
 ============================
 
 Lakesuperior has been so far a single person’s off-hours project (with much
-very valuable input from several sides). In order to turn into anything close
+valuable input from several sides). In order to turn into anything close
 to a Beta release and eventually to a production-ready implementation, it
 needs some community love.
 
@@ -19,13 +19,30 @@ To set up the software for developing code, documentation, or tests::
 
     mkdir lsup # or whatever you may want to call it
     cd lsup
-    python3 -m venv .
+    python3 -m venv venv
     source bin/activate
-    git clone https://github.com/scossu/lakesuperior.git app
-    cd app
+    git clone --recurse-submodules https://github.com/scossu/lakesuperior.git src
+    cd src
     pip install -e .
 
-This will allow to alter the code without having to recompile it after changes.
+This will allow to alter the code without having to re-run ``pip install``
+after changes (unless one is changing the Cython modules; see below).
+
+Modifying Cython Modules
+------------------------
+
+Cython files must be recompiled into C files and then into binary files every
+time they are changed. To recompile Lakesuperior modules, run::
+
+    python setup.py --build_ext --inplace
+
+For a faster compilation while testing, the environment variable ``CFLAGS``
+can set to ``-O0`` to turn off compiler optimization. The runtime code may run
+slower so this is not recommended for performance benchmarking.
+
+Refer to the `Cython documentation
+<http://docs.cython.org/en/latest/src/userguide/source_files_and_compilation.html>`__
+for a detailed description of the Cython compilation process.
 
 Contribution Guidelines
 -----------------------
@@ -54,3 +71,6 @@ addition to the code, please fork the repo, create a new branch for your topic
 and open a pull request against development. In case you find a critical bug,
 a hotfix can be proposed against master if agreed in the related issue
 discussion.
+
+Last but not least, read carefully the `Code of
+Conduct <../../code_of_conduct.md>`__.

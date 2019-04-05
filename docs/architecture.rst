@@ -1,9 +1,18 @@
 Lakesuperior Architecture
 =========================
 
-Lakesuperior is written in Python. It is not excluded that parts of the
-code may be rewritten in `Cython <http://cython.readthedocs.io/>`__ for
-performance.
+Lakesuperior is written in Python and `Cython
+<http://cython.readthedocs.io/>`__; the latter for lower-level components that
+interface with C basic data structures for maximum efficiency.
+
+Aside from an optional dependency on a message queue server, Lakesuperior aims
+at being self-contained. All persistence is done on an embedded database. This
+allows a minimum memory and CPU footprint, and a high degree of scalability,
+from :doc:`single-board computers <rpi>` to multi-core, high-load servers.
+
+Inefficient applications "get the job done" by burning through CPU cycles,
+memory, storage and electricity, and spew out great amounts of carbon and
+digits on cloud provider bills. Lakesuperior strives to be mindful of that.
 
 Multi-Modal Access
 ------------------
@@ -18,7 +27,8 @@ Lakesuperior services and data are accessible in multiple ways:
    the same methods available to the two methods above in a programmatic
    way. It is possible to write Python plugins or even to embed
    Lakesuperior in a Python application, even without running a web
-   server.
+   server. Also, only this way it is possible to access some of the lower-level
+   application layers that allow to skirt much heavy-handed data processing.
 
 Architecture Overview
 ---------------------
