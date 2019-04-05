@@ -76,6 +76,16 @@ Lakesuperior is in **alpha** status. Please see the `project
 issues <https://github.com/scossu/lakesuperior/issues>`__ list for a
 rudimentary road map.
 
---------------
+Acknowledgements & Caveat
+-------------------------
+
+Most of this code has been written on the Chicago CTA Blue Line train and, more
+recently, on the Los Angeles Metro 734 bus. The author would like to thank
+these companies for providing an office on wheels for this project.
+
+Potholes on Sepulveda street may have caused bugs and incorrect documentation.
+Please report them if you find any.
+
+-------------------
 
 .. [#] Your mileage may vary depending on the variety of your triples.
