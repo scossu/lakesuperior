@@ -7,7 +7,7 @@
 #   Set app_mode to either 'prod', 'test' or 'dev'.
 #   'prod' is normal running mode. 'test' is used for running test suites.
 #   'dev' is similar to normal mode but with reload and debug enabled.
-app_mode: 'prod'
+app_mode: 'dev'
 
 ### Base data directory.
 #   This contains both volatile files such as PID files,

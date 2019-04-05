@@ -6,6 +6,7 @@ import yaml
 from lakesuperior.config_parser import (
         config as main_config, default_config_dir)
 
+
 __doc__ = """
 GUnicorn WSGI configuration.
 
@@ -71,7 +72,7 @@ class __Defaults:
 
 
 __def = __Defaults()
-__app_mode = __def.config.get('app_mode', __def.app_mode)
+__app_mode = main_config['application'].get('app_mode', __def.app_mode)
 
 # Exposed Gunicorn parameters begin here.
 
@@ -95,3 +96,7 @@ pidfile = os.path.join(__def.run_dir, 'fcrepo.pid')
 accesslog = os.path.join(__def.log_dir, 'gunicorn-access.log')
 errorlog = os.path.join(__def.log_dir, 'gunicorn-error.log')
 
+print('\nLoading WSGI server with configuration:')
+for prop in __all__:
+    print(f'{prop:>16} = {locals().get(prop)}')
+print('\n')
