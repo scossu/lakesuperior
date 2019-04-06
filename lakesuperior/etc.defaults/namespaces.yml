@@ -2,13 +2,7 @@
 # are defined in the core application configuration and will OVERRIDE duplicate
 # prefixes defined here.
 
-aic : http://definitions.artic.edu/ontology/1.0/
-aicpc : http://definitions.artic.edu/publish_channel/
-aictype : http://definitions.artic.edu/ontology/1.0/type/
 dctype : http://purl.org/dc/dcmitype/
-exif : http://www.w3.org/2003/12/exif/ns#
-geo : http://www.w3.org/2003/01/geo/wgs84_pos#
-hw : http://projecthydra.org/works/models#
 oa : http://www.w3.org/ns/oa#
 ore : http://www.openarchives.org/ore/terms/
 rel : http://id.loc.gov/vocabulary/relators/
