@@ -1,0 +1,10 @@
+# Place CUSTOM namespace prefix definitions here. Internal FCREPO definitions
+# are defined in the core application configuration and will OVERRIDE duplicate
+# prefixes defined here.
+
+dctype : http://purl.org/dc/dcmitype/
+oa : http://www.w3.org/ns/oa#
+ore : http://www.openarchives.org/ore/terms/
+rel : http://id.loc.gov/vocabulary/relators/
+skos : http://www.w3.org/2004/02/skos/core
+

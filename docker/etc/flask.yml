@@ -1,0 +1,6 @@
+# Set to 1 in development.
+DEBUG: 1
+# Generate key with:
+# >>> import os
+# >>> os.urandom(24)
+SECRET_KEY: <set me>

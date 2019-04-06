@@ -1,0 +1,10 @@
+# Configuration for testing framework.
+#
+# These values override the ones found in `application.yml`.
+
+store:
+    ldp_rs:
+        location: /tmp/fcrepo_test/data/ldprs_store
+    ldp_nr:
+        path: /tmp/fcrepo_test/data/ldpnr_store
+
