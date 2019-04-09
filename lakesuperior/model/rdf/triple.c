@@ -3,12 +3,6 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
-        "define_macros": [
-            [
-                "CYTHON_TRACE",
-                "1"
-            ]
-        ],
         "depends": [
             "ext/tpl/src/tpl.h"
         ],
@@ -19,20 +13,15 @@
             "ext/tpl/src",
             "lakesuperior/cy_include"
         ],
-        "name": "lakesuperior.model.rdf.triple",
+        "name": "lakesuperior.model.rdf.term",
         "sources": [
-            "lakesuperior/model/rdf/triple.pyx",
+            "lakesuperior/model/rdf/term.pyx",
             "ext/tpl/src/tpl.c",
-            "ext/spookyhash/src/context.c",
-            "ext/spookyhash/src/globals.c",
-            "ext/spookyhash/src/spookyhash.c",
-            "ext/collections-c/src/common.c",
-            "ext/collections-c/src/array.c",
-            "ext/collections-c/src/hashtable.c",
-            "ext/collections-c/src/hashset.c"
+            "lakesuperior/model/rdf/triple.pyx",
+            "lakesuperior/model/rdf/graph.pyx"
         ]
     },
-    "module_name": "lakesuperior.model.rdf.triple"
+    "module_name": "lakesuperior.model.rdf.term"
 }
 END: Cython Metadata */
 
@@ -951,7 +940,7 @@ typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple __pyx_t_12lakes
 struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 
-/* "lakesuperior/model/rdf/triple.pxd":6
+/* "lakesuperior/model/rdf/triple.pxd":5
  * 
  * # Triple of Term structs.
  * ctypedef struct Triple:             # <<<<<<<<<<<<<<
@@ -964,7 +953,7 @@ struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple {
   __pyx_t_12lakesuperior_5model_3rdf_4term_Term *o;
 };
 
-/* "lakesuperior/model/rdf/triple.pxd":12
+/* "lakesuperior/model/rdf/triple.pxd":11
  * 
  * # Triple of serialized terms.
  * ctypedef struct BufferTriple:             # <<<<<<<<<<<<<<
@@ -1920,22 +1909,13 @@ if (!__Pyx_RefNanny) {
   #endif
   __Pyx_TraceCall("__Pyx_PyMODINIT_FUNC PyInit_triple(void)", __pyx_f[0], 1, 0, __PYX_ERR(0, 1, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/triple.pyx":3
- * #from lakesuperior.store.ldp_rs cimport term
- * 
+  /* "lakesuperior/model/rdf/triple.pyx":1
  * __doc__ = """             # <<<<<<<<<<<<<<
  * Triple model.
  * 
  */
-  __Pyx_TraceLine(3,0,__PYX_ERR(0, 3, __pyx_L1_error))
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_doc, __pyx_kp_u_Triple_model_This_is_a_very_lig) < 0) __PYX_ERR(0, 3, __pyx_L1_error)
-
-  /* "lakesuperior/model/rdf/triple.pyx":1
- * #from lakesuperior.store.ldp_rs cimport term             # <<<<<<<<<<<<<<
- * 
- * __doc__ = """
- */
   __Pyx_TraceLine(1,0,__PYX_ERR(0, 1, __pyx_L1_error))
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_doc, __pyx_kp_u_Triple_model_This_is_a_very_lig) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)

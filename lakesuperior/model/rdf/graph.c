@@ -3,17 +3,7 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
-        "define_macros": [
-            [
-                "CYTHON_TRACE",
-                "1"
-            ]
-        ],
         "depends": [
-            "ext/collections-c/src/include/array.h",
-            "ext/collections-c/src/include/common.h",
-            "ext/collections-c/src/include/hashset.h",
-            "ext/collections-c/src/include/hashtable.h",
             "ext/tpl/src/tpl.h"
         ],
         "include_dirs": [
@@ -23,20 +13,15 @@
             "ext/tpl/src",
             "lakesuperior/cy_include"
         ],
-        "name": "lakesuperior.model.rdf.graph",
+        "name": "lakesuperior.model.rdf.term",
         "sources": [
-            "lakesuperior/model/rdf/graph.pyx",
+            "lakesuperior/model/rdf/term.pyx",
             "ext/tpl/src/tpl.c",
-            "ext/spookyhash/src/context.c",
-            "ext/spookyhash/src/globals.c",
-            "ext/spookyhash/src/spookyhash.c",
-            "ext/collections-c/src/common.c",
-            "ext/collections-c/src/array.c",
-            "ext/collections-c/src/hashtable.c",
-            "ext/collections-c/src/hashset.c"
+            "lakesuperior/model/rdf/triple.pyx",
+            "lakesuperior/model/rdf/graph.pyx"
         ]
     },
-    "module_name": "lakesuperior.model.rdf.graph"
+    "module_name": "lakesuperior.model.rdf.term"
 }
 END: Cython Metadata */
 
@@ -629,13 +614,13 @@ static CYTHON_INLINE float __PYX_NAN() {
 #define __PYX_HAVE_API__lakesuperior__model__rdf__graph
 /* Early includes */
 #include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include "tpl.h"
 #include "common.h"
 #include "array.h"
 #include "hashtable.h"
 #include "hashset.h"
-#include <string.h>
-#include <stdio.h>
-#include "tpl.h"
 #include <sys/types.h>
 #include "lmdb.h"
 #include <stdlib.h>
@@ -910,51 +895,6 @@ typedef void *(*__pyx_t_5cymem_5cymem_malloc_t)(size_t);
  */
 typedef void (*__pyx_t_5cymem_5cymem_free_t)(void *);
 
-/* "lakesuperior/cy_include/collections.pxd":3
- * from libc.stdint cimport uint32_t
- * 
- * ctypedef void* (*mem_alloc_ft)(size_t size)             # <<<<<<<<<<<<<<
- * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
- * ctypedef void (*mem_free_ft)(void* block)
- */
-typedef void *(*__pyx_t_12lakesuperior_10cy_include_11collections_mem_alloc_ft)(size_t);
-
-/* "lakesuperior/cy_include/collections.pxd":4
- * 
- * ctypedef void* (*mem_alloc_ft)(size_t size)
- * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)             # <<<<<<<<<<<<<<
- * ctypedef void (*mem_free_ft)(void* block)
- * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
- */
-typedef void *(*__pyx_t_12lakesuperior_10cy_include_11collections_mem_calloc_ft)(size_t, size_t);
-
-/* "lakesuperior/cy_include/collections.pxd":5
- * ctypedef void* (*mem_alloc_ft)(size_t size)
- * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
- * ctypedef void (*mem_free_ft)(void* block)             # <<<<<<<<<<<<<<
- * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
- * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
- */
-typedef void (*__pyx_t_12lakesuperior_10cy_include_11collections_mem_free_ft)(void *);
-
-/* "lakesuperior/cy_include/collections.pxd":6
- * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
- * ctypedef void (*mem_free_ft)(void* block)
- * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)             # <<<<<<<<<<<<<<
- * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
- * 
- */
-typedef size_t (*__pyx_t_12lakesuperior_10cy_include_11collections_hash_ft)(void const *, int, uint32_t);
-
-/* "lakesuperior/cy_include/collections.pxd":7
- * ctypedef void (*mem_free_ft)(void* block)
- * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
- * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)             # <<<<<<<<<<<<<<
- * 
- * 
- */
-typedef int (*__pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft)(void const *, void const *);
-
 /* "lakesuperior/model/base.pxd":13
  * ctypedef Key QuadKey[4]
  * 
@@ -1035,7 +975,7 @@ typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple __pyx_t_12lakes
 struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 
-/* "lakesuperior/model/rdf/triple.pxd":6
+/* "lakesuperior/model/rdf/triple.pxd":5
  * 
  * # Triple of Term structs.
  * ctypedef struct Triple:             # <<<<<<<<<<<<<<
@@ -1048,7 +988,7 @@ struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple {
   __pyx_t_12lakesuperior_5model_3rdf_4term_Term *o;
 };
 
-/* "lakesuperior/model/rdf/triple.pxd":12
+/* "lakesuperior/model/rdf/triple.pxd":11
  * 
  * # Triple of serialized terms.
  * ctypedef struct BufferTriple:             # <<<<<<<<<<<<<<
@@ -1109,6 +1049,51 @@ struct __pyx_opt_args_12lakesuperior_5model_10structures_6keyset_6Keyset_resize 
   int __pyx_n;
   size_t size;
 };
+
+/* "lakesuperior/cy_include/collections.pxd":3
+ * from libc.stdint cimport uint32_t
+ * 
+ * ctypedef void* (*mem_alloc_ft)(size_t size)             # <<<<<<<<<<<<<<
+ * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
+ * ctypedef void (*mem_free_ft)(void* block)
+ */
+typedef void *(*__pyx_t_12lakesuperior_10cy_include_11collections_mem_alloc_ft)(size_t);
+
+/* "lakesuperior/cy_include/collections.pxd":4
+ * 
+ * ctypedef void* (*mem_alloc_ft)(size_t size)
+ * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)             # <<<<<<<<<<<<<<
+ * ctypedef void (*mem_free_ft)(void* block)
+ * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
+ */
+typedef void *(*__pyx_t_12lakesuperior_10cy_include_11collections_mem_calloc_ft)(size_t, size_t);
+
+/* "lakesuperior/cy_include/collections.pxd":5
+ * ctypedef void* (*mem_alloc_ft)(size_t size)
+ * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
+ * ctypedef void (*mem_free_ft)(void* block)             # <<<<<<<<<<<<<<
+ * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
+ * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
+ */
+typedef void (*__pyx_t_12lakesuperior_10cy_include_11collections_mem_free_ft)(void *);
+
+/* "lakesuperior/cy_include/collections.pxd":6
+ * ctypedef void* (*mem_calloc_ft)(size_t blocks, size_t size)
+ * ctypedef void (*mem_free_ft)(void* block)
+ * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)             # <<<<<<<<<<<<<<
+ * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)
+ * 
+ */
+typedef size_t (*__pyx_t_12lakesuperior_10cy_include_11collections_hash_ft)(void const *, int, uint32_t);
+
+/* "lakesuperior/cy_include/collections.pxd":7
+ * ctypedef void (*mem_free_ft)(void* block)
+ * ctypedef size_t (*hash_ft)(const void* key, int l, uint32_t seed)
+ * ctypedef int (*key_compare_ft)(const void* key1, const void* key2)             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+typedef int (*__pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft)(void const *, void const *);
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store__check;
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__init_dbis;
 struct __pyx_opt_args_12lakesuperior_5store_15base_lmdb_store_13BaseLmdbStore__txn_begin;
@@ -1416,7 +1401,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callba
 struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy;
 struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy;
 
-/* "lakesuperior/model/rdf/graph.pxd":13
+/* "lakesuperior/model/rdf/graph.pxd":11
  * 
  * # Callback for an iterator.
  * ctypedef void (*lookup_callback_fn_t)(             # <<<<<<<<<<<<<<
@@ -1425,8 +1410,8 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy;
  */
 typedef void (*__pyx_t_12lakesuperior_5model_3rdf_5graph_lookup_callback_fn_t)(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *, __pyx_t_12lakesuperior_5model_4base_TripleKey const *, void *);
 
-/* "lakesuperior/model/rdf/graph.pxd":26
- *         cc.key_compare_ft trp_cmp_fn
+/* "lakesuperior/model/rdf/graph.pxd":21
+ *         public object uri
  * 
  *         void _match_ptn_callback(             # <<<<<<<<<<<<<<
  *             self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
@@ -1438,7 +1423,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callba
   void *ctx;
 };
 
-/* "lakesuperior/model/rdf/graph.pxd":31
+/* "lakesuperior/model/rdf/graph.pxd":26
  *         ) except *
  * 
  *     cpdef Graph copy(self, str uri=*)             # <<<<<<<<<<<<<<
@@ -1450,7 +1435,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy {
   PyObject *uri;
 };
 
-/* "lakesuperior/model/rdf/graph.pxd":32
+/* "lakesuperior/model/rdf/graph.pxd":27
  * 
  *     cpdef Graph copy(self, str uri=*)
  *     cpdef Graph empty_copy(self, str uri=*)             # <<<<<<<<<<<<<<
@@ -1575,7 +1560,7 @@ struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestor
 };
 
 
-/* "lakesuperior/model/rdf/graph.pxd":17
+/* "lakesuperior/model/rdf/graph.pxd":15
  * )
  * 
  * cdef class Graph:             # <<<<<<<<<<<<<<
@@ -1588,12 +1573,10 @@ struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph {
   struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *store;
   struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *keys;
   PyObject *uri;
-  __pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft term_cmp_fn;
-  __pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft trp_cmp_fn;
 };
 
 
-/* "lakesuperior/model/rdf/graph.pyx":310
+/* "lakesuperior/model/rdf/graph.pyx":309
  * 
  * 
  *     def __iter__(self):             # <<<<<<<<<<<<<<
@@ -1738,7 +1721,7 @@ struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTri
 static struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *__pyx_vtabptr_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore;
 
 
-/* "lakesuperior/model/rdf/graph.pyx":29
+/* "lakesuperior/model/rdf/graph.pyx":28
  * 
  * 
  * cdef class Graph:             # <<<<<<<<<<<<<<
@@ -2585,8 +2568,6 @@ static PyTypeObject *__pyx_ptype_5cymem_5cymem_PyFree = 0;
 static PyTypeObject *__pyx_ptype_5cymem_5cymem_Pool = 0;
 static PyTypeObject *__pyx_ptype_5cymem_5cymem_Address = 0;
 
-/* Module declarations from 'lakesuperior.cy_include.collections' */
-
 /* Module declarations from 'libc.string' */
 
 /* Module declarations from 'libc.stdio' */
@@ -2620,6 +2601,8 @@ static struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *(*__p
 static struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *(*__pyx_f_12lakesuperior_5model_10structures_6keyset_xor)(struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *, struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *); /*proto*/
 
 /* Module declarations from 'lakesuperior.store.ldp_rs' */
+
+/* Module declarations from 'lakesuperior.cy_include.collections' */
 
 /* Module declarations from 'posix.types' */
 
@@ -3000,7 +2983,7 @@ static PyObject *__pyx_codeobj__19;
 static PyObject *__pyx_codeobj__21;
 /* Late includes */
 
-/* "lakesuperior/model/rdf/graph.pyx":72
+/* "lakesuperior/model/rdf/graph.pyx":71
  *     """
  * 
  *     def __cinit__(             # <<<<<<<<<<<<<<
@@ -3022,7 +3005,7 @@ static int __pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_1__cinit__(PyObject
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_store,&__pyx_n_s_capacity,&__pyx_n_s_uri,&__pyx_n_s_data,0};
     PyObject* values[4] = {0,0,0,0};
 
-    /* "lakesuperior/model/rdf/graph.pyx":73
+    /* "lakesuperior/model/rdf/graph.pyx":72
  * 
  *     def __cinit__(
  *         self, store=None, size_t capacity=0, uri=None, set data=set()             # <<<<<<<<<<<<<<
@@ -3074,7 +3057,7 @@ static int __pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_1__cinit__(PyObject
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(0, 72, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(0, 71, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -3092,7 +3075,7 @@ static int __pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_1__cinit__(PyObject
     }
     __pyx_v_store = values[0];
     if (values[1]) {
-      __pyx_v_capacity = __Pyx_PyInt_As_size_t(values[1]); if (unlikely((__pyx_v_capacity == (size_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 73, __pyx_L3_error)
+      __pyx_v_capacity = __Pyx_PyInt_As_size_t(values[1]); if (unlikely((__pyx_v_capacity == (size_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 72, __pyx_L3_error)
     } else {
       __pyx_v_capacity = ((size_t)0);
     }
@@ -3101,16 +3084,16 @@ static int __pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_1__cinit__(PyObject
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 72, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 71, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lakesuperior.model.rdf.graph.Graph.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return -1;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), (&PySet_Type), 1, "data", 1))) __PYX_ERR(0, 73, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), (&PySet_Type), 1, "data", 1))) __PYX_ERR(0, 72, __pyx_L1_error)
   __pyx_r = __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self), __pyx_v_store, __pyx_v_capacity, __pyx_v_uri, __pyx_v_data);
 
-  /* "lakesuperior/model/rdf/graph.pyx":72
+  /* "lakesuperior/model/rdf/graph.pyx":71
  *     """
  * 
  *     def __cinit__(             # <<<<<<<<<<<<<<
@@ -3138,21 +3121,21 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
   PyObject *__pyx_t_5 = NULL;
   Py_ssize_t __pyx_t_6;
   __Pyx_RefNannySetupContext("__cinit__", 0);
-  __Pyx_TraceCall("__cinit__", __pyx_f[0], 72, 0, __PYX_ERR(0, 72, __pyx_L1_error));
+  __Pyx_TraceCall("__cinit__", __pyx_f[0], 71, 0, __PYX_ERR(0, 71, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":109
+  /* "lakesuperior/model/rdf/graph.pyx":108
  *             :py:class:``rdflib.Term`` instances.
  *         """
  *         self.uri = rdflib.URIRef(uri) if uri else None             # <<<<<<<<<<<<<<
  * 
  *         self.store = store if store is not None else env.app_globals.rdf_store
  */
-  __Pyx_TraceLine(109,0,__PYX_ERR(0, 109, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_uri); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 109, __pyx_L1_error)
+  __Pyx_TraceLine(108,0,__PYX_ERR(0, 108, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_uri); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 108, __pyx_L1_error)
   if (__pyx_t_2) {
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 108, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_URIRef); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_URIRef); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 108, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_4 = NULL;
@@ -3167,7 +3150,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
     }
     __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_4, __pyx_v_uri) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_v_uri);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 109, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 108, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_1 = __pyx_t_3;
@@ -3182,29 +3165,29 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
   __pyx_v_self->uri = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":111
+  /* "lakesuperior/model/rdf/graph.pyx":110
  *         self.uri = rdflib.URIRef(uri) if uri else None
  * 
  *         self.store = store if store is not None else env.app_globals.rdf_store             # <<<<<<<<<<<<<<
  *         #logger.debug(f'Assigned store at {self.store.env_path}')
  * 
  */
-  __Pyx_TraceLine(111,0,__PYX_ERR(0, 111, __pyx_L1_error))
+  __Pyx_TraceLine(110,0,__PYX_ERR(0, 110, __pyx_L1_error))
   __pyx_t_2 = (__pyx_v_store != Py_None);
   if ((__pyx_t_2 != 0)) {
-    if (!(likely(((__pyx_v_store) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_store, __pyx_ptype_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore))))) __PYX_ERR(0, 111, __pyx_L1_error)
+    if (!(likely(((__pyx_v_store) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_store, __pyx_ptype_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore))))) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_INCREF(__pyx_v_store);
     __pyx_t_1 = __pyx_v_store;
   } else {
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_env); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 111, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_env); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_app_globals); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 111, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_app_globals); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_rdf_store); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 111, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_rdf_store); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore))))) __PYX_ERR(0, 111, __pyx_L1_error)
+    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore))))) __PYX_ERR(0, 110, __pyx_L1_error)
     __pyx_t_1 = __pyx_t_3;
     __pyx_t_3 = 0;
   }
@@ -3214,33 +3197,33 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
   __pyx_v_self->store = ((struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":115
+  /* "lakesuperior/model/rdf/graph.pyx":114
  * 
  *         # Initialize empty data set.
  *         if data:             # <<<<<<<<<<<<<<
  *             # Populate with provided Python set.
  *             self.keys = Keyset(len(data))
  */
-  __Pyx_TraceLine(115,0,__PYX_ERR(0, 115, __pyx_L1_error))
+  __Pyx_TraceLine(114,0,__PYX_ERR(0, 114, __pyx_L1_error))
   __pyx_t_2 = (__pyx_v_data != Py_None)&&(PySet_GET_SIZE(__pyx_v_data) != 0);
   if (__pyx_t_2) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":117
+    /* "lakesuperior/model/rdf/graph.pyx":116
  *         if data:
  *             # Populate with provided Python set.
  *             self.keys = Keyset(len(data))             # <<<<<<<<<<<<<<
  *             self.add(data)
  *         else:
  */
-    __Pyx_TraceLine(117,0,__PYX_ERR(0, 117, __pyx_L1_error))
+    __Pyx_TraceLine(116,0,__PYX_ERR(0, 116, __pyx_L1_error))
     if (unlikely(__pyx_v_data == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 117, __pyx_L1_error)
+      __PYX_ERR(0, 116, __pyx_L1_error)
     }
-    __pyx_t_6 = PySet_GET_SIZE(__pyx_v_data); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 117, __pyx_L1_error)
-    __pyx_t_1 = PyInt_FromSsize_t(__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 117, __pyx_L1_error)
+    __pyx_t_6 = PySet_GET_SIZE(__pyx_v_data); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 116, __pyx_L1_error)
+    __pyx_t_1 = PyInt_FromSsize_t(__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 116, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset), __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 117, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset), __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 116, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_GIVEREF(__pyx_t_3);
@@ -3249,15 +3232,15 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
     __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":118
+    /* "lakesuperior/model/rdf/graph.pyx":117
  *             # Populate with provided Python set.
  *             self.keys = Keyset(len(data))
  *             self.add(data)             # <<<<<<<<<<<<<<
  *         else:
  *             self.keys = Keyset(capacity)
  */
-    __Pyx_TraceLine(118,0,__PYX_ERR(0, 118, __pyx_L1_error))
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_add); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 118, __pyx_L1_error)
+    __Pyx_TraceLine(117,0,__PYX_ERR(0, 117, __pyx_L1_error))
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_add); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 117, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_5 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -3271,12 +3254,12 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
     }
     __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_5, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_data);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 118, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 117, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":115
+    /* "lakesuperior/model/rdf/graph.pyx":114
  * 
  *         # Initialize empty data set.
  *         if data:             # <<<<<<<<<<<<<<
@@ -3286,18 +3269,18 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
     goto __pyx_L3;
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":120
+  /* "lakesuperior/model/rdf/graph.pyx":119
  *             self.add(data)
  *         else:
  *             self.keys = Keyset(capacity)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(120,0,__PYX_ERR(0, 120, __pyx_L1_error))
+  __Pyx_TraceLine(119,0,__PYX_ERR(0, 119, __pyx_L1_error))
   /*else*/ {
-    __pyx_t_3 = __Pyx_PyInt_FromSize_t(__pyx_v_capacity); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyInt_FromSize_t(__pyx_v_capacity); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 119, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(((PyObject *)__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset), __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(((PyObject *)__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset), __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 119, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GIVEREF(__pyx_t_1);
@@ -3308,7 +3291,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
   }
   __pyx_L3:;
 
-  /* "lakesuperior/model/rdf/graph.pyx":72
+  /* "lakesuperior/model/rdf/graph.pyx":71
  *     """
  * 
  *     def __cinit__(             # <<<<<<<<<<<<<<
@@ -3332,7 +3315,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph___cinit__(struct __
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":126
+/* "lakesuperior/model/rdf/graph.pyx":125
  * 
  *     property data:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3366,85 +3349,85 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4data___get__
   PyObject *__pyx_t_5 = NULL;
   int __pyx_t_6;
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[0], 126, 0, __PYX_ERR(0, 126, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[0], 125, 0, __PYX_ERR(0, 125, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":134
+  /* "lakesuperior/model/rdf/graph.pyx":133
  *             cdef TripleKey spok
  * 
  *             ret = set()             # <<<<<<<<<<<<<<
  * 
  *             self.keys.seek()
  */
-  __Pyx_TraceLine(134,0,__PYX_ERR(0, 134, __pyx_L1_error))
-  __pyx_t_1 = PySet_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __Pyx_TraceLine(133,0,__PYX_ERR(0, 133, __pyx_L1_error))
+  __pyx_t_1 = PySet_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_ret = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":136
+  /* "lakesuperior/model/rdf/graph.pyx":135
  *             ret = set()
  * 
  *             self.keys.seek()             # <<<<<<<<<<<<<<
  *             while self.keys.get_next(&spok):
  *                 ret.add((
  */
-  __Pyx_TraceLine(136,0,__PYX_ERR(0, 136, __pyx_L1_error))
+  __Pyx_TraceLine(135,0,__PYX_ERR(0, 135, __pyx_L1_error))
   ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->seek(__pyx_v_self->keys, NULL);
 
-  /* "lakesuperior/model/rdf/graph.pyx":137
+  /* "lakesuperior/model/rdf/graph.pyx":136
  * 
  *             self.keys.seek()
  *             while self.keys.get_next(&spok):             # <<<<<<<<<<<<<<
  *                 ret.add((
  *                     self.store.from_key(spok[0]),
  */
-  __Pyx_TraceLine(137,0,__PYX_ERR(0, 137, __pyx_L1_error))
+  __Pyx_TraceLine(136,0,__PYX_ERR(0, 136, __pyx_L1_error))
   while (1) {
     __pyx_t_2 = (((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->get_next(__pyx_v_self->keys, (&__pyx_v_spok)) != 0);
     if (!__pyx_t_2) break;
 
-    /* "lakesuperior/model/rdf/graph.pyx":139
+    /* "lakesuperior/model/rdf/graph.pyx":138
  *             while self.keys.get_next(&spok):
  *                 ret.add((
  *                     self.store.from_key(spok[0]),             # <<<<<<<<<<<<<<
  *                     self.store.from_key(spok[1]),
  *                     self.store.from_key(spok[2])
  */
-    __Pyx_TraceLine(139,0,__PYX_ERR(0, 139, __pyx_L1_error))
-    __pyx_t_1 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[0])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __Pyx_TraceLine(138,0,__PYX_ERR(0, 138, __pyx_L1_error))
+    __pyx_t_1 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[0])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
 
-    /* "lakesuperior/model/rdf/graph.pyx":140
+    /* "lakesuperior/model/rdf/graph.pyx":139
  *                 ret.add((
  *                     self.store.from_key(spok[0]),
  *                     self.store.from_key(spok[1]),             # <<<<<<<<<<<<<<
  *                     self.store.from_key(spok[2])
  *                 ))
  */
-    __Pyx_TraceLine(140,0,__PYX_ERR(0, 140, __pyx_L1_error))
-    __pyx_t_3 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[1])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
+    __Pyx_TraceLine(139,0,__PYX_ERR(0, 139, __pyx_L1_error))
+    __pyx_t_3 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[1])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
 
-    /* "lakesuperior/model/rdf/graph.pyx":141
+    /* "lakesuperior/model/rdf/graph.pyx":140
  *                     self.store.from_key(spok[0]),
  *                     self.store.from_key(spok[1]),
  *                     self.store.from_key(spok[2])             # <<<<<<<<<<<<<<
  *                 ))
  * 
  */
-    __Pyx_TraceLine(141,0,__PYX_ERR(0, 141, __pyx_L1_error))
-    __pyx_t_4 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[2])); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 141, __pyx_L1_error)
+    __Pyx_TraceLine(140,0,__PYX_ERR(0, 140, __pyx_L1_error))
+    __pyx_t_4 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->from_key(__pyx_v_self->store, (__pyx_v_spok[2])); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
 
-    /* "lakesuperior/model/rdf/graph.pyx":139
+    /* "lakesuperior/model/rdf/graph.pyx":138
  *             while self.keys.get_next(&spok):
  *                 ret.add((
  *                     self.store.from_key(spok[0]),             # <<<<<<<<<<<<<<
  *                     self.store.from_key(spok[1]),
  *                     self.store.from_key(spok[2])
  */
-    __Pyx_TraceLine(139,0,__PYX_ERR(0, 139, __pyx_L1_error))
-    __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __Pyx_TraceLine(138,0,__PYX_ERR(0, 138, __pyx_L1_error))
+    __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_GIVEREF(__pyx_t_1);
     PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_1);
@@ -3456,32 +3439,32 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4data___get__
     __pyx_t_3 = 0;
     __pyx_t_4 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":138
+    /* "lakesuperior/model/rdf/graph.pyx":137
  *             self.keys.seek()
  *             while self.keys.get_next(&spok):
  *                 ret.add((             # <<<<<<<<<<<<<<
  *                     self.store.from_key(spok[0]),
  *                     self.store.from_key(spok[1]),
  */
-    __Pyx_TraceLine(138,0,__PYX_ERR(0, 138, __pyx_L1_error))
-    __pyx_t_6 = PySet_Add(__pyx_v_ret, __pyx_t_5); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 138, __pyx_L1_error)
+    __Pyx_TraceLine(137,0,__PYX_ERR(0, 137, __pyx_L1_error))
+    __pyx_t_6 = PySet_Add(__pyx_v_ret, __pyx_t_5); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 137, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":144
+  /* "lakesuperior/model/rdf/graph.pyx":143
  *                 ))
  * 
  *             return ret             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(144,0,__PYX_ERR(0, 144, __pyx_L1_error))
+  __Pyx_TraceLine(143,0,__PYX_ERR(0, 143, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v_ret);
   __pyx_r = __pyx_v_ret;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":126
+  /* "lakesuperior/model/rdf/graph.pyx":125
  * 
  *     property data:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3505,7 +3488,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4data___get__
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":148
+/* "lakesuperior/model/rdf/graph.pyx":147
  * 
  *     property capacity:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3532,24 +3515,24 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_8capacity___g
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[0], 148, 0, __PYX_ERR(0, 148, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[0], 147, 0, __PYX_ERR(0, 147, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":154
+  /* "lakesuperior/model/rdf/graph.pyx":153
  *             rtype: int
  *             """
  *             return self.keys.capacity             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(154,0,__PYX_ERR(0, 154, __pyx_L1_error))
+  __Pyx_TraceLine(153,0,__PYX_ERR(0, 153, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_FromSize_t(__pyx_v_self->keys->capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_FromSize_t(__pyx_v_self->keys->capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":148
+  /* "lakesuperior/model/rdf/graph.pyx":147
  * 
  *     property capacity:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3569,7 +3552,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_8capacity___g
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":158
+/* "lakesuperior/model/rdf/graph.pyx":157
  * 
  *     property txn_ctx:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3596,24 +3579,24 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_7txn_ctx___ge
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[0], 158, 0, __PYX_ERR(0, 158, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[0], 157, 0, __PYX_ERR(0, 157, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":165
+  /* "lakesuperior/model/rdf/graph.pyx":164
  *             :py:meth:`lakesuperior.store.base_lmdb_Store.BaseLmdbStore.txn_ctx`
  *             """
  *             return self.store.txn_ctx             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(165,0,__PYX_ERR(0, 165, __pyx_L1_error))
+  __Pyx_TraceLine(164,0,__PYX_ERR(0, 164, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self->store), __pyx_n_s_txn_ctx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self->store), __pyx_n_s_txn_ctx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 164, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":158
+  /* "lakesuperior/model/rdf/graph.pyx":157
  * 
  *     property txn_ctx:
  *         def __get__(self):             # <<<<<<<<<<<<<<
@@ -3633,7 +3616,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_7txn_ctx___ge
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":170
+/* "lakesuperior/model/rdf/graph.pyx":169
  *     ## MAGIC METHODS ##
  * 
  *     def __len__(self):             # <<<<<<<<<<<<<<
@@ -3663,20 +3646,20 @@ static Py_ssize_t __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_2__len__(str
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__len__", 0);
-  __Pyx_TraceCall("__len__", __pyx_f[0], 170, 0, __PYX_ERR(0, 170, __pyx_L1_error));
+  __Pyx_TraceCall("__len__", __pyx_f[0], 169, 0, __PYX_ERR(0, 169, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":176
+  /* "lakesuperior/model/rdf/graph.pyx":175
  *         :rtype: int
  *         """
  *         return self.keys.size()             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(176,0,__PYX_ERR(0, 176, __pyx_L1_error))
+  __Pyx_TraceLine(175,0,__PYX_ERR(0, 175, __pyx_L1_error))
   __pyx_r = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->size(__pyx_v_self->keys);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":170
+  /* "lakesuperior/model/rdf/graph.pyx":169
  *     ## MAGIC METHODS ##
  * 
  *     def __len__(self):             # <<<<<<<<<<<<<<
@@ -3694,7 +3677,7 @@ static Py_ssize_t __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_2__len__(str
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":179
+/* "lakesuperior/model/rdf/graph.pyx":178
  * 
  * 
  *     def __richcmp__(self, other, int op):             # <<<<<<<<<<<<<<
@@ -3723,34 +3706,34 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
   PyObject *__pyx_t_2 = NULL;
   Py_ssize_t __pyx_t_3;
   __Pyx_RefNannySetupContext("__richcmp__", 0);
-  __Pyx_TraceCall("__richcmp__", __pyx_f[0], 179, 0, __PYX_ERR(0, 179, __pyx_L1_error));
+  __Pyx_TraceCall("__richcmp__", __pyx_f[0], 178, 0, __PYX_ERR(0, 178, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":185
+  /* "lakesuperior/model/rdf/graph.pyx":184
  *         Only equality and non-equality are supprted.
  *         """
  *         if op == Py_LT:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError()
  *         elif op == Py_EQ:
  */
-  __Pyx_TraceLine(185,0,__PYX_ERR(0, 185, __pyx_L1_error))
+  __Pyx_TraceLine(184,0,__PYX_ERR(0, 184, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_LT) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":186
+    /* "lakesuperior/model/rdf/graph.pyx":185
  *         """
  *         if op == Py_LT:
  *             raise NotImplementedError()             # <<<<<<<<<<<<<<
  *         elif op == Py_EQ:
  *             return len(self ^ other) == 0
  */
-    __Pyx_TraceLine(186,0,__PYX_ERR(0, 186, __pyx_L1_error))
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 186, __pyx_L1_error)
+    __Pyx_TraceLine(185,0,__PYX_ERR(0, 185, __pyx_L1_error))
+    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 186, __pyx_L1_error)
+    __PYX_ERR(0, 185, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":185
+    /* "lakesuperior/model/rdf/graph.pyx":184
  *         Only equality and non-equality are supprted.
  *         """
  *         if op == Py_LT:             # <<<<<<<<<<<<<<
@@ -3759,37 +3742,37 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":187
+  /* "lakesuperior/model/rdf/graph.pyx":186
  *         if op == Py_LT:
  *             raise NotImplementedError()
  *         elif op == Py_EQ:             # <<<<<<<<<<<<<<
  *             return len(self ^ other) == 0
  *         elif op == Py_GT:
  */
-  __Pyx_TraceLine(187,0,__PYX_ERR(0, 187, __pyx_L1_error))
+  __Pyx_TraceLine(186,0,__PYX_ERR(0, 186, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
   if (__pyx_t_1) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":188
+    /* "lakesuperior/model/rdf/graph.pyx":187
  *             raise NotImplementedError()
  *         elif op == Py_EQ:
  *             return len(self ^ other) == 0             # <<<<<<<<<<<<<<
  *         elif op == Py_GT:
  *             raise NotImplementedError()
  */
-    __Pyx_TraceLine(188,0,__PYX_ERR(0, 188, __pyx_L1_error))
+    __Pyx_TraceLine(187,0,__PYX_ERR(0, 187, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = PyNumber_Xor(((PyObject *)__pyx_v_self), __pyx_v_other); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Xor(((PyObject *)__pyx_v_self), __pyx_v_other); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_3 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_t_3 == 0)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_t_3 == 0)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_r = __pyx_t_2;
     __pyx_t_2 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":187
+    /* "lakesuperior/model/rdf/graph.pyx":186
  *         if op == Py_LT:
  *             raise NotImplementedError()
  *         elif op == Py_EQ:             # <<<<<<<<<<<<<<
@@ -3798,32 +3781,32 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":189
+  /* "lakesuperior/model/rdf/graph.pyx":188
  *         elif op == Py_EQ:
  *             return len(self ^ other) == 0
  *         elif op == Py_GT:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError()
  *         elif op == Py_LE:
  */
-  __Pyx_TraceLine(189,0,__PYX_ERR(0, 189, __pyx_L1_error))
+  __Pyx_TraceLine(188,0,__PYX_ERR(0, 188, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_GT) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":190
+    /* "lakesuperior/model/rdf/graph.pyx":189
  *             return len(self ^ other) == 0
  *         elif op == Py_GT:
  *             raise NotImplementedError()             # <<<<<<<<<<<<<<
  *         elif op == Py_LE:
  *             raise NotImplementedError()
  */
-    __Pyx_TraceLine(190,0,__PYX_ERR(0, 190, __pyx_L1_error))
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __Pyx_TraceLine(189,0,__PYX_ERR(0, 189, __pyx_L1_error))
+    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 189, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 190, __pyx_L1_error)
+    __PYX_ERR(0, 189, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":189
+    /* "lakesuperior/model/rdf/graph.pyx":188
  *         elif op == Py_EQ:
  *             return len(self ^ other) == 0
  *         elif op == Py_GT:             # <<<<<<<<<<<<<<
@@ -3832,32 +3815,32 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":191
+  /* "lakesuperior/model/rdf/graph.pyx":190
  *         elif op == Py_GT:
  *             raise NotImplementedError()
  *         elif op == Py_LE:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError()
  *         elif op == Py_NE:
  */
-  __Pyx_TraceLine(191,0,__PYX_ERR(0, 191, __pyx_L1_error))
+  __Pyx_TraceLine(190,0,__PYX_ERR(0, 190, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_LE) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":192
+    /* "lakesuperior/model/rdf/graph.pyx":191
  *             raise NotImplementedError()
  *         elif op == Py_LE:
  *             raise NotImplementedError()             # <<<<<<<<<<<<<<
  *         elif op == Py_NE:
  *             return len(self ^ other) != 0
  */
-    __Pyx_TraceLine(192,0,__PYX_ERR(0, 192, __pyx_L1_error))
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 192, __pyx_L1_error)
+    __Pyx_TraceLine(191,0,__PYX_ERR(0, 191, __pyx_L1_error))
+    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 191, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 192, __pyx_L1_error)
+    __PYX_ERR(0, 191, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":191
+    /* "lakesuperior/model/rdf/graph.pyx":190
  *         elif op == Py_GT:
  *             raise NotImplementedError()
  *         elif op == Py_LE:             # <<<<<<<<<<<<<<
@@ -3866,37 +3849,37 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":193
+  /* "lakesuperior/model/rdf/graph.pyx":192
  *         elif op == Py_LE:
  *             raise NotImplementedError()
  *         elif op == Py_NE:             # <<<<<<<<<<<<<<
  *             return len(self ^ other) != 0
  *         elif op == Py_GE:
  */
-  __Pyx_TraceLine(193,0,__PYX_ERR(0, 193, __pyx_L1_error))
+  __Pyx_TraceLine(192,0,__PYX_ERR(0, 192, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
   if (__pyx_t_1) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":194
+    /* "lakesuperior/model/rdf/graph.pyx":193
  *             raise NotImplementedError()
  *         elif op == Py_NE:
  *             return len(self ^ other) != 0             # <<<<<<<<<<<<<<
  *         elif op == Py_GE:
  *             raise NotImplementedError()
  */
-    __Pyx_TraceLine(194,0,__PYX_ERR(0, 194, __pyx_L1_error))
+    __Pyx_TraceLine(193,0,__PYX_ERR(0, 193, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = PyNumber_Xor(((PyObject *)__pyx_v_self), __pyx_v_other); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Xor(((PyObject *)__pyx_v_self), __pyx_v_other); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 193, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 194, __pyx_L1_error)
+    __pyx_t_3 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 193, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_t_3 != 0)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_t_3 != 0)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 193, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_r = __pyx_t_2;
     __pyx_t_2 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":193
+    /* "lakesuperior/model/rdf/graph.pyx":192
  *         elif op == Py_LE:
  *             raise NotImplementedError()
  *         elif op == Py_NE:             # <<<<<<<<<<<<<<
@@ -3905,32 +3888,32 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":195
+  /* "lakesuperior/model/rdf/graph.pyx":194
  *         elif op == Py_NE:
  *             return len(self ^ other) != 0
  *         elif op == Py_GE:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError()
  * 
  */
-  __Pyx_TraceLine(195,0,__PYX_ERR(0, 195, __pyx_L1_error))
+  __Pyx_TraceLine(194,0,__PYX_ERR(0, 194, __pyx_L1_error))
   __pyx_t_1 = ((__pyx_v_op == Py_GE) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":196
+    /* "lakesuperior/model/rdf/graph.pyx":195
  *             return len(self ^ other) != 0
  *         elif op == Py_GE:
  *             raise NotImplementedError()             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __Pyx_TraceLine(196,0,__PYX_ERR(0, 196, __pyx_L1_error))
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
+    __Pyx_TraceLine(195,0,__PYX_ERR(0, 195, __pyx_L1_error))
+    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_NotImplementedError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 195, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 196, __pyx_L1_error)
+    __PYX_ERR(0, 195, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":195
+    /* "lakesuperior/model/rdf/graph.pyx":194
  *         elif op == Py_NE:
  *             return len(self ^ other) != 0
  *         elif op == Py_GE:             # <<<<<<<<<<<<<<
@@ -3939,7 +3922,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":179
+  /* "lakesuperior/model/rdf/graph.pyx":178
  * 
  * 
  *     def __richcmp__(self, other, int op):             # <<<<<<<<<<<<<<
@@ -3961,7 +3944,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4__richcmp__(
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":199
+/* "lakesuperior/model/rdf/graph.pyx":198
  * 
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -3999,21 +3982,21 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   Py_UCS4 __pyx_t_6;
   Py_ssize_t __pyx_t_7;
   __Pyx_RefNannySetupContext("__repr__", 0);
-  __Pyx_TraceCall("__repr__", __pyx_f[0], 199, 0, __PYX_ERR(0, 199, __pyx_L1_error));
+  __Pyx_TraceCall("__repr__", __pyx_f[0], 198, 0, __PYX_ERR(0, 198, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":206
+  /* "lakesuperior/model/rdf/graph.pyx":205
  *         memory address of the instance.
  *         """
  *         uri_repr = f', uri={self.uri}' if self.uri else ''             # <<<<<<<<<<<<<<
  *         return (
  *             f'<{self.__class__.__module__}.{self.__class__.__qualname__} '
  */
-  __Pyx_TraceLine(206,0,__PYX_ERR(0, 206, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 206, __pyx_L1_error)
+  __Pyx_TraceLine(205,0,__PYX_ERR(0, 205, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 205, __pyx_L1_error)
   if (__pyx_t_2) {
-    __pyx_t_3 = __Pyx_PyObject_FormatSimple(__pyx_v_self->uri, __pyx_empty_unicode); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_FormatSimple(__pyx_v_self->uri, __pyx_empty_unicode); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyUnicode_Concat(__pyx_kp_u_uri_2, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyUnicode_Concat(__pyx_kp_u_uri_2, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_1 = __pyx_t_4;
@@ -4025,25 +4008,25 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __pyx_v_uri_repr = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":207
+  /* "lakesuperior/model/rdf/graph.pyx":206
  *         """
  *         uri_repr = f', uri={self.uri}' if self.uri else ''
  *         return (             # <<<<<<<<<<<<<<
  *             f'<{self.__class__.__module__}.{self.__class__.__qualname__} '
  *             f'@0x{id(self):02x} length={len(self)}{uri_repr}>'
  */
-  __Pyx_TraceLine(207,0,__PYX_ERR(0, 207, __pyx_L1_error))
+  __Pyx_TraceLine(206,0,__PYX_ERR(0, 206, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
 
-  /* "lakesuperior/model/rdf/graph.pyx":208
+  /* "lakesuperior/model/rdf/graph.pyx":207
  *         uri_repr = f', uri={self.uri}' if self.uri else ''
  *         return (
  *             f'<{self.__class__.__module__}.{self.__class__.__qualname__} '             # <<<<<<<<<<<<<<
  *             f'@0x{id(self):02x} length={len(self)}{uri_repr}>'
  *         )
  */
-  __Pyx_TraceLine(208,0,__PYX_ERR(0, 208, __pyx_L1_error))
-  __pyx_t_1 = PyTuple_New(10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __Pyx_TraceLine(207,0,__PYX_ERR(0, 207, __pyx_L1_error))
+  __pyx_t_1 = PyTuple_New(10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_5 = 0;
   __pyx_t_6 = 127;
@@ -4051,12 +4034,12 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __pyx_t_5 += 1;
   __Pyx_GIVEREF(__pyx_kp_u__3);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_kp_u__3);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_class); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_class); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_module); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_module); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_t_3, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_t_3, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_6;
@@ -4068,12 +4051,12 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __pyx_t_5 += 1;
   __Pyx_GIVEREF(__pyx_kp_u__4);
   PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_kp_u__4);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_class); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_class); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_qualname); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_qualname); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_t_3, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_t_3, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_6;
@@ -4086,17 +4069,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __Pyx_GIVEREF(__pyx_kp_u_0x);
   PyTuple_SET_ITEM(__pyx_t_1, 4, __pyx_kp_u_0x);
 
-  /* "lakesuperior/model/rdf/graph.pyx":209
+  /* "lakesuperior/model/rdf/graph.pyx":208
  *         return (
  *             f'<{self.__class__.__module__}.{self.__class__.__qualname__} '
  *             f'@0x{id(self):02x} length={len(self)}{uri_repr}>'             # <<<<<<<<<<<<<<
  *         )
  * 
  */
-  __Pyx_TraceLine(209,0,__PYX_ERR(0, 209, __pyx_L1_error))
-  __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_id, ((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __Pyx_TraceLine(208,0,__PYX_ERR(0, 208, __pyx_L1_error))
+  __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_id, ((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = __Pyx_PyObject_Format(__pyx_t_4, __pyx_kp_u_02x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Format(__pyx_t_4, __pyx_kp_u_02x); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_3) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_3) : __pyx_t_6;
@@ -4108,14 +4091,14 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __pyx_t_5 += 8;
   __Pyx_GIVEREF(__pyx_kp_u_length);
   PyTuple_SET_ITEM(__pyx_t_1, 6, __pyx_kp_u_length);
-  __pyx_t_7 = PyObject_Length(((PyObject *)__pyx_v_self)); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 209, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyUnicode_From_Py_ssize_t(__pyx_t_7, 0, ' ', 'd'); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_7 = PyObject_Length(((PyObject *)__pyx_v_self)); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyUnicode_From_Py_ssize_t(__pyx_t_7, 0, ' ', 'd'); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_5 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_3);
   PyTuple_SET_ITEM(__pyx_t_1, 7, __pyx_t_3);
   __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyUnicode_Unicode(__pyx_v_uri_repr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyUnicode_Unicode(__pyx_v_uri_repr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_3) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_3) : __pyx_t_6;
   __pyx_t_5 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_3);
@@ -4127,22 +4110,22 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   __Pyx_GIVEREF(__pyx_kp_u__5);
   PyTuple_SET_ITEM(__pyx_t_1, 9, __pyx_kp_u__5);
 
-  /* "lakesuperior/model/rdf/graph.pyx":208
+  /* "lakesuperior/model/rdf/graph.pyx":207
  *         uri_repr = f', uri={self.uri}' if self.uri else ''
  *         return (
  *             f'<{self.__class__.__module__}.{self.__class__.__qualname__} '             # <<<<<<<<<<<<<<
  *             f'@0x{id(self):02x} length={len(self)}{uri_repr}>'
  *         )
  */
-  __Pyx_TraceLine(208,0,__PYX_ERR(0, 208, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_PyUnicode_Join(__pyx_t_1, 10, __pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
+  __Pyx_TraceLine(207,0,__PYX_ERR(0, 207, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_PyUnicode_Join(__pyx_t_1, 10, __pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":199
+  /* "lakesuperior/model/rdf/graph.pyx":198
  * 
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -4165,7 +4148,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__(str
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":213
+/* "lakesuperior/model/rdf/graph.pyx":212
  * 
  * 
  *     def __str__(self):             # <<<<<<<<<<<<<<
@@ -4197,27 +4180,27 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_8__str__(stru
   PyObject *__pyx_t_1 = NULL;
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("__str__", 0);
-  __Pyx_TraceCall("__str__", __pyx_f[0], 213, 0, __PYX_ERR(0, 213, __pyx_L1_error));
+  __Pyx_TraceCall("__str__", __pyx_f[0], 212, 0, __PYX_ERR(0, 212, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":215
+  /* "lakesuperior/model/rdf/graph.pyx":214
  *     def __str__(self):
  *         """ String dump of the graph triples. """
  *         return str(self.data)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(215,0,__PYX_ERR(0, 215, __pyx_L1_error))
+  __Pyx_TraceLine(214,0,__PYX_ERR(0, 214, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 215, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 214, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 215, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 214, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":213
+  /* "lakesuperior/model/rdf/graph.pyx":212
  * 
  * 
  *     def __str__(self):             # <<<<<<<<<<<<<<
@@ -4238,7 +4221,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_8__str__(stru
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":218
+/* "lakesuperior/model/rdf/graph.pyx":217
  * 
  * 
  *     def __add__(self, other):             # <<<<<<<<<<<<<<
@@ -4271,18 +4254,18 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__(PyO
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__add__", 0);
-  __Pyx_TraceCall("__add__", __pyx_f[0], 218, 0, __PYX_ERR(0, 218, __pyx_L1_error));
+  __Pyx_TraceCall("__add__", __pyx_f[0], 217, 0, __PYX_ERR(0, 217, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":220
+  /* "lakesuperior/model/rdf/graph.pyx":219
  *     def __add__(self, other):
  *         """ Alias for :py:meth:`__or__`. """
  *         return self.__or__(other)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(220,0,__PYX_ERR(0, 220, __pyx_L1_error))
+  __Pyx_TraceLine(219,0,__PYX_ERR(0, 219, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_or); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_or); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -4296,14 +4279,14 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__(PyO
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_v_other) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_other);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 220, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":218
+  /* "lakesuperior/model/rdf/graph.pyx":217
  * 
  * 
  *     def __add__(self, other):             # <<<<<<<<<<<<<<
@@ -4325,7 +4308,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__(PyO
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":223
+/* "lakesuperior/model/rdf/graph.pyx":222
  * 
  * 
  *     def __iadd__(self, other):             # <<<<<<<<<<<<<<
@@ -4358,18 +4341,18 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__(st
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__iadd__", 0);
-  __Pyx_TraceCall("__iadd__", __pyx_f[0], 223, 0, __PYX_ERR(0, 223, __pyx_L1_error));
+  __Pyx_TraceCall("__iadd__", __pyx_f[0], 222, 0, __PYX_ERR(0, 222, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":225
+  /* "lakesuperior/model/rdf/graph.pyx":224
  *     def __iadd__(self, other):
  *         """ Alias for :py:meth:`__ior__`. """
  *         return self.__ior__(other)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(225,0,__PYX_ERR(0, 225, __pyx_L1_error))
+  __Pyx_TraceLine(224,0,__PYX_ERR(0, 224, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_ior); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_ior); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -4383,14 +4366,14 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__(st
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_v_other) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_other);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 225, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":223
+  /* "lakesuperior/model/rdf/graph.pyx":222
  * 
  * 
  *     def __iadd__(self, other):             # <<<<<<<<<<<<<<
@@ -4412,7 +4395,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__(st
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":228
+/* "lakesuperior/model/rdf/graph.pyx":227
  * 
  * 
  *     def __sub__(self, other):             # <<<<<<<<<<<<<<
@@ -4446,17 +4429,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__(PyO
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__sub__", 0);
-  __Pyx_TraceCall("__sub__", __pyx_f[0], 228, 0, __PYX_ERR(0, 228, __pyx_L1_error));
+  __Pyx_TraceCall("__sub__", __pyx_f[0], 227, 0, __PYX_ERR(0, 227, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":230
+  /* "lakesuperior/model/rdf/graph.pyx":229
  *     def __sub__(self, other):
  *         """ Set-theoretical subtraction. """
  *         cdef Graph gr3 = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         gr3.keys = kset.subtract(self.keys, other.keys)
  */
-  __Pyx_TraceLine(230,0,__PYX_ERR(0, 230, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 230, __pyx_L1_error)
+  __Pyx_TraceLine(229,0,__PYX_ERR(0, 229, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -4470,28 +4453,28 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__(PyO
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 230, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 229, __pyx_L1_error)
   __pyx_v_gr3 = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":232
+  /* "lakesuperior/model/rdf/graph.pyx":231
  *         cdef Graph gr3 = self.empty_copy()
  * 
  *         gr3.keys = kset.subtract(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return gr3
  */
-  __Pyx_TraceLine(232,0,__PYX_ERR(0, 232, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 232, __pyx_L1_error)
+  __Pyx_TraceLine(231,0,__PYX_ERR(0, 231, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 231, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 232, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 232, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 231, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 232, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_subtract(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 232, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_subtract(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 231, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4501,20 +4484,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__(PyO
   __pyx_v_gr3->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":234
+  /* "lakesuperior/model/rdf/graph.pyx":233
  *         gr3.keys = kset.subtract(self.keys, other.keys)
  * 
  *         return gr3             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(234,0,__PYX_ERR(0, 234, __pyx_L1_error))
+  __Pyx_TraceLine(233,0,__PYX_ERR(0, 233, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_gr3));
   __pyx_r = ((PyObject *)__pyx_v_gr3);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":228
+  /* "lakesuperior/model/rdf/graph.pyx":227
  * 
  * 
  *     def __sub__(self, other):             # <<<<<<<<<<<<<<
@@ -4537,7 +4520,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__(PyO
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":237
+/* "lakesuperior/model/rdf/graph.pyx":236
  * 
  * 
  *     def __isub__(self, other):             # <<<<<<<<<<<<<<
@@ -4570,22 +4553,22 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__(st
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__isub__", 0);
-  __Pyx_TraceCall("__isub__", __pyx_f[0], 237, 0, __PYX_ERR(0, 237, __pyx_L1_error));
+  __Pyx_TraceCall("__isub__", __pyx_f[0], 236, 0, __PYX_ERR(0, 236, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":239
+  /* "lakesuperior/model/rdf/graph.pyx":238
  *     def __isub__(self, other):
  *         """ In-place set-theoretical subtraction. """
  *         self.keys = kset.subtract(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return self
  */
-  __Pyx_TraceLine(239,0,__PYX_ERR(0, 239, __pyx_L1_error))
+  __Pyx_TraceLine(238,0,__PYX_ERR(0, 238, __pyx_L1_error))
   __pyx_t_1 = ((PyObject *)__pyx_v_self->keys);
   __Pyx_INCREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 239, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 239, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_subtract(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 239, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_subtract(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4595,20 +4578,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__(st
   __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":241
+  /* "lakesuperior/model/rdf/graph.pyx":240
  *         self.keys = kset.subtract(self.keys, other.keys)
  * 
  *         return self             # <<<<<<<<<<<<<<
  * 
  *     def __and__(self, other):
  */
-  __Pyx_TraceLine(241,0,__PYX_ERR(0, 241, __pyx_L1_error))
+  __Pyx_TraceLine(240,0,__PYX_ERR(0, 240, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self));
   __pyx_r = ((PyObject *)__pyx_v_self);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":237
+  /* "lakesuperior/model/rdf/graph.pyx":236
  * 
  * 
  *     def __isub__(self, other):             # <<<<<<<<<<<<<<
@@ -4630,7 +4613,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__(st
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":243
+/* "lakesuperior/model/rdf/graph.pyx":242
  *         return self
  * 
  *     def __and__(self, other):             # <<<<<<<<<<<<<<
@@ -4664,17 +4647,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__(PyO
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__and__", 0);
-  __Pyx_TraceCall("__and__", __pyx_f[0], 243, 0, __PYX_ERR(0, 243, __pyx_L1_error));
+  __Pyx_TraceCall("__and__", __pyx_f[0], 242, 0, __PYX_ERR(0, 242, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":245
+  /* "lakesuperior/model/rdf/graph.pyx":244
  *     def __and__(self, other):
  *         """ Set-theoretical intersection. """
  *         cdef Graph gr3 = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         gr3.keys = kset.intersect(self.keys, other.keys)
  */
-  __Pyx_TraceLine(245,0,__PYX_ERR(0, 245, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 245, __pyx_L1_error)
+  __Pyx_TraceLine(244,0,__PYX_ERR(0, 244, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 244, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -4688,28 +4671,28 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__(PyO
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 245, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 244, __pyx_L1_error)
   __pyx_v_gr3 = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":247
+  /* "lakesuperior/model/rdf/graph.pyx":246
  *         cdef Graph gr3 = self.empty_copy()
  * 
  *         gr3.keys = kset.intersect(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return gr3
  */
-  __Pyx_TraceLine(247,0,__PYX_ERR(0, 247, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 247, __pyx_L1_error)
+  __Pyx_TraceLine(246,0,__PYX_ERR(0, 246, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 247, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 247, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 246, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 247, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_intersect(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 247, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_intersect(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 246, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4719,20 +4702,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__(PyO
   __pyx_v_gr3->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":249
+  /* "lakesuperior/model/rdf/graph.pyx":248
  *         gr3.keys = kset.intersect(self.keys, other.keys)
  * 
  *         return gr3             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(249,0,__PYX_ERR(0, 249, __pyx_L1_error))
+  __Pyx_TraceLine(248,0,__PYX_ERR(0, 248, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_gr3));
   __pyx_r = ((PyObject *)__pyx_v_gr3);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":243
+  /* "lakesuperior/model/rdf/graph.pyx":242
  *         return self
  * 
  *     def __and__(self, other):             # <<<<<<<<<<<<<<
@@ -4755,7 +4738,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__(PyO
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":252
+/* "lakesuperior/model/rdf/graph.pyx":251
  * 
  * 
  *     def __iand__(self, other):             # <<<<<<<<<<<<<<
@@ -4788,22 +4771,22 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__(st
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__iand__", 0);
-  __Pyx_TraceCall("__iand__", __pyx_f[0], 252, 0, __PYX_ERR(0, 252, __pyx_L1_error));
+  __Pyx_TraceCall("__iand__", __pyx_f[0], 251, 0, __PYX_ERR(0, 251, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":254
+  /* "lakesuperior/model/rdf/graph.pyx":253
  *     def __iand__(self, other):
  *         """ In-place set-theoretical intersection. """
  *         self.keys = kset.intersect(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return self
  */
-  __Pyx_TraceLine(254,0,__PYX_ERR(0, 254, __pyx_L1_error))
+  __Pyx_TraceLine(253,0,__PYX_ERR(0, 253, __pyx_L1_error))
   __pyx_t_1 = ((PyObject *)__pyx_v_self->keys);
   __Pyx_INCREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 254, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 253, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 254, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_intersect(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 254, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_intersect(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 253, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4813,20 +4796,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__(st
   __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":256
+  /* "lakesuperior/model/rdf/graph.pyx":255
  *         self.keys = kset.intersect(self.keys, other.keys)
  * 
  *         return self             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(256,0,__PYX_ERR(0, 256, __pyx_L1_error))
+  __Pyx_TraceLine(255,0,__PYX_ERR(0, 255, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self));
   __pyx_r = ((PyObject *)__pyx_v_self);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":252
+  /* "lakesuperior/model/rdf/graph.pyx":251
  * 
  * 
  *     def __iand__(self, other):             # <<<<<<<<<<<<<<
@@ -4848,7 +4831,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__(st
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":259
+/* "lakesuperior/model/rdf/graph.pyx":258
  * 
  * 
  *     def __or__(self, other):             # <<<<<<<<<<<<<<
@@ -4882,17 +4865,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__(PyOb
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__or__", 0);
-  __Pyx_TraceCall("__or__", __pyx_f[0], 259, 0, __PYX_ERR(0, 259, __pyx_L1_error));
+  __Pyx_TraceCall("__or__", __pyx_f[0], 258, 0, __PYX_ERR(0, 258, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":261
+  /* "lakesuperior/model/rdf/graph.pyx":260
  *     def __or__(self, other):
  *         """ Set-theoretical union. """
  *         cdef Graph gr3 = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         gr3.keys = kset.merge(self.keys, other.keys)
  */
-  __Pyx_TraceLine(261,0,__PYX_ERR(0, 261, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 261, __pyx_L1_error)
+  __Pyx_TraceLine(260,0,__PYX_ERR(0, 260, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -4906,28 +4889,28 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__(PyOb
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 261, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 260, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 261, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 260, __pyx_L1_error)
   __pyx_v_gr3 = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":263
+  /* "lakesuperior/model/rdf/graph.pyx":262
  *         cdef Graph gr3 = self.empty_copy()
  * 
  *         gr3.keys = kset.merge(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return gr3
  */
-  __Pyx_TraceLine(263,0,__PYX_ERR(0, 263, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 263, __pyx_L1_error)
+  __Pyx_TraceLine(262,0,__PYX_ERR(0, 262, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 263, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 263, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 263, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_merge(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 263, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_merge(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4937,20 +4920,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__(PyOb
   __pyx_v_gr3->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":265
+  /* "lakesuperior/model/rdf/graph.pyx":264
  *         gr3.keys = kset.merge(self.keys, other.keys)
  * 
  *         return gr3             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(265,0,__PYX_ERR(0, 265, __pyx_L1_error))
+  __Pyx_TraceLine(264,0,__PYX_ERR(0, 264, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_gr3));
   __pyx_r = ((PyObject *)__pyx_v_gr3);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":259
+  /* "lakesuperior/model/rdf/graph.pyx":258
  * 
  * 
  *     def __or__(self, other):             # <<<<<<<<<<<<<<
@@ -4973,7 +4956,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__(PyOb
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":268
+/* "lakesuperior/model/rdf/graph.pyx":267
  * 
  * 
  *     def __ior__(self, other):             # <<<<<<<<<<<<<<
@@ -5006,22 +4989,22 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__(str
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__ior__", 0);
-  __Pyx_TraceCall("__ior__", __pyx_f[0], 268, 0, __PYX_ERR(0, 268, __pyx_L1_error));
+  __Pyx_TraceCall("__ior__", __pyx_f[0], 267, 0, __PYX_ERR(0, 267, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":270
+  /* "lakesuperior/model/rdf/graph.pyx":269
  *     def __ior__(self, other):
  *         """ In-place set-theoretical union. """
  *         self.keys = kset.merge(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return self
  */
-  __Pyx_TraceLine(270,0,__PYX_ERR(0, 270, __pyx_L1_error))
+  __Pyx_TraceLine(269,0,__PYX_ERR(0, 269, __pyx_L1_error))
   __pyx_t_1 = ((PyObject *)__pyx_v_self->keys);
   __Pyx_INCREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 270, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_merge(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 270, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 269, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_merge(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -5031,20 +5014,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__(str
   __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":272
+  /* "lakesuperior/model/rdf/graph.pyx":271
  *         self.keys = kset.merge(self.keys, other.keys)
  * 
  *         return self             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(272,0,__PYX_ERR(0, 272, __pyx_L1_error))
+  __Pyx_TraceLine(271,0,__PYX_ERR(0, 271, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self));
   __pyx_r = ((PyObject *)__pyx_v_self);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":268
+  /* "lakesuperior/model/rdf/graph.pyx":267
  * 
  * 
  *     def __ior__(self, other):             # <<<<<<<<<<<<<<
@@ -5066,7 +5049,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__(str
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":275
+/* "lakesuperior/model/rdf/graph.pyx":274
  * 
  * 
  *     def __xor__(self, other):             # <<<<<<<<<<<<<<
@@ -5100,17 +5083,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__(PyO
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__xor__", 0);
-  __Pyx_TraceCall("__xor__", __pyx_f[0], 275, 0, __PYX_ERR(0, 275, __pyx_L1_error));
+  __Pyx_TraceCall("__xor__", __pyx_f[0], 274, 0, __PYX_ERR(0, 274, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":277
+  /* "lakesuperior/model/rdf/graph.pyx":276
  *     def __xor__(self, other):
  *         """ Set-theoretical exclusive disjunction (XOR). """
  *         cdef Graph gr3 = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         gr3.keys = kset.xor(self.keys, other.keys)
  */
-  __Pyx_TraceLine(277,0,__PYX_ERR(0, 277, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __Pyx_TraceLine(276,0,__PYX_ERR(0, 276, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 276, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -5124,28 +5107,28 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__(PyO
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 277, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 276, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 277, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 276, __pyx_L1_error)
   __pyx_v_gr3 = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":279
+  /* "lakesuperior/model/rdf/graph.pyx":278
  *         cdef Graph gr3 = self.empty_copy()
  * 
  *         gr3.keys = kset.xor(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return gr3
  */
-  __Pyx_TraceLine(279,0,__PYX_ERR(0, 279, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 279, __pyx_L1_error)
+  __Pyx_TraceLine(278,0,__PYX_ERR(0, 278, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_keys); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 279, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 278, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 279, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_xor(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 279, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 278, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_xor(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -5155,20 +5138,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__(PyO
   __pyx_v_gr3->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":281
+  /* "lakesuperior/model/rdf/graph.pyx":280
  *         gr3.keys = kset.xor(self.keys, other.keys)
  * 
  *         return gr3             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(281,0,__PYX_ERR(0, 281, __pyx_L1_error))
+  __Pyx_TraceLine(280,0,__PYX_ERR(0, 280, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_gr3));
   __pyx_r = ((PyObject *)__pyx_v_gr3);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":275
+  /* "lakesuperior/model/rdf/graph.pyx":274
  * 
  * 
  *     def __xor__(self, other):             # <<<<<<<<<<<<<<
@@ -5191,7 +5174,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__(PyO
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":284
+/* "lakesuperior/model/rdf/graph.pyx":283
  * 
  * 
  *     def __ixor__(self, other):             # <<<<<<<<<<<<<<
@@ -5224,22 +5207,22 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__(st
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__ixor__", 0);
-  __Pyx_TraceCall("__ixor__", __pyx_f[0], 284, 0, __PYX_ERR(0, 284, __pyx_L1_error));
+  __Pyx_TraceCall("__ixor__", __pyx_f[0], 283, 0, __PYX_ERR(0, 283, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":286
+  /* "lakesuperior/model/rdf/graph.pyx":285
  *     def __ixor__(self, other):
  *         """ In-place set-theoretical exclusive disjunction (XOR). """
  *         self.keys = kset.xor(self.keys, other.keys)             # <<<<<<<<<<<<<<
  * 
  *         return self
  */
-  __Pyx_TraceLine(286,0,__PYX_ERR(0, 286, __pyx_L1_error))
+  __Pyx_TraceLine(285,0,__PYX_ERR(0, 285, __pyx_L1_error))
   __pyx_t_1 = ((PyObject *)__pyx_v_self->keys);
   __Pyx_INCREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_other, __pyx_n_s_keys); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 285, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 286, __pyx_L1_error)
-  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_xor(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L1_error)
+  if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_3 = ((PyObject *)__pyx_f_12lakesuperior_5model_10structures_6keyset_xor(((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1), ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_2))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 285, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -5249,20 +5232,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__(st
   __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":288
+  /* "lakesuperior/model/rdf/graph.pyx":287
  *         self.keys = kset.xor(self.keys, other.keys)
  * 
  *         return self             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(288,0,__PYX_ERR(0, 288, __pyx_L1_error))
+  __Pyx_TraceLine(287,0,__PYX_ERR(0, 287, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self));
   __pyx_r = ((PyObject *)__pyx_v_self);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":284
+  /* "lakesuperior/model/rdf/graph.pyx":283
  * 
  * 
  *     def __ixor__(self, other):             # <<<<<<<<<<<<<<
@@ -5284,7 +5267,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__(st
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":291
+/* "lakesuperior/model/rdf/graph.pyx":290
  * 
  * 
  *     def __contains__(self, trp):             # <<<<<<<<<<<<<<
@@ -5320,72 +5303,72 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_30__contains__(stru
   __pyx_t_12lakesuperior_5model_4base_Key __pyx_t_4;
   __pyx_t_12lakesuperior_5model_4base_Key __pyx_t_5[3];
   __Pyx_RefNannySetupContext("__contains__", 0);
-  __Pyx_TraceCall("__contains__", __pyx_f[0], 291, 0, __PYX_ERR(0, 291, __pyx_L1_error));
+  __Pyx_TraceCall("__contains__", __pyx_f[0], 290, 0, __PYX_ERR(0, 290, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":302
+  /* "lakesuperior/model/rdf/graph.pyx":301
  * 
  *         spok = [
  *             self.store.to_key(trp[0]),             # <<<<<<<<<<<<<<
  *             self.store.to_key(trp[1]),
  *             self.store.to_key(trp[2]),
  */
-  __Pyx_TraceLine(302,0,__PYX_ERR(0, 302, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
+  __Pyx_TraceLine(301,0,__PYX_ERR(0, 301, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_2 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_t_2 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_2 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 301, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":303
+  /* "lakesuperior/model/rdf/graph.pyx":302
  *         spok = [
  *             self.store.to_key(trp[0]),
  *             self.store.to_key(trp[1]),             # <<<<<<<<<<<<<<
  *             self.store.to_key(trp[2]),
  *         ]
  */
-  __Pyx_TraceLine(303,0,__PYX_ERR(0, 303, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+  __Pyx_TraceLine(302,0,__PYX_ERR(0, 302, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_3 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 303, __pyx_L1_error)
+  __pyx_t_3 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_3 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":304
+  /* "lakesuperior/model/rdf/graph.pyx":303
  *             self.store.to_key(trp[0]),
  *             self.store.to_key(trp[1]),
  *             self.store.to_key(trp[2]),             # <<<<<<<<<<<<<<
  *         ]
  * 
  */
-  __Pyx_TraceLine(304,0,__PYX_ERR(0, 304, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __Pyx_TraceLine(303,0,__PYX_ERR(0, 303, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_trp, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_4 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_4 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_t_1); if (unlikely(__pyx_t_4 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 303, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":301
+  /* "lakesuperior/model/rdf/graph.pyx":300
  *         cdef TripleKey spok
  * 
  *         spok = [             # <<<<<<<<<<<<<<
  *             self.store.to_key(trp[0]),
  *             self.store.to_key(trp[1]),
  */
-  __Pyx_TraceLine(301,0,__PYX_ERR(0, 301, __pyx_L1_error))
+  __Pyx_TraceLine(300,0,__PYX_ERR(0, 300, __pyx_L1_error))
   __pyx_t_5[0] = __pyx_t_2;
   __pyx_t_5[1] = __pyx_t_3;
   __pyx_t_5[2] = __pyx_t_4;
   memcpy(&(__pyx_v_spok[0]), __pyx_t_5, sizeof(__pyx_v_spok[0]) * (3));
 
-  /* "lakesuperior/model/rdf/graph.pyx":307
+  /* "lakesuperior/model/rdf/graph.pyx":306
  *         ]
  * 
  *         return self.keys.contains(&spok)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(307,0,__PYX_ERR(0, 307, __pyx_L1_error))
+  __Pyx_TraceLine(306,0,__PYX_ERR(0, 306, __pyx_L1_error))
   __pyx_r = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->contains(__pyx_v_self->keys, (&__pyx_v_spok));
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":291
+  /* "lakesuperior/model/rdf/graph.pyx":290
  * 
  * 
  *     def __contains__(self, trp):             # <<<<<<<<<<<<<<
@@ -5405,7 +5388,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_30__contains__(stru
 }
 static PyObject *__pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator(__pyx_CoroutineObject *__pyx_generator, CYTHON_UNUSED PyThreadState *__pyx_tstate, PyObject *__pyx_sent_value); /* proto */
 
-/* "lakesuperior/model/rdf/graph.pyx":310
+/* "lakesuperior/model/rdf/graph.pyx":309
  * 
  * 
  *     def __iter__(self):             # <<<<<<<<<<<<<<
@@ -5439,7 +5422,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_32__iter__(st
   if (unlikely(!__pyx_cur_scope)) {
     __pyx_cur_scope = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__ *)Py_None);
     __Pyx_INCREF(Py_None);
-    __PYX_ERR(0, 310, __pyx_L1_error)
+    __PYX_ERR(0, 309, __pyx_L1_error)
   } else {
     __Pyx_GOTREF(__pyx_cur_scope);
   }
@@ -5447,7 +5430,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_32__iter__(st
   __Pyx_INCREF((PyObject *)__pyx_cur_scope->__pyx_v_self);
   __Pyx_GIVEREF((PyObject *)__pyx_cur_scope->__pyx_v_self);
   {
-    __pyx_CoroutineObject *gen = __Pyx_Generator_New((__pyx_coroutine_body_t) __pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator, NULL, (PyObject *) __pyx_cur_scope, __pyx_n_s_iter, __pyx_n_s_Graph___iter, __pyx_n_s_lakesuperior_model_rdf_graph); if (unlikely(!gen)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_CoroutineObject *gen = __Pyx_Generator_New((__pyx_coroutine_body_t) __pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator, NULL, (PyObject *) __pyx_cur_scope, __pyx_n_s_iter, __pyx_n_s_Graph___iter, __pyx_n_s_lakesuperior_model_rdf_graph); if (unlikely(!gen)) __PYX_ERR(0, 309, __pyx_L1_error)
     __Pyx_DECREF(__pyx_cur_scope);
     __Pyx_RefNannyFinishContext();
     return (PyObject *) gen;
@@ -5471,7 +5454,7 @@ static PyObject *__pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator(_
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__iter__", 0);
-  __Pyx_TraceCall("__iter__", __pyx_f[0], 310, 0, __PYX_ERR(0, 310, __pyx_L1_error));
+  __Pyx_TraceCall("__iter__", __pyx_f[0], 309, 0, __PYX_ERR(0, 309, __pyx_L1_error));
   switch (__pyx_generator->resume_label) {
     case 0: goto __pyx_L3_first_run;
     case 1: goto __pyx_L4_resume_from_yield_from;
@@ -5481,17 +5464,17 @@ static PyObject *__pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator(_
     return NULL;
   }
   __pyx_L3_first_run:;
-  if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 310, __pyx_L1_error)
+  if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 309, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":313
+  /* "lakesuperior/model/rdf/graph.pyx":312
  *         """ Graph iterator. It iterates over the set triples. """
  *         # TODO Could use a faster method.
  *         yield from self.data             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(313,0,__PYX_ERR(0, 313, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_cur_scope->__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __Pyx_TraceLine(312,0,__PYX_ERR(0, 312, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_cur_scope->__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __Pyx_Generator_Yield_From(__pyx_generator, __pyx_t_1);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -5505,17 +5488,17 @@ static PyObject *__pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator(_
     __pyx_generator->resume_label = 1;
     return __pyx_r;
     __pyx_L4_resume_from_yield_from:;
-    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 313, __pyx_L1_error)
+    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 312, __pyx_L1_error)
   } else {
     PyObject* exc_type = __Pyx_PyErr_Occurred();
     if (exc_type) {
       if (likely(exc_type == PyExc_StopIteration || (exc_type != PyExc_GeneratorExit && __Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration)))) PyErr_Clear();
-      else __PYX_ERR(0, 313, __pyx_L1_error)
+      else __PYX_ERR(0, 312, __pyx_L1_error)
     }
   }
   CYTHON_MAYBE_UNUSED_VAR(__pyx_cur_scope);
 
-  /* "lakesuperior/model/rdf/graph.pyx":310
+  /* "lakesuperior/model/rdf/graph.pyx":309
  * 
  * 
  *     def __iter__(self):             # <<<<<<<<<<<<<<
@@ -5541,7 +5524,7 @@ static PyObject *__pyx_gb_12lakesuperior_5model_3rdf_5graph_5Graph_34generator(_
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":318
+/* "lakesuperior/model/rdf/graph.pyx":317
  *     # Slicing.
  * 
  *     def __getitem__(self, item):             # <<<<<<<<<<<<<<
@@ -5584,33 +5567,33 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
   Py_ssize_t __pyx_t_9;
   Py_UCS4 __pyx_t_10;
   __Pyx_RefNannySetupContext("__getitem__", 0);
-  __Pyx_TraceCall("__getitem__", __pyx_f[0], 318, 0, __PYX_ERR(0, 318, __pyx_L1_error));
+  __Pyx_TraceCall("__getitem__", __pyx_f[0], 317, 0, __PYX_ERR(0, 317, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":333
+  /* "lakesuperior/model/rdf/graph.pyx":332
  *         :rtype: set
  *         """
  *         if isinstance(item, slice):             # <<<<<<<<<<<<<<
  *             s, p, o = item.start, item.stop, item.step
  *             return self._slice(s, p, o)
  */
-  __Pyx_TraceLine(333,0,__PYX_ERR(0, 333, __pyx_L1_error))
+  __Pyx_TraceLine(332,0,__PYX_ERR(0, 332, __pyx_L1_error))
   __pyx_t_1 = PySlice_Check(__pyx_v_item); 
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":334
+    /* "lakesuperior/model/rdf/graph.pyx":333
  *         """
  *         if isinstance(item, slice):
  *             s, p, o = item.start, item.stop, item.step             # <<<<<<<<<<<<<<
  *             return self._slice(s, p, o)
  *         elif self.uri and isinstance(item, rdflib.term.Identifier):
  */
-    __Pyx_TraceLine(334,0,__PYX_ERR(0, 334, __pyx_L1_error))
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_start); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 334, __pyx_L1_error)
+    __Pyx_TraceLine(333,0,__PYX_ERR(0, 333, __pyx_L1_error))
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_start); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 333, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_stop); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 334, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_stop); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 333, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_step); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_item, __pyx_n_s_step); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 333, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_v_s = __pyx_t_3;
     __pyx_t_3 = 0;
@@ -5619,16 +5602,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     __pyx_v_o = __pyx_t_5;
     __pyx_t_5 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":335
+    /* "lakesuperior/model/rdf/graph.pyx":334
  *         if isinstance(item, slice):
  *             s, p, o = item.start, item.stop, item.step
  *             return self._slice(s, p, o)             # <<<<<<<<<<<<<<
  *         elif self.uri and isinstance(item, rdflib.term.Identifier):
  *             # If a Node is given, return all values for that predicate.
  */
-    __Pyx_TraceLine(335,0,__PYX_ERR(0, 335, __pyx_L1_error))
+    __Pyx_TraceLine(334,0,__PYX_ERR(0, 334, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_slice); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 335, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_slice); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 334, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_3 = NULL;
     __pyx_t_6 = 0;
@@ -5645,7 +5628,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_4)) {
       PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_v_s, __pyx_v_p, __pyx_v_o};
-      __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_GOTREF(__pyx_t_5);
     } else
@@ -5653,13 +5636,13 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
       PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_v_s, __pyx_v_p, __pyx_v_o};
-      __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_GOTREF(__pyx_t_5);
     } else
     #endif
     {
-      __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 335, __pyx_L1_error)
+      __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 334, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       if (__pyx_t_3) {
         __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_3); __pyx_t_3 = NULL;
@@ -5673,7 +5656,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
       __Pyx_INCREF(__pyx_v_o);
       __Pyx_GIVEREF(__pyx_v_o);
       PyTuple_SET_ITEM(__pyx_t_7, 2+__pyx_t_6, __pyx_v_o);
-      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_7, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_7, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     }
@@ -5682,7 +5665,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     __pyx_t_5 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":333
+    /* "lakesuperior/model/rdf/graph.pyx":332
  *         :rtype: set
  *         """
  *         if isinstance(item, slice):             # <<<<<<<<<<<<<<
@@ -5691,45 +5674,45 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":336
+  /* "lakesuperior/model/rdf/graph.pyx":335
  *             s, p, o = item.start, item.stop, item.step
  *             return self._slice(s, p, o)
  *         elif self.uri and isinstance(item, rdflib.term.Identifier):             # <<<<<<<<<<<<<<
  *             # If a Node is given, return all values for that predicate.
  *             return self._slice(self.uri, item, None)
  */
-  __Pyx_TraceLine(336,0,__PYX_ERR(0, 336, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __Pyx_TraceLine(335,0,__PYX_ERR(0, 335, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 335, __pyx_L1_error)
   if (__pyx_t_1) {
   } else {
     __pyx_t_2 = __pyx_t_1;
     goto __pyx_L4_bool_binop_done;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_term); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_term); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_Identifier); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_Identifier); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_1 = PyObject_IsInstance(__pyx_v_item, __pyx_t_5); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_1 = PyObject_IsInstance(__pyx_v_item, __pyx_t_5); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_8 = (__pyx_t_1 != 0);
   __pyx_t_2 = __pyx_t_8;
   __pyx_L4_bool_binop_done:;
   if (likely(__pyx_t_2)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":338
+    /* "lakesuperior/model/rdf/graph.pyx":337
  *         elif self.uri and isinstance(item, rdflib.term.Identifier):
  *             # If a Node is given, return all values for that predicate.
  *             return self._slice(self.uri, item, None)             # <<<<<<<<<<<<<<
  *         else:
  *             raise TypeError(f'Wrong slice format: {item}.')
  */
-    __Pyx_TraceLine(338,0,__PYX_ERR(0, 338, __pyx_L1_error))
+    __Pyx_TraceLine(337,0,__PYX_ERR(0, 337, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_slice); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 338, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_slice); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 337, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_7 = NULL;
     __pyx_t_6 = 0;
@@ -5746,7 +5729,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_4)) {
       PyObject *__pyx_temp[4] = {__pyx_t_7, __pyx_v_self->uri, __pyx_v_item, Py_None};
-      __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 338, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 337, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
       __Pyx_GOTREF(__pyx_t_5);
     } else
@@ -5754,13 +5737,13 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
       PyObject *__pyx_temp[4] = {__pyx_t_7, __pyx_v_self->uri, __pyx_v_item, Py_None};
-      __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 338, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 337, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
       __Pyx_GOTREF(__pyx_t_5);
     } else
     #endif
     {
-      __pyx_t_3 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 338, __pyx_L1_error)
+      __pyx_t_3 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 337, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       if (__pyx_t_7) {
         __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_7); __pyx_t_7 = NULL;
@@ -5774,7 +5757,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
       __Pyx_INCREF(Py_None);
       __Pyx_GIVEREF(Py_None);
       PyTuple_SET_ITEM(__pyx_t_3, 2+__pyx_t_6, Py_None);
-      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_3, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 338, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_3, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 337, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     }
@@ -5783,7 +5766,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     __pyx_t_5 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":336
+    /* "lakesuperior/model/rdf/graph.pyx":335
  *             s, p, o = item.start, item.stop, item.step
  *             return self._slice(s, p, o)
  *         elif self.uri and isinstance(item, rdflib.term.Identifier):             # <<<<<<<<<<<<<<
@@ -5792,16 +5775,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":340
+  /* "lakesuperior/model/rdf/graph.pyx":339
  *             return self._slice(self.uri, item, None)
  *         else:
  *             raise TypeError(f'Wrong slice format: {item}.')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(340,0,__PYX_ERR(0, 340, __pyx_L1_error))
+  __Pyx_TraceLine(339,0,__PYX_ERR(0, 339, __pyx_L1_error))
   /*else*/ {
-    __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 340, __pyx_L1_error)
+    __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_t_9 = 0;
     __pyx_t_10 = 127;
@@ -5809,7 +5792,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     __pyx_t_9 += 20;
     __Pyx_GIVEREF(__pyx_kp_u_Wrong_slice_format);
     PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_kp_u_Wrong_slice_format);
-    __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_v_item, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 340, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_FormatSimple(__pyx_v_item, __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_10;
     __pyx_t_9 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_4);
@@ -5820,18 +5803,18 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
     __pyx_t_9 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__4);
     PyTuple_SET_ITEM(__pyx_t_5, 2, __pyx_kp_u__4);
-    __pyx_t_4 = __Pyx_PyUnicode_Join(__pyx_t_5, 3, __pyx_t_9, __pyx_t_10); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 340, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyUnicode_Join(__pyx_t_5, 3, __pyx_t_9, __pyx_t_10); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_builtin_TypeError, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 340, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_builtin_TypeError, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_Raise(__pyx_t_5, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __PYX_ERR(0, 340, __pyx_L1_error)
+    __PYX_ERR(0, 339, __pyx_L1_error)
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":318
+  /* "lakesuperior/model/rdf/graph.pyx":317
  *     # Slicing.
  * 
  *     def __getitem__(self, item):             # <<<<<<<<<<<<<<
@@ -5857,7 +5840,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":343
+/* "lakesuperior/model/rdf/graph.pyx":342
  * 
  * 
  *     def __hash__(self):             # <<<<<<<<<<<<<<
@@ -5889,24 +5872,24 @@ static Py_hash_t __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_37__hash__(st
   PyObject *__pyx_t_1 = NULL;
   Py_hash_t __pyx_t_2;
   __Pyx_RefNannySetupContext("__hash__", 0);
-  __Pyx_TraceCall("__hash__", __pyx_f[0], 343, 0, __PYX_ERR(0, 343, __pyx_L1_error));
+  __Pyx_TraceCall("__hash__", __pyx_f[0], 342, 0, __PYX_ERR(0, 342, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":345
+  /* "lakesuperior/model/rdf/graph.pyx":344
  *     def __hash__(self):
  *         """ FIXME this is a joke of a hash. """
  *         return id(self)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(345,0,__PYX_ERR(0, 345, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_id, ((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 345, __pyx_L1_error)
+  __Pyx_TraceLine(344,0,__PYX_ERR(0, 344, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_id, ((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 344, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_AsHash_t(__pyx_t_1); if (unlikely((__pyx_t_2 == (Py_hash_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 345, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_AsHash_t(__pyx_t_1); if (unlikely((__pyx_t_2 == (Py_hash_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 344, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":343
+  /* "lakesuperior/model/rdf/graph.pyx":342
  * 
  * 
  *     def __hash__(self):             # <<<<<<<<<<<<<<
@@ -5926,7 +5909,7 @@ static Py_hash_t __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_37__hash__(st
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":350
+/* "lakesuperior/model/rdf/graph.pyx":349
  *     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
  * 
  *     def value(self, p, strict=False):             # <<<<<<<<<<<<<<
@@ -5972,7 +5955,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_40value(PyObj
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "value") < 0)) __PYX_ERR(0, 350, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "value") < 0)) __PYX_ERR(0, 349, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -5988,7 +5971,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_40value(PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("value", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 350, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("value", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 349, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lakesuperior.model.rdf.graph.Graph.value", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -6022,35 +6005,35 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
   int __pyx_t_12;
   __Pyx_TraceFrameInit(__pyx_codeobj__6)
   __Pyx_RefNannySetupContext("value", 0);
-  __Pyx_TraceCall("value", __pyx_f[0], 350, 0, __PYX_ERR(0, 350, __pyx_L1_error));
+  __Pyx_TraceCall("value", __pyx_f[0], 349, 0, __PYX_ERR(0, 349, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":361
+  /* "lakesuperior/model/rdf/graph.pyx":360
  *         :rtype: rdflib.term.Node
  *         """
  *         if not self.uri:             # <<<<<<<<<<<<<<
  *             raise ValueError('Cannot use `value` on a non-named graph.')
  * 
  */
-  __Pyx_TraceLine(361,0,__PYX_ERR(0, 361, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 361, __pyx_L1_error)
+  __Pyx_TraceLine(360,0,__PYX_ERR(0, 360, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->uri); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 360, __pyx_L1_error)
   __pyx_t_2 = ((!__pyx_t_1) != 0);
   if (unlikely(__pyx_t_2)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":362
+    /* "lakesuperior/model/rdf/graph.pyx":361
  *         """
  *         if not self.uri:
  *             raise ValueError('Cannot use `value` on a non-named graph.')             # <<<<<<<<<<<<<<
  * 
  *         # TODO use slice.
  */
-    __Pyx_TraceLine(362,0,__PYX_ERR(0, 362, __pyx_L1_error))
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 362, __pyx_L1_error)
+    __Pyx_TraceLine(361,0,__PYX_ERR(0, 361, __pyx_L1_error))
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 361, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __PYX_ERR(0, 362, __pyx_L1_error)
+    __PYX_ERR(0, 361, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":361
+    /* "lakesuperior/model/rdf/graph.pyx":360
  *         :rtype: rdflib.term.Node
  *         """
  *         if not self.uri:             # <<<<<<<<<<<<<<
@@ -6059,20 +6042,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":365
+  /* "lakesuperior/model/rdf/graph.pyx":364
  * 
  *         # TODO use slice.
  *         values = {trp[2] for trp in self.lookup((self.uri, p, None))}             # <<<<<<<<<<<<<<
  * 
  *         if strict and len(values) > 1:
  */
-  __Pyx_TraceLine(365,0,__PYX_ERR(0, 365, __pyx_L1_error))
+  __Pyx_TraceLine(364,0,__PYX_ERR(0, 364, __pyx_L1_error))
   { /* enter inner scope */
-    __pyx_t_3 = PySet_New(NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 365, __pyx_L6_error)
+    __pyx_t_3 = PySet_New(NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 364, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_lookup); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 365, __pyx_L6_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_lookup); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 364, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 365, __pyx_L6_error)
+    __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 364, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_INCREF(__pyx_v_self->uri);
     __Pyx_GIVEREF(__pyx_v_self->uri);
@@ -6096,16 +6079,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
     __pyx_t_4 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_7, __pyx_t_6) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6);
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 365, __pyx_L6_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 364, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     if (likely(PyList_CheckExact(__pyx_t_4)) || PyTuple_CheckExact(__pyx_t_4)) {
       __pyx_t_5 = __pyx_t_4; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
       __pyx_t_9 = NULL;
     } else {
-      __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 365, __pyx_L6_error)
+      __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 364, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 365, __pyx_L6_error)
+      __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 364, __pyx_L6_error)
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     for (;;) {
@@ -6113,17 +6096,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
         if (likely(PyList_CheckExact(__pyx_t_5))) {
           if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_4 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_4); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 365, __pyx_L6_error)
+          __pyx_t_4 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_4); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 364, __pyx_L6_error)
           #else
-          __pyx_t_4 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 365, __pyx_L6_error)
+          __pyx_t_4 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 364, __pyx_L6_error)
           __Pyx_GOTREF(__pyx_t_4);
           #endif
         } else {
           if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_4); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 365, __pyx_L6_error)
+          __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_4); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 364, __pyx_L6_error)
           #else
-          __pyx_t_4 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 365, __pyx_L6_error)
+          __pyx_t_4 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 364, __pyx_L6_error)
           __Pyx_GOTREF(__pyx_t_4);
           #endif
         }
@@ -6133,7 +6116,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 365, __pyx_L6_error)
+            else __PYX_ERR(0, 364, __pyx_L6_error)
           }
           break;
         }
@@ -6141,9 +6124,9 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
       }
       __Pyx_XDECREF_SET(__pyx_7genexpr__pyx_v_trp, __pyx_t_4);
       __pyx_t_4 = 0;
-      __pyx_t_4 = __Pyx_GetItemInt(__pyx_7genexpr__pyx_v_trp, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 365, __pyx_L6_error)
+      __pyx_t_4 = __Pyx_GetItemInt(__pyx_7genexpr__pyx_v_trp, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 364, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_4);
-      if (unlikely(PySet_Add(__pyx_t_3, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 365, __pyx_L6_error)
+      if (unlikely(PySet_Add(__pyx_t_3, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 364, __pyx_L6_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -6157,45 +6140,45 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
   __pyx_v_values = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":367
+  /* "lakesuperior/model/rdf/graph.pyx":366
  *         values = {trp[2] for trp in self.lookup((self.uri, p, None))}
  * 
  *         if strict and len(values) > 1:             # <<<<<<<<<<<<<<
  *             raise RuntimeError('More than one value found for {}, {}.'.format(
  *                     self.uri, p))
  */
-  __Pyx_TraceLine(367,0,__PYX_ERR(0, 367, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_strict); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 367, __pyx_L1_error)
+  __Pyx_TraceLine(366,0,__PYX_ERR(0, 366, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_strict); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 366, __pyx_L1_error)
   if (__pyx_t_1) {
   } else {
     __pyx_t_2 = __pyx_t_1;
     goto __pyx_L11_bool_binop_done;
   }
-  __pyx_t_8 = PySet_GET_SIZE(__pyx_v_values); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 367, __pyx_L1_error)
+  __pyx_t_8 = PySet_GET_SIZE(__pyx_v_values); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 366, __pyx_L1_error)
   __pyx_t_1 = ((__pyx_t_8 > 1) != 0);
   __pyx_t_2 = __pyx_t_1;
   __pyx_L11_bool_binop_done:;
   if (unlikely(__pyx_t_2)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":368
+    /* "lakesuperior/model/rdf/graph.pyx":367
  * 
  *         if strict and len(values) > 1:
  *             raise RuntimeError('More than one value found for {}, {}.'.format(             # <<<<<<<<<<<<<<
  *                     self.uri, p))
  * 
  */
-    __Pyx_TraceLine(368,0,__PYX_ERR(0, 368, __pyx_L1_error))
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_More_than_one_value_found_for, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 368, __pyx_L1_error)
+    __Pyx_TraceLine(367,0,__PYX_ERR(0, 367, __pyx_L1_error))
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_More_than_one_value_found_for, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 367, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
 
-    /* "lakesuperior/model/rdf/graph.pyx":369
+    /* "lakesuperior/model/rdf/graph.pyx":368
  *         if strict and len(values) > 1:
  *             raise RuntimeError('More than one value found for {}, {}.'.format(
  *                     self.uri, p))             # <<<<<<<<<<<<<<
  * 
  *         for ret in values:
  */
-    __Pyx_TraceLine(369,0,__PYX_ERR(0, 369, __pyx_L1_error))
+    __Pyx_TraceLine(368,0,__PYX_ERR(0, 368, __pyx_L1_error))
     __pyx_t_4 = NULL;
     __pyx_t_10 = 0;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
@@ -6211,7 +6194,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_5)) {
       PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_self->uri, __pyx_v_p};
-      __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 2+__pyx_t_10); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 368, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 2+__pyx_t_10); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 367, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_GOTREF(__pyx_t_3);
     } else
@@ -6219,13 +6202,13 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
       PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_self->uri, __pyx_v_p};
-      __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 2+__pyx_t_10); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 368, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 2+__pyx_t_10); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 367, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_GOTREF(__pyx_t_3);
     } else
     #endif
     {
-      __pyx_t_6 = PyTuple_New(2+__pyx_t_10); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 368, __pyx_L1_error)
+      __pyx_t_6 = PyTuple_New(2+__pyx_t_10); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 367, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       if (__pyx_t_4) {
         __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -6236,28 +6219,28 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
       __Pyx_INCREF(__pyx_v_p);
       __Pyx_GIVEREF(__pyx_v_p);
       PyTuple_SET_ITEM(__pyx_t_6, 1+__pyx_t_10, __pyx_v_p);
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 368, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 367, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     }
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":368
+    /* "lakesuperior/model/rdf/graph.pyx":367
  * 
  *         if strict and len(values) > 1:
  *             raise RuntimeError('More than one value found for {}, {}.'.format(             # <<<<<<<<<<<<<<
  *                     self.uri, p))
  * 
  */
-    __Pyx_TraceLine(368,0,__PYX_ERR(0, 368, __pyx_L1_error))
-    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_builtin_RuntimeError, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 368, __pyx_L1_error)
+    __Pyx_TraceLine(367,0,__PYX_ERR(0, 367, __pyx_L1_error))
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_builtin_RuntimeError, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 367, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_5, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __PYX_ERR(0, 368, __pyx_L1_error)
+    __PYX_ERR(0, 367, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":367
+    /* "lakesuperior/model/rdf/graph.pyx":366
  *         values = {trp[2] for trp in self.lookup((self.uri, p, None))}
  * 
  *         if strict and len(values) > 1:             # <<<<<<<<<<<<<<
@@ -6266,16 +6249,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":371
+  /* "lakesuperior/model/rdf/graph.pyx":370
  *                     self.uri, p))
  * 
  *         for ret in values:             # <<<<<<<<<<<<<<
  *             return ret
  * 
  */
-  __Pyx_TraceLine(371,0,__PYX_ERR(0, 371, __pyx_L1_error))
+  __Pyx_TraceLine(370,0,__PYX_ERR(0, 370, __pyx_L1_error))
   __pyx_t_8 = 0;
-  __pyx_t_3 = __Pyx_set_iterator(__pyx_v_values, 1, (&__pyx_t_11), (&__pyx_t_10)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 371, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_set_iterator(__pyx_v_values, 1, (&__pyx_t_11), (&__pyx_t_10)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 370, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_5);
   __pyx_t_5 = __pyx_t_3;
@@ -6283,19 +6266,19 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
   while (1) {
     __pyx_t_12 = __Pyx_set_iter_next(__pyx_t_5, __pyx_t_11, &__pyx_t_8, &__pyx_t_3, __pyx_t_10);
     if (unlikely(__pyx_t_12 == 0)) break;
-    if (unlikely(__pyx_t_12 == -1)) __PYX_ERR(0, 371, __pyx_L1_error)
+    if (unlikely(__pyx_t_12 == -1)) __PYX_ERR(0, 370, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_v_ret = __pyx_t_3;
     __pyx_t_3 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":372
+    /* "lakesuperior/model/rdf/graph.pyx":371
  * 
  *         for ret in values:
  *             return ret             # <<<<<<<<<<<<<<
  * 
  *         return None
  */
-    __Pyx_TraceLine(372,0,__PYX_ERR(0, 372, __pyx_L1_error))
+    __Pyx_TraceLine(371,0,__PYX_ERR(0, 371, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
     __Pyx_INCREF(__pyx_v_ret);
     __pyx_r = __pyx_v_ret;
@@ -6304,19 +6287,19 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":374
+  /* "lakesuperior/model/rdf/graph.pyx":373
  *             return ret
  * 
  *         return None             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(374,0,__PYX_ERR(0, 374, __pyx_L1_error))
+  __Pyx_TraceLine(373,0,__PYX_ERR(0, 373, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __pyx_r = Py_None; __Pyx_INCREF(Py_None);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":350
+  /* "lakesuperior/model/rdf/graph.pyx":349
  *     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
  * 
  *     def value(self, p, strict=False):             # <<<<<<<<<<<<<<
@@ -6343,7 +6326,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_39value(struc
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":377
+/* "lakesuperior/model/rdf/graph.pyx":376
  * 
  * 
  *     def terms_by_type(self, type):             # <<<<<<<<<<<<<<
@@ -6379,17 +6362,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
   PyObject *(*__pyx_t_5)(PyObject *);
   __Pyx_TraceFrameInit(__pyx_codeobj__8)
   __Pyx_RefNannySetupContext("terms_by_type", 0);
-  __Pyx_TraceCall("terms_by_type", __pyx_f[0], 377, 0, __PYX_ERR(0, 377, __pyx_L1_error));
+  __Pyx_TraceCall("terms_by_type", __pyx_f[0], 376, 0, __PYX_ERR(0, 376, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":383
+  /* "lakesuperior/model/rdf/graph.pyx":382
  *         :param str type: One of ``s``, ``p`` or ``o``.
  *         """
  *         i = 'spo'.index(type)             # <<<<<<<<<<<<<<
  *         return {r[i] for r in self.data}
  * 
  */
-  __Pyx_TraceLine(383,0,__PYX_ERR(0, 383, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_n_u_spo, __pyx_n_s_index); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L1_error)
+  __Pyx_TraceLine(382,0,__PYX_ERR(0, 382, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_n_u_spo, __pyx_n_s_index); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 382, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -6403,33 +6386,33 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_v_type) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_type);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 383, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 382, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_i = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":384
+  /* "lakesuperior/model/rdf/graph.pyx":383
  *         """
  *         i = 'spo'.index(type)
  *         return {r[i] for r in self.data}             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(384,0,__PYX_ERR(0, 384, __pyx_L1_error))
+  __Pyx_TraceLine(383,0,__PYX_ERR(0, 383, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   { /* enter inner scope */
-    __pyx_t_1 = PySet_New(NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 384, __pyx_L5_error)
+    __pyx_t_1 = PySet_New(NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 383, __pyx_L5_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 384, __pyx_L5_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L5_error)
     __Pyx_GOTREF(__pyx_t_2);
     if (likely(PyList_CheckExact(__pyx_t_2)) || PyTuple_CheckExact(__pyx_t_2)) {
       __pyx_t_3 = __pyx_t_2; __Pyx_INCREF(__pyx_t_3); __pyx_t_4 = 0;
       __pyx_t_5 = NULL;
     } else {
-      __pyx_t_4 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 384, __pyx_L5_error)
+      __pyx_t_4 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 383, __pyx_L5_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_5 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 384, __pyx_L5_error)
+      __pyx_t_5 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 383, __pyx_L5_error)
     }
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     for (;;) {
@@ -6437,17 +6420,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
         if (likely(PyList_CheckExact(__pyx_t_3))) {
           if (__pyx_t_4 >= PyList_GET_SIZE(__pyx_t_3)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_2 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 384, __pyx_L5_error)
+          __pyx_t_2 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 383, __pyx_L5_error)
           #else
-          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 384, __pyx_L5_error)
+          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L5_error)
           __Pyx_GOTREF(__pyx_t_2);
           #endif
         } else {
           if (__pyx_t_4 >= PyTuple_GET_SIZE(__pyx_t_3)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 384, __pyx_L5_error)
+          __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 383, __pyx_L5_error)
           #else
-          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 384, __pyx_L5_error)
+          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L5_error)
           __Pyx_GOTREF(__pyx_t_2);
           #endif
         }
@@ -6457,7 +6440,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 384, __pyx_L5_error)
+            else __PYX_ERR(0, 383, __pyx_L5_error)
           }
           break;
         }
@@ -6465,9 +6448,9 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
       }
       __Pyx_XDECREF_SET(__pyx_8genexpr1__pyx_v_r, __pyx_t_2);
       __pyx_t_2 = 0;
-      __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_8genexpr1__pyx_v_r, __pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 384, __pyx_L5_error)
+      __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_8genexpr1__pyx_v_r, __pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L5_error)
       __Pyx_GOTREF(__pyx_t_2);
-      if (unlikely(PySet_Add(__pyx_t_1, (PyObject*)__pyx_t_2))) __PYX_ERR(0, 384, __pyx_L5_error)
+      if (unlikely(PySet_Add(__pyx_t_1, (PyObject*)__pyx_t_2))) __PYX_ERR(0, 383, __pyx_L5_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6482,7 +6465,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":377
+  /* "lakesuperior/model/rdf/graph.pyx":376
  * 
  * 
  *     def terms_by_type(self, type):             # <<<<<<<<<<<<<<
@@ -6506,7 +6489,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_41terms_by_ty
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":387
+/* "lakesuperior/model/rdf/graph.pyx":386
  * 
  * 
  *     def add(self, triples):             # <<<<<<<<<<<<<<
@@ -6554,40 +6537,40 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
   struct __pyx_opt_args_12lakesuperior_5model_10structures_6keyset_6Keyset_add __pyx_t_15;
   __Pyx_TraceFrameInit(__pyx_codeobj__9)
   __Pyx_RefNannySetupContext("add", 0);
-  __Pyx_TraceCall("add", __pyx_f[0], 387, 0, __PYX_ERR(0, 387, __pyx_L1_error));
+  __Pyx_TraceCall("add", __pyx_f[0], 386, 0, __PYX_ERR(0, 386, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":398
+  /* "lakesuperior/model/rdf/graph.pyx":397
  *             TripleKey spok
  * 
  *         for s, p, o in triples:             # <<<<<<<<<<<<<<
  *             #logger.info(f'Adding {s} {p} {o} to store: {self.store}')
  *             spok = [
  */
-  __Pyx_TraceLine(398,0,__PYX_ERR(0, 398, __pyx_L1_error))
+  __Pyx_TraceLine(397,0,__PYX_ERR(0, 397, __pyx_L1_error))
   if (likely(PyList_CheckExact(__pyx_v_triples)) || PyTuple_CheckExact(__pyx_v_triples)) {
     __pyx_t_1 = __pyx_v_triples; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
     __pyx_t_3 = NULL;
   } else {
-    __pyx_t_2 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_triples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 398, __pyx_L1_error)
+    __pyx_t_2 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_triples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 397, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_3 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 398, __pyx_L1_error)
+    __pyx_t_3 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 397, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_3)) {
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 398, __pyx_L1_error)
+        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 397, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 398, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 397, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       } else {
         if (__pyx_t_2 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 398, __pyx_L1_error)
+        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 397, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 398, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 397, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       }
@@ -6597,7 +6580,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 398, __pyx_L1_error)
+          else __PYX_ERR(0, 397, __pyx_L1_error)
         }
         break;
       }
@@ -6609,7 +6592,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
       if (unlikely(size != 3)) {
         if (size > 3) __Pyx_RaiseTooManyValuesError(3);
         else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-        __PYX_ERR(0, 398, __pyx_L1_error)
+        __PYX_ERR(0, 397, __pyx_L1_error)
       }
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
       if (likely(PyTuple_CheckExact(sequence))) {
@@ -6625,17 +6608,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
       __Pyx_INCREF(__pyx_t_6);
       __Pyx_INCREF(__pyx_t_7);
       #else
-      __pyx_t_5 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 398, __pyx_L1_error)
+      __pyx_t_5 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 397, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_6 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 398, __pyx_L1_error)
+      __pyx_t_6 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 397, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_7 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 398, __pyx_L1_error)
+      __pyx_t_7 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 397, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       #endif
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     } else {
       Py_ssize_t index = -1;
-      __pyx_t_8 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 398, __pyx_L1_error)
+      __pyx_t_8 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 397, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_t_9 = Py_TYPE(__pyx_t_8)->tp_iternext;
@@ -6645,7 +6628,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
       __Pyx_GOTREF(__pyx_t_6);
       index = 2; __pyx_t_7 = __pyx_t_9(__pyx_t_8); if (unlikely(!__pyx_t_7)) goto __pyx_L5_unpacking_failed;
       __Pyx_GOTREF(__pyx_t_7);
-      if (__Pyx_IternextUnpackEndCheck(__pyx_t_9(__pyx_t_8), 3) < 0) __PYX_ERR(0, 398, __pyx_L1_error)
+      if (__Pyx_IternextUnpackEndCheck(__pyx_t_9(__pyx_t_8), 3) < 0) __PYX_ERR(0, 397, __pyx_L1_error)
       __pyx_t_9 = NULL;
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       goto __pyx_L6_unpacking_done;
@@ -6653,7 +6636,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __pyx_t_9 = NULL;
       if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-      __PYX_ERR(0, 398, __pyx_L1_error)
+      __PYX_ERR(0, 397, __pyx_L1_error)
       __pyx_L6_unpacking_done:;
     }
     __Pyx_XDECREF_SET(__pyx_v_s, __pyx_t_5);
@@ -6663,73 +6646,73 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
     __Pyx_XDECREF_SET(__pyx_v_o, __pyx_t_7);
     __pyx_t_7 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":401
+    /* "lakesuperior/model/rdf/graph.pyx":400
  *             #logger.info(f'Adding {s} {p} {o} to store: {self.store}')
  *             spok = [
  *                 self.store.to_key(s),             # <<<<<<<<<<<<<<
  *                 self.store.to_key(p),
  *                 self.store.to_key(o),
  */
-    __Pyx_TraceLine(401,0,__PYX_ERR(0, 401, __pyx_L1_error))
-    __pyx_t_10 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_10 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 401, __pyx_L1_error)
+    __Pyx_TraceLine(400,0,__PYX_ERR(0, 400, __pyx_L1_error))
+    __pyx_t_10 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_10 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 400, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":402
+    /* "lakesuperior/model/rdf/graph.pyx":401
  *             spok = [
  *                 self.store.to_key(s),
  *                 self.store.to_key(p),             # <<<<<<<<<<<<<<
  *                 self.store.to_key(o),
  *             ]
  */
-    __Pyx_TraceLine(402,0,__PYX_ERR(0, 402, __pyx_L1_error))
-    __pyx_t_11 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_11 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 402, __pyx_L1_error)
+    __Pyx_TraceLine(401,0,__PYX_ERR(0, 401, __pyx_L1_error))
+    __pyx_t_11 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_11 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 401, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":403
+    /* "lakesuperior/model/rdf/graph.pyx":402
  *                 self.store.to_key(s),
  *                 self.store.to_key(p),
  *                 self.store.to_key(o),             # <<<<<<<<<<<<<<
  *             ]
  * 
  */
-    __Pyx_TraceLine(403,0,__PYX_ERR(0, 403, __pyx_L1_error))
-    __pyx_t_12 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_12 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 403, __pyx_L1_error)
+    __Pyx_TraceLine(402,0,__PYX_ERR(0, 402, __pyx_L1_error))
+    __pyx_t_12 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_12 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 402, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":400
+    /* "lakesuperior/model/rdf/graph.pyx":399
  *         for s, p, o in triples:
  *             #logger.info(f'Adding {s} {p} {o} to store: {self.store}')
  *             spok = [             # <<<<<<<<<<<<<<
  *                 self.store.to_key(s),
  *                 self.store.to_key(p),
  */
-    __Pyx_TraceLine(400,0,__PYX_ERR(0, 400, __pyx_L1_error))
+    __Pyx_TraceLine(399,0,__PYX_ERR(0, 399, __pyx_L1_error))
     __pyx_t_13[0] = __pyx_t_10;
     __pyx_t_13[1] = __pyx_t_11;
     __pyx_t_13[2] = __pyx_t_12;
     memcpy(&(__pyx_v_spok[0]), __pyx_t_13, sizeof(__pyx_v_spok[0]) * (3));
 
-    /* "lakesuperior/model/rdf/graph.pyx":406
+    /* "lakesuperior/model/rdf/graph.pyx":405
  *             ]
  * 
  *             self.keys.add(&spok, True)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __Pyx_TraceLine(406,0,__PYX_ERR(0, 406, __pyx_L1_error))
+    __Pyx_TraceLine(405,0,__PYX_ERR(0, 405, __pyx_L1_error))
     __pyx_t_15.__pyx_n = 1;
     __pyx_t_15.check_dup = 1;
-    __pyx_t_14 = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->add(__pyx_v_self->keys, (&__pyx_v_spok), &__pyx_t_15); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 406, __pyx_L1_error)
+    __pyx_t_14 = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->add(__pyx_v_self->keys, (&__pyx_v_spok), &__pyx_t_15); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 405, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":398
+    /* "lakesuperior/model/rdf/graph.pyx":397
  *             TripleKey spok
  * 
  *         for s, p, o in triples:             # <<<<<<<<<<<<<<
  *             #logger.info(f'Adding {s} {p} {o} to store: {self.store}')
  *             spok = [
  */
-    __Pyx_TraceLine(398,0,__PYX_ERR(0, 398, __pyx_L1_error))
+    __Pyx_TraceLine(397,0,__PYX_ERR(0, 397, __pyx_L1_error))
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":387
+  /* "lakesuperior/model/rdf/graph.pyx":386
  * 
  * 
  *     def add(self, triples):             # <<<<<<<<<<<<<<
@@ -6759,7 +6742,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_43add(struct 
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":409
+/* "lakesuperior/model/rdf/graph.pyx":408
  * 
  * 
  *     def remove(self, pattern):             # <<<<<<<<<<<<<<
@@ -6791,41 +6774,41 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_45remove(stru
   struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback __pyx_t_2;
   __Pyx_TraceFrameInit(__pyx_codeobj__10)
   __Pyx_RefNannySetupContext("remove", 0);
-  __Pyx_TraceCall("remove", __pyx_f[0], 409, 0, __PYX_ERR(0, 409, __pyx_L1_error));
+  __Pyx_TraceCall("remove", __pyx_f[0], 408, 0, __PYX_ERR(0, 408, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":416
+  /* "lakesuperior/model/rdf/graph.pyx":415
  *         """
  *         # create an empty copy of the current object.
  *         new_gr = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         # Reverse lookup: only triples not matching the pattern are added to
  */
-  __Pyx_TraceLine(416,0,__PYX_ERR(0, 416, __pyx_L1_error))
-  __pyx_t_1 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->empty_copy(__pyx_v_self, 0, NULL)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 416, __pyx_L1_error)
+  __Pyx_TraceLine(415,0,__PYX_ERR(0, 415, __pyx_L1_error))
+  __pyx_t_1 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->empty_copy(__pyx_v_self, 0, NULL)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 415, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_new_gr = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":420
+  /* "lakesuperior/model/rdf/graph.pyx":419
  *         # Reverse lookup: only triples not matching the pattern are added to
  *         # the new set.
  *         self._match_ptn_callback(             # <<<<<<<<<<<<<<
  *             pattern, new_gr, add_trp_callback, False
  *         )
  */
-  __Pyx_TraceLine(420,0,__PYX_ERR(0, 420, __pyx_L1_error))
+  __Pyx_TraceLine(419,0,__PYX_ERR(0, 419, __pyx_L1_error))
   __pyx_t_2.__pyx_n = 1;
   __pyx_t_2.callback_cond = 0;
-  ((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->_match_ptn_callback(__pyx_v_self, __pyx_v_pattern, __pyx_v_new_gr, __pyx_f_12lakesuperior_5model_3rdf_5graph_add_trp_callback, &__pyx_t_2); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 420, __pyx_L1_error)
+  ((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->_match_ptn_callback(__pyx_v_self, __pyx_v_pattern, __pyx_v_new_gr, __pyx_f_12lakesuperior_5model_3rdf_5graph_add_trp_callback, &__pyx_t_2); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 419, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":425
+  /* "lakesuperior/model/rdf/graph.pyx":424
  * 
  *         # Replace the keyset.
  *         self.keys = new_gr.keys             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(425,0,__PYX_ERR(0, 425, __pyx_L1_error))
+  __Pyx_TraceLine(424,0,__PYX_ERR(0, 424, __pyx_L1_error))
   __pyx_t_1 = ((PyObject *)__pyx_v_new_gr->keys);
   __Pyx_INCREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
@@ -6834,7 +6817,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_45remove(stru
   __pyx_v_self->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":409
+  /* "lakesuperior/model/rdf/graph.pyx":408
  * 
  * 
  *     def remove(self, pattern):             # <<<<<<<<<<<<<<
@@ -6857,7 +6840,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_45remove(stru
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":430
+/* "lakesuperior/model/rdf/graph.pyx":429
  *     ## CYTHON-ACCESSIBLE BASIC METHODS ##
  * 
  *     cpdef Graph copy(self, str uri=None):             # <<<<<<<<<<<<<<
@@ -6878,7 +6861,7 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   PyObject *__pyx_t_4 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__11)
   __Pyx_RefNannySetupContext("copy", 0);
-  __Pyx_TraceCall("copy", __pyx_f[0], 430, 0, __PYX_ERR(0, 430, __pyx_L1_error));
+  __Pyx_TraceCall("copy", __pyx_f[0], 429, 0, __PYX_ERR(0, 429, __pyx_L1_error));
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
       __pyx_v_uri = __pyx_optional_args->uri;
@@ -6893,7 +6876,7 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
     if (unlikely(!__Pyx_object_dict_version_matches(((PyObject *)__pyx_v_self), __pyx_tp_dict_version, __pyx_obj_dict_version))) {
       PY_UINT64_T __pyx_type_dict_guard = __Pyx_get_tp_dict_version(((PyObject *)__pyx_v_self));
       #endif
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_copy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 430, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_copy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       if (!PyCFunction_Check(__pyx_t_1) || (PyCFunction_GET_FUNCTION(__pyx_t_1) != (PyCFunction)(void*)__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_48copy)) {
         __Pyx_XDECREF(((PyObject *)__pyx_r));
@@ -6910,10 +6893,10 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
         }
         __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_v_uri) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_uri);
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 430, __pyx_L1_error)
+        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 429, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 430, __pyx_L1_error)
+        if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 429, __pyx_L1_error)
         __pyx_r = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_2);
         __pyx_t_2 = 0;
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -6932,17 +6915,17 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
     #endif
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":437
+  /* "lakesuperior/model/rdf/graph.pyx":436
  *             the original.
  *         """
  *         cdef Graph new_gr = Graph(self.store, self.capacity, uri=uri)             # <<<<<<<<<<<<<<
  * 
  *         new_gr.keys = self.keys.copy()
  */
-  __Pyx_TraceLine(437,0,__PYX_ERR(0, 437, __pyx_L1_error))
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __Pyx_TraceLine(436,0,__PYX_ERR(0, 436, __pyx_L1_error))
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(((PyObject *)__pyx_v_self->store));
   __Pyx_GIVEREF(((PyObject *)__pyx_v_self->store));
@@ -6950,25 +6933,25 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 437, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 437, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 436, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_new_gr = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":439
+  /* "lakesuperior/model/rdf/graph.pyx":438
  *         cdef Graph new_gr = Graph(self.store, self.capacity, uri=uri)
  * 
  *         new_gr.keys = self.keys.copy()             # <<<<<<<<<<<<<<
  * 
  *         return new_gr
  */
-  __Pyx_TraceLine(439,0,__PYX_ERR(0, 439, __pyx_L1_error))
-  __pyx_t_3 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->copy(__pyx_v_self->keys)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 439, __pyx_L1_error)
+  __Pyx_TraceLine(438,0,__PYX_ERR(0, 438, __pyx_L1_error))
+  __pyx_t_3 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->copy(__pyx_v_self->keys)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 438, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_3);
   __Pyx_GOTREF(__pyx_v_new_gr->keys);
@@ -6976,20 +6959,20 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   __pyx_v_new_gr->keys = ((struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":441
+  /* "lakesuperior/model/rdf/graph.pyx":440
  *         new_gr.keys = self.keys.copy()
  * 
  *         return new_gr             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(441,0,__PYX_ERR(0, 441, __pyx_L1_error))
+  __Pyx_TraceLine(440,0,__PYX_ERR(0, 440, __pyx_L1_error))
   __Pyx_XDECREF(((PyObject *)__pyx_r));
   __Pyx_INCREF(((PyObject *)__pyx_v_new_gr));
   __pyx_r = __pyx_v_new_gr;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":430
+  /* "lakesuperior/model/rdf/graph.pyx":429
  *     ## CYTHON-ACCESSIBLE BASIC METHODS ##
  * 
  *     cpdef Graph copy(self, str uri=None):             # <<<<<<<<<<<<<<
@@ -7044,7 +7027,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_48copy(PyObje
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "copy") < 0)) __PYX_ERR(0, 430, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "copy") < 0)) __PYX_ERR(0, 429, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -7058,13 +7041,13 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_48copy(PyObje
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("copy", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 430, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("copy", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 429, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lakesuperior.model.rdf.graph.Graph.copy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_uri), (&PyUnicode_Type), 1, "uri", 1))) __PYX_ERR(0, 430, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_uri), (&PyUnicode_Type), 1, "uri", 1))) __PYX_ERR(0, 429, __pyx_L1_error)
   __pyx_r = __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_47copy(((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self), __pyx_v_uri);
 
   /* function exit code */
@@ -7084,11 +7067,11 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_47copy(struct
   struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy __pyx_t_2;
   __Pyx_TraceFrameInit(__pyx_codeobj__11)
   __Pyx_RefNannySetupContext("copy", 0);
-  __Pyx_TraceCall("copy (wrapper)", __pyx_f[0], 430, 0, __PYX_ERR(0, 430, __pyx_L1_error));
+  __Pyx_TraceCall("copy (wrapper)", __pyx_f[0], 429, 0, __PYX_ERR(0, 429, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_2.__pyx_n = 1;
   __pyx_t_2.uri = __pyx_v_uri;
-  __pyx_t_1 = ((PyObject *)__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph->copy(__pyx_v_self, 1, &__pyx_t_2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph->copy(__pyx_v_self, 1, &__pyx_t_2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -7106,7 +7089,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_47copy(struct
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":444
+/* "lakesuperior/model/rdf/graph.pyx":443
  * 
  * 
  *     cpdef Graph empty_copy(self, str uri=None):             # <<<<<<<<<<<<<<
@@ -7126,7 +7109,7 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   PyObject *__pyx_t_4 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__12)
   __Pyx_RefNannySetupContext("empty_copy", 0);
-  __Pyx_TraceCall("empty_copy", __pyx_f[0], 444, 0, __PYX_ERR(0, 444, __pyx_L1_error));
+  __Pyx_TraceCall("empty_copy", __pyx_f[0], 443, 0, __PYX_ERR(0, 443, __pyx_L1_error));
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
       __pyx_v_uri = __pyx_optional_args->uri;
@@ -7141,7 +7124,7 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
     if (unlikely(!__Pyx_object_dict_version_matches(((PyObject *)__pyx_v_self), __pyx_tp_dict_version, __pyx_obj_dict_version))) {
       PY_UINT64_T __pyx_type_dict_guard = __Pyx_get_tp_dict_version(((PyObject *)__pyx_v_self));
       #endif
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 444, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_empty_copy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 443, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       if (!PyCFunction_Check(__pyx_t_1) || (PyCFunction_GET_FUNCTION(__pyx_t_1) != (PyCFunction)(void*)__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_50empty_copy)) {
         __Pyx_XDECREF(((PyObject *)__pyx_r));
@@ -7158,10 +7141,10 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
         }
         __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_v_uri) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_uri);
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 444, __pyx_L1_error)
+        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 443, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 444, __pyx_L1_error)
+        if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph))))) __PYX_ERR(0, 443, __pyx_L1_error)
         __pyx_r = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_2);
         __pyx_t_2 = 0;
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -7180,18 +7163,18 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
     #endif
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":451
+  /* "lakesuperior/model/rdf/graph.pyx":450
  *             the original.
  *         """
  *         return Graph(self.store, self.capacity, uri=uri)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(451,0,__PYX_ERR(0, 451, __pyx_L1_error))
+  __Pyx_TraceLine(450,0,__PYX_ERR(0, 450, __pyx_L1_error))
   __Pyx_XDECREF(((PyObject *)__pyx_r));
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 451, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_capacity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 450, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 451, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 450, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(((PyObject *)__pyx_v_self->store));
   __Pyx_GIVEREF(((PyObject *)__pyx_v_self->store));
@@ -7199,10 +7182,10 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 451, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 450, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 451, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 451, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 450, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 450, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -7210,7 +7193,7 @@ static struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_f_12lakes
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":444
+  /* "lakesuperior/model/rdf/graph.pyx":443
  * 
  * 
  *     cpdef Graph empty_copy(self, str uri=None):             # <<<<<<<<<<<<<<
@@ -7264,7 +7247,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_50empty_copy(
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "empty_copy") < 0)) __PYX_ERR(0, 444, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "empty_copy") < 0)) __PYX_ERR(0, 443, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -7278,13 +7261,13 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_50empty_copy(
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("empty_copy", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 444, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("empty_copy", 0, 0, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 443, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lakesuperior.model.rdf.graph.Graph.empty_copy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_uri), (&PyUnicode_Type), 1, "uri", 1))) __PYX_ERR(0, 444, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_uri), (&PyUnicode_Type), 1, "uri", 1))) __PYX_ERR(0, 443, __pyx_L1_error)
   __pyx_r = __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_49empty_copy(((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self), __pyx_v_uri);
 
   /* function exit code */
@@ -7304,11 +7287,11 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_49empty_copy(
   struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy __pyx_t_2;
   __Pyx_TraceFrameInit(__pyx_codeobj__12)
   __Pyx_RefNannySetupContext("empty_copy", 0);
-  __Pyx_TraceCall("empty_copy (wrapper)", __pyx_f[0], 444, 0, __PYX_ERR(0, 444, __pyx_L1_error));
+  __Pyx_TraceCall("empty_copy (wrapper)", __pyx_f[0], 443, 0, __PYX_ERR(0, 443, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_2.__pyx_n = 1;
   __pyx_t_2.uri = __pyx_v_uri;
-  __pyx_t_1 = ((PyObject *)__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph->empty_copy(__pyx_v_self, 1, &__pyx_t_2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 444, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph->empty_copy(__pyx_v_self, 1, &__pyx_t_2)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 443, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -7326,7 +7309,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_49empty_copy(
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":454
+/* "lakesuperior/model/rdf/graph.pyx":453
  * 
  * 
  *     cpdef void set(self, tuple trp) except *:             # <<<<<<<<<<<<<<
@@ -7346,7 +7329,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
   int __pyx_t_6;
   __Pyx_TraceFrameInit(__pyx_codeobj__13)
   __Pyx_RefNannySetupContext("set", 0);
-  __Pyx_TraceCall("set", __pyx_f[0], 454, 0, __PYX_ERR(0, 454, __pyx_L1_error));
+  __Pyx_TraceCall("set", __pyx_f[0], 453, 0, __PYX_ERR(0, 453, __pyx_L1_error));
   /* Check if called by wrapper */
   if (unlikely(__pyx_skip_dispatch)) ;
   /* Check if overridden in Python */
@@ -7356,7 +7339,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
     if (unlikely(!__Pyx_object_dict_version_matches(((PyObject *)__pyx_v_self), __pyx_tp_dict_version, __pyx_obj_dict_version))) {
       PY_UINT64_T __pyx_type_dict_guard = __Pyx_get_tp_dict_version(((PyObject *)__pyx_v_self));
       #endif
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_set); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 454, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_set); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 453, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       if (!PyCFunction_Check(__pyx_t_1) || (PyCFunction_GET_FUNCTION(__pyx_t_1) != (PyCFunction)(void*)__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_52set)) {
         __Pyx_INCREF(__pyx_t_1);
@@ -7372,7 +7355,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
         }
         __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_v_trp) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_trp);
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 454, __pyx_L1_error)
+        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 453, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -7392,39 +7375,39 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
     #endif
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":460
+  /* "lakesuperior/model/rdf/graph.pyx":459
  *         Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
  *         """
  *         if None in trp:             # <<<<<<<<<<<<<<
  *             raise ValueError(f'Invalid triple: {trp}')
  *         self.remove((trp[0], trp[1], None))
  */
-  __Pyx_TraceLine(460,0,__PYX_ERR(0, 460, __pyx_L1_error))
-  __pyx_t_5 = (__Pyx_PySequence_ContainsTF(Py_None, __pyx_v_trp, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 460, __pyx_L1_error)
+  __Pyx_TraceLine(459,0,__PYX_ERR(0, 459, __pyx_L1_error))
+  __pyx_t_5 = (__Pyx_PySequence_ContainsTF(Py_None, __pyx_v_trp, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 459, __pyx_L1_error)
   __pyx_t_6 = (__pyx_t_5 != 0);
   if (unlikely(__pyx_t_6)) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":461
+    /* "lakesuperior/model/rdf/graph.pyx":460
  *         """
  *         if None in trp:
  *             raise ValueError(f'Invalid triple: {trp}')             # <<<<<<<<<<<<<<
  *         self.remove((trp[0], trp[1], None))
  *         self.add((trp,))
  */
-    __Pyx_TraceLine(461,0,__PYX_ERR(0, 461, __pyx_L1_error))
-    __pyx_t_1 = __Pyx_PyObject_FormatSimple(__pyx_v_trp, __pyx_empty_unicode); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 461, __pyx_L1_error)
+    __Pyx_TraceLine(460,0,__PYX_ERR(0, 460, __pyx_L1_error))
+    __pyx_t_1 = __Pyx_PyObject_FormatSimple(__pyx_v_trp, __pyx_empty_unicode); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 460, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Invalid_triple, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 461, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Invalid_triple, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 460, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 461, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 460, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_Raise(__pyx_t_1, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __PYX_ERR(0, 461, __pyx_L1_error)
+    __PYX_ERR(0, 460, __pyx_L1_error)
 
-    /* "lakesuperior/model/rdf/graph.pyx":460
+    /* "lakesuperior/model/rdf/graph.pyx":459
  *         Remove all triples matching ``s`` and ``p`` before adding ``s p o``.
  *         """
  *         if None in trp:             # <<<<<<<<<<<<<<
@@ -7433,25 +7416,25 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":462
+  /* "lakesuperior/model/rdf/graph.pyx":461
  *         if None in trp:
  *             raise ValueError(f'Invalid triple: {trp}')
  *         self.remove((trp[0], trp[1], None))             # <<<<<<<<<<<<<<
  *         self.add((trp,))
  * 
  */
-  __Pyx_TraceLine(462,0,__PYX_ERR(0, 462, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_remove); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 462, __pyx_L1_error)
+  __Pyx_TraceLine(461,0,__PYX_ERR(0, 461, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_remove); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 461, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (unlikely(__pyx_v_trp == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-    __PYX_ERR(0, 462, __pyx_L1_error)
+    __PYX_ERR(0, 461, __pyx_L1_error)
   }
   if (unlikely(__pyx_v_trp == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-    __PYX_ERR(0, 462, __pyx_L1_error)
+    __PYX_ERR(0, 461, __pyx_L1_error)
   }
-  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 462, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 461, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(PyTuple_GET_ITEM(__pyx_v_trp, 0));
   __Pyx_GIVEREF(PyTuple_GET_ITEM(__pyx_v_trp, 0));
@@ -7475,22 +7458,22 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 462, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 461, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":463
+  /* "lakesuperior/model/rdf/graph.pyx":462
  *             raise ValueError(f'Invalid triple: {trp}')
  *         self.remove((trp[0], trp[1], None))
  *         self.add((trp,))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(463,0,__PYX_ERR(0, 463, __pyx_L1_error))
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __Pyx_TraceLine(462,0,__PYX_ERR(0, 462, __pyx_L1_error))
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 462, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 462, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_v_trp);
   __Pyx_GIVEREF(__pyx_v_trp);
@@ -7508,12 +7491,12 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(struct __pyx_ob
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 463, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 462, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":454
+  /* "lakesuperior/model/rdf/graph.pyx":453
  * 
  * 
  *     cpdef void set(self, tuple trp) except *:             # <<<<<<<<<<<<<<
@@ -7542,7 +7525,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_52set(PyObjec
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_trp), (&PyTuple_Type), 1, "trp", 1))) __PYX_ERR(0, 454, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_trp), (&PyTuple_Type), 1, "trp", 1))) __PYX_ERR(0, 453, __pyx_L1_error)
   __pyx_r = __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_51set(((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self), ((PyObject*)__pyx_v_trp));
 
   /* function exit code */
@@ -7561,10 +7544,10 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_51set(struct 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__13)
   __Pyx_RefNannySetupContext("set", 0);
-  __Pyx_TraceCall("set (wrapper)", __pyx_f[0], 454, 0, __PYX_ERR(0, 454, __pyx_L1_error));
+  __Pyx_TraceCall("set (wrapper)", __pyx_f[0], 453, 0, __PYX_ERR(0, 453, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
-  __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(__pyx_v_self, __pyx_v_trp, 1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 454, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_void_to_None(NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 454, __pyx_L1_error)
+  __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set(__pyx_v_self, __pyx_v_trp, 1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 453, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_void_to_None(NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 453, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -7582,7 +7565,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_51set(struct 
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":466
+/* "lakesuperior/model/rdf/graph.pyx":465
  * 
  * 
  *     def as_rdflib(self):             # <<<<<<<<<<<<<<
@@ -7619,48 +7602,48 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
   PyObject *__pyx_t_6 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__14)
   __Pyx_RefNannySetupContext("as_rdflib", 0);
-  __Pyx_TraceCall("as_rdflib", __pyx_f[0], 466, 0, __PYX_ERR(0, 466, __pyx_L1_error));
+  __Pyx_TraceCall("as_rdflib", __pyx_f[0], 465, 0, __PYX_ERR(0, 465, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":472
+  /* "lakesuperior/model/rdf/graph.pyx":471
  *         :rtype: rdflib.Graph
  *         """
  *         gr = rdflib.Graph(identifier=self.uri)             # <<<<<<<<<<<<<<
  *         for trp in self.data:
  *             gr.add(trp)
  */
-  __Pyx_TraceLine(472,0,__PYX_ERR(0, 472, __pyx_L1_error))
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 472, __pyx_L1_error)
+  __Pyx_TraceLine(471,0,__PYX_ERR(0, 471, __pyx_L1_error))
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 471, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Graph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 472, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Graph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 471, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 472, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 471, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_identifier, __pyx_v_self->uri) < 0) __PYX_ERR(0, 472, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 472, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_identifier, __pyx_v_self->uri) < 0) __PYX_ERR(0, 471, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 471, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_gr = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":473
+  /* "lakesuperior/model/rdf/graph.pyx":472
  *         """
  *         gr = rdflib.Graph(identifier=self.uri)
  *         for trp in self.data:             # <<<<<<<<<<<<<<
  *             gr.add(trp)
  * 
  */
-  __Pyx_TraceLine(473,0,__PYX_ERR(0, 473, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 473, __pyx_L1_error)
+  __Pyx_TraceLine(472,0,__PYX_ERR(0, 472, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_data); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 472, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (likely(PyList_CheckExact(__pyx_t_3)) || PyTuple_CheckExact(__pyx_t_3)) {
     __pyx_t_1 = __pyx_t_3; __Pyx_INCREF(__pyx_t_1); __pyx_t_4 = 0;
     __pyx_t_5 = NULL;
   } else {
-    __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 473, __pyx_L1_error)
+    __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 472, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 473, __pyx_L1_error)
+    __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 472, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   for (;;) {
@@ -7668,17 +7651,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_4 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_3 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_3); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __pyx_t_3 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_3); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 472, __pyx_L1_error)
         #else
-        __pyx_t_3 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __pyx_t_3 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 472, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         #endif
       } else {
         if (__pyx_t_4 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_3); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_3); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 472, __pyx_L1_error)
         #else
-        __pyx_t_3 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 473, __pyx_L1_error)
+        __pyx_t_3 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 472, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         #endif
       }
@@ -7688,7 +7671,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 473, __pyx_L1_error)
+          else __PYX_ERR(0, 472, __pyx_L1_error)
         }
         break;
       }
@@ -7697,15 +7680,15 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
     __Pyx_XDECREF_SET(__pyx_v_trp, __pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":474
+    /* "lakesuperior/model/rdf/graph.pyx":473
  *         gr = rdflib.Graph(identifier=self.uri)
  *         for trp in self.data:
  *             gr.add(trp)             # <<<<<<<<<<<<<<
  * 
  *         return gr
  */
-    __Pyx_TraceLine(474,0,__PYX_ERR(0, 474, __pyx_L1_error))
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_gr, __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 474, __pyx_L1_error)
+    __Pyx_TraceLine(473,0,__PYX_ERR(0, 473, __pyx_L1_error))
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_gr, __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 473, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_6 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -7719,36 +7702,36 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
     }
     __pyx_t_3 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_6, __pyx_v_trp) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_trp);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 474, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 473, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":473
+    /* "lakesuperior/model/rdf/graph.pyx":472
  *         """
  *         gr = rdflib.Graph(identifier=self.uri)
  *         for trp in self.data:             # <<<<<<<<<<<<<<
  *             gr.add(trp)
  * 
  */
-    __Pyx_TraceLine(473,0,__PYX_ERR(0, 473, __pyx_L1_error))
+    __Pyx_TraceLine(472,0,__PYX_ERR(0, 472, __pyx_L1_error))
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":476
+  /* "lakesuperior/model/rdf/graph.pyx":475
  *             gr.add(trp)
  * 
  *         return gr             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(476,0,__PYX_ERR(0, 476, __pyx_L1_error))
+  __Pyx_TraceLine(475,0,__PYX_ERR(0, 475, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v_gr);
   __pyx_r = __pyx_v_gr;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":466
+  /* "lakesuperior/model/rdf/graph.pyx":465
  * 
  * 
  *     def as_rdflib(self):             # <<<<<<<<<<<<<<
@@ -7773,7 +7756,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_53as_rdflib(s
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":479
+/* "lakesuperior/model/rdf/graph.pyx":478
  * 
  * 
  *     def _slice(self, s, p, o):             # <<<<<<<<<<<<<<
@@ -7817,17 +7800,17 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_56_slice(PyOb
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_p)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, 1); __PYX_ERR(0, 479, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, 1); __PYX_ERR(0, 478, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_o)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, 2); __PYX_ERR(0, 479, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, 2); __PYX_ERR(0, 478, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_slice") < 0)) __PYX_ERR(0, 479, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_slice") < 0)) __PYX_ERR(0, 478, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -7842,7 +7825,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_5Graph_56_slice(PyOb
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 479, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("_slice", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 478, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lakesuperior.model.rdf.graph.Graph._slice", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7878,16 +7861,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
   PyObject *__pyx_t_10 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__15)
   __Pyx_RefNannySetupContext("_slice", 0);
-  __Pyx_TraceCall("_slice", __pyx_f[0], 479, 0, __PYX_ERR(0, 479, __pyx_L1_error));
+  __Pyx_TraceCall("_slice", __pyx_f[0], 478, 0, __PYX_ERR(0, 478, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":487
+  /* "lakesuperior/model/rdf/graph.pyx":486
  *         #logger.info(f'Slicing: {s} {p} {o}')
  *         # If no terms are unbound, check for containment.
  *         if s is not None and p is not None and o is not None: # s p o             # <<<<<<<<<<<<<<
  *             return (s, p, o) in self
  * 
  */
-  __Pyx_TraceLine(487,0,__PYX_ERR(0, 487, __pyx_L1_error))
+  __Pyx_TraceLine(486,0,__PYX_ERR(0, 486, __pyx_L1_error))
   __pyx_t_2 = (__pyx_v_s != Py_None);
   __pyx_t_3 = (__pyx_t_2 != 0);
   if (__pyx_t_3) {
@@ -7908,16 +7891,16 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":488
+    /* "lakesuperior/model/rdf/graph.pyx":487
  *         # If no terms are unbound, check for containment.
  *         if s is not None and p is not None and o is not None: # s p o
  *             return (s, p, o) in self             # <<<<<<<<<<<<<<
  * 
  *         # If some terms are unbound, do a lookup.
  */
-    __Pyx_TraceLine(488,0,__PYX_ERR(0, 488, __pyx_L1_error))
+    __Pyx_TraceLine(487,0,__PYX_ERR(0, 487, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 488, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 487, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_INCREF(__pyx_v_s);
     __Pyx_GIVEREF(__pyx_v_s);
@@ -7928,15 +7911,15 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
     __Pyx_INCREF(__pyx_v_o);
     __Pyx_GIVEREF(__pyx_v_o);
     PyTuple_SET_ITEM(__pyx_t_4, 2, __pyx_v_o);
-    __pyx_t_1 = (__Pyx_PySequence_ContainsTF(__pyx_t_4, ((PyObject *)__pyx_v_self), Py_EQ)); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 488, __pyx_L1_error)
+    __pyx_t_1 = (__Pyx_PySequence_ContainsTF(__pyx_t_4, ((PyObject *)__pyx_v_self), Py_EQ)); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 487, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyBool_FromLong(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 488, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyBool_FromLong(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 487, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_r = __pyx_t_4;
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":487
+    /* "lakesuperior/model/rdf/graph.pyx":486
  *         #logger.info(f'Slicing: {s} {p} {o}')
  *         # If no terms are unbound, check for containment.
  *         if s is not None and p is not None and o is not None: # s p o             # <<<<<<<<<<<<<<
@@ -7945,17 +7928,17 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":491
+  /* "lakesuperior/model/rdf/graph.pyx":490
  * 
  *         # If some terms are unbound, do a lookup.
  *         res = self.lookup((s, p, o))             # <<<<<<<<<<<<<<
  *         #logger.info(f'Slicing results: {res}')
  *         if s is not None:
  */
-  __Pyx_TraceLine(491,0,__PYX_ERR(0, 491, __pyx_L1_error))
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_lookup); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 491, __pyx_L1_error)
+  __Pyx_TraceLine(490,0,__PYX_ERR(0, 490, __pyx_L1_error))
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_lookup); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 490, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 491, __pyx_L1_error)
+  __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 490, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_INCREF(__pyx_v_s);
   __Pyx_GIVEREF(__pyx_v_s);
@@ -7979,72 +7962,72 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
   __pyx_t_4 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_7, __pyx_t_6) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6);
   __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 491, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 490, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_v_res = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":493
+  /* "lakesuperior/model/rdf/graph.pyx":492
  *         res = self.lookup((s, p, o))
  *         #logger.info(f'Slicing results: {res}')
  *         if s is not None:             # <<<<<<<<<<<<<<
  *             if p is not None: # s p ?
  *                 return {r[2] for r in res}
  */
-  __Pyx_TraceLine(493,0,__PYX_ERR(0, 493, __pyx_L1_error))
+  __Pyx_TraceLine(492,0,__PYX_ERR(0, 492, __pyx_L1_error))
   __pyx_t_1 = (__pyx_v_s != Py_None);
   __pyx_t_3 = (__pyx_t_1 != 0);
   if (__pyx_t_3) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":494
+    /* "lakesuperior/model/rdf/graph.pyx":493
  *         #logger.info(f'Slicing results: {res}')
  *         if s is not None:
  *             if p is not None: # s p ?             # <<<<<<<<<<<<<<
  *                 return {r[2] for r in res}
  * 
  */
-    __Pyx_TraceLine(494,0,__PYX_ERR(0, 494, __pyx_L1_error))
+    __Pyx_TraceLine(493,0,__PYX_ERR(0, 493, __pyx_L1_error))
     __pyx_t_3 = (__pyx_v_p != Py_None);
     __pyx_t_1 = (__pyx_t_3 != 0);
     if (__pyx_t_1) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":495
+      /* "lakesuperior/model/rdf/graph.pyx":494
  *         if s is not None:
  *             if p is not None: # s p ?
  *                 return {r[2] for r in res}             # <<<<<<<<<<<<<<
  * 
  *             if o is not None: # s ? o
  */
-      __Pyx_TraceLine(495,0,__PYX_ERR(0, 495, __pyx_L1_error))
+      __Pyx_TraceLine(494,0,__PYX_ERR(0, 494, __pyx_L1_error))
       __Pyx_XDECREF(__pyx_r);
       { /* enter inner scope */
-        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 495, __pyx_L11_error)
+        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 494, __pyx_L11_error)
         __Pyx_GOTREF(__pyx_t_4);
         if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
           __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
           __pyx_t_9 = NULL;
         } else {
-          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 495, __pyx_L11_error)
+          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 494, __pyx_L11_error)
           __Pyx_GOTREF(__pyx_t_5);
-          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 495, __pyx_L11_error)
+          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 494, __pyx_L11_error)
         }
         for (;;) {
           if (likely(!__pyx_t_9)) {
             if (likely(PyList_CheckExact(__pyx_t_5))) {
               if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 495, __pyx_L11_error)
+              __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 494, __pyx_L11_error)
               #else
-              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 495, __pyx_L11_error)
+              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 494, __pyx_L11_error)
               __Pyx_GOTREF(__pyx_t_6);
               #endif
             } else {
               if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 495, __pyx_L11_error)
+              __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 494, __pyx_L11_error)
               #else
-              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 495, __pyx_L11_error)
+              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 494, __pyx_L11_error)
               __Pyx_GOTREF(__pyx_t_6);
               #endif
             }
@@ -8054,7 +8037,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
               PyObject* exc_type = PyErr_Occurred();
               if (exc_type) {
                 if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-                else __PYX_ERR(0, 495, __pyx_L11_error)
+                else __PYX_ERR(0, 494, __pyx_L11_error)
               }
               break;
             }
@@ -8062,9 +8045,9 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
           }
           __Pyx_XDECREF_SET(__pyx_8genexpr2__pyx_v_r, __pyx_t_6);
           __pyx_t_6 = 0;
-          __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr2__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 495, __pyx_L11_error)
+          __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr2__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 494, __pyx_L11_error)
           __Pyx_GOTREF(__pyx_t_6);
-          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 495, __pyx_L11_error)
+          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 494, __pyx_L11_error)
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
         }
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8079,7 +8062,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
       __pyx_t_4 = 0;
       goto __pyx_L0;
 
-      /* "lakesuperior/model/rdf/graph.pyx":494
+      /* "lakesuperior/model/rdf/graph.pyx":493
  *         #logger.info(f'Slicing results: {res}')
  *         if s is not None:
  *             if p is not None: # s p ?             # <<<<<<<<<<<<<<
@@ -8088,54 +8071,54 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":497
+    /* "lakesuperior/model/rdf/graph.pyx":496
  *                 return {r[2] for r in res}
  * 
  *             if o is not None: # s ? o             # <<<<<<<<<<<<<<
  *                 return {r[1] for r in res}
  * 
  */
-    __Pyx_TraceLine(497,0,__PYX_ERR(0, 497, __pyx_L1_error))
+    __Pyx_TraceLine(496,0,__PYX_ERR(0, 496, __pyx_L1_error))
     __pyx_t_1 = (__pyx_v_o != Py_None);
     __pyx_t_3 = (__pyx_t_1 != 0);
     if (__pyx_t_3) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":498
+      /* "lakesuperior/model/rdf/graph.pyx":497
  * 
  *             if o is not None: # s ? o
  *                 return {r[1] for r in res}             # <<<<<<<<<<<<<<
  * 
  *             # s ? ?
  */
-      __Pyx_TraceLine(498,0,__PYX_ERR(0, 498, __pyx_L1_error))
+      __Pyx_TraceLine(497,0,__PYX_ERR(0, 497, __pyx_L1_error))
       __Pyx_XDECREF(__pyx_r);
       { /* enter inner scope */
-        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 498, __pyx_L18_error)
+        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 497, __pyx_L18_error)
         __Pyx_GOTREF(__pyx_t_4);
         if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
           __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
           __pyx_t_9 = NULL;
         } else {
-          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 498, __pyx_L18_error)
+          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 497, __pyx_L18_error)
           __Pyx_GOTREF(__pyx_t_5);
-          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 498, __pyx_L18_error)
+          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 497, __pyx_L18_error)
         }
         for (;;) {
           if (likely(!__pyx_t_9)) {
             if (likely(PyList_CheckExact(__pyx_t_5))) {
               if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 498, __pyx_L18_error)
+              __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 497, __pyx_L18_error)
               #else
-              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 498, __pyx_L18_error)
+              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 497, __pyx_L18_error)
               __Pyx_GOTREF(__pyx_t_6);
               #endif
             } else {
               if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 498, __pyx_L18_error)
+              __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 497, __pyx_L18_error)
               #else
-              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 498, __pyx_L18_error)
+              __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 497, __pyx_L18_error)
               __Pyx_GOTREF(__pyx_t_6);
               #endif
             }
@@ -8145,7 +8128,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
               PyObject* exc_type = PyErr_Occurred();
               if (exc_type) {
                 if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-                else __PYX_ERR(0, 498, __pyx_L18_error)
+                else __PYX_ERR(0, 497, __pyx_L18_error)
               }
               break;
             }
@@ -8153,9 +8136,9 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
           }
           __Pyx_XDECREF_SET(__pyx_8genexpr3__pyx_v_r, __pyx_t_6);
           __pyx_t_6 = 0;
-          __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr3__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 498, __pyx_L18_error)
+          __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr3__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 497, __pyx_L18_error)
           __Pyx_GOTREF(__pyx_t_6);
-          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 498, __pyx_L18_error)
+          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 497, __pyx_L18_error)
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
         }
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8170,7 +8153,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
       __pyx_t_4 = 0;
       goto __pyx_L0;
 
-      /* "lakesuperior/model/rdf/graph.pyx":497
+      /* "lakesuperior/model/rdf/graph.pyx":496
  *                 return {r[2] for r in res}
  * 
  *             if o is not None: # s ? o             # <<<<<<<<<<<<<<
@@ -8179,42 +8162,42 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":501
+    /* "lakesuperior/model/rdf/graph.pyx":500
  * 
  *             # s ? ?
  *             return {(r[1], r[2]) for r in res}             # <<<<<<<<<<<<<<
  * 
  *         if p is not None:
  */
-    __Pyx_TraceLine(501,0,__PYX_ERR(0, 501, __pyx_L1_error))
+    __Pyx_TraceLine(500,0,__PYX_ERR(0, 500, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
     { /* enter inner scope */
-      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 501, __pyx_L24_error)
+      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 500, __pyx_L24_error)
       __Pyx_GOTREF(__pyx_t_4);
       if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
         __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
         __pyx_t_9 = NULL;
       } else {
-        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 501, __pyx_L24_error)
+        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 500, __pyx_L24_error)
         __Pyx_GOTREF(__pyx_t_5);
-        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 501, __pyx_L24_error)
+        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 500, __pyx_L24_error)
       }
       for (;;) {
         if (likely(!__pyx_t_9)) {
           if (likely(PyList_CheckExact(__pyx_t_5))) {
             if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 501, __pyx_L24_error)
+            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 500, __pyx_L24_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 501, __pyx_L24_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 500, __pyx_L24_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           } else {
             if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 501, __pyx_L24_error)
+            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 500, __pyx_L24_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 501, __pyx_L24_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 500, __pyx_L24_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           }
@@ -8224,7 +8207,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 501, __pyx_L24_error)
+              else __PYX_ERR(0, 500, __pyx_L24_error)
             }
             break;
           }
@@ -8232,11 +8215,11 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         }
         __Pyx_XDECREF_SET(__pyx_8genexpr4__pyx_v_r, __pyx_t_6);
         __pyx_t_6 = 0;
-        __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr4__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 501, __pyx_L24_error)
+        __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr4__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 500, __pyx_L24_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr4__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 501, __pyx_L24_error)
+        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr4__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 500, __pyx_L24_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_10 = PyTuple_New(2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 501, __pyx_L24_error)
+        __pyx_t_10 = PyTuple_New(2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 500, __pyx_L24_error)
         __Pyx_GOTREF(__pyx_t_10);
         __Pyx_GIVEREF(__pyx_t_6);
         PyTuple_SET_ITEM(__pyx_t_10, 0, __pyx_t_6);
@@ -8244,7 +8227,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         PyTuple_SET_ITEM(__pyx_t_10, 1, __pyx_t_7);
         __pyx_t_6 = 0;
         __pyx_t_7 = 0;
-        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 501, __pyx_L24_error)
+        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 500, __pyx_L24_error)
         __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
       }
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8259,7 +8242,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":493
+    /* "lakesuperior/model/rdf/graph.pyx":492
  *         res = self.lookup((s, p, o))
  *         #logger.info(f'Slicing results: {res}')
  *         if s is not None:             # <<<<<<<<<<<<<<
@@ -8268,66 +8251,66 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":503
+  /* "lakesuperior/model/rdf/graph.pyx":502
  *             return {(r[1], r[2]) for r in res}
  * 
  *         if p is not None:             # <<<<<<<<<<<<<<
  *             if o is not None: # ? p o
  *                 return {r[0] for r in res}
  */
-  __Pyx_TraceLine(503,0,__PYX_ERR(0, 503, __pyx_L1_error))
+  __Pyx_TraceLine(502,0,__PYX_ERR(0, 502, __pyx_L1_error))
   __pyx_t_3 = (__pyx_v_p != Py_None);
   __pyx_t_1 = (__pyx_t_3 != 0);
   if (__pyx_t_1) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":504
+    /* "lakesuperior/model/rdf/graph.pyx":503
  * 
  *         if p is not None:
  *             if o is not None: # ? p o             # <<<<<<<<<<<<<<
  *                 return {r[0] for r in res}
  * 
  */
-    __Pyx_TraceLine(504,0,__PYX_ERR(0, 504, __pyx_L1_error))
+    __Pyx_TraceLine(503,0,__PYX_ERR(0, 503, __pyx_L1_error))
     __pyx_t_1 = (__pyx_v_o != Py_None);
     __pyx_t_3 = (__pyx_t_1 != 0);
     if (__pyx_t_3) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":505
+      /* "lakesuperior/model/rdf/graph.pyx":504
  *         if p is not None:
  *             if o is not None: # ? p o
  *                 return {r[0] for r in res}             # <<<<<<<<<<<<<<
  * 
  *             # ? p ?
  */
-      __Pyx_TraceLine(505,0,__PYX_ERR(0, 505, __pyx_L1_error))
+      __Pyx_TraceLine(504,0,__PYX_ERR(0, 504, __pyx_L1_error))
       __Pyx_XDECREF(__pyx_r);
       { /* enter inner scope */
-        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 505, __pyx_L32_error)
+        __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 504, __pyx_L32_error)
         __Pyx_GOTREF(__pyx_t_4);
         if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
           __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
           __pyx_t_9 = NULL;
         } else {
-          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 505, __pyx_L32_error)
+          __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 504, __pyx_L32_error)
           __Pyx_GOTREF(__pyx_t_5);
-          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 505, __pyx_L32_error)
+          __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 504, __pyx_L32_error)
         }
         for (;;) {
           if (likely(!__pyx_t_9)) {
             if (likely(PyList_CheckExact(__pyx_t_5))) {
               if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_10 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 505, __pyx_L32_error)
+              __pyx_t_10 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 504, __pyx_L32_error)
               #else
-              __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 505, __pyx_L32_error)
+              __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 504, __pyx_L32_error)
               __Pyx_GOTREF(__pyx_t_10);
               #endif
             } else {
               if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
               #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-              __pyx_t_10 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 505, __pyx_L32_error)
+              __pyx_t_10 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 504, __pyx_L32_error)
               #else
-              __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 505, __pyx_L32_error)
+              __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 504, __pyx_L32_error)
               __Pyx_GOTREF(__pyx_t_10);
               #endif
             }
@@ -8337,7 +8320,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
               PyObject* exc_type = PyErr_Occurred();
               if (exc_type) {
                 if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-                else __PYX_ERR(0, 505, __pyx_L32_error)
+                else __PYX_ERR(0, 504, __pyx_L32_error)
               }
               break;
             }
@@ -8345,9 +8328,9 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
           }
           __Pyx_XDECREF_SET(__pyx_8genexpr5__pyx_v_r, __pyx_t_10);
           __pyx_t_10 = 0;
-          __pyx_t_10 = __Pyx_GetItemInt(__pyx_8genexpr5__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 505, __pyx_L32_error)
+          __pyx_t_10 = __Pyx_GetItemInt(__pyx_8genexpr5__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 504, __pyx_L32_error)
           __Pyx_GOTREF(__pyx_t_10);
-          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 505, __pyx_L32_error)
+          if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 504, __pyx_L32_error)
           __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
         }
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8362,7 +8345,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
       __pyx_t_4 = 0;
       goto __pyx_L0;
 
-      /* "lakesuperior/model/rdf/graph.pyx":504
+      /* "lakesuperior/model/rdf/graph.pyx":503
  * 
  *         if p is not None:
  *             if o is not None: # ? p o             # <<<<<<<<<<<<<<
@@ -8371,42 +8354,42 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":508
+    /* "lakesuperior/model/rdf/graph.pyx":507
  * 
  *             # ? p ?
  *             return {(r[0], r[2]) for r in res}             # <<<<<<<<<<<<<<
  * 
  *         if o is not None: # ? ? o
  */
-    __Pyx_TraceLine(508,0,__PYX_ERR(0, 508, __pyx_L1_error))
+    __Pyx_TraceLine(507,0,__PYX_ERR(0, 507, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
     { /* enter inner scope */
-      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 508, __pyx_L38_error)
+      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 507, __pyx_L38_error)
       __Pyx_GOTREF(__pyx_t_4);
       if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
         __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
         __pyx_t_9 = NULL;
       } else {
-        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 508, __pyx_L38_error)
+        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 507, __pyx_L38_error)
         __Pyx_GOTREF(__pyx_t_5);
-        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 508, __pyx_L38_error)
+        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 507, __pyx_L38_error)
       }
       for (;;) {
         if (likely(!__pyx_t_9)) {
           if (likely(PyList_CheckExact(__pyx_t_5))) {
             if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_10 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 508, __pyx_L38_error)
+            __pyx_t_10 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 507, __pyx_L38_error)
             #else
-            __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 508, __pyx_L38_error)
+            __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 507, __pyx_L38_error)
             __Pyx_GOTREF(__pyx_t_10);
             #endif
           } else {
             if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_10 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 508, __pyx_L38_error)
+            __pyx_t_10 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_10); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 507, __pyx_L38_error)
             #else
-            __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 508, __pyx_L38_error)
+            __pyx_t_10 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 507, __pyx_L38_error)
             __Pyx_GOTREF(__pyx_t_10);
             #endif
           }
@@ -8416,7 +8399,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 508, __pyx_L38_error)
+              else __PYX_ERR(0, 507, __pyx_L38_error)
             }
             break;
           }
@@ -8424,11 +8407,11 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         }
         __Pyx_XDECREF_SET(__pyx_8genexpr6__pyx_v_r, __pyx_t_10);
         __pyx_t_10 = 0;
-        __pyx_t_10 = __Pyx_GetItemInt(__pyx_8genexpr6__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 508, __pyx_L38_error)
+        __pyx_t_10 = __Pyx_GetItemInt(__pyx_8genexpr6__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 507, __pyx_L38_error)
         __Pyx_GOTREF(__pyx_t_10);
-        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr6__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 508, __pyx_L38_error)
+        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr6__pyx_v_r, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 507, __pyx_L38_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_6 = PyTuple_New(2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 508, __pyx_L38_error)
+        __pyx_t_6 = PyTuple_New(2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 507, __pyx_L38_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_GIVEREF(__pyx_t_10);
         PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_10);
@@ -8436,7 +8419,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_t_7);
         __pyx_t_10 = 0;
         __pyx_t_7 = 0;
-        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 508, __pyx_L38_error)
+        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 507, __pyx_L38_error)
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       }
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8451,7 +8434,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":503
+    /* "lakesuperior/model/rdf/graph.pyx":502
  *             return {(r[1], r[2]) for r in res}
  * 
  *         if p is not None:             # <<<<<<<<<<<<<<
@@ -8460,54 +8443,54 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":510
+  /* "lakesuperior/model/rdf/graph.pyx":509
  *             return {(r[0], r[2]) for r in res}
  * 
  *         if o is not None: # ? ? o             # <<<<<<<<<<<<<<
  *             return {(r[0], r[1]) for r in res}
  * 
  */
-  __Pyx_TraceLine(510,0,__PYX_ERR(0, 510, __pyx_L1_error))
+  __Pyx_TraceLine(509,0,__PYX_ERR(0, 509, __pyx_L1_error))
   __pyx_t_3 = (__pyx_v_o != Py_None);
   __pyx_t_1 = (__pyx_t_3 != 0);
   if (__pyx_t_1) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":511
+    /* "lakesuperior/model/rdf/graph.pyx":510
  * 
  *         if o is not None: # ? ? o
  *             return {(r[0], r[1]) for r in res}             # <<<<<<<<<<<<<<
  * 
  *         # ? ? ?
  */
-    __Pyx_TraceLine(511,0,__PYX_ERR(0, 511, __pyx_L1_error))
+    __Pyx_TraceLine(510,0,__PYX_ERR(0, 510, __pyx_L1_error))
     __Pyx_XDECREF(__pyx_r);
     { /* enter inner scope */
-      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 511, __pyx_L45_error)
+      __pyx_t_4 = PySet_New(NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 510, __pyx_L45_error)
       __Pyx_GOTREF(__pyx_t_4);
       if (likely(PyList_CheckExact(__pyx_v_res)) || PyTuple_CheckExact(__pyx_v_res)) {
         __pyx_t_5 = __pyx_v_res; __Pyx_INCREF(__pyx_t_5); __pyx_t_8 = 0;
         __pyx_t_9 = NULL;
       } else {
-        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 511, __pyx_L45_error)
+        __pyx_t_8 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_v_res); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 510, __pyx_L45_error)
         __Pyx_GOTREF(__pyx_t_5);
-        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 511, __pyx_L45_error)
+        __pyx_t_9 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 510, __pyx_L45_error)
       }
       for (;;) {
         if (likely(!__pyx_t_9)) {
           if (likely(PyList_CheckExact(__pyx_t_5))) {
             if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 511, __pyx_L45_error)
+            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 510, __pyx_L45_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 511, __pyx_L45_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 510, __pyx_L45_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           } else {
             if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 511, __pyx_L45_error)
+            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 510, __pyx_L45_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 511, __pyx_L45_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_5, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 510, __pyx_L45_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           }
@@ -8517,7 +8500,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 511, __pyx_L45_error)
+              else __PYX_ERR(0, 510, __pyx_L45_error)
             }
             break;
           }
@@ -8525,11 +8508,11 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         }
         __Pyx_XDECREF_SET(__pyx_8genexpr7__pyx_v_r, __pyx_t_6);
         __pyx_t_6 = 0;
-        __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr7__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 511, __pyx_L45_error)
+        __pyx_t_6 = __Pyx_GetItemInt(__pyx_8genexpr7__pyx_v_r, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 510, __pyx_L45_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr7__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 511, __pyx_L45_error)
+        __pyx_t_7 = __Pyx_GetItemInt(__pyx_8genexpr7__pyx_v_r, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 510, __pyx_L45_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_10 = PyTuple_New(2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 511, __pyx_L45_error)
+        __pyx_t_10 = PyTuple_New(2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 510, __pyx_L45_error)
         __Pyx_GOTREF(__pyx_t_10);
         __Pyx_GIVEREF(__pyx_t_6);
         PyTuple_SET_ITEM(__pyx_t_10, 0, __pyx_t_6);
@@ -8537,7 +8520,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
         PyTuple_SET_ITEM(__pyx_t_10, 1, __pyx_t_7);
         __pyx_t_6 = 0;
         __pyx_t_7 = 0;
-        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 511, __pyx_L45_error)
+        if (unlikely(PySet_Add(__pyx_t_4, (PyObject*)__pyx_t_10))) __PYX_ERR(0, 510, __pyx_L45_error)
         __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
       }
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8552,7 +8535,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":510
+    /* "lakesuperior/model/rdf/graph.pyx":509
  *             return {(r[0], r[2]) for r in res}
  * 
  *         if o is not None: # ? ? o             # <<<<<<<<<<<<<<
@@ -8561,20 +8544,20 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":514
+  /* "lakesuperior/model/rdf/graph.pyx":513
  * 
  *         # ? ? ?
  *         return res             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(514,0,__PYX_ERR(0, 514, __pyx_L1_error))
+  __Pyx_TraceLine(513,0,__PYX_ERR(0, 513, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v_res);
   __pyx_r = __pyx_v_res;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":479
+  /* "lakesuperior/model/rdf/graph.pyx":478
  * 
  * 
  *     def _slice(self, s, p, o):             # <<<<<<<<<<<<<<
@@ -8605,7 +8588,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_55_slice(stru
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":517
+/* "lakesuperior/model/rdf/graph.pyx":516
  * 
  * 
  *     def lookup(self, pattern):             # <<<<<<<<<<<<<<
@@ -8636,55 +8619,55 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_57lookup(stru
   PyObject *__pyx_t_1 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__16)
   __Pyx_RefNannySetupContext("lookup", 0);
-  __Pyx_TraceCall("lookup", __pyx_f[0], 517, 0, __PYX_ERR(0, 517, __pyx_L1_error));
+  __Pyx_TraceCall("lookup", __pyx_f[0], 516, 0, __PYX_ERR(0, 516, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":531
+  /* "lakesuperior/model/rdf/graph.pyx":530
  *         """
  *         cdef:
  *             Graph res_gr = self.empty_copy()             # <<<<<<<<<<<<<<
  * 
  *         self._match_ptn_callback(pattern, res_gr, add_trp_callback)
  */
-  __Pyx_TraceLine(531,0,__PYX_ERR(0, 531, __pyx_L1_error))
-  __pyx_t_1 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->empty_copy(__pyx_v_self, 0, NULL)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 531, __pyx_L1_error)
+  __Pyx_TraceLine(530,0,__PYX_ERR(0, 530, __pyx_L1_error))
+  __pyx_t_1 = ((PyObject *)((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->empty_copy(__pyx_v_self, 0, NULL)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 530, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_res_gr = ((struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":533
+  /* "lakesuperior/model/rdf/graph.pyx":532
  *             Graph res_gr = self.empty_copy()
  * 
  *         self._match_ptn_callback(pattern, res_gr, add_trp_callback)             # <<<<<<<<<<<<<<
  *         res_gr.keys.resize()
  * 
  */
-  __Pyx_TraceLine(533,0,__PYX_ERR(0, 533, __pyx_L1_error))
-  ((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->_match_ptn_callback(__pyx_v_self, __pyx_v_pattern, __pyx_v_res_gr, __pyx_f_12lakesuperior_5model_3rdf_5graph_add_trp_callback, NULL); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 533, __pyx_L1_error)
+  __Pyx_TraceLine(532,0,__PYX_ERR(0, 532, __pyx_L1_error))
+  ((struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph *)__pyx_v_self->__pyx_vtab)->_match_ptn_callback(__pyx_v_self, __pyx_v_pattern, __pyx_v_res_gr, __pyx_f_12lakesuperior_5model_3rdf_5graph_add_trp_callback, NULL); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 532, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":534
+  /* "lakesuperior/model/rdf/graph.pyx":533
  * 
  *         self._match_ptn_callback(pattern, res_gr, add_trp_callback)
  *         res_gr.keys.resize()             # <<<<<<<<<<<<<<
  * 
  *         return res_gr
  */
-  __Pyx_TraceLine(534,0,__PYX_ERR(0, 534, __pyx_L1_error))
-  ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_res_gr->keys->__pyx_vtab)->resize(__pyx_v_res_gr->keys, NULL); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 534, __pyx_L1_error)
+  __Pyx_TraceLine(533,0,__PYX_ERR(0, 533, __pyx_L1_error))
+  ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_res_gr->keys->__pyx_vtab)->resize(__pyx_v_res_gr->keys, NULL); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 533, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":536
+  /* "lakesuperior/model/rdf/graph.pyx":535
  *         res_gr.keys.resize()
  * 
  *         return res_gr             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(536,0,__PYX_ERR(0, 536, __pyx_L1_error))
+  __Pyx_TraceLine(535,0,__PYX_ERR(0, 535, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_res_gr));
   __pyx_r = ((PyObject *)__pyx_v_res_gr);
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":517
+  /* "lakesuperior/model/rdf/graph.pyx":516
  * 
  * 
  *     def lookup(self, pattern):             # <<<<<<<<<<<<<<
@@ -8705,7 +8688,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_57lookup(stru
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":539
+/* "lakesuperior/model/rdf/graph.pyx":538
  * 
  * 
  *     cdef void _match_ptn_callback(             # <<<<<<<<<<<<<<
@@ -8715,7 +8698,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_57lookup(stru
 
 static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_v_self, PyObject *__pyx_v_pattern, struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *__pyx_v_gr, __pyx_t_12lakesuperior_5model_3rdf_5graph_lookup_callback_fn_t __pyx_v_callback_fn, struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback *__pyx_optional_args) {
 
-  /* "lakesuperior/model/rdf/graph.pyx":541
+  /* "lakesuperior/model/rdf/graph.pyx":540
  *     cdef void _match_ptn_callback(
  *         self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
  *         bint callback_cond=True, void* ctx=NULL             # <<<<<<<<<<<<<<
@@ -8746,7 +8729,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
   __pyx_t_12lakesuperior_5model_4base_Key __pyx_t_10[3];
   int __pyx_t_11;
   __Pyx_RefNannySetupContext("_match_ptn_callback", 0);
-  __Pyx_TraceCall("_match_ptn_callback", __pyx_f[0], 539, 0, __PYX_ERR(0, 539, __pyx_L1_error));
+  __Pyx_TraceCall("_match_ptn_callback", __pyx_f[0], 538, 0, __PYX_ERR(0, 538, __pyx_L1_error));
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
       __pyx_v_callback_cond = __pyx_optional_args->callback_cond;
@@ -8756,21 +8739,21 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     }
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":564
+  /* "lakesuperior/model/rdf/graph.pyx":563
  *             TripleKey spok
  * 
  *         s, p, o = pattern             # <<<<<<<<<<<<<<
  * 
  *         #logger.info(f'Match Callback pattern: {pattern}')
  */
-  __Pyx_TraceLine(564,0,__PYX_ERR(0, 564, __pyx_L1_error))
+  __Pyx_TraceLine(563,0,__PYX_ERR(0, 563, __pyx_L1_error))
   if ((likely(PyTuple_CheckExact(__pyx_v_pattern))) || (PyList_CheckExact(__pyx_v_pattern))) {
     PyObject* sequence = __pyx_v_pattern;
     Py_ssize_t size = __Pyx_PySequence_SIZE(sequence);
     if (unlikely(size != 3)) {
       if (size > 3) __Pyx_RaiseTooManyValuesError(3);
       else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-      __PYX_ERR(0, 564, __pyx_L1_error)
+      __PYX_ERR(0, 563, __pyx_L1_error)
     }
     #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
     if (likely(PyTuple_CheckExact(sequence))) {
@@ -8786,16 +8769,16 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     __Pyx_INCREF(__pyx_t_2);
     __Pyx_INCREF(__pyx_t_3);
     #else
-    __pyx_t_1 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 564, __pyx_L1_error)
+    __pyx_t_1 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 564, __pyx_L1_error)
+    __pyx_t_2 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 564, __pyx_L1_error)
+    __pyx_t_3 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     #endif
   } else {
     Py_ssize_t index = -1;
-    __pyx_t_4 = PyObject_GetIter(__pyx_v_pattern); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 564, __pyx_L1_error)
+    __pyx_t_4 = PyObject_GetIter(__pyx_v_pattern); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_5 = Py_TYPE(__pyx_t_4)->tp_iternext;
     index = 0; __pyx_t_1 = __pyx_t_5(__pyx_t_4); if (unlikely(!__pyx_t_1)) goto __pyx_L3_unpacking_failed;
@@ -8804,7 +8787,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     __Pyx_GOTREF(__pyx_t_2);
     index = 2; __pyx_t_3 = __pyx_t_5(__pyx_t_4); if (unlikely(!__pyx_t_3)) goto __pyx_L3_unpacking_failed;
     __Pyx_GOTREF(__pyx_t_3);
-    if (__Pyx_IternextUnpackEndCheck(__pyx_t_5(__pyx_t_4), 3) < 0) __PYX_ERR(0, 564, __pyx_L1_error)
+    if (__Pyx_IternextUnpackEndCheck(__pyx_t_5(__pyx_t_4), 3) < 0) __PYX_ERR(0, 563, __pyx_L1_error)
     __pyx_t_5 = NULL;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     goto __pyx_L4_unpacking_done;
@@ -8812,7 +8795,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_5 = NULL;
     if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-    __PYX_ERR(0, 564, __pyx_L1_error)
+    __PYX_ERR(0, 563, __pyx_L1_error)
     __pyx_L4_unpacking_done:;
   }
   __pyx_v_s = __pyx_t_1;
@@ -8822,106 +8805,106 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
   __pyx_v_o = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":568
+  /* "lakesuperior/model/rdf/graph.pyx":567
  *         #logger.info(f'Match Callback pattern: {pattern}')
  * 
  *         self.keys.seek()             # <<<<<<<<<<<<<<
  *         # Decide comparison logic outside the loop.
  *         if all(pattern):
  */
-  __Pyx_TraceLine(568,0,__PYX_ERR(0, 568, __pyx_L1_error))
+  __Pyx_TraceLine(567,0,__PYX_ERR(0, 567, __pyx_L1_error))
   ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->seek(__pyx_v_self->keys, NULL);
 
-  /* "lakesuperior/model/rdf/graph.pyx":570
+  /* "lakesuperior/model/rdf/graph.pyx":569
  *         self.keys.seek()
  *         # Decide comparison logic outside the loop.
  *         if all(pattern):             # <<<<<<<<<<<<<<
  *             if callback_cond:
  *                 # Shortcut for 3-term matchonly if callback_cond is True.
  */
-  __Pyx_TraceLine(570,0,__PYX_ERR(0, 570, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_all, __pyx_v_pattern); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 570, __pyx_L1_error)
+  __Pyx_TraceLine(569,0,__PYX_ERR(0, 569, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_all, __pyx_v_pattern); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 569, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 570, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 569, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   if (__pyx_t_6) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":571
+    /* "lakesuperior/model/rdf/graph.pyx":570
  *         # Decide comparison logic outside the loop.
  *         if all(pattern):
  *             if callback_cond:             # <<<<<<<<<<<<<<
  *                 # Shortcut for 3-term matchonly if callback_cond is True.
  *                 spok = [
  */
-    __Pyx_TraceLine(571,0,__PYX_ERR(0, 571, __pyx_L1_error))
+    __Pyx_TraceLine(570,0,__PYX_ERR(0, 570, __pyx_L1_error))
     __pyx_t_6 = (__pyx_v_callback_cond != 0);
     if (__pyx_t_6) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":574
+      /* "lakesuperior/model/rdf/graph.pyx":573
  *                 # Shortcut for 3-term matchonly if callback_cond is True.
  *                 spok = [
  *                     self.store.to_key(s),             # <<<<<<<<<<<<<<
  *                     self.store.to_key(p),
  *                     self.store.to_key(o),
  */
-      __Pyx_TraceLine(574,0,__PYX_ERR(0, 574, __pyx_L1_error))
-      __pyx_t_7 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_7 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 574, __pyx_L1_error)
+      __Pyx_TraceLine(573,0,__PYX_ERR(0, 573, __pyx_L1_error))
+      __pyx_t_7 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_7 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 573, __pyx_L1_error)
 
-      /* "lakesuperior/model/rdf/graph.pyx":575
+      /* "lakesuperior/model/rdf/graph.pyx":574
  *                 spok = [
  *                     self.store.to_key(s),
  *                     self.store.to_key(p),             # <<<<<<<<<<<<<<
  *                     self.store.to_key(o),
  *                 ]
  */
-      __Pyx_TraceLine(575,0,__PYX_ERR(0, 575, __pyx_L1_error))
-      __pyx_t_8 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_8 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 575, __pyx_L1_error)
+      __Pyx_TraceLine(574,0,__PYX_ERR(0, 574, __pyx_L1_error))
+      __pyx_t_8 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_8 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 574, __pyx_L1_error)
 
-      /* "lakesuperior/model/rdf/graph.pyx":576
+      /* "lakesuperior/model/rdf/graph.pyx":575
  *                     self.store.to_key(s),
  *                     self.store.to_key(p),
  *                     self.store.to_key(o),             # <<<<<<<<<<<<<<
  *                 ]
  *                 if self.keys.contains(&spok):
  */
-      __Pyx_TraceLine(576,0,__PYX_ERR(0, 576, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 576, __pyx_L1_error)
+      __Pyx_TraceLine(575,0,__PYX_ERR(0, 575, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 575, __pyx_L1_error)
 
-      /* "lakesuperior/model/rdf/graph.pyx":573
+      /* "lakesuperior/model/rdf/graph.pyx":572
  *             if callback_cond:
  *                 # Shortcut for 3-term matchonly if callback_cond is True.
  *                 spok = [             # <<<<<<<<<<<<<<
  *                     self.store.to_key(s),
  *                     self.store.to_key(p),
  */
-      __Pyx_TraceLine(573,0,__PYX_ERR(0, 573, __pyx_L1_error))
+      __Pyx_TraceLine(572,0,__PYX_ERR(0, 572, __pyx_L1_error))
       __pyx_t_10[0] = __pyx_t_7;
       __pyx_t_10[1] = __pyx_t_8;
       __pyx_t_10[2] = __pyx_t_9;
       memcpy(&(__pyx_v_spok[0]), __pyx_t_10, sizeof(__pyx_v_spok[0]) * (3));
 
-      /* "lakesuperior/model/rdf/graph.pyx":578
+      /* "lakesuperior/model/rdf/graph.pyx":577
  *                     self.store.to_key(o),
  *                 ]
  *                 if self.keys.contains(&spok):             # <<<<<<<<<<<<<<
  *                     callback_fn(gr, &spok, ctx)
  *             else:
  */
-      __Pyx_TraceLine(578,0,__PYX_ERR(0, 578, __pyx_L1_error))
+      __Pyx_TraceLine(577,0,__PYX_ERR(0, 577, __pyx_L1_error))
       __pyx_t_6 = (((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->contains(__pyx_v_self->keys, (&__pyx_v_spok)) != 0);
       if (__pyx_t_6) {
 
-        /* "lakesuperior/model/rdf/graph.pyx":579
+        /* "lakesuperior/model/rdf/graph.pyx":578
  *                 ]
  *                 if self.keys.contains(&spok):
  *                     callback_fn(gr, &spok, ctx)             # <<<<<<<<<<<<<<
  *             else:
  *                 # For negative condition (i.e. "apply this function to all keys
  */
-        __Pyx_TraceLine(579,0,__PYX_ERR(0, 579, __pyx_L1_error))
+        __Pyx_TraceLine(578,0,__PYX_ERR(0, 578, __pyx_L1_error))
         __pyx_v_callback_fn(__pyx_v_gr, (&__pyx_v_spok), __pyx_v_ctx);
 
-        /* "lakesuperior/model/rdf/graph.pyx":578
+        /* "lakesuperior/model/rdf/graph.pyx":577
  *                     self.store.to_key(o),
  *                 ]
  *                 if self.keys.contains(&spok):             # <<<<<<<<<<<<<<
@@ -8930,7 +8913,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
  */
       }
 
-      /* "lakesuperior/model/rdf/graph.pyx":571
+      /* "lakesuperior/model/rdf/graph.pyx":570
  *         # Decide comparison logic outside the loop.
  *         if all(pattern):
  *             if callback_cond:             # <<<<<<<<<<<<<<
@@ -8940,60 +8923,60 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
       goto __pyx_L6;
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":584
+    /* "lakesuperior/model/rdf/graph.pyx":583
  *                 # except the matching one"), the whole set must be scanned.
  *                 #logger.info('All terms bound and negative condition.')
  *                 k1 = self.store.to_key(s)             # <<<<<<<<<<<<<<
  *                 k2 = self.store.to_key(p)
  *                 k3 = self.store.to_key(o)
  */
-    __Pyx_TraceLine(584,0,__PYX_ERR(0, 584, __pyx_L1_error))
+    __Pyx_TraceLine(583,0,__PYX_ERR(0, 583, __pyx_L1_error))
     /*else*/ {
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 584, __pyx_L1_error)
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 583, __pyx_L1_error)
       __pyx_v_k1 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":585
+      /* "lakesuperior/model/rdf/graph.pyx":584
  *                 #logger.info('All terms bound and negative condition.')
  *                 k1 = self.store.to_key(s)
  *                 k2 = self.store.to_key(p)             # <<<<<<<<<<<<<<
  *                 k3 = self.store.to_key(o)
  *                 #logger.info(f'Keys to match: {k1} {k2} {k3}')
  */
-      __Pyx_TraceLine(585,0,__PYX_ERR(0, 585, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 585, __pyx_L1_error)
+      __Pyx_TraceLine(584,0,__PYX_ERR(0, 584, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 584, __pyx_L1_error)
       __pyx_v_k2 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":586
+      /* "lakesuperior/model/rdf/graph.pyx":585
  *                 k1 = self.store.to_key(s)
  *                 k2 = self.store.to_key(p)
  *                 k3 = self.store.to_key(o)             # <<<<<<<<<<<<<<
  *                 #logger.info(f'Keys to match: {k1} {k2} {k3}')
  *                 while self.keys.get_next(&spok):
  */
-      __Pyx_TraceLine(586,0,__PYX_ERR(0, 586, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 586, __pyx_L1_error)
+      __Pyx_TraceLine(585,0,__PYX_ERR(0, 585, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 585, __pyx_L1_error)
       __pyx_v_k3 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":588
+      /* "lakesuperior/model/rdf/graph.pyx":587
  *                 k3 = self.store.to_key(o)
  *                 #logger.info(f'Keys to match: {k1} {k2} {k3}')
  *                 while self.keys.get_next(&spok):             # <<<<<<<<<<<<<<
  *                     #logger.info(f'Verifying spok: {spok}')
  *                     if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:
  */
-      __Pyx_TraceLine(588,0,__PYX_ERR(0, 588, __pyx_L1_error))
+      __Pyx_TraceLine(587,0,__PYX_ERR(0, 587, __pyx_L1_error))
       while (1) {
         __pyx_t_6 = (((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->get_next(__pyx_v_self->keys, (&__pyx_v_spok)) != 0);
         if (!__pyx_t_6) break;
 
-        /* "lakesuperior/model/rdf/graph.pyx":590
+        /* "lakesuperior/model/rdf/graph.pyx":589
  *                 while self.keys.get_next(&spok):
  *                     #logger.info(f'Verifying spok: {spok}')
  *                     if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:             # <<<<<<<<<<<<<<
  *                         #logger.info(f'Calling function for spok: {spok}')
  *                         callback_fn(gr, &spok, ctx)
  */
-        __Pyx_TraceLine(590,0,__PYX_ERR(0, 590, __pyx_L1_error))
+        __Pyx_TraceLine(589,0,__PYX_ERR(0, 589, __pyx_L1_error))
         __pyx_t_11 = ((__pyx_v_k1 != (__pyx_v_spok[0])) != 0);
         if (!__pyx_t_11) {
         } else {
@@ -9011,17 +8994,17 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
         __pyx_L11_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "lakesuperior/model/rdf/graph.pyx":592
+          /* "lakesuperior/model/rdf/graph.pyx":591
  *                     if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:
  *                         #logger.info(f'Calling function for spok: {spok}')
  *                         callback_fn(gr, &spok, ctx)             # <<<<<<<<<<<<<<
  *             return
  * 
  */
-          __Pyx_TraceLine(592,0,__PYX_ERR(0, 592, __pyx_L1_error))
+          __Pyx_TraceLine(591,0,__PYX_ERR(0, 591, __pyx_L1_error))
           __pyx_v_callback_fn(__pyx_v_gr, (&__pyx_v_spok), __pyx_v_ctx);
 
-          /* "lakesuperior/model/rdf/graph.pyx":590
+          /* "lakesuperior/model/rdf/graph.pyx":589
  *                 while self.keys.get_next(&spok):
  *                     #logger.info(f'Verifying spok: {spok}')
  *                     if k1 != spok[0] or k2 != spok[1] or k3 != spok[2]:             # <<<<<<<<<<<<<<
@@ -9033,17 +9016,17 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     }
     __pyx_L6:;
 
-    /* "lakesuperior/model/rdf/graph.pyx":593
+    /* "lakesuperior/model/rdf/graph.pyx":592
  *                         #logger.info(f'Calling function for spok: {spok}')
  *                         callback_fn(gr, &spok, ctx)
  *             return             # <<<<<<<<<<<<<<
  * 
  *         if s is not None:
  */
-    __Pyx_TraceLine(593,0,__PYX_ERR(0, 593, __pyx_L1_error))
+    __Pyx_TraceLine(592,0,__PYX_ERR(0, 592, __pyx_L1_error))
     goto __pyx_L0;
 
-    /* "lakesuperior/model/rdf/graph.pyx":570
+    /* "lakesuperior/model/rdf/graph.pyx":569
  *         self.keys.seek()
  *         # Decide comparison logic outside the loop.
  *         if all(pattern):             # <<<<<<<<<<<<<<
@@ -9052,63 +9035,63 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
  */
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":595
+  /* "lakesuperior/model/rdf/graph.pyx":594
  *             return
  * 
  *         if s is not None:             # <<<<<<<<<<<<<<
  *             k1 = self.store.to_key(s)
  *             if p is not None:
  */
-  __Pyx_TraceLine(595,0,__PYX_ERR(0, 595, __pyx_L1_error))
+  __Pyx_TraceLine(594,0,__PYX_ERR(0, 594, __pyx_L1_error))
   __pyx_t_6 = (__pyx_v_s != Py_None);
   __pyx_t_11 = (__pyx_t_6 != 0);
   if (__pyx_t_11) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":596
+    /* "lakesuperior/model/rdf/graph.pyx":595
  * 
  *         if s is not None:
  *             k1 = self.store.to_key(s)             # <<<<<<<<<<<<<<
  *             if p is not None:
  *                 k2 = self.store.to_key(p)
  */
-    __Pyx_TraceLine(596,0,__PYX_ERR(0, 596, __pyx_L1_error))
-    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 596, __pyx_L1_error)
+    __Pyx_TraceLine(595,0,__PYX_ERR(0, 595, __pyx_L1_error))
+    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_s); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 595, __pyx_L1_error)
     __pyx_v_k1 = __pyx_t_9;
 
-    /* "lakesuperior/model/rdf/graph.pyx":597
+    /* "lakesuperior/model/rdf/graph.pyx":596
  *         if s is not None:
  *             k1 = self.store.to_key(s)
  *             if p is not None:             # <<<<<<<<<<<<<<
  *                 k2 = self.store.to_key(p)
  *                 cmp_fn = cb.lookup_skpk_cmp_fn
  */
-    __Pyx_TraceLine(597,0,__PYX_ERR(0, 597, __pyx_L1_error))
+    __Pyx_TraceLine(596,0,__PYX_ERR(0, 596, __pyx_L1_error))
     __pyx_t_11 = (__pyx_v_p != Py_None);
     __pyx_t_6 = (__pyx_t_11 != 0);
     if (__pyx_t_6) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":598
+      /* "lakesuperior/model/rdf/graph.pyx":597
  *             k1 = self.store.to_key(s)
  *             if p is not None:
  *                 k2 = self.store.to_key(p)             # <<<<<<<<<<<<<<
  *                 cmp_fn = cb.lookup_skpk_cmp_fn
  *             elif o is not None:
  */
-      __Pyx_TraceLine(598,0,__PYX_ERR(0, 598, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 598, __pyx_L1_error)
+      __Pyx_TraceLine(597,0,__PYX_ERR(0, 597, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 597, __pyx_L1_error)
       __pyx_v_k2 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":599
+      /* "lakesuperior/model/rdf/graph.pyx":598
  *             if p is not None:
  *                 k2 = self.store.to_key(p)
  *                 cmp_fn = cb.lookup_skpk_cmp_fn             # <<<<<<<<<<<<<<
  *             elif o is not None:
  *                 k2 = self.store.to_key(o)
  */
-      __Pyx_TraceLine(599,0,__PYX_ERR(0, 599, __pyx_L1_error))
+      __Pyx_TraceLine(598,0,__PYX_ERR(0, 598, __pyx_L1_error))
       __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_skpk_cmp_fn;
 
-      /* "lakesuperior/model/rdf/graph.pyx":597
+      /* "lakesuperior/model/rdf/graph.pyx":596
  *         if s is not None:
  *             k1 = self.store.to_key(s)
  *             if p is not None:             # <<<<<<<<<<<<<<
@@ -9118,40 +9101,40 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
       goto __pyx_L15;
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":600
+    /* "lakesuperior/model/rdf/graph.pyx":599
  *                 k2 = self.store.to_key(p)
  *                 cmp_fn = cb.lookup_skpk_cmp_fn
  *             elif o is not None:             # <<<<<<<<<<<<<<
  *                 k2 = self.store.to_key(o)
  *                 cmp_fn = cb.lookup_skok_cmp_fn
  */
-    __Pyx_TraceLine(600,0,__PYX_ERR(0, 600, __pyx_L1_error))
+    __Pyx_TraceLine(599,0,__PYX_ERR(0, 599, __pyx_L1_error))
     __pyx_t_6 = (__pyx_v_o != Py_None);
     __pyx_t_11 = (__pyx_t_6 != 0);
     if (__pyx_t_11) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":601
+      /* "lakesuperior/model/rdf/graph.pyx":600
  *                 cmp_fn = cb.lookup_skpk_cmp_fn
  *             elif o is not None:
  *                 k2 = self.store.to_key(o)             # <<<<<<<<<<<<<<
  *                 cmp_fn = cb.lookup_skok_cmp_fn
  *             else:
  */
-      __Pyx_TraceLine(601,0,__PYX_ERR(0, 601, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 601, __pyx_L1_error)
+      __Pyx_TraceLine(600,0,__PYX_ERR(0, 600, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 600, __pyx_L1_error)
       __pyx_v_k2 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":602
+      /* "lakesuperior/model/rdf/graph.pyx":601
  *             elif o is not None:
  *                 k2 = self.store.to_key(o)
  *                 cmp_fn = cb.lookup_skok_cmp_fn             # <<<<<<<<<<<<<<
  *             else:
  *                 cmp_fn = cb.lookup_sk_cmp_fn
  */
-      __Pyx_TraceLine(602,0,__PYX_ERR(0, 602, __pyx_L1_error))
+      __Pyx_TraceLine(601,0,__PYX_ERR(0, 601, __pyx_L1_error))
       __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_skok_cmp_fn;
 
-      /* "lakesuperior/model/rdf/graph.pyx":600
+      /* "lakesuperior/model/rdf/graph.pyx":599
  *                 k2 = self.store.to_key(p)
  *                 cmp_fn = cb.lookup_skpk_cmp_fn
  *             elif o is not None:             # <<<<<<<<<<<<<<
@@ -9161,20 +9144,20 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
       goto __pyx_L15;
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":604
+    /* "lakesuperior/model/rdf/graph.pyx":603
  *                 cmp_fn = cb.lookup_skok_cmp_fn
  *             else:
  *                 cmp_fn = cb.lookup_sk_cmp_fn             # <<<<<<<<<<<<<<
  *         elif p is not None:
  *             k1 = self.store.to_key(p)
  */
-    __Pyx_TraceLine(604,0,__PYX_ERR(0, 604, __pyx_L1_error))
+    __Pyx_TraceLine(603,0,__PYX_ERR(0, 603, __pyx_L1_error))
     /*else*/ {
       __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_sk_cmp_fn;
     }
     __pyx_L15:;
 
-    /* "lakesuperior/model/rdf/graph.pyx":595
+    /* "lakesuperior/model/rdf/graph.pyx":594
  *             return
  * 
  *         if s is not None:             # <<<<<<<<<<<<<<
@@ -9184,63 +9167,63 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     goto __pyx_L14;
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":605
+  /* "lakesuperior/model/rdf/graph.pyx":604
  *             else:
  *                 cmp_fn = cb.lookup_sk_cmp_fn
  *         elif p is not None:             # <<<<<<<<<<<<<<
  *             k1 = self.store.to_key(p)
  *             if o is not None:
  */
-  __Pyx_TraceLine(605,0,__PYX_ERR(0, 605, __pyx_L1_error))
+  __Pyx_TraceLine(604,0,__PYX_ERR(0, 604, __pyx_L1_error))
   __pyx_t_11 = (__pyx_v_p != Py_None);
   __pyx_t_6 = (__pyx_t_11 != 0);
   if (__pyx_t_6) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":606
+    /* "lakesuperior/model/rdf/graph.pyx":605
  *                 cmp_fn = cb.lookup_sk_cmp_fn
  *         elif p is not None:
  *             k1 = self.store.to_key(p)             # <<<<<<<<<<<<<<
  *             if o is not None:
  *                 k2 = self.store.to_key(o)
  */
-    __Pyx_TraceLine(606,0,__PYX_ERR(0, 606, __pyx_L1_error))
-    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 606, __pyx_L1_error)
+    __Pyx_TraceLine(605,0,__PYX_ERR(0, 605, __pyx_L1_error))
+    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_p); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 605, __pyx_L1_error)
     __pyx_v_k1 = __pyx_t_9;
 
-    /* "lakesuperior/model/rdf/graph.pyx":607
+    /* "lakesuperior/model/rdf/graph.pyx":606
  *         elif p is not None:
  *             k1 = self.store.to_key(p)
  *             if o is not None:             # <<<<<<<<<<<<<<
  *                 k2 = self.store.to_key(o)
  *                 cmp_fn = cb.lookup_pkok_cmp_fn
  */
-    __Pyx_TraceLine(607,0,__PYX_ERR(0, 607, __pyx_L1_error))
+    __Pyx_TraceLine(606,0,__PYX_ERR(0, 606, __pyx_L1_error))
     __pyx_t_6 = (__pyx_v_o != Py_None);
     __pyx_t_11 = (__pyx_t_6 != 0);
     if (__pyx_t_11) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":608
+      /* "lakesuperior/model/rdf/graph.pyx":607
  *             k1 = self.store.to_key(p)
  *             if o is not None:
  *                 k2 = self.store.to_key(o)             # <<<<<<<<<<<<<<
  *                 cmp_fn = cb.lookup_pkok_cmp_fn
  *             else:
  */
-      __Pyx_TraceLine(608,0,__PYX_ERR(0, 608, __pyx_L1_error))
-      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 608, __pyx_L1_error)
+      __Pyx_TraceLine(607,0,__PYX_ERR(0, 607, __pyx_L1_error))
+      __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 607, __pyx_L1_error)
       __pyx_v_k2 = __pyx_t_9;
 
-      /* "lakesuperior/model/rdf/graph.pyx":609
+      /* "lakesuperior/model/rdf/graph.pyx":608
  *             if o is not None:
  *                 k2 = self.store.to_key(o)
  *                 cmp_fn = cb.lookup_pkok_cmp_fn             # <<<<<<<<<<<<<<
  *             else:
  *                 cmp_fn = cb.lookup_pk_cmp_fn
  */
-      __Pyx_TraceLine(609,0,__PYX_ERR(0, 609, __pyx_L1_error))
+      __Pyx_TraceLine(608,0,__PYX_ERR(0, 608, __pyx_L1_error))
       __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_pkok_cmp_fn;
 
-      /* "lakesuperior/model/rdf/graph.pyx":607
+      /* "lakesuperior/model/rdf/graph.pyx":606
  *         elif p is not None:
  *             k1 = self.store.to_key(p)
  *             if o is not None:             # <<<<<<<<<<<<<<
@@ -9250,20 +9233,20 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
       goto __pyx_L16;
     }
 
-    /* "lakesuperior/model/rdf/graph.pyx":611
+    /* "lakesuperior/model/rdf/graph.pyx":610
  *                 cmp_fn = cb.lookup_pkok_cmp_fn
  *             else:
  *                 cmp_fn = cb.lookup_pk_cmp_fn             # <<<<<<<<<<<<<<
  *         elif o is not None:
  *             k1 = self.store.to_key(o)
  */
-    __Pyx_TraceLine(611,0,__PYX_ERR(0, 611, __pyx_L1_error))
+    __Pyx_TraceLine(610,0,__PYX_ERR(0, 610, __pyx_L1_error))
     /*else*/ {
       __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_pk_cmp_fn;
     }
     __pyx_L16:;
 
-    /* "lakesuperior/model/rdf/graph.pyx":605
+    /* "lakesuperior/model/rdf/graph.pyx":604
  *             else:
  *                 cmp_fn = cb.lookup_sk_cmp_fn
  *         elif p is not None:             # <<<<<<<<<<<<<<
@@ -9273,40 +9256,40 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     goto __pyx_L14;
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":612
+  /* "lakesuperior/model/rdf/graph.pyx":611
  *             else:
  *                 cmp_fn = cb.lookup_pk_cmp_fn
  *         elif o is not None:             # <<<<<<<<<<<<<<
  *             k1 = self.store.to_key(o)
  *             cmp_fn = cb.lookup_ok_cmp_fn
  */
-  __Pyx_TraceLine(612,0,__PYX_ERR(0, 612, __pyx_L1_error))
+  __Pyx_TraceLine(611,0,__PYX_ERR(0, 611, __pyx_L1_error))
   __pyx_t_11 = (__pyx_v_o != Py_None);
   __pyx_t_6 = (__pyx_t_11 != 0);
   if (__pyx_t_6) {
 
-    /* "lakesuperior/model/rdf/graph.pyx":613
+    /* "lakesuperior/model/rdf/graph.pyx":612
  *                 cmp_fn = cb.lookup_pk_cmp_fn
  *         elif o is not None:
  *             k1 = self.store.to_key(o)             # <<<<<<<<<<<<<<
  *             cmp_fn = cb.lookup_ok_cmp_fn
  *         else:
  */
-    __Pyx_TraceLine(613,0,__PYX_ERR(0, 613, __pyx_L1_error))
-    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 613, __pyx_L1_error)
+    __Pyx_TraceLine(612,0,__PYX_ERR(0, 612, __pyx_L1_error))
+    __pyx_t_9 = ((struct __pyx_vtabstruct_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *)__pyx_v_self->store->__pyx_base.__pyx_vtab)->to_key(__pyx_v_self->store, __pyx_v_o); if (unlikely(__pyx_t_9 == ((__pyx_t_12lakesuperior_5model_4base_Key)0) && PyErr_Occurred())) __PYX_ERR(0, 612, __pyx_L1_error)
     __pyx_v_k1 = __pyx_t_9;
 
-    /* "lakesuperior/model/rdf/graph.pyx":614
+    /* "lakesuperior/model/rdf/graph.pyx":613
  *         elif o is not None:
  *             k1 = self.store.to_key(o)
  *             cmp_fn = cb.lookup_ok_cmp_fn             # <<<<<<<<<<<<<<
  *         else:
  *             cmp_fn = cb.lookup_none_cmp_fn
  */
-    __Pyx_TraceLine(614,0,__PYX_ERR(0, 614, __pyx_L1_error))
+    __Pyx_TraceLine(613,0,__PYX_ERR(0, 613, __pyx_L1_error))
     __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_ok_cmp_fn;
 
-    /* "lakesuperior/model/rdf/graph.pyx":612
+    /* "lakesuperior/model/rdf/graph.pyx":611
  *             else:
  *                 cmp_fn = cb.lookup_pk_cmp_fn
  *         elif o is not None:             # <<<<<<<<<<<<<<
@@ -9316,53 +9299,53 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     goto __pyx_L14;
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":616
+  /* "lakesuperior/model/rdf/graph.pyx":615
  *             cmp_fn = cb.lookup_ok_cmp_fn
  *         else:
  *             cmp_fn = cb.lookup_none_cmp_fn             # <<<<<<<<<<<<<<
  * 
  *         # Iterate over serialized triples.
  */
-  __Pyx_TraceLine(616,0,__PYX_ERR(0, 616, __pyx_L1_error))
+  __Pyx_TraceLine(615,0,__PYX_ERR(0, 615, __pyx_L1_error))
   /*else*/ {
     __pyx_v_cmp_fn = __pyx_f_12lakesuperior_5model_9callbacks_lookup_none_cmp_fn;
   }
   __pyx_L14:;
 
-  /* "lakesuperior/model/rdf/graph.pyx":619
+  /* "lakesuperior/model/rdf/graph.pyx":618
  * 
  *         # Iterate over serialized triples.
  *         while self.keys.get_next(&spok):             # <<<<<<<<<<<<<<
  *             if cmp_fn(&spok, k1, k2) == callback_cond:
  *                 callback_fn(gr, &spok, ctx)
  */
-  __Pyx_TraceLine(619,0,__PYX_ERR(0, 619, __pyx_L1_error))
+  __Pyx_TraceLine(618,0,__PYX_ERR(0, 618, __pyx_L1_error))
   while (1) {
     __pyx_t_6 = (((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_self->keys->__pyx_vtab)->get_next(__pyx_v_self->keys, (&__pyx_v_spok)) != 0);
     if (!__pyx_t_6) break;
 
-    /* "lakesuperior/model/rdf/graph.pyx":620
+    /* "lakesuperior/model/rdf/graph.pyx":619
  *         # Iterate over serialized triples.
  *         while self.keys.get_next(&spok):
  *             if cmp_fn(&spok, k1, k2) == callback_cond:             # <<<<<<<<<<<<<<
  *                 callback_fn(gr, &spok, ctx)
  * 
  */
-    __Pyx_TraceLine(620,0,__PYX_ERR(0, 620, __pyx_L1_error))
+    __Pyx_TraceLine(619,0,__PYX_ERR(0, 619, __pyx_L1_error))
     __pyx_t_6 = ((__pyx_v_cmp_fn((&__pyx_v_spok), __pyx_v_k1, __pyx_v_k2) == __pyx_v_callback_cond) != 0);
     if (__pyx_t_6) {
 
-      /* "lakesuperior/model/rdf/graph.pyx":621
+      /* "lakesuperior/model/rdf/graph.pyx":620
  *         while self.keys.get_next(&spok):
  *             if cmp_fn(&spok, k1, k2) == callback_cond:
  *                 callback_fn(gr, &spok, ctx)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-      __Pyx_TraceLine(621,0,__PYX_ERR(0, 621, __pyx_L1_error))
+      __Pyx_TraceLine(620,0,__PYX_ERR(0, 620, __pyx_L1_error))
       __pyx_v_callback_fn(__pyx_v_gr, (&__pyx_v_spok), __pyx_v_ctx);
 
-      /* "lakesuperior/model/rdf/graph.pyx":620
+      /* "lakesuperior/model/rdf/graph.pyx":619
  *         # Iterate over serialized triples.
  *         while self.keys.get_next(&spok):
  *             if cmp_fn(&spok, k1, k2) == callback_cond:             # <<<<<<<<<<<<<<
@@ -9372,7 +9355,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
     }
   }
 
-  /* "lakesuperior/model/rdf/graph.pyx":539
+  /* "lakesuperior/model/rdf/graph.pyx":538
  * 
  * 
  *     cdef void _match_ptn_callback(             # <<<<<<<<<<<<<<
@@ -9396,7 +9379,7 @@ static void __pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callback
   __Pyx_RefNannyFinishContext();
 }
 
-/* "lakesuperior/model/rdf/graph.pxd":19
+/* "lakesuperior/model/rdf/graph.pxd":17
  * cdef class Graph:
  *     cdef:
  *         readonly lmdb_triplestore.LmdbTriplestore store             # <<<<<<<<<<<<<<
@@ -9422,7 +9405,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_5store___get_
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[1], 19, 0, __PYX_ERR(1, 19, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[1], 17, 0, __PYX_ERR(1, 17, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self->store));
   __pyx_r = ((PyObject *)__pyx_v_self->store);
@@ -9439,7 +9422,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_5store___get_
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pxd":20
+/* "lakesuperior/model/rdf/graph.pxd":18
  *     cdef:
  *         readonly lmdb_triplestore.LmdbTriplestore store
  *         public Keyset keys             # <<<<<<<<<<<<<<
@@ -9465,7 +9448,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4keys___get__
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[1], 20, 0, __PYX_ERR(1, 20, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[1], 18, 0, __PYX_ERR(1, 18, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_self->keys));
   __pyx_r = ((PyObject *)__pyx_v_self->keys);
@@ -9501,8 +9484,8 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4keys_2__set__(stru
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __Pyx_TraceCall("__set__", __pyx_f[1], 20, 0, __PYX_ERR(1, 20, __pyx_L1_error));
-  if (!(likely(((__pyx_v_value) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_value, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(1, 20, __pyx_L1_error)
+  __Pyx_TraceCall("__set__", __pyx_f[1], 18, 0, __PYX_ERR(1, 18, __pyx_L1_error));
+  if (!(likely(((__pyx_v_value) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_value, __pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset))))) __PYX_ERR(1, 18, __pyx_L1_error)
   __pyx_t_1 = __pyx_v_value;
   __Pyx_INCREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
@@ -9542,7 +9525,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4keys_4__del__(stru
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__del__", 0);
-  __Pyx_TraceCall("__del__", __pyx_f[1], 20, 0, __PYX_ERR(1, 20, __pyx_L1_error));
+  __Pyx_TraceCall("__del__", __pyx_f[1], 18, 0, __PYX_ERR(1, 18, __pyx_L1_error));
   __Pyx_INCREF(Py_None);
   __Pyx_GIVEREF(Py_None);
   __Pyx_GOTREF(__pyx_v_self->keys);
@@ -9561,12 +9544,12 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_4keys_4__del__(stru
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pxd":21
+/* "lakesuperior/model/rdf/graph.pxd":19
  *         readonly lmdb_triplestore.LmdbTriplestore store
  *         public Keyset keys
  *         public object uri             # <<<<<<<<<<<<<<
  * 
- *         cc.key_compare_ft term_cmp_fn
+ *         void _match_ptn_callback(
  */
 
 /* Python wrapper */
@@ -9587,7 +9570,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_3uri___get__(
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__get__", 0);
-  __Pyx_TraceCall("__get__", __pyx_f[1], 21, 0, __PYX_ERR(1, 21, __pyx_L1_error));
+  __Pyx_TraceCall("__get__", __pyx_f[1], 19, 0, __PYX_ERR(1, 19, __pyx_L1_error));
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v_self->uri);
   __pyx_r = __pyx_v_self->uri;
@@ -9622,7 +9605,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_3uri_2__set__(struc
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__set__", 0);
-  __Pyx_TraceCall("__set__", __pyx_f[1], 21, 0, __PYX_ERR(1, 21, __pyx_L1_error));
+  __Pyx_TraceCall("__set__", __pyx_f[1], 19, 0, __PYX_ERR(1, 19, __pyx_L1_error));
   __Pyx_INCREF(__pyx_v_value);
   __Pyx_GIVEREF(__pyx_v_value);
   __Pyx_GOTREF(__pyx_v_self->uri);
@@ -9659,7 +9642,7 @@ static int __pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_3uri_4__del__(struc
   __Pyx_TraceDeclarations
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__del__", 0);
-  __Pyx_TraceCall("__del__", __pyx_f[1], 21, 0, __PYX_ERR(1, 21, __pyx_L1_error));
+  __Pyx_TraceCall("__del__", __pyx_f[1], 19, 0, __PYX_ERR(1, 19, __pyx_L1_error));
   __Pyx_INCREF(Py_None);
   __Pyx_GIVEREF(Py_None);
   __Pyx_GOTREF(__pyx_v_self->uri);
@@ -9799,7 +9782,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_5Graph_61__setstate_
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":627
+/* "lakesuperior/model/rdf/graph.pyx":626
  * ## FACTORY METHODS
  * 
  * def from_rdf(store=None, uri=None, *args, **kwargs):             # <<<<<<<<<<<<<<
@@ -9864,7 +9847,7 @@ static PyObject *__pyx_pw_12lakesuperior_5model_3rdf_5graph_1from_rdf(PyObject *
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t used_pos_args = (pos_args < 2) ? pos_args : 2;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, used_pos_args, "from_rdf") < 0)) __PYX_ERR(0, 627, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, used_pos_args, "from_rdf") < 0)) __PYX_ERR(0, 626, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -9906,19 +9889,19 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_from_rdf(CYTHON_UNUS
   PyObject *__pyx_t_3 = NULL;
   __Pyx_TraceFrameInit(__pyx_codeobj__21)
   __Pyx_RefNannySetupContext("from_rdf", 0);
-  __Pyx_TraceCall("from_rdf", __pyx_f[0], 627, 0, __PYX_ERR(0, 627, __pyx_L1_error));
+  __Pyx_TraceCall("from_rdf", __pyx_f[0], 626, 0, __PYX_ERR(0, 626, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":645
+  /* "lakesuperior/model/rdf/graph.pyx":644
  * 
  *     """
  *     gr = rdflib.Graph().parse(*args, **kwargs)             # <<<<<<<<<<<<<<
  * 
  *     return Graph(store=store, uri=uri, data={*gr})
  */
-  __Pyx_TraceLine(645,0,__PYX_ERR(0, 645, __pyx_L1_error))
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 645, __pyx_L1_error)
+  __Pyx_TraceLine(644,0,__PYX_ERR(0, 644, __pyx_L1_error))
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_rdflib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 644, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_Graph); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 645, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_Graph); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 644, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -9933,47 +9916,47 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_from_rdf(CYTHON_UNUS
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 645, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 644, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_parse); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 645, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_parse); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 644, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_v_args, __pyx_v_kwargs); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 645, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_v_args, __pyx_v_kwargs); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 644, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_gr = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":647
+  /* "lakesuperior/model/rdf/graph.pyx":646
  *     gr = rdflib.Graph().parse(*args, **kwargs)
  * 
  *     return Graph(store=store, uri=uri, data={*gr})             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_TraceLine(647,0,__PYX_ERR(0, 647, __pyx_L1_error))
+  __Pyx_TraceLine(646,0,__PYX_ERR(0, 646, __pyx_L1_error))
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 647, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 646, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_store, __pyx_v_store) < 0) __PYX_ERR(0, 647, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 647, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_store, __pyx_v_store) < 0) __PYX_ERR(0, 646, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_uri, __pyx_v_uri) < 0) __PYX_ERR(0, 646, __pyx_L1_error)
   if (unlikely(__pyx_v_gr == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "argument after * must be an iterable, not NoneType");
-    __PYX_ERR(0, 647, __pyx_L1_error)
+    __PYX_ERR(0, 646, __pyx_L1_error)
   }
-  __pyx_t_3 = PySet_New(__pyx_v_gr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 647, __pyx_L1_error)
+  __pyx_t_3 = PySet_New(__pyx_v_gr); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 646, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_data, __pyx_t_3) < 0) __PYX_ERR(0, 647, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_data, __pyx_t_3) < 0) __PYX_ERR(0, 646, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 647, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph), __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 646, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":627
+  /* "lakesuperior/model/rdf/graph.pyx":626
  * ## FACTORY METHODS
  * 
  * def from_rdf(store=None, uri=None, *args, **kwargs):             # <<<<<<<<<<<<<<
@@ -9996,7 +9979,7 @@ static PyObject *__pyx_pf_12lakesuperior_5model_3rdf_5graph_from_rdf(CYTHON_UNUS
   return __pyx_r;
 }
 
-/* "lakesuperior/model/rdf/graph.pyx":652
+/* "lakesuperior/model/rdf/graph.pyx":651
  * ## LOOKUP CALLBACK FUNCTIONS
  * 
  * cdef inline void add_trp_callback(             # <<<<<<<<<<<<<<
@@ -10009,17 +9992,17 @@ static CYTHON_INLINE void __pyx_f_12lakesuperior_5model_3rdf_5graph_add_trp_call
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("add_trp_callback", 0);
-  __Pyx_TraceCall("add_trp_callback", __pyx_f[0], 652, 0, __PYX_ERR(0, 652, __pyx_L1_error));
+  __Pyx_TraceCall("add_trp_callback", __pyx_f[0], 651, 0, __PYX_ERR(0, 651, __pyx_L1_error));
 
-  /* "lakesuperior/model/rdf/graph.pyx":662
+  /* "lakesuperior/model/rdf/graph.pyx":661
  *     :param void* ctx: Not used.
  *     """
  *     gr.keys.add(spok_p)             # <<<<<<<<<<<<<<
  */
-  __Pyx_TraceLine(662,0,__PYX_ERR(0, 662, __pyx_L1_error))
-  __pyx_t_1 = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_gr->keys->__pyx_vtab)->add(__pyx_v_gr->keys, __pyx_v_spok_p, NULL); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 662, __pyx_L1_error)
+  __Pyx_TraceLine(661,0,__PYX_ERR(0, 661, __pyx_L1_error))
+  __pyx_t_1 = ((struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *)__pyx_v_gr->keys->__pyx_vtab)->add(__pyx_v_gr->keys, __pyx_v_spok_p, NULL); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 661, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":652
+  /* "lakesuperior/model/rdf/graph.pyx":651
  * ## LOOKUP CALLBACK FUNCTIONS
  * 
  * cdef inline void add_trp_callback(             # <<<<<<<<<<<<<<
@@ -10574,12 +10557,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_NotImplementedError = __Pyx_GetBuiltinName(__pyx_n_s_NotImplementedError); if (!__pyx_builtin_NotImplementedError) __PYX_ERR(0, 186, __pyx_L1_error)
-  __pyx_builtin_id = __Pyx_GetBuiltinName(__pyx_n_s_id); if (!__pyx_builtin_id) __PYX_ERR(0, 209, __pyx_L1_error)
-  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 340, __pyx_L1_error)
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 362, __pyx_L1_error)
-  __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(0, 368, __pyx_L1_error)
-  __pyx_builtin_all = __Pyx_GetBuiltinName(__pyx_n_s_all); if (!__pyx_builtin_all) __PYX_ERR(0, 570, __pyx_L1_error)
+  __pyx_builtin_NotImplementedError = __Pyx_GetBuiltinName(__pyx_n_s_NotImplementedError); if (!__pyx_builtin_NotImplementedError) __PYX_ERR(0, 185, __pyx_L1_error)
+  __pyx_builtin_id = __Pyx_GetBuiltinName(__pyx_n_s_id); if (!__pyx_builtin_id) __PYX_ERR(0, 208, __pyx_L1_error)
+  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 361, __pyx_L1_error)
+  __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(0, 367, __pyx_L1_error)
+  __pyx_builtin_all = __Pyx_GetBuiltinName(__pyx_n_s_all); if (!__pyx_builtin_all) __PYX_ERR(0, 569, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -10589,14 +10572,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "lakesuperior/model/rdf/graph.pyx":362
+  /* "lakesuperior/model/rdf/graph.pyx":361
  *         """
  *         if not self.uri:
  *             raise ValueError('Cannot use `value` on a non-named graph.')             # <<<<<<<<<<<<<<
  * 
  *         # TODO use slice.
  */
-  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Cannot_use_value_on_a_non_named); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 362, __pyx_L1_error)
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Cannot_use_value_on_a_non_named); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 361, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
 
@@ -10619,125 +10602,125 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__20);
   __Pyx_GIVEREF(__pyx_tuple__20);
 
-  /* "lakesuperior/model/rdf/graph.pyx":350
+  /* "lakesuperior/model/rdf/graph.pyx":349
  *     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
  * 
  *     def value(self, p, strict=False):             # <<<<<<<<<<<<<<
  *         """
  *         Get an individual value for a given predicate.
  */
-  __pyx_tuple__22 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_p, __pyx_n_s_strict, __pyx_n_s_values, __pyx_n_s_ret, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 350, __pyx_L1_error)
+  __pyx_tuple__22 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_p, __pyx_n_s_strict, __pyx_n_s_values, __pyx_n_s_ret, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 349, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__22);
   __Pyx_GIVEREF(__pyx_tuple__22);
-  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(3, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_value, 350, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 350, __pyx_L1_error)
+  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(3, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_value, 349, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 349, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":377
+  /* "lakesuperior/model/rdf/graph.pyx":376
  * 
  * 
  *     def terms_by_type(self, type):             # <<<<<<<<<<<<<<
  *         """
  *         Get all terms of a type: subject, predicate or object.
  */
-  __pyx_tuple__23 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_type, __pyx_n_s_i, __pyx_n_s_r); if (unlikely(!__pyx_tuple__23)) __PYX_ERR(0, 377, __pyx_L1_error)
+  __pyx_tuple__23 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_type, __pyx_n_s_i, __pyx_n_s_r); if (unlikely(!__pyx_tuple__23)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__23);
   __Pyx_GIVEREF(__pyx_tuple__23);
-  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(2, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__23, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_terms_by_type, 377, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 377, __pyx_L1_error)
+  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(2, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__23, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_terms_by_type, 376, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 376, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":387
+  /* "lakesuperior/model/rdf/graph.pyx":386
  * 
  * 
  *     def add(self, triples):             # <<<<<<<<<<<<<<
  *         """
  *         Add triples to the graph.
  */
-  __pyx_tuple__24 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_triples, __pyx_n_s_spok, __pyx_n_s_s, __pyx_n_s_p, __pyx_n_s_o); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_tuple__24 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_triples, __pyx_n_s_spok, __pyx_n_s_s, __pyx_n_s_p, __pyx_n_s_o); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 386, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__24);
   __Pyx_GIVEREF(__pyx_tuple__24);
-  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_add, 387, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_add, 386, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 386, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":409
+  /* "lakesuperior/model/rdf/graph.pyx":408
  * 
  * 
  *     def remove(self, pattern):             # <<<<<<<<<<<<<<
  *         """
  *         Remove triples by pattern.
  */
-  __pyx_tuple__25 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_pattern, __pyx_n_s_new_gr); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 409, __pyx_L1_error)
+  __pyx_tuple__25 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_pattern, __pyx_n_s_new_gr); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 408, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__25);
   __Pyx_GIVEREF(__pyx_tuple__25);
-  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_remove, 409, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 409, __pyx_L1_error)
+  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_remove, 408, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 408, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":430
+  /* "lakesuperior/model/rdf/graph.pyx":429
  *     ## CYTHON-ACCESSIBLE BASIC METHODS ##
  * 
  *     cpdef Graph copy(self, str uri=None):             # <<<<<<<<<<<<<<
  *         """
  *         Create copy of the graph with a different (or no) URI.
  */
-  __pyx_tuple__26 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_uri); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __pyx_tuple__26 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_uri); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 429, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__26);
   __Pyx_GIVEREF(__pyx_tuple__26);
-  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_copy, 430, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_copy, 429, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 429, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":444
+  /* "lakesuperior/model/rdf/graph.pyx":443
  * 
  * 
  *     cpdef Graph empty_copy(self, str uri=None):             # <<<<<<<<<<<<<<
  *         """
  *         Create an empty copy with same capacity and store binding.
  */
-  __pyx_tuple__27 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_uri); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 444, __pyx_L1_error)
+  __pyx_tuple__27 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_uri); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 443, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__27);
   __Pyx_GIVEREF(__pyx_tuple__27);
-  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_empty_copy, 444, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 444, __pyx_L1_error)
+  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_empty_copy, 443, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 443, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":454
+  /* "lakesuperior/model/rdf/graph.pyx":453
  * 
  * 
  *     cpdef void set(self, tuple trp) except *:             # <<<<<<<<<<<<<<
  *         """
  *         Set a single value for subject and predicate.
  */
-  __pyx_tuple__28 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 454, __pyx_L1_error)
+  __pyx_tuple__28 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 453, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__28);
   __Pyx_GIVEREF(__pyx_tuple__28);
-  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_set, 454, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 454, __pyx_L1_error)
+  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_set, 453, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 453, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":466
+  /* "lakesuperior/model/rdf/graph.pyx":465
  * 
  * 
  *     def as_rdflib(self):             # <<<<<<<<<<<<<<
  *         """
  *         Return the data set as an RDFLib Graph.
  */
-  __pyx_tuple__29 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_gr, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 466, __pyx_L1_error)
+  __pyx_tuple__29 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_gr, __pyx_n_s_trp); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 465, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__29);
   __Pyx_GIVEREF(__pyx_tuple__29);
-  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(1, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_as_rdflib, 466, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 466, __pyx_L1_error)
+  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(1, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_as_rdflib, 465, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 465, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":479
+  /* "lakesuperior/model/rdf/graph.pyx":478
  * 
  * 
  *     def _slice(self, s, p, o):             # <<<<<<<<<<<<<<
  *         """
  *         Return terms filtered by other terms.
  */
-  __pyx_tuple__30 = PyTuple_Pack(11, __pyx_n_s_self, __pyx_n_s_s, __pyx_n_s_p, __pyx_n_s_o, __pyx_n_s_res, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 479, __pyx_L1_error)
+  __pyx_tuple__30 = PyTuple_Pack(11, __pyx_n_s_self, __pyx_n_s_s, __pyx_n_s_p, __pyx_n_s_o, __pyx_n_s_res, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r, __pyx_n_s_r); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 478, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
-  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_slice, 479, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 479, __pyx_L1_error)
+  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_slice, 478, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 478, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":517
+  /* "lakesuperior/model/rdf/graph.pyx":516
  * 
  * 
  *     def lookup(self, pattern):             # <<<<<<<<<<<<<<
  *         """
  *         Look up triples by a pattern.
  */
-  __pyx_tuple__31 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_pattern, __pyx_n_s_res_gr); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 517, __pyx_L1_error)
+  __pyx_tuple__31 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_pattern, __pyx_n_s_res_gr); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 516, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__31);
   __Pyx_GIVEREF(__pyx_tuple__31);
-  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_lookup, 517, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 517, __pyx_L1_error)
+  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_lookup, 516, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 516, __pyx_L1_error)
 
   /* "(tree fragment)":1
  * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
@@ -10760,18 +10743,18 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__33);
   __pyx_codeobj__19 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_setstate_cython, 3, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__19)) __PYX_ERR(2, 3, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":627
+  /* "lakesuperior/model/rdf/graph.pyx":626
  * ## FACTORY METHODS
  * 
  * def from_rdf(store=None, uri=None, *args, **kwargs):             # <<<<<<<<<<<<<<
  *     r"""
  *     Create a Graph from a serialized RDF string.
  */
-  __pyx_tuple__34 = PyTuple_Pack(5, __pyx_n_s_store, __pyx_n_s_uri, __pyx_n_s_args, __pyx_n_s_kwargs, __pyx_n_s_gr); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 627, __pyx_L1_error)
+  __pyx_tuple__34 = PyTuple_Pack(5, __pyx_n_s_store, __pyx_n_s_uri, __pyx_n_s_args, __pyx_n_s_kwargs, __pyx_n_s_gr); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 626, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__34);
   __Pyx_GIVEREF(__pyx_tuple__34);
-  __pyx_codeobj__21 = (PyObject*)__Pyx_PyCode_New(2, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARARGS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_from_rdf, 627, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__21)) __PYX_ERR(0, 627, __pyx_L1_error)
-  __pyx_tuple__35 = PyTuple_Pack(2, ((PyObject *)Py_None), ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__35)) __PYX_ERR(0, 627, __pyx_L1_error)
+  __pyx_codeobj__21 = (PyObject*)__Pyx_PyCode_New(2, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARARGS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lakesuperior_model_rdf_graph_pyx, __pyx_n_s_from_rdf, 626, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__21)) __PYX_ERR(0, 626, __pyx_L1_error)
+  __pyx_tuple__35 = PyTuple_Pack(2, ((PyObject *)Py_None), ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__35)) __PYX_ERR(0, 626, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__35);
   __Pyx_GIVEREF(__pyx_tuple__35);
   __Pyx_RefNannyFinishContext();
@@ -10833,14 +10816,14 @@ static int __Pyx_modinit_type_init_code(void) {
   __pyx_vtable_12lakesuperior_5model_3rdf_5graph_Graph.copy = (struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *(*)(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy *__pyx_optional_args))__pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_copy;
   __pyx_vtable_12lakesuperior_5model_3rdf_5graph_Graph.empty_copy = (struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *(*)(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *, int __pyx_skip_dispatch, struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy *__pyx_optional_args))__pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy;
   __pyx_vtable_12lakesuperior_5model_3rdf_5graph_Graph.set = (void (*)(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *, PyObject *, int __pyx_skip_dispatch))__pyx_f_12lakesuperior_5model_3rdf_5graph_5Graph_set;
-  if (PyType_Ready(&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
   __pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_print = 0;
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_dictoffset && __pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__len__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__len__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_2__len__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_2__len__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_2__len__;
@@ -10850,7 +10833,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__repr__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__repr__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_6__repr__;
@@ -10860,7 +10843,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__str__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__str__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_8__str__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_8__str__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_8__str__;
@@ -10870,7 +10853,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__add__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__add__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_10__add__;
@@ -10880,7 +10863,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iadd__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iadd__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_12__iadd__;
@@ -10890,7 +10873,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__sub__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__sub__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_14__sub__;
@@ -10900,7 +10883,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__isub__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__isub__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_16__isub__;
@@ -10910,7 +10893,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__and__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__and__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_18__and__;
@@ -10920,7 +10903,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iand__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iand__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_20__iand__;
@@ -10930,7 +10913,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__or__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__or__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_22__or__;
@@ -10940,7 +10923,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__ior__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__ior__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_24__ior__;
@@ -10950,7 +10933,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__xor__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__xor__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_26__xor__;
@@ -10960,7 +10943,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__ixor__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__ixor__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_28__ixor__;
@@ -10970,7 +10953,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__contains__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__contains__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_30__contains__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_30__contains__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_30__contains__;
@@ -10980,7 +10963,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iter__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__iter__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_32__iter__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_32__iter__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_32__iter__;
@@ -10990,7 +10973,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__getitem__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__getitem__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_35__getitem__;
@@ -11000,7 +10983,7 @@ static int __Pyx_modinit_type_init_code(void) {
   #endif
   #if CYTHON_COMPILING_IN_CPYTHON
   {
-    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__hash__"); if (unlikely(!wrapper)) __PYX_ERR(0, 29, __pyx_L1_error)
+    PyObject *wrapper = PyObject_GetAttrString((PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph, "__hash__"); if (unlikely(!wrapper)) __PYX_ERR(0, 28, __pyx_L1_error)
     if (Py_TYPE(wrapper) == &PyWrapperDescr_Type) {
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_37__hash__ = *((PyWrapperDescrObject *)wrapper)->d_base;
       __pyx_wrapperbase_12lakesuperior_5model_3rdf_5graph_5Graph_37__hash__.doc = __pyx_doc_12lakesuperior_5model_3rdf_5graph_5Graph_37__hash__;
@@ -11008,11 +10991,11 @@ static int __Pyx_modinit_type_init_code(void) {
     }
   }
   #endif
-  if (__Pyx_SetVtable(__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_dict, __pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_Graph, (PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
+  if (__Pyx_SetVtable(__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph.tp_dict, __pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
+  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_Graph, (PyObject *)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
   __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph = &__pyx_type_12lakesuperior_5model_3rdf_5graph_Graph;
-  if (PyType_Ready(&__pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__) < 0) __PYX_ERR(0, 310, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__) < 0) __PYX_ERR(0, 309, __pyx_L1_error)
   __pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__.tp_print = 0;
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__.tp_dictoffset && __pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_12lakesuperior_5model_3rdf_5graph___pyx_scope_struct____iter__.tp_getattro = __Pyx_PyObject_GenericGetAttrNoDict;
@@ -11400,189 +11383,189 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":21
+  /* "lakesuperior/model/rdf/graph.pyx":20
  * from lakesuperior.model.structures.keyset cimport Keyset
  * 
  * logger = logging.getLogger(__name__)             # <<<<<<<<<<<<<<
  * 
  * __doc__ = """
  */
-  __Pyx_TraceLine(21,0,__PYX_ERR(0, 21, __pyx_L1_error))
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __Pyx_TraceLine(20,0,__PYX_ERR(0, 20, __pyx_L1_error))
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 20, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_getLogger); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_getLogger); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 20, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 20, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 20, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logger, __pyx_t_3) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logger, __pyx_t_3) < 0) __PYX_ERR(0, 20, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":23
+  /* "lakesuperior/model/rdf/graph.pyx":22
  * logger = logging.getLogger(__name__)
  * 
  * __doc__ = """             # <<<<<<<<<<<<<<
  * Graph class and factories.
  * 
  */
-  __Pyx_TraceLine(23,0,__PYX_ERR(0, 23, __pyx_L1_error))
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_doc, __pyx_kp_u_Graph_class_and_factories) < 0) __PYX_ERR(0, 23, __pyx_L1_error)
+  __Pyx_TraceLine(22,0,__PYX_ERR(0, 22, __pyx_L1_error))
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_doc, __pyx_kp_u_Graph_class_and_factories) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
 
-  /* "lakesuperior/model/rdf/graph.pyx":72
+  /* "lakesuperior/model/rdf/graph.pyx":71
  *     """
  * 
  *     def __cinit__(             # <<<<<<<<<<<<<<
  *         self, store=None, size_t capacity=0, uri=None, set data=set()
  *     ):
  */
-  __Pyx_TraceLine(72,0,__PYX_ERR(0, 72, __pyx_L1_error))
-  __pyx_t_3 = PySet_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __Pyx_TraceLine(71,0,__PYX_ERR(0, 71, __pyx_L1_error))
+  __pyx_t_3 = PySet_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 72, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_k_ = ((PyObject*)__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":350
+  /* "lakesuperior/model/rdf/graph.pyx":349
  *     ## BASIC PYTHON-ACCESSIBLE SET OPERATIONS ##
  * 
  *     def value(self, p, strict=False):             # <<<<<<<<<<<<<<
  *         """
  *         Get an individual value for a given predicate.
  */
-  __Pyx_TraceLine(350,0,__PYX_ERR(0, 350, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_40value, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_value, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__6)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 350, __pyx_L1_error)
+  __Pyx_TraceLine(349,0,__PYX_ERR(0, 349, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_40value, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_value, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__6)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 349, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_value, __pyx_t_3) < 0) __PYX_ERR(0, 350, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_value, __pyx_t_3) < 0) __PYX_ERR(0, 349, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":377
+  /* "lakesuperior/model/rdf/graph.pyx":376
  * 
  * 
  *     def terms_by_type(self, type):             # <<<<<<<<<<<<<<
  *         """
  *         Get all terms of a type: subject, predicate or object.
  */
-  __Pyx_TraceLine(377,0,__PYX_ERR(0, 377, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_42terms_by_type, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_terms_by_type, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__8)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 377, __pyx_L1_error)
+  __Pyx_TraceLine(376,0,__PYX_ERR(0, 376, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_42terms_by_type, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_terms_by_type, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__8)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_terms_by_type, __pyx_t_3) < 0) __PYX_ERR(0, 377, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_terms_by_type, __pyx_t_3) < 0) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":387
+  /* "lakesuperior/model/rdf/graph.pyx":386
  * 
  * 
  *     def add(self, triples):             # <<<<<<<<<<<<<<
  *         """
  *         Add triples to the graph.
  */
-  __Pyx_TraceLine(387,0,__PYX_ERR(0, 387, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_44add, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_add, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __Pyx_TraceLine(386,0,__PYX_ERR(0, 386, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_44add, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_add, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 386, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_add, __pyx_t_3) < 0) __PYX_ERR(0, 387, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_add, __pyx_t_3) < 0) __PYX_ERR(0, 386, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":409
+  /* "lakesuperior/model/rdf/graph.pyx":408
  * 
  * 
  *     def remove(self, pattern):             # <<<<<<<<<<<<<<
  *         """
  *         Remove triples by pattern.
  */
-  __Pyx_TraceLine(409,0,__PYX_ERR(0, 409, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_46remove, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_remove, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__10)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 409, __pyx_L1_error)
+  __Pyx_TraceLine(408,0,__PYX_ERR(0, 408, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_46remove, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_remove, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__10)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 408, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_remove, __pyx_t_3) < 0) __PYX_ERR(0, 409, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_remove, __pyx_t_3) < 0) __PYX_ERR(0, 408, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":430
+  /* "lakesuperior/model/rdf/graph.pyx":429
  *     ## CYTHON-ACCESSIBLE BASIC METHODS ##
  * 
  *     cpdef Graph copy(self, str uri=None):             # <<<<<<<<<<<<<<
  *         """
  *         Create copy of the graph with a different (or no) URI.
  */
-  __Pyx_TraceLine(430,0,__PYX_ERR(0, 430, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_48copy, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_copy, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_TraceLine(429,0,__PYX_ERR(0, 429, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_48copy, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_copy, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 429, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_copy, __pyx_t_3) < 0) __PYX_ERR(0, 430, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_copy, __pyx_t_3) < 0) __PYX_ERR(0, 429, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":444
+  /* "lakesuperior/model/rdf/graph.pyx":443
  * 
  * 
  *     cpdef Graph empty_copy(self, str uri=None):             # <<<<<<<<<<<<<<
  *         """
  *         Create an empty copy with same capacity and store binding.
  */
-  __Pyx_TraceLine(444,0,__PYX_ERR(0, 444, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_50empty_copy, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_empty_copy, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__12)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 444, __pyx_L1_error)
+  __Pyx_TraceLine(443,0,__PYX_ERR(0, 443, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_50empty_copy, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_empty_copy, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__12)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 443, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_empty_copy, __pyx_t_3) < 0) __PYX_ERR(0, 444, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_empty_copy, __pyx_t_3) < 0) __PYX_ERR(0, 443, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":454
+  /* "lakesuperior/model/rdf/graph.pyx":453
  * 
  * 
  *     cpdef void set(self, tuple trp) except *:             # <<<<<<<<<<<<<<
  *         """
  *         Set a single value for subject and predicate.
  */
-  __Pyx_TraceLine(454,0,__PYX_ERR(0, 454, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_52set, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_set, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 454, __pyx_L1_error)
+  __Pyx_TraceLine(453,0,__PYX_ERR(0, 453, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_52set, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_set, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 453, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_set, __pyx_t_3) < 0) __PYX_ERR(0, 454, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_set, __pyx_t_3) < 0) __PYX_ERR(0, 453, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":466
+  /* "lakesuperior/model/rdf/graph.pyx":465
  * 
  * 
  *     def as_rdflib(self):             # <<<<<<<<<<<<<<
  *         """
  *         Return the data set as an RDFLib Graph.
  */
-  __Pyx_TraceLine(466,0,__PYX_ERR(0, 466, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_54as_rdflib, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_as_rdflib, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__14)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 466, __pyx_L1_error)
+  __Pyx_TraceLine(465,0,__PYX_ERR(0, 465, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_54as_rdflib, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_as_rdflib, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__14)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 465, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_as_rdflib, __pyx_t_3) < 0) __PYX_ERR(0, 466, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_as_rdflib, __pyx_t_3) < 0) __PYX_ERR(0, 465, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":479
+  /* "lakesuperior/model/rdf/graph.pyx":478
  * 
  * 
  *     def _slice(self, s, p, o):             # <<<<<<<<<<<<<<
  *         """
  *         Return terms filtered by other terms.
  */
-  __Pyx_TraceLine(479,0,__PYX_ERR(0, 479, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_56_slice, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph__slice, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 479, __pyx_L1_error)
+  __Pyx_TraceLine(478,0,__PYX_ERR(0, 478, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_56_slice, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph__slice, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 478, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_slice, __pyx_t_3) < 0) __PYX_ERR(0, 479, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_slice, __pyx_t_3) < 0) __PYX_ERR(0, 478, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
-  /* "lakesuperior/model/rdf/graph.pyx":517
+  /* "lakesuperior/model/rdf/graph.pyx":516
  * 
  * 
  *     def lookup(self, pattern):             # <<<<<<<<<<<<<<
  *         """
  *         Look up triples by a pattern.
  */
-  __Pyx_TraceLine(517,0,__PYX_ERR(0, 517, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_58lookup, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_lookup, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 517, __pyx_L1_error)
+  __Pyx_TraceLine(516,0,__PYX_ERR(0, 516, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_5Graph_58lookup, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Graph_lookup, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 516, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_lookup, __pyx_t_3) < 0) __PYX_ERR(0, 517, __pyx_L1_error)
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict, __pyx_n_s_lookup, __pyx_t_3) < 0) __PYX_ERR(0, 516, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   PyType_Modified(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph);
 
@@ -11609,18 +11592,18 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_setstate_cython, __pyx_t_3) < 0) __PYX_ERR(2, 3, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "lakesuperior/model/rdf/graph.pyx":627
+  /* "lakesuperior/model/rdf/graph.pyx":626
  * ## FACTORY METHODS
  * 
  * def from_rdf(store=None, uri=None, *args, **kwargs):             # <<<<<<<<<<<<<<
  *     r"""
  *     Create a Graph from a serialized RDF string.
  */
-  __Pyx_TraceLine(627,0,__PYX_ERR(0, 627, __pyx_L1_error))
-  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_1from_rdf, 0, __pyx_n_s_from_rdf, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__21)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 627, __pyx_L1_error)
+  __Pyx_TraceLine(626,0,__PYX_ERR(0, 626, __pyx_L1_error))
+  __pyx_t_3 = __Pyx_CyFunction_NewEx(&__pyx_mdef_12lakesuperior_5model_3rdf_5graph_1from_rdf, 0, __pyx_n_s_from_rdf, NULL, __pyx_n_s_lakesuperior_model_rdf_graph, __pyx_d, ((PyObject *)__pyx_codeobj__21)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 626, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_3, __pyx_tuple__35);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_from_rdf, __pyx_t_3) < 0) __PYX_ERR(0, 627, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_from_rdf, __pyx_t_3) < 0) __PYX_ERR(0, 626, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
   /* "lakesuperior/model/rdf/graph.pyx":1

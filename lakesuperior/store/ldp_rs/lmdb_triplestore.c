@@ -11,14 +11,6 @@
             "ext/lmdb/libraries/liblmdb/lmdb.h",
             "ext/tpl/src/tpl.h"
         ],
-        "extra_compile_args": [
-            "-g",
-            "-fopenmp"
-        ],
-        "extra_link_args": [
-            "-g",
-            "-fopenmp"
-        ],
         "include_dirs": [
             "ext/collections-c/src/include",
             "ext/lmdb/libraries/liblmdb",
@@ -1034,7 +1026,7 @@ typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple __pyx_t_12lakes
 struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 typedef struct __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple __pyx_t_12lakesuperior_5model_3rdf_6triple_BufferTriple;
 
-/* "lakesuperior/model/rdf/triple.pxd":6
+/* "lakesuperior/model/rdf/triple.pxd":5
  * 
  * # Triple of Term structs.
  * ctypedef struct Triple:             # <<<<<<<<<<<<<<
@@ -1047,7 +1039,7 @@ struct __pyx_t_12lakesuperior_5model_3rdf_6triple_Triple {
   __pyx_t_12lakesuperior_5model_3rdf_4term_Term *o;
 };
 
-/* "lakesuperior/model/rdf/triple.pxd":12
+/* "lakesuperior/model/rdf/triple.pxd":11
  * 
  * # Triple of serialized terms.
  * ctypedef struct BufferTriple:             # <<<<<<<<<<<<<<
@@ -1112,7 +1104,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callba
 struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy;
 struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy;
 
-/* "lakesuperior/model/rdf/graph.pxd":13
+/* "lakesuperior/model/rdf/graph.pxd":11
  * 
  * # Callback for an iterator.
  * ctypedef void (*lookup_callback_fn_t)(             # <<<<<<<<<<<<<<
@@ -1121,8 +1113,8 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_empty_copy;
  */
 typedef void (*__pyx_t_12lakesuperior_5model_3rdf_5graph_lookup_callback_fn_t)(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph *, __pyx_t_12lakesuperior_5model_4base_TripleKey const *, void *);
 
-/* "lakesuperior/model/rdf/graph.pxd":26
- *         cc.key_compare_ft trp_cmp_fn
+/* "lakesuperior/model/rdf/graph.pxd":21
+ *         public object uri
  * 
  *         void _match_ptn_callback(             # <<<<<<<<<<<<<<
  *             self, pattern, Graph gr, lookup_callback_fn_t callback_fn,
@@ -1134,7 +1126,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph__match_ptn_callba
   void *ctx;
 };
 
-/* "lakesuperior/model/rdf/graph.pxd":31
+/* "lakesuperior/model/rdf/graph.pxd":26
  *         ) except *
  * 
  *     cpdef Graph copy(self, str uri=*)             # <<<<<<<<<<<<<<
@@ -1146,7 +1138,7 @@ struct __pyx_opt_args_12lakesuperior_5model_3rdf_5graph_5Graph_copy {
   PyObject *uri;
 };
 
-/* "lakesuperior/model/rdf/graph.pxd":32
+/* "lakesuperior/model/rdf/graph.pxd":27
  * 
  *     cpdef Graph copy(self, str uri=*)
  *     cpdef Graph empty_copy(self, str uri=*)             # <<<<<<<<<<<<<<
@@ -1540,7 +1532,7 @@ struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset {
 };
 
 
-/* "lakesuperior/model/rdf/graph.pxd":17
+/* "lakesuperior/model/rdf/graph.pxd":15
  * )
  * 
  * cdef class Graph:             # <<<<<<<<<<<<<<
@@ -1553,8 +1545,6 @@ struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph {
   struct __pyx_obj_12lakesuperior_5store_6ldp_rs_16lmdb_triplestore_LmdbTriplestore *store;
   struct __pyx_obj_12lakesuperior_5model_10structures_6keyset_Keyset *keys;
   PyObject *uri;
-  __pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft term_cmp_fn;
-  __pyx_t_12lakesuperior_10cy_include_11collections_key_compare_ft trp_cmp_fn;
 };
 
 
@@ -1684,7 +1674,7 @@ struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset {
 static struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset *__pyx_vtabptr_12lakesuperior_5model_10structures_6keyset_Keyset;
 
 
-/* "lakesuperior/model/rdf/graph.pxd":17
+/* "lakesuperior/model/rdf/graph.pxd":15
  * )
  * 
  * cdef class Graph:             # <<<<<<<<<<<<<<
@@ -17927,11 +17917,11 @@ static int __Pyx_modinit_type_import_code(void) {
    if (!__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset) __PYX_ERR(4, 9, __pyx_L1_error)
   __pyx_vtabptr_12lakesuperior_5model_10structures_6keyset_Keyset = (struct __pyx_vtabstruct_12lakesuperior_5model_10structures_6keyset_Keyset*)__Pyx_GetVtable(__pyx_ptype_12lakesuperior_5model_10structures_6keyset_Keyset->tp_dict); if (unlikely(!__pyx_vtabptr_12lakesuperior_5model_10structures_6keyset_Keyset)) __PYX_ERR(4, 9, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyImport_ImportModule("lakesuperior.model.rdf.graph"); if (unlikely(!__pyx_t_1)) __PYX_ERR(5, 17, __pyx_L1_error)
+  __pyx_t_1 = PyImport_ImportModule("lakesuperior.model.rdf.graph"); if (unlikely(!__pyx_t_1)) __PYX_ERR(5, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph = __Pyx_ImportType(__pyx_t_1, "lakesuperior.model.rdf.graph", "Graph", sizeof(struct __pyx_obj_12lakesuperior_5model_3rdf_5graph_Graph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph) __PYX_ERR(5, 17, __pyx_L1_error)
-  __pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph = (struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph*)__Pyx_GetVtable(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict); if (unlikely(!__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph)) __PYX_ERR(5, 17, __pyx_L1_error)
+   if (!__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph) __PYX_ERR(5, 15, __pyx_L1_error)
+  __pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph = (struct __pyx_vtabstruct_12lakesuperior_5model_3rdf_5graph_Graph*)__Pyx_GetVtable(__pyx_ptype_12lakesuperior_5model_3rdf_5graph_Graph->tp_dict); if (unlikely(!__pyx_vtabptr_12lakesuperior_5model_3rdf_5graph_Graph)) __PYX_ERR(5, 15, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_RefNannyFinishContext();
   return 0;
