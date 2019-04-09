@@ -8,7 +8,6 @@ from cpython.object cimport Py_LT, Py_EQ, Py_GT, Py_LE, Py_NE, Py_GE
 from libc.string cimport memcpy
 from libc.stdlib cimport free
 
-cimport lakesuperior.cy_include.collections as cc
 cimport lakesuperior.model.callbacks as cb
 cimport lakesuperior.model.structures.keyset as kset
 

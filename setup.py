@@ -82,8 +82,8 @@ extensions = [
             path.join('lakesuperior', 'model', f'base.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp', '-g'],
-        extra_link_args=['-fopenmp', '-g']
+        #extra_compile_args=['-fopenmp', '-g'],
+        #extra_link_args=['-fopenmp', '-g']
     ),
     Extension(
         'lakesuperior.model.callbacks',
@@ -91,57 +91,69 @@ extensions = [
             path.join('lakesuperior', 'model', f'callbacks.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-g'],
-        extra_link_args=['-g'],
-        #extra_compile_args=['-fopenmp'],
-        #extra_link_args=['-fopenmp']
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g'],
     ),
     Extension(
-        'lakesuperior.model.structures.*',
+        'lakesuperior.model.structures.hash',
         [
+            #path.join(spookyhash_src_dir, 'context.c'),
+            #path.join(spookyhash_src_dir, 'globals.c'),
             path.join(spookyhash_src_dir, 'spookyhash.c'),
-            path.join(coll_src_dir, 'common.c'),
-            path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashtable.c'),
-            path.join(coll_src_dir, 'hashset.c'),
-            path.join('lakesuperior', 'model', 'structures', f'*.{ext}'),
+            path.join('lakesuperior', 'model', 'structures', f'hash.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-fopenmp', '-g'],
-        extra_link_args=['-fopenmp', '-g']
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g']
+    ),
+    Extension(
+        'lakesuperior.model.structures.keyset',
+        [
+            path.join('lakesuperior', 'model', 'structures', f'keyset.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-fopenmp', '-g'],
+        #extra_link_args=['-fopenmp', '-g']
     ),
     Extension(
         'lakesuperior.store.base_lmdb_store',
         [
-            path.join(coll_src_dir, 'common.c'),
-            path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashtable.c'),
-            path.join(coll_src_dir, 'hashset.c'),
             path.join(tpl_src_dir, 'tpl.c'),
             path.join(lmdb_src_dir, 'mdb.c'),
             path.join(lmdb_src_dir, 'midl.c'),
             path.join('lakesuperior', 'store', f'base_lmdb_store.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-g'],
-        extra_link_args=['-g'],
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g'],
     ),
     Extension(
-        'lakesuperior.model.rdf.*',
+        'lakesuperior.model.rdf.term',
         [
             path.join(tpl_src_dir, 'tpl.c'),
-            path.join(spookyhash_src_dir, 'context.c'),
-            path.join(spookyhash_src_dir, 'globals.c'),
-            path.join(spookyhash_src_dir, 'spookyhash.c'),
-            path.join(coll_src_dir, 'common.c'),
-            path.join(coll_src_dir, 'array.c'),
-            path.join(coll_src_dir, 'hashtable.c'),
-            path.join(coll_src_dir, 'hashset.c'),
-            path.join('lakesuperior', 'model', 'rdf', f'*.{ext}'),
+            path.join('lakesuperior', 'model', 'rdf', f'term.{ext}'),
         ],
         include_dirs=include_dirs,
-        #extra_compile_args=['-fopenmp'],
-        #extra_link_args=['-fopenmp']
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g'],
+    ),
+    Extension(
+        'lakesuperior.model.rdf.triple',
+        [
+            path.join('lakesuperior', 'model', 'rdf', f'triple.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g'],
+    ),
+    Extension(
+        'lakesuperior.model.rdf.graph',
+        [
+            path.join('lakesuperior', 'model', 'rdf', f'graph.{ext}'),
+        ],
+        include_dirs=include_dirs,
+        #extra_compile_args=['-g'],
+        #extra_link_args=['-g'],
     ),
     Extension(
         'lakesuperior.store.ldp_rs.lmdb_triplestore',
@@ -156,8 +168,8 @@ extensions = [
                 'lakesuperior', 'store', 'ldp_rs', f'lmdb_triplestore.{ext}'),
         ],
         include_dirs=include_dirs,
-        extra_compile_args=['-g', '-fopenmp'],
-        extra_link_args=['-g', '-fopenmp']
+        #extra_compile_args=['-g', '-fopenmp'],
+        #extra_link_args=['-g', '-fopenmp']
     ),
 ]
 
@@ -192,7 +204,9 @@ if USE_CYTHON:
             'boundscheck': False,
             'wraparound': False,
             'profile': True,
-            'embedsignature': True
+            'embedsignature': True,
+            'linetrace': True,
+            'binding': True,
         }
     )
 
@@ -211,6 +225,8 @@ setup(
     license='Apache License Version 2.0',
 
     ext_modules=extensions,
+
+    zip_safe=False,
 
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -233,16 +249,19 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
 
+        'Programming Language :: Cython',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
 
         'Topic :: Database :: Database Engines/Servers',
+        'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
+        'Topic :: Software Development :: Libraries :: Application Frameworks',
     ],
 
     keywords='repository linked-data',
 
-    python_requires='~=3.6',
+    python_requires='>=3.6',
 
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
