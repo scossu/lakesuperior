@@ -118,8 +118,8 @@ Lakesuperior Python  69ms (60%)       58ms (89%)        8.7Gb (72%)    6.7s (3%)
 Charts
 ------
 
-.. figure:: assets/plot_fcrepo_put_100K.png
-   :alt: Fedora with PUT, 100K request time chart
+.. figure:: assets/plot_fcrepo_put_30K.png
+   :alt: Fedora with PUT, 30K request time chart
 
    Fedora/Modeshape using PUT requests under the same parent. The "many
    members" issue is clearly visible after a threshold is reached.
