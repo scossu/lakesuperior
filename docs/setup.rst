@@ -15,7 +15,7 @@ your host machine.
    Edition <https://www.docker.com/community-edition>`__ for your
    operating system.
 2. Clone the Lakesuperior git repository:
-   ``git clone https://github.com/scossu/lakesuperior.git``
+   ``git clone --recurse-submodules https://github.com/scossu/lakesuperior.git``
 3. ``cd`` into repo folder
 4. Run ``docker-compose up``
 
@@ -36,7 +36,7 @@ modifications. Feedback is welcome.
 Dependencies
 ~~~~~~~~~~~~
 
-#. Python 3.5 or greater.
+#. Python 3.6 or greater.
 #. A message broker supporting the STOMP protocol. For testing and
    evaluation purposes, `CoilMQ <https://github.com/hozn/coilmq>`__ is
    included with the dependencies and should be automatically installed.
@@ -49,10 +49,8 @@ and paste the lines below in your console.
 
 ::
 
-    mkdir lsup_env # Or whatever you want to call it
-    cd lsup_env
-    python3 -m venv .
-    source bin/activate
+    python3 -m venv venv
+    source venv/bin/activate
     pip install lakesuperior
     # Start the message broker. If you have another
     # queue manager listening to port 61613 you can either configure a
@@ -60,7 +58,7 @@ and paste the lines below in your console.
     # message queue.
     coilmq&
     # Bootstrap the repo
-    echo yes | lsup-admin bootstrap
+    lsup-admin bootstrap # Confirm manually
     # Run the thing
     fcrepo
 

@@ -15,12 +15,11 @@ Lakesuperior is meant to live as a community project.
 Development Setup
 -----------------
 
-To set up the software for developing code, documentation, or tests::
+To set up the software for developing code, documentation, or tests, start in
+an empty project folder::
 
-    mkdir lsup # or whatever you may want to call it
-    cd lsup
     python3 -m venv venv
-    source bin/activate
+    source venv/bin/activate
     git clone --recurse-submodules https://github.com/scossu/lakesuperior.git src
     cd src
     pip install -e .
@@ -56,11 +55,11 @@ You can contribute by (from least to most involved):
 - Adding test coverage (**HOT**)
 - Browsing the list of open issues and picking a ticket that you may find
   interesting and within your reach
-- Suggesting new functionality or improvements and/or implementing them
+- Suggesting new functionality or improvements and implementing them
 
 Please open a ticket and discuss the issue you are raising before opening a PR.
 
-Documentation is critical. If you implement new modules, class or methods, or
+Documentation is critical. If you implement new modules, classes or methods, or
 modify them, please document them thoroughly and verify that the API docs are
 displaying and linking correctly.
 
@@ -72,5 +71,5 @@ and open a pull request against development. In case you find a critical bug,
 a hotfix can be proposed against master if agreed in the related issue
 discussion.
 
-Last but not least, read carefully the `Code of
-Conduct <../../code_of_conduct.md>`__.
+Last but not least, read carefully the `Code of Conduct
+<https://github.com/scossu/lakesuperior/blob/master/code_of_conduct.md>`__.

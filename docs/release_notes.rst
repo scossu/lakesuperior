@@ -2,6 +2,22 @@
 Release Notes
 =============
 
+1.0 Alpha 20
+------------
+
+*April 08, 2019*
+
+After 6 months and almost 200 commits, this release completes a major effort
+to further move performance-critical sections of the code to C libraries.
+
+The storage layer has been simplified by moving from 5-byte ``char*`` keys to
+``size_t`` integers (8 bytes in most architectures). This means that this
+version requires a data migration from previous vresions.
+
+:doc:`Performance benchmarks <performance>` have been updated with new results
+and charts.
+
+
 1.0 Alpha 19 HOTFIX
 -------------------
 

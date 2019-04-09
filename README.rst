@@ -47,7 +47,7 @@ Installation & Documentation
 
 With Docker::
 
-    git clone https://github.com/scossu/lakesuperior.git
+    git clone --recurse-submodules https://github.com/scossu/lakesuperior.git
     cd lakesuperior
     docker-compose up
 
