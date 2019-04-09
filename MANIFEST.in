@@ -1,6 +1,7 @@
 include README.rst
 include LICENSE
 include bin/*
+
 include ext/lmdb/libraries/liblmdb/mdb.c
 include ext/lmdb/libraries/liblmdb/lmdb.h
 include ext/lmdb/libraries/liblmdb/midl.c
