@@ -5,7 +5,8 @@ WORKDIR     /usr/local
 ADD         . lakesuperior
 WORKDIR     /usr/local/lakesuperior
 RUN         git submodule update --init
-RUN         [[ -f lakesuperior/model/base.c ]] || pip install cython
+RUN         [[ -f lakesuperior/model/base.c ]] || \
+                pip install -r requirements_dev.txt
 RUN         pip install -e .
 RUN         cp ./docker/etc/* ./lakesuperior/etc.defaults/
 CMD         ./docker/docker_entrypoint
