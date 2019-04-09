@@ -1,0 +1,15 @@
+Uses for a graph:
+
+1. Create a graph from RDF input, manipulate or evaluate it, and output it as
+  serialized RDF (always detached) [NO USE CASE]
+2. Create a graph from RDF input, optionally manipulate it with other data from
+  the store or external RDF and store it (start detached, then convert keys;
+  or, start attached)
+3. Retrieve a graph from the store, optionally manipulate it, and output it as
+  serialized RDF (start attached, then detach)
+4. Retrieve a graph from the store, manipulate it, and put the changed graph
+  back in the store (always attached)
+
+Initially we might try to render the graph read-only when detached; this
+avoids implementing more complex operations such as add, remove and booleans.
+

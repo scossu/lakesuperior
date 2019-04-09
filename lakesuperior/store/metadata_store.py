@@ -22,9 +22,9 @@ class MetadataStore(BaseLmdbStore):
     """
     Currently implemented:
 
-    - ``checksums``: registry of
-    LDP resource graphs, indicated in the key by their UID, and their
-    cryptographic hashes.
+    - ``checksums``: registry of LDP resource graphs, indicated in the key by
+      their UID, and their cryptographic hashes.
+
     """
 
 

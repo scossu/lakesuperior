@@ -4,105 +4,182 @@
 # settings. Individual items can be selectively overridden as long as the YAML
 # hierarchical structure is kept.
 
+###
+#   Application mode.
+#
+#   One of ``prod``, ``test`` or ``dev``.
+#   ``prod`` is normal running mode. 'test' is used for running test suites.
+#   ``dev`` is similar to normal mode but with reload and debug enabled.
+app_mode: 'dev'
+
+###
+#   Base data directory.
+#
+#   This contains both volatile files such as PID files,
+#   and persistent ones, such as resource data. LDP-NRs will be stored under
+#   ``<basedir>/ldpnr_store` and LDP-RSs under ``<basedir>/ldprs_store``.
+#
+#   If different data files need to be running on different storage hardware,
+#   the individual subdirectories can be mounted on different file systems.
+#
+#   If unset, it will default to <lakesuperior package root>/data.
+data_dir:
+
+###
 # Configuration for binary path and fixity check generation. The hash is a
 # checksumn of the contents of the file.
 uuid:
-    # Algorithm used to calculate the hash that generates the content path.
-    # One of: sha1, sha224, sha256, sha384, or sha512, corresponding to the
-    # omonymous hashlib function:
-    # https://docs.python.org/3/library/hashlib.html
+
+    ###
+    #   Algorithm used to calculate the hash that generates the content path.
+    #
+    #   This can be any one of the Python hashlib functions:
+    #   https://docs.python.org/3/library/hashlib.html
+    #
+    #   This needs to be ``sha1`` if a compatibility with the Fedora4 file
+    #   layout is needed, however in security-sensitive environments it is
+    #   strongly advised to use a stronger algorithm, since SHA1 is known to be
+    #   vulnerable to counterfeiting: see https://shattered.io/
+    #
+    #   ``blake2b`` is a strong, fast cryptographic alternative to SHA2/3:
+    #   https://blake2.net/
     algo: sha1
 
+###
 # Data store configuration.
 store:
-    # The semantic store used for persisting LDP-RS (RDF Source) resources.
-    # MUST support SPARQL 1.1 query and update.
-    ldp_rs:
-        # Directory where the RDF data files are stored.
-        location: /data/ldprs_store
 
-        # store layout. At the moment, only `rsrc_centric_layout`is supported.
+    ###
+    #  The semantic store used for persisting LDP-RS (RDF Source) resources.
+    #
+    #  MUST support SPARQL 1.1 query and update.
+    ldp_rs:
+
+        ###
+        #   Store layout.
+        #
+        #   At the moment, only ``rsrc_centric_layout`` is supported.
         layout: rsrc_centric_layout
 
-        # whether to check if the object of a client-provided triple is the uri
-        # of a repository-managed resource and veify if that exists.
-        # if set to false, properties are allowed to point to resources in the
-        # repositoy that do not exist. also, if a resource is deleted, inbound
-        # relationships may not be cleaned up.
-        # this can be one of `False` (boolean), `lenient` or `strict`. `False`
-        # does not check for referential integrity. `lenient` quietly drops a
-        # user-provided triple if its object violates referential integrity.
-        # `strict` raises an exception.
+        ###
+        #   Enable referential integrity checks.
         #
-        # Changes to this parameter require a full migration.
+        #   Whether to check if the object of a client-provided triple is the
+        #   uri of a repository-managed resource and veify if that exists.  if
+        #   set to false, properties are allowed to point to resources in the
+        #   repositoy that do not exist. also, if a resource is deleted,
+        #   inbound relationships may not be cleaned up.  this can be one of
+        #   ``False``, ``lenient`` or ``strict``. ``False`` does not check for
+        #   referential integrity. ``lenient`` quietly drops a user-provided
+        #   triple if its object violates referential integrity.  ``strict``
+        #   raises an exception.
+        #
+        #   Changes to this parameter require a full migration.
         referential_integrity: lenient
 
-        # this mimics Fedora4 behavior which segments an identifier on POST.
+        ###
+        #   Split newly minted URIs into pairtrees.
+        #
+        #   This mimics Fedora4 behavior which segments an identifier on POST.
         legacy_ptree_split: False
 
-    # The path used to persist LDP-NR (bitstreams).
-    # This is for now a POSIX filesystem. Other solutions such as HDFS may be
-    # possible in the future.
+    ###
+    #   The path used to persist LDP-NR (bitstreams).
+    #
+    #   This is for now a POSIX filesystem. Other solutions such as HDFS may be
+    #   possible in the future.
     ldp_nr:
-        # See store.ldp_rs.layout.
+
+        ###
+        #   See store.ldp_rs.layout.
         layout: default_layout
 
-        # The filesystem path to the root of the binary store.
-        path: /data/ldpnr_store
-
-        # How to split the balanced pairtree to generate a path. The hash
-        # string is defined by the uuid.algo parameter value.
-        # This parameter defines how many characters are in each branch. 2-4 is
-        # the recommended setting. NOTE: a value of 2 will generate up to 256
-        # sub-folders in a folder; 3 will generate max. 4096 and 4 will
-        # generate max. 65536. Check your filesystem capabilities before
-        # setting this to a non-default value.
+        ###
+        #   How to split the balanced pairtree to generate a path.
         #
-        # Changes to this parameter require a full migration.
+        #   The hash string is defined by the uuid.algo parameter value.  This
+        #   parameter defines how many characters are in each branch. 2-4 is
+        #   the recommended setting. NOTE: a value of 2 will generate up to 256
+        #   sub-folders in a folder; 3 will generate max. 4096 and 4 will
+        #   generate max. 65536. Check your filesystem capabilities before
+        #   setting this to a non-default value.
+        #
+        #   Changes to this parameter require a full migration.
         pairtree_branch_length: 2
 
-        # Max. number of branches to generate. 0 will split the string until
-        # it reaches the end.
-        # E.g. if the hash value is 0123456789abcdef01234565789abcdef and the
-        # branch length value is 2, and the branch number is 4, the path will
-        # be 01/23/45/67/89abcdef01234565789abcdef. For a value of 0 it will be
-        # 01/23/45/67/89/ab/cd/ef/01/23/45/67/89/ab/cd/ef. Be aware that deeply
-        # nested directory structures may tax some of the operating system's
-        # services that scan for files, such as `updatedb`. Check your system
-        # capabilities for maximum nested directories before changing the
-        # default.
+        ###
+        #   Max. number of branches to generate.
         #
-        # Changes to this parameter require a full migration.
+        #   0 will split the string until it reaches the end.
+        #
+        #   E.g. if the hash value is 0123456789abcdef01234565789abcdef and the
+        #   branch length value is 2, and the branch number is 4, the path will
+        #   be 01/23/45/67/89abcdef01234565789abcdef. For a value of 0 it will
+        #   be 01/23/45/67/89/ab/cd/ef/01/23/45/67/89/ab/cd/ef. Be aware that
+        #   deeply nested directory structures may tax some of the operating
+        #   system's services that scan for files, such as `updatedb`. Check
+        #   your system capabilities for maximum nested directories before
+        #   changing the default.
+        #
+        #   Changes to this parameter require a full migration.
         pairtree_branches: 4
 
-# Configuration for messaging.
+###
+#   Messaging configuration.
 messaging:
-    # List of channels to send messages to.
-    # Each channel must define the `endpoint` and the `level` parameters.
+
+    ###
+    #   List of channels to send messages to.
+    #
+    #   Each channel must define the `endpoint` and the `level` parameters.
     routes:
-          # Output handler. Currently only `StompHandler` is supported.
+
+        ###
+        #   Output handler. Currently only ``StompHandler`` is supported.
         - handler: StompHandler
 
-          # Whether this route is used. It False, no messages will be emitted
-          # for this route.
+          ###
+          #   Activate this route.
+          #
+          #   If ``False``, no messages will be emitted for this route.
           active: True
 
-          # Protocol version. One of `10`, `11` or `12`.
+          ###
+          #   Protocol version. One of ``10``, ``11`` or ``12``.
           protocol: '11'
+
+          ###
+          #   Host IP address.
           host: 127.0.0.1
+
+          ###
+          #   Host port.
           port: 61613
 
-          # Credentials are optional.
+          ###
+          #   User name for authentication.
+          #
+          #   Credentials are optional.
           username:
+
+          ###
+          #   Password for authentication.
           password:
+
+          ###
+          #   Message topic.
           destination: '/topic/fcrepo'
 
-          # Message format: at the moment the following are supported:
-          # - `ASResourceFormatter`: Sends information about a resource being
-          #   created, updated or deleted, by who and when, with no further
-          #   information about what changed.
-          # - `ASDeltaFormatter`: Sends the same information as
-          #   `ASResourceFormatter` with the addition of the triples that were
-          #   added and the ones that were removed in the request. This may be
-          #   used to send rich provenance data to a preservation system.
+          ###
+          #   Message format: at the moment the following are supported:
+          #
+          #   - ``ASResourceFormatter``: Sends information about a resource
+          #     being created, updated or deleted, by who and when, with no
+          #     further information about what changed.
+          #
+          #   - ``ASDeltaFormatter``:
+          #     Sends the same information as ``ASResourceFormatter`` with the
+          #     addition of the triples that were added and the ones that were
+          #     removed in the request. This may be used to send rich provenance
+          #     data to a preservation system.
           formatter: ASResourceFormatter

@@ -1,0 +1,50 @@
+# Default Python 3 logging file. This is parsed by `dictConfig()`. See
+# https://docs.python.org/3.5/library/logging.config.html#logging-config-dictschema
+
+version: 1
+disable_existing_loggers: true
+
+formatters:
+  default_fmt:
+    format: "%(asctime)s %(levelname)s %(name)s - %(message)s"
+  extended_fmt:
+    format: "%(asctime)s %(levelname)s %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+
+handlers:
+  logfile:
+    class: logging.handlers.RotatingFileHandler
+    # Relative paths are relative to the `data_dir` value in `application.yml`.
+    # You can change this value to an absolute path or leave it alone and
+    # symlink the location to a different directory.
+    filename: log/lakesuperior.log
+    maxBytes: 10485760
+    backupCount: 3
+    formatter: default_fmt
+    level: INFO
+  console:
+    class: logging.StreamHandler
+    stream: ext://sys.stdout
+    formatter: default_fmt
+    level: INFO
+
+loggers:
+  store:
+    qualname: lakesuperior.endpoints
+    handlers: [logfile]
+    level: INFO
+    propagate: no
+  store:
+    qualname: lakesuperior.store_layouts
+    handlers: [logfile]
+    level: INFO
+    propagate: no
+  model:
+    qualname: lakesuperior.model
+    handlers: [logfile]
+    level: INFO
+    propagate: no
+
+root:
+  level: INFO
+  handlers: [console, logfile]
+

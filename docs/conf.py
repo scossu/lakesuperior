@@ -20,17 +20,6 @@
 import sys
 
 from os import path
-from unittest.mock import MagicMock
-
-class MockModule(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-# LMDB raises an issue if imported by Sphinx. This bypasses the issue.
-# https://github.com/dw/py-lmdb/issues/172
-MOCK_MODULES = ['lmdb']
-sys.modules.update((mod_name, MockModule()) for mod_name in MOCK_MODULES)
 
 import lakesuperior
 import lakesuperior.env_setup
@@ -45,12 +34,15 @@ import lakesuperior.env_setup
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = [
+    'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode',
+    'sphinxcontrib.autoyaml',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -66,7 +58,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'lakesuperior'
-copyright = '2018, Everybody & Nobody'
+copyright = '2019, Knowledge Transfer, LLC'
 author = 'Stefano Cossu'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -185,4 +177,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+# Autoyaml extension
+autoyaml_root = path.join(lakesuperior.basedir, 'etc.defaults')
 

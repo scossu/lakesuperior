@@ -37,8 +37,14 @@ def random_utf8_string(length):
     return ''.join(random.choice(alphabet) for i in range(length))
 
 
-def random_image(name, ts=8, ims=256):
-    imarray = numpy.random.rand(ts, ts, 3) * 255
+def random_image(tn=8, ims=256):
+    """
+    Generate a random square image with pretty color tiles.
+
+    :param int tn: Number of tiles in each dimension of the image.
+    :param int ims: Size in pixel of each dimension of the image.
+    """
+    imarray = numpy.random.rand(tn, tn, 3) * 255
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im = im.resize((ims, ims), Image.NEAREST)
 
@@ -63,7 +69,7 @@ nsc = {
 for pfx, ns in nsc.items():
     nsm.bind(pfx, ns)
 
-def random_graph(size, ref):
+def random_graph(size, ref, subj=''):
     '''
     Generate a synthetic graph.
 
@@ -74,24 +80,24 @@ def random_graph(size, ref):
     gr.namespace_manager = nsm
     for ii in range(floor(size / 4)):
         gr.add((
-            URIRef(''),
-            nsc['intp'][str(ii % size)],
+            URIRef(subj),
+            nsc['intp'][f'u{ii % size}'],
             URIRef(ref)
         ))
         gr.add((
-            URIRef(''),
-            nsc['litp'][str(ii % size)],
-            Literal(random_utf8_string(64))
-        ))
-        gr.add((
-            URIRef(''),
-            nsc['litp'][str(ii % size)],
-            Literal(random_utf8_string(64))
-        ))
-        gr.add((
-            URIRef(''),
-            nsc['extp'][str(ii % size)],
+            URIRef(subj),
+            nsc['extp'][f'u{ii % size}'],
             URIRef('http://example.edu/res/{}'.format(ii // 10))
+        ))
+        gr.add((
+            URIRef(subj),
+            nsc['litp'][f'l{ii % size}'],
+            Literal(random_utf8_string(64))
+        ))
+        gr.add((
+            URIRef(subj),
+            nsc['litp'][f'l{ii % size + size}'],
+            Literal(random_utf8_string(64))
         ))
 
     #print('Graph: {}'.format(gr.serialize(format='turtle').decode('utf-8')))

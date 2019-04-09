@@ -30,6 +30,7 @@ Indices and tables
    :maxdepth: 3
    :caption: User Reference
 
+    Configuration <config>
     Discovery & Query <discovery>
     Divergences from Fedora 4 <fcrepo4_deltas>
     Messaging <messaging>
@@ -48,6 +49,7 @@ Indices and tables
     Content Model <model>
     Storage Implementation <storage>
     Indexing Strategy <indexing_strategy>
+    Scaling Down <rpi>
 
 * :ref:`genindex`
 * :ref:`modindex`

@@ -10,7 +10,6 @@ from lakesuperior import env
 from lakesuperior.api import query as query_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.toolbox import Toolbox
 
 # Query endpoint. raw SPARQL queries exposing the underlying layout can be made
 # available. Also convenience methods that allow simple lookups based on simple

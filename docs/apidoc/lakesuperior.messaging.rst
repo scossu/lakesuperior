@@ -1,27 +1,32 @@
-lakesuperior\.messaging package
-===============================
+lakesuperior.messaging package
+==============================
+
+.. automodule:: lakesuperior.messaging
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Submodules
 ----------
 
-lakesuperior\.messaging\.formatters module
-------------------------------------------
+lakesuperior.messaging.formatters module
+----------------------------------------
 
 .. automodule:: lakesuperior.messaging.formatters
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.messaging\.handlers module
-----------------------------------------
+lakesuperior.messaging.handlers module
+--------------------------------------
 
 .. automodule:: lakesuperior.messaging.handlers
     :members:
     :undoc-members:
     :show-inheritance:
 
-lakesuperior\.messaging\.messenger module
------------------------------------------
+lakesuperior.messaging.messenger module
+---------------------------------------
 
 .. automodule:: lakesuperior.messaging.messenger
     :members:
@@ -29,10 +34,3 @@ lakesuperior\.messaging\.messenger module
     :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: lakesuperior.messaging
-    :members:
-    :undoc-members:
-    :show-inheritance:

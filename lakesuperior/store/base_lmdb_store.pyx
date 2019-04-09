@@ -27,6 +27,12 @@ cdef void _check(int rc, str message='') except *:
         raise KeyNotFoundError()
     if rc == lmdb.MDB_KEYEXIST:
         raise KeyExistsError()
+    if rc == errno.EINVAL:
+        raise InvalidParamError(
+            'Invalid LMDB parameter error.\n'
+            'Please verify that a transaction is open and valid for the '
+            'current operation.'
+        )
     if rc != lmdb.MDB_SUCCESS:
         out_msg = (
                 message + '\nInternal error ({}): '.format(rc)
@@ -42,6 +48,9 @@ class KeyNotFoundError(LmdbError):
     pass
 
 class KeyExistsError(LmdbError):
+    pass
+
+class InvalidParamError(LmdbError):
     pass
 
 
@@ -267,9 +276,9 @@ cdef class BaseLmdbStore:
                 for i, dblabel in enumerate(self.dbi_labels):
                     flags = self.dbi_flags.get(dblabel, 0) | create_flag
                     _check(lmdb.mdb_dbi_open(
-                            txn, dblabel.encode(), flags, self.dbis + i))
+                            txn, dblabel, flags, self.dbis + i))
                     dbi = self.dbis[i]
-                    logger.info(f'Created DB {dblabel}: {dbi}')
+                    logger.debug(f'Created DB {dblabel}: {dbi}')
                     # Open and close cursor to initialize the memory slot.
                     _check(lmdb.mdb_cursor_open(
                         txn, dbi, self.curs + dbi))
@@ -335,22 +344,46 @@ cdef class BaseLmdbStore:
         """
         Transaction context manager.
 
+        Open and close a transaction for the duration of the functions in the
+        context. If a transaction has already been opened in the store, a new
+        one is opened only if the current transaction is read-only and the new
+        requested transaction is read-write.
+
+        If a new write transaction is opened, the old one is kept on hold until
+        the new transaction is closed, then restored. All cursors are
+        invalidated and must be restored as well if one needs to reuse them.
+
         :param bool write: Whether a write transaction is to be opened.
 
         :rtype: lmdb.Transaction
         """
+        cdef lmdb.MDB_txn* hold_txn
+
+        will_open = False
+
         if not self.is_open:
             raise LmdbError('Store is not open.')
 
+        # If another transaction is open, only open the new transaction if
+        # the current one is RO and the new one RW.
         if self.is_txn_open:
-            logger.debug(
-                    'Transaction is already active. Not opening another one.')
-            #logger.debug('before yield')
-            yield
-            #logger.debug('after yield')
+            if write:
+                will_open = not self.is_txn_rw
         else:
+            will_open = True
+
+        # If a new transaction needs to be opened and replace the old one,
+        # the old one must be put on hold and swapped out when the new txn
+        # is closed.
+        if will_open:
+            will_reset = self.is_txn_open
+
+        if will_open:
             #logger.debug('Beginning {} transaction.'.format(
             #    'RW' if write else 'RO'))
+            if will_reset:
+                hold_txn = self.txn
+
             try:
                 self._txn_begin(write=write)
                 self.is_txn_rw = write
@@ -359,9 +392,21 @@ cdef class BaseLmdbStore:
                 #logger.debug('In txn_ctx, after yield')
                 self._txn_commit()
                 #logger.debug('after _txn_commit')
+                if will_reset:
+                    lmdb.mdb_txn_reset(hold_txn)
+                    self.txn = hold_txn
+                    _check(lmdb.mdb_txn_renew(self.txn))
+                    self.is_txn_rw = False
             except:
                 self._txn_abort()
                 raise
+        else:
+            logger.info(
+                'Transaction is already active. Not opening another one.'
+            )
+            #logger.debug('before yield')
+            yield
+            #logger.debug('after yield')
 
 
     def begin(self, write=False):
@@ -405,15 +450,14 @@ cdef class BaseLmdbStore:
         """
         if new_txn is True:
             with self.txn_ctx():
-                return self._key_exists(
-                        key, len(key), dblabel=dblabel.encode())
+                return self._key_exists(key, len(key), dblabel=dblabel)
         else:
-            return self._key_exists(key, len(key), dblabel=dblabel.encode())
+            return self._key_exists(key, len(key), dblabel=dblabel)
 
 
     cdef inline bint _key_exists(
             self, unsigned char *key, unsigned char klen,
-            unsigned char *dblabel=b'') except -1:
+            DbLabel dblabel=b'') except -1:
         """
         Return whether a key exists in a database.
 
@@ -440,13 +484,14 @@ cdef class BaseLmdbStore:
         Put one key/value pair (Python-facing method).
         """
         self._put(
-                key, len(key), data, len(data), dblabel=dblabel.encode(),
-                txn=self.txn, flags=flags)
+            key, len(key), data, len(data), dblabel=dblabel,
+            txn=self.txn, flags=flags
+        )
 
 
     cdef void _put(
             self, unsigned char *key, size_t key_size, unsigned char *data,
-            size_t data_size, unsigned char *dblabel='',
+            size_t data_size, DbLabel dblabel='',
             lmdb.MDB_txn *txn=NULL, unsigned int flags=0) except *:
         """
         Put one key/value pair.
@@ -466,13 +511,13 @@ cdef class BaseLmdbStore:
                 key[: key_size], data[: data_size]))
 
 
-    cpdef bytes get_data(self, key, dblabel=''):
+    cpdef bytes get_data(self, key, DbLabel dblabel=''):
         """
         Get a single value (non-dup) for a key (Python-facing method).
         """
         cdef lmdb.MDB_val rv
         try:
-            self._get_data(key, len(key), &rv, dblabel=dblabel.encode())
+            self._get_data(key, len(key), &rv, dblabel=dblabel)
 
             return (<unsigned char *>rv.mv_data)[: rv.mv_size]
         except KeyNotFoundError:
@@ -481,7 +526,7 @@ cdef class BaseLmdbStore:
 
     cdef void _get_data(
             self, unsigned char *key, size_t klen, lmdb.MDB_val *rv,
-            unsigned char *dblabel='') except *:
+            DbLabel dblabel='') except *:
         """
         Get a single value (non-dup) for a key.
         """
@@ -500,12 +545,12 @@ cdef class BaseLmdbStore:
         """
         Delete one single value by key. Python-facing method.
         """
-        self._delete(key, len(key), dblabel.encode())
+        self._delete(key, len(key), dblabel)
 
 
     cdef void _delete(
             self, unsigned char *key, size_t klen,
-            unsigned char *dblabel=b'') except *:
+            DbLabel dblabel=b'') except *:
         """
         Delete one single value by key from a non-dup database.
 
@@ -543,13 +588,13 @@ cdef class BaseLmdbStore:
                 lmdb.mdb_stat(self.txn, self.dbis[i], &stat),
                 'Error getting datbase stats: {}')
             entries = stat.ms_entries
-            db_stats[dblabel.encode()] = <dict>stat
+            db_stats[dblabel] = <dict>stat
 
         return {
             'env_stats': env_stats,
             'env_size': os.stat(self.env_path).st_size,
             'db_stats': {
-                db_label: db_stats[db_label.encode()]
+                db_label: db_stats[db_label]
                 for db_label in self.dbi_labels
             },
         }
@@ -655,7 +700,7 @@ cdef class BaseLmdbStore:
 
 
     cdef lmdb.MDB_dbi get_dbi(
-            self, unsigned char *dblabel=NULL, lmdb.MDB_txn *txn=NULL):
+            self, DbLabel dblabel=NULL, lmdb.MDB_txn *txn=NULL):
         """
         Return a DB handle by database name.
         """
@@ -667,8 +712,9 @@ cdef class BaseLmdbStore:
         if dblabel is NULL:
             logger.debug('Getting DBI without label.')
         dbidx = (
-                0 if dblabel is NULL
-                else self.dbi_labels.index(dblabel.decode()))
+            0 if dblabel is NULL
+            else self.dbi_labels.index(dblabel)
+        )
         #logger.debug(
         #        f'Got DBI {self.dbis[dbidx]} with label {dblabel} '
         #        f'and index #{dbidx}')
@@ -677,7 +723,7 @@ cdef class BaseLmdbStore:
 
 
     cdef lmdb.MDB_cursor *_cur_open(
-            self, unsigned char *dblabel=NULL, lmdb.MDB_txn *txn=NULL) except *:
+            self, DbLabel dblabel=NULL, lmdb.MDB_txn *txn=NULL) except *:
         cdef:
             lmdb.MDB_dbi dbi
 
@@ -686,7 +732,7 @@ cdef class BaseLmdbStore:
 
         dbi = self.get_dbi(dblabel, txn=txn)
 
-        logger.debug(f'Opening cursor for DB {dblabel} (DBI {dbi})...')
+        #logger.debug(f'Opening cursor for DB {dblabel} (DBI {dbi})...')
         #try:
         #    # FIXME Either reuse the cursor, if it works, or remove this code.
         #    _check(lmdb.mdb_cursor_renew(txn, self.curs[dbi]))
@@ -699,7 +745,7 @@ cdef class BaseLmdbStore:
         _check(
                 lmdb.mdb_cursor_open(txn, dbi, self.curs + dbi),
                 f'Error opening cursor: {dblabel}')
-        logger.debug('...opened @ {:x}.'.format(<unsigned long>self.curs[dbi]))
+        #logger.debug('...opened @ {:x}.'.format(<unsigned long>self.curs[dbi]))
 
         return self.curs[dbi]
 

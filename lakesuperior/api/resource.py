@@ -7,7 +7,7 @@ from threading import Lock, Thread
 
 import arrow
 
-from rdflib import Graph, Literal, URIRef
+from rdflib import Literal
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
@@ -15,8 +15,7 @@ from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
-from lakesuperior.model.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.store.ldp_rs.lmdb_triplestore import SimpleGraph
+from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
 
 
 logger = logging.getLogger(__name__)
@@ -24,36 +23,37 @@ logger = logging.getLogger(__name__)
 __doc__ = """
 Primary API for resource manipulation.
 
-Quickstart:
+Quickstart::
 
->>> # First import default configuration and globals—only done once.
->>> import lakesuperior.default_env
->>> from lakesuperior.api import resource
->>> # Get root resource.
->>> rsrc = resource.get('/')
->>> # Dump graph.
->>> set(rsrc.imr)
-{(rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://purl.org/dc/terms/title'),
-  rdflib.term.Literal('Repository Root')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Container')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#RepositoryRoot')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Resource')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#BasicContainer')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#Container')),
- (rdflib.term.URIRef('info:fcres/'),
-  rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
-  rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
+    >>> # First import default configuration and globals—only done once.
+    >>> import lakesuperior.default_env
+    >>> from lakesuperior.api import resource
+    >>> # Get root resource.
+    >>> rsrc = resource.get('/')
+    >>> # Dump graph.
+    >>> with rsrc.imr.store.txn_ctx():
+    >>>     print({*rsrc.imr.as_rdflib()})
+    {(rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://purl.org/dc/terms/title'),
+      rdflib.term.Literal('Repository Root')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Container')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#RepositoryRoot')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://fedora.info/definitions/v4/repository#Resource')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#BasicContainer')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#Container')),
+     (rdflib.term.URIRef('info:fcres/'),
+      rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+      rdflib.term.URIRef('http://www.w3.org/ns/ldp#RDFSource'))}
 """
 
 def transaction(write=False):
@@ -200,11 +200,13 @@ def create(parent, slug=None, **kwargs):
     :param str parent: UID of the parent resource.
     :param str slug: Tentative path relative to the parent UID.
     :param \*\*kwargs: Other parameters are passed to the
-      :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+      :py:meth:`~lakesuperior.model.ldp.ldp_factory.LdpFactory.from_provided`
       method.
 
-    :rtype: str
-    :return: UID of the new resource.
+    :rtype: tuple(str, lakesuperior.model.ldp.ldpr.Ldpr)
+    :return: A tuple of:
+        1. Event type (str): whether the resource was created or updated.
+        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated resource.
     """
     uid = LdpFactory.mint_uid(parent, slug)
     logger.debug('Minted UID for new resource: {}'.format(uid))
@@ -212,7 +214,7 @@ def create(parent, slug=None, **kwargs):
 
     rsrc.create_or_replace(create_only=True)
 
-    return uid
+    return rsrc
 
 
 @transaction(True)
@@ -222,13 +224,16 @@ def create_or_replace(uid, **kwargs):
 
     :param string uid: UID of the resource to be created or updated.
     :param \*\*kwargs: Other parameters are passed to the
-        :py:meth:`~lakesuperior.model.ldp_factory.LdpFactory.from_provided`
+        :py:meth:`~lakesuperior.model.ldp.ldp_factory.LdpFactory.from_provided`
         method.
 
-    :rtype: str
-    :return: Event type: whether the resource was created or updated.
+    :rtype: tuple(str, lakesuperior.model.ldp.ldpr.Ldpr)
+    :return: A tuple of:
+        1. Event type (str): whether the resource was created or updated.
+        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated resource.
     """
-    return LdpFactory.from_provided(uid, **kwargs).create_or_replace()
+    rsrc = LdpFactory.from_provided(uid, **kwargs)
+    return rsrc.create_or_replace(), rsrc
 
 
 @transaction(True)
@@ -269,8 +274,8 @@ def update_delta(uid, remove_trp, add_trp):
         add, as 3-tuples of RDFLib terms.
     """
     rsrc = LdpFactory.from_stored(uid)
-    remove_trp = rsrc.check_mgd_terms(SimpleGraph(remove_trp))
-    add_trp = rsrc.check_mgd_terms(SimpleGraph(add_trp))
+    remove_trp = rsrc.check_mgd_terms(remove_trp)
+    add_trp = rsrc.check_mgd_terms(add_trp)
 
     return rsrc.modify(RES_UPDATED, remove_trp, add_trp)
 

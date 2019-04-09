@@ -1,4 +1,5 @@
 CoilMQ>=1.0.1
+Cython==0.29.6
 Flask>=0.12.2
 HiYaPyCo>=0.4.11
 PyYAML>=3.13
@@ -12,5 +13,6 @@ rdflib==4.2.2
 requests-toolbelt>=0.8.0
 requests>=2.18.4
 sphinx-rtd-theme>=0.2.4
+sphinxcontrib-autoyaml
 stomp.py>=4.1.20
 wheel>=0.30.0a0

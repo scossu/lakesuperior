@@ -1,5 +1,10 @@
-lakesuperior\.store package
-===========================
+lakesuperior.store package
+==========================
+
+.. automodule:: lakesuperior.store
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Subpackages
 -----------
@@ -9,10 +14,23 @@ Subpackages
     lakesuperior.store.ldp_nr
     lakesuperior.store.ldp_rs
 
-Module contents
----------------
+Submodules
+----------
 
-.. automodule:: lakesuperior.store
+lakesuperior.store.base\_lmdb\_store module
+-------------------------------------------
+
+.. automodule:: lakesuperior.store.base_lmdb_store
     :members:
     :undoc-members:
     :show-inheritance:
+
+lakesuperior.store.metadata\_store module
+-----------------------------------------
+
+.. automodule:: lakesuperior.store.metadata_store
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+

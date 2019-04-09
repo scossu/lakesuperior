@@ -1,8 +1,9 @@
 About Lakesuperior
 ==================
 
-Lakesuperior is an alternative `Fedora
-Repository <http://fedorarepository.org>`__ implementation.
+Lakesuperior is a repository system that stores binary files and their metadata
+as Linked Data. It is a `Fedora Repository <http://fedorarepository.org>`__
+implementation focused on efficiency, stability and integration with Python.
 
 Fedora is a mature repository software system historically adopted by
 major cultural heritage institutions. It exposes an
@@ -12,8 +13,7 @@ any type of binary files and their metadata in Linked Data format.
 Guiding Principles
 ------------------
 
-Lakesuperior aims at being an uncomplicated, efficient Fedora 4
-implementation.
+Lakesuperior aims at being an efficient and flexible Fedora 4 implementation.
 
 Its main goals are:
 
@@ -27,9 +27,7 @@ Its main goals are:
 Key features
 ------------
 
--  Drop-in replacement for Fedora4 (with some
-   :doc:`caveats <fcrepo4_deltas>`); currently being tested
-   with Hyrax 2
+-  Drop-in replacement for Fedora4 (with some :doc:`caveats <fcrepo4_deltas>`)
 -  Very stable persistence layer based on
    `LMDB <https://symas.com/lmdb/>`__ and filesystem. Fully
    ACID-compliant writes guarantee consistency of data.
@@ -37,16 +35,15 @@ Key features
 -  No performance penalty for storing many resources under the same
    container; no `kudzu
    <https://www.nature.org/ourinitiatives/urgentissues/land-conservation/forests/kudzu.xml>`__
-   pairtree segmentation [#]_ 
+   pairtree segmentation.
 -  Extensible :doc:`provenance metadata <model>` tracking
 -  :doc:`Multi-modal access <architecture>`: HTTP
    (REST), command line interface and native Python API.
--  Fits in a pocket: you can carry 50M triples in an 8Gb memory stick [#]_.
+-  Fits in a pocket: you can carry 64M triples in a 32Gb memory stick [#]_.
 
 Implementation of the official `Fedora API
-specs <https://fedora.info/spec/>`__ (Fedora 5.x and beyond) is not
-foreseen in the short term, however it would be a natural evolution of
-this project if it gains support.
+specs <https://fedora.info/spec/>`__ and OCFL are currently being
+considered as the next major development steps.
 
 Please make sure you read the :doc:`Delta document <fcrepo4_deltas>` for
 divergences with the official Fedora4 implementation.
@@ -79,9 +76,16 @@ Lakesuperior is in **alpha** status. Please see the `project
 issues <https://github.com/scossu/lakesuperior/issues>`__ list for a
 rudimentary road map.
 
---------------
+Acknowledgements & Caveat
+-------------------------
 
-.. [#] However if your client splits pairtrees upstream, such as Hyrax does,
-   that obviously needs to change to get rid of the path segments.
+Most of this code has been written on the Chicago CTA Blue Line train and, more
+recently, on the Los Angeles Metro 734 bus. The author would like to thank
+these companies for providing an office on wheels for this project.
+
+Potholes on Sepulveda street may have caused bugs and incorrect documentation.
+Please report them if you find any.
+
+-------------------
 
 .. [#] Your mileage may vary depending on the variety of your triples.
