@@ -4,7 +4,7 @@ from os import path
 
 
 version = '1.0 alpha'
-release = '1.0.0a20'
+release = '1.0.0a21'
 
 basedir = path.dirname(path.realpath(__file__))
 """
