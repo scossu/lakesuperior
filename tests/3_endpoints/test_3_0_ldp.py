@@ -545,9 +545,25 @@ class TestLdp:
         ).status_code == 412
 
         assert self.client.patch(
+            path, data=ins_qry1,
+            headers={
+                'content-type': 'application/sparql-update',
+                'prefer': 'handling=lenient',
+            }
+        ).status_code == 204
+
+        assert self.client.patch(
             path, data=ins_qry2,
             headers={'content-type': 'application/sparql-update'}
         ).status_code == 412
+
+        assert self.client.patch(
+            path, data=ins_qry2,
+            headers={
+                'content-type': 'application/sparql-update',
+                'prefer': 'handling=lenient',
+            }
+        ).status_code == 204
 
         assert self.client.patch(
             path, data=ins_qry3,
@@ -560,9 +576,25 @@ class TestLdp:
         ).status_code == 412
 
         assert self.client.patch(
+            path, data=del_qry1,
+            headers={
+                'content-type': 'application/sparql-update',
+                'prefer': 'handling=lenient',
+            }
+        ).status_code == 204
+
+        assert self.client.patch(
             path, data=del_qry2,
             headers={'content-type': 'application/sparql-update'}
         ).status_code == 412
+
+        assert self.client.patch(
+            path, data=ins_qry2,
+            headers={
+                'content-type': 'application/sparql-update',
+                'prefer': 'handling=lenient',
+            }
+        ).status_code == 204
 
         assert self.client.patch(
             path, data=del_qry3,

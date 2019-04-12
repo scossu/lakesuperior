@@ -410,6 +410,8 @@ def patch_resource(uid, is_metadata=False):
     if cond_ret:
         return cond_ret
 
+    handling, _ = set_post_put_params()
+
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
     if request.mimetype != 'application/sparql-update':
         return 'Provided content type is not a valid parsable format: {}'\
@@ -418,7 +420,7 @@ def patch_resource(uid, is_metadata=False):
     update_str = request.get_data().decode('utf-8')
     local_update_str = g.tbox.localize_ext_str(update_str, nsc['fcres'][uid])
     try:
-        rsrc = rsrc_api.update(uid, local_update_str, is_metadata)
+        rsrc = rsrc_api.update(uid, local_update_str, is_metadata, handling)
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
     except InvalidResourceError as e:
