@@ -23,7 +23,8 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import (
         ChecksumValidationError, ResourceNotExistsError, TombstoneError,
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
-        ResourceExistsError, IncompatibleLdpTypeError)
+        ResourceExistsError, IncompatibleLdpTypeError,
+        IndigestibleError)
 from lakesuperior.globals import RES_CREATED
 from lakesuperior.model.ldp.ldp_factory import LdpFactory
 from lakesuperior.model.ldp.ldp_nr import LdpNr
@@ -283,11 +284,22 @@ def post_resource(parent_uid):
         kwargs['mimetype'] = mimetype
         # Check digest if requested.
         if 'digest' in request.headers:
-            kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = \
+            try:
+                kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = (
                     request.headers['digest'].split('=')
+                )
+            except ValueError:
+                return (
+                    f'Cannot parse digest value: {request.headers["digest"]}',
+                    400
+                )
 
     try:
         rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
+    except IndigestibleError:
+        return (
+            f'Unable to parse digest header: {request.headers["digest"]}'
+        ), 400
     except ResourceNotExistsError as e:
         return str(e), 404
     except (InvalidResourceError, ChecksumValidationError) as e:

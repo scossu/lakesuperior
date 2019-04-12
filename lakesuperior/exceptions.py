@@ -39,10 +39,16 @@ class ChecksumValidationError(ResourceError):
 
 
     def __str__(self):
-        return self.msg or (f'Validation failed for resource {self.uid}. '
-                            f'Provided checksum: {self.prov_cksum}; '
+        return self.msg or (f'validation failed for resource {self.uid}. '
+                            f'provided checksum: {self.prov_cksum}; '
                             f'calculated checksum: {self.calc_cksum}')
 
+
+class IndigestibleError(ResourceError):
+    """
+    Raised when an unsupported digest algorithm is requested.
+    """
+    pass
 
 
 class ResourceNotExistsError(ResourceError):
