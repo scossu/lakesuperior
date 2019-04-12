@@ -877,6 +877,15 @@ class TestDigestHeaders:
         assert self.client.post(path, data=content, headers={
                 'digest': f'blake2b={content_blake2b}'}).status_code == 201
 
+        assert self.client.post(path, data=content, headers={
+                'digest': f'bogusmd={content_blake2b}'}).status_code == 400
+
+        bencoded = b64encode(content_blake2b.encode())
+        assert self.client.post(
+            path, data=content,
+            headers={'digest': f'blake2b={bencoded}'}
+        ).status_code == 400
+
 
 
 @pytest.mark.usefixtures('client_class')
