@@ -416,7 +416,7 @@ class TestLdp:
         assert gr[ URIRef(uri) : nsc['dc'].title : Literal('Ciao') ]
 
 
-    def test_patch_ssr(self):
+    def test_patch_no_single_subject(self):
         """
         Test patching a resource violating the single-subject rule.
         """
@@ -507,6 +507,56 @@ class TestLdp:
                 headers={'content-type' : 'text/plain'})
 
         assert ldprs_resp.status_code == ldpnr_resp.status_code == 415
+
+
+    def test_patch_srv_mgd_pred(self, rnd_img):
+        """
+        Verify that adding or removing a server-managed predicate fails.
+        """
+        uid = '/test_patch_sm_pred'
+        path = f'/ldp{uid}'
+        self.client.put(path)
+
+        uri = g.webroot + uid
+
+        ins_qry1 = f'INSERT {{ <> <{nsc["ldp"].contains}> <http://bogus.com/ext1> . }} WHERE {{}}'
+        ins_qry2 = f'INSERT {{ <> <{nsc["fcrepo"].created}> "2019-04-01T05:57:36.899033+00:00"^^{nsc["xsd"].dateTime} . }} WHERE {{}}'
+        # The following won't change the graph so it does not raise an error.
+        ins_qry3 = f'INSERT {{ <> a <{nsc["ldp"].Container}> WHERE {{}}'
+        del_qry1 = f'DELETE {{ <> <{nsc["ldp"].contains}> ?o . }} WHERE {{ <> <{nsc["ldp"].contains}> ?o . }}'
+        del_qry2 = f'DELETE {{ <> a <{nsc["ldp"].Container}> WHERE {{}}'
+        # No-op as ins_qry1
+        del_qry3 = f'DELETE {{ <> a <{nsc["ldp"].DirectContainer}> WHERE {{}}'
+
+        assert self.client.patch(
+            path, data=ins_qry1,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 412
+
+        assert self.client.patch(
+            path, data=ins_qry2,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 412
+
+        assert self.client.patch(
+            path, data=ins_qry3,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 204
+
+        assert self.client.patch(
+            path, data=del_qry1,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 412
+
+        assert self.client.patch(
+            path, data=del_qry2,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 412
+
+        assert self.client.patch(
+            path, data=del_qry3,
+            headers={'content-type': 'application/sparql-update'}
+        ).status_code == 204
 
 
     def test_delete(self):
