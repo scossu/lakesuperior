@@ -43,7 +43,7 @@ uuid:
     #
     #   ``blake2b`` is a strong, fast cryptographic alternative to SHA2/3:
     #   https://blake2.net/
-    algo: sha1
+    algo: blake2b
 
 ###
 # Data store configuration.
