@@ -118,12 +118,10 @@ class LdpFactory:
                     'Binary stream must be provided if mimetype is specified.')
 
             # Determine whether it is a basic, direct or indirect container.
-            if provided_imr[ : Ldpr.MBR_RSRC_URI : ] and \
-                    provided_imr[ : Ldpr.MBR_REL_URI : ]:
-                if provided_imr[ : Ldpr.INS_CNT_REL_URI : ]:
-                    cls = LdpIc
-                else:
-                    cls = LdpDc
+            if provided_imr[nsc['rdf'].type] == nsc['ldp'].IndirectContainer:
+                cls = LdpIc
+            elif provided_imr[nsc['rdf'].type] == nsc['ldp'].DirectContainer:
+                cls = LdpDc
             else:
                 cls = Ldpc
 
