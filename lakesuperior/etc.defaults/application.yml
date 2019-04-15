@@ -77,12 +77,6 @@ store:
         #   Changes to this parameter require a full migration.
         referential_integrity: lenient
 
-        ###
-        #   Split newly minted URIs into pairtrees.
-        #
-        #   This mimics Fedora4 behavior which segments an identifier on POST.
-        legacy_ptree_split: False
-
     ###
     #   The path used to persist LDP-NR (bitstreams).
     #
