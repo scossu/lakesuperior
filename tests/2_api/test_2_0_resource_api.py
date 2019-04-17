@@ -27,7 +27,8 @@ def dc_rdf():
     PREFIX dcterms: <http://purl.org/dc/terms/>
     PREFIX ldp: <http://www.w3.org/ns/ldp#>
 
-    <> dcterms:title "Direct Container" ;
+    <> a ldp:DirectContainer ;
+        dcterms:title "Direct Container" ;
         ldp:membershipResource <info:fcres/member> ;
         ldp:hasMemberRelation dcterms:relation .
     '''
@@ -40,7 +41,8 @@ def ic_rdf():
     PREFIX ldp: <http://www.w3.org/ns/ldp#>
     PREFIX ore: <http://www.openarchives.org/ore/terms/>
 
-    <> dcterms:title "Indirect Container" ;
+    <> a ldp:IndirectContainer ;
+        dcterms:title "Indirect Container" ;
         ldp:membershipResource <info:fcres/top_container> ;
         ldp:hasMemberRelation dcterms:relation ;
         ldp:insertedContentRelation ore:proxyFor .
@@ -343,7 +345,7 @@ class TestResourceCRUD:
         _, dc_rsrc = rsrc_api.create_or_replace(
                 dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
 
-        child_uid = rsrc_api.create(dc_uid, None).uid
+        child_uid = rsrc_api.create(dc_uid).uid
         member_rsrc = rsrc_api.get('/member')
 
         with env.app_globals.rdf_store.txn_ctx():
@@ -351,9 +353,80 @@ class TestResourceCRUD:
                 member_rsrc.uri: nsc['dcterms'].relation: nsc['fcres'][child_uid]]
 
 
+    def test_create_ldp_dc_defaults1(self):
+        """
+        Create an LDP Direct Container with default values.
+        """
+        dc_rdf = b'''
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+        <> a ldp:DirectContainer ;
+            ldp:membershipResource <info:fcres/member> .
+        '''
+        dc_uid = '/test_dc_defaults1'
+        _, dc_rsrc = rsrc_api.create_or_replace(
+                dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        child_uid = rsrc_api.create(dc_uid).uid
+        member_rsrc = rsrc_api.get('/member')
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert member_rsrc.imr[
+                member_rsrc.uri: nsc['ldp'].member: nsc['fcres'][child_uid]
+            ]
+
+
+    def test_create_ldp_dc_defaults2(self):
+        """
+        Create an LDP Direct Container with default values.
+        """
+        dc_rdf = b'''
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+        <> a ldp:DirectContainer ;
+            ldp:hasMemberRelation dcterms:relation .
+        '''
+        dc_uid = '/test_dc_defaults2'
+        _, dc_rsrc = rsrc_api.create_or_replace(
+                dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        child_uid = rsrc_api.create(dc_uid).uid
+        member_rsrc = rsrc_api.get(dc_uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            #import pdb; pdb.set_trace()
+            assert member_rsrc.imr[
+                member_rsrc.uri: nsc['dcterms'].relation:
+                nsc['fcres'][child_uid]]
+
+
+    def test_create_ldp_dc_defaults3(self):
+        """
+        Create an LDP Direct Container with default values.
+        """
+        dc_rdf = b'''
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX ldp: <http://www.w3.org/ns/ldp#>
+
+        <> a ldp:DirectContainer .
+        '''
+        dc_uid = '/test_dc_defaults3'
+        _, dc_rsrc = rsrc_api.create_or_replace(
+                dc_uid, rdf_data=dc_rdf, rdf_fmt='turtle')
+
+        child_uid = rsrc_api.create(dc_uid, None).uid
+        member_rsrc = rsrc_api.get(dc_uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert member_rsrc.imr[
+                member_rsrc.uri: nsc['ldp'].member: nsc['fcres'][child_uid]]
+
+
     def test_indirect_container(self, ic_rdf):
         """
-        Create an indirect container verify special properties.
+        Create an indirect container and verify special properties.
         """
         cont_uid = '/top_container'
         ic_uid = '{}/test_ic'.format(cont_uid)
@@ -381,6 +454,81 @@ class TestResourceCRUD:
             assert top_cont_rsrc.imr[
                 top_cont_rsrc.uri: nsc['dcterms'].relation:
                 nsc['fcres'][target_uid]]
+
+
+    # TODO WIP Complex test of all possible combinations of missing IC triples
+    # falling back to default values.
+    #def test_indirect_container_defaults(self):
+    #    """
+    #    Create an indirect container with various default values.
+    #    """
+    #    ic_rdf_base = b'''
+    #    PREFIX dcterms: <http://purl.org/dc/terms/>
+    #    PREFIX ldp: <http://www.w3.org/ns/ldp#>
+    #    PREFIX ore: <http://www.openarchives.org/ore/terms/>
+
+    #    <> a ldp:IndirectContainer ;
+    #    '''
+    #    ic_rdf_trp1 = '\nldp:membershipResource <info:fcres/top_container> ;'
+    #    ic_rdf_trp2 = '\nldp:hasMemberRelation dcterms:relation ;'
+    #    ic_rdf_trp3 = '\nldp:insertedContentRelation ore:proxyFor ;'
+
+    #    ic_def_rdf = [
+    #        ic_rdf_base + ic_rdf_trp1 + ic_trp2 + '\n.',
+    #        ic_rdf_base + ic_rdf_trp1 + ic_trp3 + '\n.',
+    #        ic_rdf_base + ic_rdf_trp2 + ic_trp3 + '\n.',
+    #        ic_rdf_base + ic_rdf_trp1 + '\n.',
+    #        ic_rdf_base + ic_rdf_trp2 + '\n.',
+    #        ic_rdf_base + ic_rdf_trp3 + '\n.',
+    #        ic_rdf_base + '\n.',
+    #    ]
+
+    #    target_uid = '/ic_target_def'
+    #    rsrc_api.create_or_replace(target_uid)
+
+    #    # Create several sets of indirect containers, each missing one or more
+    #    # triples from the original graph, which should be replaced by default
+    #    # values. All combinations are tried.
+    #    for i, ic_rdf in enumerate(ic_def_rdf):
+    #        cont_uid = f'/top_container_def{i}'
+    #        ic_uid = '{}/test_ic'.format(cont_uid)
+    #        member_uid = '{}/ic_member'.format(ic_uid)
+
+    #        rsrc_api.create_or_replace(cont_uid)
+    #        rsrc_api.create_or_replace(
+    #            ic_uid, rdf_data=ic_rdf, rdf_fmt='turtle'
+    #        )
+
+    #        ic_member_p = (
+    #            nsc['ore'].proxyFor if i in (1, 2, 5)
+    #            else nsc['ldp'].memberSubject
+    #        )
+    #        # WIP
+    #        #ic_member_o_uid = (
+    #        #    'ic_target_def' if i in (1, 2, 5)
+    #        #    else nsc['ldp'].memberSubject
+    #        #)
+
+    #        ic_member_rdf = b'''
+    #        PREFIX ore: <http://www.openarchives.org/ore/terms/>
+    #        <> ore:proxyFor <info:fcres/ic_target_def> .'''
+
+    #        rsrc_api.create_or_replace(
+    #                member_uid, rdf_data=ic_member_rdf, rdf_fmt='turtle')
+
+    #        ic_rsrc = rsrc_api.get(ic_uid)
+    #        with env.app_globals.rdf_store.txn_ctx():
+    #            assert nsc['ldp'].Container in ic_rsrc.ldp_types
+    #            assert nsc['ldp'].IndirectContainer in ic_rsrc.ldp_types
+
+    #    top_cont_rsrc = rsrc_api.get(cont_uid)
+
+    #    for i, ic_rdf in enumerate(ic_def_rdf):
+    #        member_rsrc = rsrc_api.get(member_uid)
+    #        with env.app_globals.rdf_store.txn_ctx():
+    #            assert top_cont_rsrc.imr[
+    #                top_cont_rsrc.uri: nsc['dcterms'].relation:
+    #                nsc['fcres'][target_uid]]
 
 
 

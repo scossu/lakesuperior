@@ -31,6 +31,8 @@ from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.util.toolbox import replace_term_domain
 
+DEF_MBR_REL_URI = nsc['ldp'].member
+DEF_INS_CNT_REL_URI = nsc['ldp'].memberSubject
 
 rdfly = env.app_globals.rdfly
 logger = logging.getLogger(__name__)
@@ -910,30 +912,35 @@ class Ldpr(metaclass=ABCMeta):
 
         :param rdflib.resource.Resouce cont_rsrc:  The container resource.
         """
-        cont_p = cont_rsrc.metadata.terms_by_type('p')
-
         logger.info('Checking direct or indirect containment.')
-        logger.debug('Parent predicates: {}'.format(cont_p))
 
         add_trp = {(self.uri, nsc['fcrepo'].hasParent, cont_rsrc.uri)}
 
-        if self.MBR_RSRC_URI in cont_p and self.MBR_REL_URI in cont_p:
+        if (
+            nsc['ldp'].DirectContainer in cont_rsrc.ldp_types
+            or nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types
+        ):
             from lakesuperior.model.ldp.ldp_factory import LdpFactory
 
-            s = cont_rsrc.metadata.value(self.MBR_RSRC_URI)
-            p = cont_rsrc.metadata.value(self.MBR_REL_URI)
+            cont_p = cont_rsrc.metadata.terms_by_type('p')
+            logger.debug('Parent predicates: {}'.format(cont_p))
 
-            if nsc['ldp'].DirectContainer in cont_rsrc.ldp_types:
-                logger.info('Parent is a direct container.')
-                logger.debug('Creating DC triples.')
-                o = self.uri
+            s = cont_rsrc.metadata.value(self.MBR_RSRC_URI) or cont_rsrc.uri
+            p = cont_rsrc.metadata.value(self.MBR_REL_URI) or DEF_MBR_REL_URI
+            #import pdb; pdb.set_trace()
 
-            elif nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types:
+            if nsc['ldp'].IndirectContainer in cont_rsrc.ldp_types:
                 logger.info('Parent is an indirect container.')
                 cont_rel_uri = cont_rsrc.metadata.value(self.INS_CNT_REL_URI)
-                o = self.provided_imr.value(cont_rel_uri)
-                logger.debug('Target URI: {}'.format(o))
-                logger.debug('Creating IC triples.')
+                o = (
+                    self.provided_imr.value(cont_rel_uri)
+                    or DEF_INS_CNT_REL_URI
+                )
+                logger.debug(f'Target URI: {o}')
+
+            else:
+                logger.info('Parent is a direct container.')
+                o = self.uri
 
             target_rsrc = LdpFactory.from_stored(rdfly.uri_to_uid(s))
             target_rsrc.modify(RES_UPDATED, add_trp={(s, p, o)})

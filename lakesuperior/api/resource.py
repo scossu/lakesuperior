@@ -237,19 +237,22 @@ def create_or_replace(uid, **kwargs):
 
 
 @transaction(True)
-def update(uid, update_str, is_metadata=False):
+def update(uid, update_str, is_metadata=False, handling='strict'):
     """
     Update a resource with a SPARQL-Update string.
 
     :param string uid: Resource UID.
     :param string update_str: SPARQL-Update statements.
     :param bool is_metadata: Whether the resource metadata are being updated.
+    :param str handling: How to handle servre-managed triples. ``strict``
+        (the default) rejects the update with an exception if server-managed
+        triples are being changed. ``lenient`` modifies the update graph so
+        offending triples are removed and the update can be applied.
 
     :raise InvalidResourceError: If ``is_metadata`` is False and the resource
         being updated is a LDP-NR.
     """
-    # FCREPO is lenient here and Hyrax requires it.
-    rsrc = LdpFactory.from_stored(uid, handling='lenient')
+    rsrc = LdpFactory.from_stored(uid, handling=handling)
     if LDP_NR_TYPE in rsrc.ldp_types and not is_metadata:
         raise InvalidResourceError(
                 'Cannot use this method to update an LDP-NR content.')

@@ -118,12 +118,10 @@ class LdpFactory:
                     'Binary stream must be provided if mimetype is specified.')
 
             # Determine whether it is a basic, direct or indirect container.
-            if provided_imr[ : Ldpr.MBR_RSRC_URI : ] and \
-                    provided_imr[ : Ldpr.MBR_REL_URI : ]:
-                if provided_imr[ : Ldpr.INS_CNT_REL_URI : ]:
-                    cls = LdpIc
-                else:
-                    cls = LdpDc
+            if provided_imr[nsc['rdf'].type] == nsc['ldp'].IndirectContainer:
+                cls = LdpIc
+            elif provided_imr[nsc['rdf'].type] == nsc['ldp'].DirectContainer:
+                cls = LdpDc
             else:
                 cls = Ldpc
 
@@ -173,16 +171,11 @@ class LdpFactory:
         :return: The confirmed resource UID. This may be different from
             what has been indicated.
         """
-        def split_if_legacy(uid):
-            if config['application']['store']['ldp_rs']['legacy_ptree_split']:
-                uid = tbox.split_uuid(uid)
-            return uid
-
         if path and path.startswith('/'):
             raise ValueError('Slug cannot start with a slash.')
         # Shortcut!
         if not path and parent_uid == '/':
-            return '/' + split_if_legacy(str(uuid4()))
+            return f'/{uuid4()}'
 
         if not parent_uid.startswith('/'):
             raise ValueError('Invalid parent UID: {}'.format(parent_uid))
@@ -198,6 +191,6 @@ class LdpFactory:
             if not rdfly.ask_rsrc_exists(cnd_uid):
                 return cnd_uid
 
-        return pfx + split_if_legacy(str(uuid4()))
+        return f'{pfx}{uuid4()}'
 
 
