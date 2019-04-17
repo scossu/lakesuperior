@@ -516,17 +516,28 @@ class TestLdp:
         uid = '/test_patch_sm_pred'
         path = f'/ldp{uid}'
         self.client.put(path)
+        self.client.put(path + '/child1')
 
         uri = g.webroot + uid
 
         ins_qry1 = f'INSERT {{ <> <{nsc["ldp"].contains}> <http://bogus.com/ext1> . }} WHERE {{}}'
-        ins_qry2 = f'INSERT {{ <> <{nsc["fcrepo"].created}> "2019-04-01T05:57:36.899033+00:00"^^{nsc["xsd"].dateTime} . }} WHERE {{}}'
+        ins_qry2 = (
+            f'INSERT {{ <> <{nsc["fcrepo"].created}>'
+            f'"2019-04-01T05:57:36.899033+00:00"^^<{nsc["xsd"].dateTime}> . }}'
+            'WHERE {}'
+        )
         # The following won't change the graph so it does not raise an error.
-        ins_qry3 = f'INSERT {{ <> a <{nsc["ldp"].Container}> WHERE {{}}'
-        del_qry1 = f'DELETE {{ <> <{nsc["ldp"].contains}> ?o . }} WHERE {{ <> <{nsc["ldp"].contains}> ?o . }}'
-        del_qry2 = f'DELETE {{ <> a <{nsc["ldp"].Container}> WHERE {{}}'
-        # No-op as ins_qry1
-        del_qry3 = f'DELETE {{ <> a <{nsc["ldp"].DirectContainer}> WHERE {{}}'
+        ins_qry3 = f'INSERT {{ <> a <{nsc["ldp"].Container}> . }} WHERE {{}}'
+        del_qry1 = (
+            f'DELETE {{ <> <{nsc["ldp"].contains}> ?o . }} '
+            f'WHERE {{ <> <{nsc["ldp"].contains}> ?o . }}'
+        )
+        del_qry2 = f'DELETE {{ <> a <{nsc["ldp"].Container}> . }} WHERE {{}}'
+        # No-op as ins_qry3
+        del_qry3 = (
+            f'DELETE {{ <> a <{nsc["ldp"].DirectContainer}> .}} '
+            'WHERE {}'
+        )
 
         assert self.client.patch(
             path, data=ins_qry1,

@@ -307,6 +307,10 @@ def post_resource(parent_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     except ServerManagedTermError as e:
+        rsp_headers['Link'] = (
+            f'<{uri}>; rel="{nsc["ldp"].constrainedBy}"; '
+            f'{g.webroot}/info/ldp_constraints"'
+        )
         return str(e), 412
 
     uri = g.tbox.uid_to_uri(rsrc.uid)
@@ -315,8 +319,9 @@ def post_resource(parent_uid):
     rsp_headers['Location'] = uri
 
     if mimetype and kwargs.get('rdf_fmt') is None:
-        rsp_headers['Link'] = (f'<{uri}/fcr:metadata>; rel="describedby"; '
-                               f'anchor="{uri}"')
+        rsp_headers['Link'] = (
+            f'<{uri}/fcr:metadata>; rel="describedby"; anchor="{uri}"'
+        )
 
     return uri, 201, rsp_headers
 
