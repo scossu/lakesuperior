@@ -89,7 +89,7 @@ group = __def.config.get('group')
 raw_env = 'APP_MODE={}'.format(__app_mode)
 
 preload_app = __def.config.get('preload_app', __def.preload_app)
-daemon = __app_mode == 'prod'
+#daemon = __app_mode == 'prod'
 reload = __app_mode == 'dev' and not preload_app
 
 pidfile = os.path.join(__def.run_dir, 'fcrepo.pid')

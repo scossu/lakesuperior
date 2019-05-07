@@ -10,7 +10,7 @@
 #   One of ``prod``, ``test`` or ``dev``.
 #   ``prod`` is normal running mode. 'test' is used for running test suites.
 #   ``dev`` is similar to normal mode but with reload and debug enabled.
-app_mode: 'dev'
+app_mode: 'prod'
 
 ###
 #   Base data directory.
@@ -23,7 +23,7 @@ app_mode: 'dev'
 #   the individual subdirectories can be mounted on different file systems.
 #
 #   If unset, it will default to <lakesuperior package root>/data.
-data_dir:
+data_dir: /data
 
 ###
 # Configuration for binary path and fixity check generation. The hash is a
