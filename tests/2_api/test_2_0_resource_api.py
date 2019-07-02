@@ -533,6 +533,156 @@ class TestResourceCRUD:
 
 
 @pytest.mark.usefixtures('db')
+class TestRelativeUris:
+    '''
+    Test inserting and updating resources with relative URIs.
+    '''
+    def test_create_self_uri_rdf(self):
+        """
+        Create a resource with empty string ("self") URIs in the RDF body.
+        """
+        uid = '/reluri01'
+        uri = nsc['fcres'][uid]
+        data = '''
+        <> a <urn:type:A> .
+        <http://ex.org/external> <urn:pred:x> <> .
+        '''
+        rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[uri: nsc['rdf']['type']: URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'): uri]
+
+
+    def test_create_self_uri_graph(self):
+        """
+        Create a resource with empty string ("self") URIs in a RDFlib graph.
+        """
+        uid = '/reluri02'
+        uri = nsc['fcres'][uid]
+        gr = Graph()
+        with env.app_globals.rdf_store.txn_ctx():
+            gr.add({
+                (URIRef(''), nsc['rdf']['type'], URIRef('urn:type:A')),
+                (
+                    URIRef('http://ex.org/external'),
+                    URIRef('urn:pred:x'), URIRef('')
+                ),
+            })
+        rsrc_api.create_or_replace(uid, graph=gr)
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[uri: nsc['rdf']['type']: URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'): uri]
+
+
+    def test_create_hash_uri_rdf(self):
+        """
+        Create a resource with empty string ("self") URIs in the RDF body.
+        """
+        uid = '/reluri03'
+        uri = nsc['fcres'][uid]
+        data = '''
+        <#hash1> a <urn:type:A> .
+        <http://ex.org/external> <urn:pred:x> <#hash2> .
+        '''
+        rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                URIRef(str(uri) + '#hash1'): nsc['rdf'].type:
+                URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'):
+                URIRef(str(uri) + '#hash2')]
+
+
+    @pytest.mark.skip
+    def test_create_hash_uri_graph(self):
+        """
+        Create a resource with empty string ("self") URIs in a RDFlib graph.
+        """
+        uid = '/reluri04'
+        uri = nsc['fcres'][uid]
+        gr = Graph()
+        with env.app_globals.rdf_store.txn_ctx():
+            gr.add({
+                (URIRef('#hash1'), nsc['rdf']['type'], URIRef('urn:type:A')),
+                (
+                    URIRef('http://ex.org/external'),
+                    URIRef('urn:pred:x'), URIRef('#hash2')
+                )
+            })
+        rsrc_api.create_or_replace(uid, graph=gr)
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                URIRef(str(uri) + '#hash1'): nsc['rdf']['type']:
+                URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'):
+                URIRef(str(uri) + '#hash2')]
+
+
+    @pytest.mark.skip(reason='RDFlib bug.')
+    def test_create_child_uri_rdf(self):
+        """
+        Create a resource with empty string ("self") URIs in the RDF body.
+        """
+        uid = '/reluri05'
+        uri = nsc['fcres'][uid]
+        data = '''
+        <child1> a <urn:type:A> .
+        <http://ex.org/external> <urn:pred:x> <child2> .
+        '''
+        rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                URIRef(str(uri) + '/child1'): nsc['rdf'].type:
+                URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'):
+                URIRef(str(uri) + '/child2')]
+
+
+    @pytest.mark.skip(reason='RDFlib bug.')
+    def test_create_child_uri_graph(self):
+        """
+        Create a resource with empty string ("self") URIs in the RDF body.
+        """
+        uid = '/reluri06'
+        uri = nsc['fcres'][uid]
+        gr = Graph()
+        with env.app_globals.rdf_store.txn_ctx():
+            gr.add({
+                (URIRef('child1'), nsc['rdf']['type'], URIRef('urn:type:A')),
+                (
+                    URIRef('http://ex.org/external'),
+                    URIRef('urn:pred:x'), URIRef('child22')
+                )
+            })
+        rsrc_api.create_or_replace(uid, graph=gr)
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                URIRef(str(uri) + '/child1'): nsc['rdf'].type:
+                URIRef('urn:type:A')]
+            assert rsrc.imr[
+                URIRef('http://ex.org/external'): URIRef('urn:pred:x'):
+                URIRef(str(uri) + '/child2')]
+
+
+
+@pytest.mark.usefixtures('db')
 class TestAdvancedDelete:
     '''
     Test resource version lifecycle.

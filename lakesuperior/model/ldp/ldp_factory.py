@@ -16,6 +16,7 @@ from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
         ResourceNotExistsError, TombstoneError)
 from lakesuperior.model.rdf.graph import Graph, from_rdf
+from lakesuperior.util.toolbox import rel_uri_to_urn
 
 
 LDP_NR_TYPE = nsc['ldp'].NonRDFSource
@@ -100,11 +101,16 @@ class LdpFactory:
         uri = nsc['fcres'][uid]
         if rdf_data:
             provided_imr = from_rdf(
-                uri=uri, data=rdf_data, format=rdf_fmt,
-                publicID=nsc['fcres'][uid]
+                uri=uri, data=rdf_data,
+                format=rdf_fmt, publicID=nsc['fcres'][uid]
             )
         elif graph:
-            provided_imr = Graph(uri=uri, data={*graph})
+            provided_imr = Graph(
+                uri=uri, data={
+                    (rel_uri_to_urn(s, uid), p, rel_uri_to_urn(o, uid))
+                    for s, p, o in graph
+                }
+            )
         else:
             provided_imr = Graph(uri=uri)
 
