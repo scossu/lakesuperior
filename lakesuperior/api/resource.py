@@ -11,11 +11,13 @@ from rdflib import Literal
 from rdflib.namespace import XSD
 
 from lakesuperior.config_parser import config
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
+from lakesuperior.util.toolbox import rel_uri_to_urn
 
 
 logger = logging.getLogger(__name__)
@@ -230,7 +232,8 @@ def create_or_replace(uid, **kwargs):
     :rtype: tuple(str, lakesuperior.model.ldp.ldpr.Ldpr)
     :return: A tuple of:
         1. Event type (str): whether the resource was created or updated.
-        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated resource.
+        2. Resource (lakesuperior.model.ldp.ldpr.Ldpr): The new or updated
+            resource.
     """
     rsrc = LdpFactory.from_provided(uid, **kwargs)
     return rsrc.create_or_replace(), rsrc
@@ -244,7 +247,7 @@ def update(uid, update_str, is_metadata=False, handling='strict'):
     :param string uid: Resource UID.
     :param string update_str: SPARQL-Update statements.
     :param bool is_metadata: Whether the resource metadata are being updated.
-    :param str handling: How to handle servre-managed triples. ``strict``
+    :param str handling: How to handle server-managed triples. ``strict``
         (the default) rejects the update with an exception if server-managed
         triples are being changed. ``lenient`` modifies the update graph so
         offending triples are removed and the update can be applied.
@@ -277,6 +280,16 @@ def update_delta(uid, remove_trp, add_trp):
         add, as 3-tuples of RDFLib terms.
     """
     rsrc = LdpFactory.from_stored(uid)
+
+    # FIXME Wrong place to put this, should be at the LDP level.
+    remove_trp = {
+        (rel_uri_to_urn(s, uid), p, rel_uri_to_urn(o, uid))
+        for s, p, o in remove_trp
+    }
+    add_trp = {
+        (rel_uri_to_urn(s, uid), p, rel_uri_to_urn(o, uid))
+        for s, p, o in add_trp
+    }
     remove_trp = rsrc.check_mgd_terms(remove_trp)
     add_trp = rsrc.check_mgd_terms(add_trp)
 

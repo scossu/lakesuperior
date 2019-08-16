@@ -29,7 +29,8 @@ from lakesuperior.exceptions import (
     ServerManagedTermError, TombstoneError)
 from lakesuperior.model.rdf.graph import Graph
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
-from lakesuperior.util.toolbox import replace_term_domain
+from lakesuperior.util.toolbox import (
+        rel_uri_to_urn_string, replace_term_domain)
 
 DEF_MBR_REL_URI = nsc['ldp'].member
 DEF_INS_CNT_REL_URI = nsc['ldp'].memberSubject
@@ -674,9 +675,7 @@ class Ldpr(metaclass=ABCMeta):
         logger.debug('Provided SPARQL query: {}'.format(qry_str))
         # Workaround for RDFLib bug. See
         # https://github.com/RDFLib/rdflib/issues/824
-        qry_str = (
-                re.sub('<#([^>]+)>', '<{}#\\1>'.format(self.uri), qry_str)
-                .replace('<>', '<{}>'.format(self.uri)))
+        qry_str = rel_uri_to_urn_string(qry_str, self.uid)
         pre_gr = self.imr.as_rdflib()
         post_gr = rdflib.Graph(identifier=self.uri)
         post_gr |= pre_gr
