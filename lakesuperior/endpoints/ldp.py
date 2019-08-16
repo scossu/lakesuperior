@@ -23,7 +23,8 @@ from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
 from lakesuperior.exceptions import (
         ChecksumValidationError, ResourceNotExistsError, TombstoneError,
         ServerManagedTermError, InvalidResourceError, SingleSubjectError,
-        ResourceExistsError, IncompatibleLdpTypeError)
+        ResourceExistsError, IncompatibleLdpTypeError,
+        IndigestibleError)
 from lakesuperior.globals import RES_CREATED
 from lakesuperior.model.ldp.ldp_factory import LdpFactory
 from lakesuperior.model.ldp.ldp_nr import LdpNr
@@ -283,11 +284,22 @@ def post_resource(parent_uid):
         kwargs['mimetype'] = mimetype
         # Check digest if requested.
         if 'digest' in request.headers:
-            kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = \
+            try:
+                kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = (
                     request.headers['digest'].split('=')
+                )
+            except ValueError:
+                return (
+                    f'Cannot parse digest value: {request.headers["digest"]}',
+                    400
+                )
 
     try:
         rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
+    except IndigestibleError:
+        return (
+            f'Unable to parse digest header: {request.headers["digest"]}'
+        ), 400
     except ResourceNotExistsError as e:
         return str(e), 404
     except (InvalidResourceError, ChecksumValidationError) as e:
@@ -295,6 +307,10 @@ def post_resource(parent_uid):
     except TombstoneError as e:
         return _tombstone_response(e, uid)
     except ServerManagedTermError as e:
+        rsp_headers['Link'] = (
+            f'<{uri}>; rel="{nsc["ldp"].constrainedBy}"; '
+            f'{g.webroot}/info/ldp_constraints"'
+        )
         return str(e), 412
 
     uri = g.tbox.uid_to_uri(rsrc.uid)
@@ -303,8 +319,9 @@ def post_resource(parent_uid):
     rsp_headers['Location'] = uri
 
     if mimetype and kwargs.get('rdf_fmt') is None:
-        rsp_headers['Link'] = (f'<{uri}/fcr:metadata>; rel="describedby"; '
-                               f'anchor="{uri}"')
+        rsp_headers['Link'] = (
+            f'<{uri}/fcr:metadata>; rel="describedby"; anchor="{uri}"'
+        )
 
     return uri, 201, rsp_headers
 
@@ -393,6 +410,8 @@ def patch_resource(uid, is_metadata=False):
     if cond_ret:
         return cond_ret
 
+    handling, _ = set_post_put_params()
+
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
     if request.mimetype != 'application/sparql-update':
         return 'Provided content type is not a valid parsable format: {}'\
@@ -401,7 +420,7 @@ def patch_resource(uid, is_metadata=False):
     update_str = request.get_data().decode('utf-8')
     local_update_str = g.tbox.localize_ext_str(update_str, nsc['fcres'][uid])
     try:
-        rsrc = rsrc_api.update(uid, local_update_str, is_metadata)
+        rsrc = rsrc_api.update(uid, local_update_str, is_metadata, handling)
     except (ServerManagedTermError, SingleSubjectError) as e:
         return str(e), 412
     except InvalidResourceError as e:

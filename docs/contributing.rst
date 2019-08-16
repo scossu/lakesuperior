@@ -65,11 +65,10 @@ displaying and linking correctly.
 
 Likewise, please add mindful testing to new fatures or bug fixes.
 
-Development is done on the ``development`` branch. If you have any suggested
-addition to the code, please fork the repo, create a new branch for your topic
-and open a pull request against development. In case you find a critical bug,
-a hotfix can be proposed against master if agreed in the related issue
-discussion.
+Development is done on the ``master`` branch. If you have an addition to the
+code that you have previously discussed by opening an issue, please fork the
+repo, create a new branch for your topic and open a pull request against
+master.
 
 Last but not least, read carefully the `Code of Conduct
 <https://github.com/scossu/lakesuperior/blob/master/code_of_conduct.md>`__.

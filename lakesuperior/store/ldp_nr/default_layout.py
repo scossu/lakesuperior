@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from lakesuperior import env
 from lakesuperior.store.ldp_nr.base_non_rdf_layout import BaseNonRdfLayout
-from lakesuperior.exceptions import ChecksumValidationError
+from lakesuperior.exceptions import ChecksumValidationError, IndigestibleError
 
 
 logger = logging.getLogger(__name__)
@@ -98,9 +98,14 @@ class DefaultLayout(BaseNonRdfLayout):
                 logger.debug(f'Writing temp file to {tmp_fname}.')
 
                 store_hash = hashlib.new(default_hash_algo)
-                verify_hash = (
+                try:
+                    verify_hash = (
                         store_hash if prov_cksum_algo == default_hash_algo
-                        else hashlib.new(prov_cksum_algo))
+                        else hashlib.new(prov_cksum_algo)
+                    )
+                except ValueError as e:
+                    raise IndigestibleError(uid, str(e))
+
                 size = 0
                 while True:
                     buf = stream.read(bufsize)

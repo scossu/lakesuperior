@@ -1,11 +1,12 @@
-version: '2'
+version: '3'
 
 volumes:
   lakesuperior:
 
 services:
   lakesuperior:
-    image: scossu/lakesuperior:stable
+    build:
+      context: .
     volumes:
       - lakesuperior:/data
     ports:

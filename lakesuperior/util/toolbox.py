@@ -121,6 +121,39 @@ def split_uuid(uuid):
 
     return path
 
+def rel_uri_to_urn(uri, uid):
+    """
+    Convert a URIRef with a relative location (e.g. ``<>``) to an URN.
+
+    :param URIRef uri: The URI to convert.
+
+    :param str uid: Resource UID that the URI should be relative to.
+
+    :return: Converted URN if the input is relative, otherwise the unchanged
+        URI.
+    :rtype: URIRef
+    """
+    # FIXME This only accounts for empty URIs, not all relative URIs.
+    return nsc['fcres'][uid] if str(uri) == '' else uri
+    #return URIRef(
+    #        re.sub('<#([^>]+)>', f'<{base_uri}#\\1>', str(uri))
+    #        .replace('<>', f'<{base_uri}>'))
+
+
+def rel_uri_to_urn_string(string, uid):
+    """
+    Convert relative URIs in a SPARQL or RDF string to internal URNs.
+
+    :param str string: Input string.
+    :param str uid Resource UID to build the base URN from.
+
+    :rtype: str
+    :return: Modified string.
+    """
+    urn = str(nsc['fcres'][uid])
+    return (
+        re.sub('<#([^>]+)>', f'<{urn}#\\1>', string).replace('<>', f'<{urn}>')
+    )
 
 
 class RequestUtils:
