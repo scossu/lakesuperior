@@ -125,7 +125,7 @@ class DefaultLayout(BaseNonRdfLayout):
             os.unlink(tmp_fname)
             raise
         if size == 0:
-            logger.warn('Zero-length file received.')
+            logger.warning('Zero-length file received.')
 
         # If the file exists already, don't bother rewriting it.
         dst = __class__.local_path(

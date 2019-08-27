@@ -17,6 +17,7 @@ from lakesuperior.exceptions import (
 from lakesuperior import env, thread_env
 from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
+from lakesuperior.model.ldp.ldpr import Ldpr
 from lakesuperior.util.toolbox import rel_uri_to_urn
 
 
@@ -325,13 +326,13 @@ def delete(uid, soft=True, inbound=True):
     # to break them.
     refint = env.app_globals.rdfly.config['referential_integrity']
     inbound = True if refint else inbound
-    repr_opts = {'incl_inbound' : True} if inbound else {}
 
-    rsrc = LdpFactory.from_stored(uid, repr_opts, strict=soft)
     if soft:
+        repr_opts = {'incl_inbound' : True} if inbound else {}
+        rsrc = LdpFactory.from_stored(uid, repr_opts)
         return rsrc.bury(inbound)
     else:
-        return rsrc.forget(inbound)
+        Ldpr.forget(uid, inbound)
 
 
 @transaction(True)
