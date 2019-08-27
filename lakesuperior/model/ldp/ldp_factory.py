@@ -61,13 +61,14 @@ class LdpFactory:
 
         if LDP_NR_TYPE in rdf_types:
             logger.info('Resource is a LDP-NR.')
-            rsrc = LdpNr(uid, repr_opts, **kwargs)
+            cls = LdpNr
         elif LDP_RS_TYPE in rdf_types:
             logger.info('Resource is a LDP-RS.')
-            rsrc = LdpRs(uid, repr_opts, **kwargs)
+            cls = LdpRs
         else:
             raise ResourceNotExistsError(uid)
 
+        rsrc = cls(uid, repr_opts, **kwargs)
         # Sneak in the already extracted metadata to save a query.
         rsrc._metadata = rsrc_meta
 

@@ -270,31 +270,8 @@ def post_resource(parent_uid):
     rsp_headers = std_headers.copy()
     slug = request.headers.get('Slug')
 
-    kwargs = {}
-    kwargs['handling'], kwargs['disposition'] = set_post_put_params()
-    stream, mimetype = _bistream_from_req()
-
-    if mimetype in rdf_parsable_mimetypes:
-        # If the content is RDF, localize in-repo URIs.
-        global_rdf = stream.read()
-        kwargs['rdf_data'] = g.tbox.localize_payload(global_rdf)
-        kwargs['rdf_fmt'] = mimetype
-    else:
-        kwargs['stream'] = stream
-        kwargs['mimetype'] = mimetype
-        # Check digest if requested.
-        if 'digest' in request.headers:
-            try:
-                kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = (
-                    request.headers['digest'].split('=')
-                )
-            except ValueError:
-                return (
-                    f'Cannot parse digest value: {request.headers["digest"]}',
-                    400
-                )
-
     try:
+        kwargs = _create_args_from_req(slug)
         rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
     except IndigestibleError:
         return (
@@ -318,7 +295,7 @@ def post_resource(parent_uid):
         rsp_headers.update(_headers_from_metadata(rsrc))
     rsp_headers['Location'] = uri
 
-    if mimetype and kwargs.get('rdf_fmt') is None:
+    if kwargs.get('mimetype') and kwargs.get('rdf_fmt') is None:
         rsp_headers['Link'] = (
             f'<{uri}/fcr:metadata>; rel="describedby"; anchor="{uri}"'
         )
@@ -342,25 +319,13 @@ def put_resource(uid):
     if cond_ret:
         return cond_ret
 
-    kwargs = {}
-    kwargs['handling'], kwargs['disposition'] = set_post_put_params()
-    stream, mimetype = _bistream_from_req()
-
-    if mimetype in rdf_parsable_mimetypes:
-        # If the content is RDF, localize in-repo URIs.
-        global_rdf = stream.read()
-        kwargs['rdf_data'] = g.tbox.localize_payload(global_rdf)
-        kwargs['rdf_fmt'] = mimetype
-    else:
-        kwargs['stream'] = stream
-        kwargs['mimetype'] = mimetype
-        # Check digest if requested.
-        if 'digest' in request.headers:
-            kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = \
-                    request.headers['digest'].split('=')
-
     try:
+        kwargs = _create_args_from_req(uid)
         evt, rsrc = rsrc_api.create_or_replace(uid, **kwargs)
+    except IndigestibleError:
+        return (
+            f'Unable to parse digest header: {request.headers["digest"]}'
+        ), 400
     except (
             InvalidResourceError, ChecksumValidationError,
             ResourceExistsError) as e:
@@ -380,7 +345,7 @@ def put_resource(uid):
     if evt == RES_CREATED:
         rsp_code = 201
         rsp_headers['Location'] = rsp_body = uri
-        if mimetype and not kwargs.get('rdf_data'):
+        if kwargs.get('mimetype') and not kwargs.get('rdf_data'):
             rsp_headers['Link'] = f'<{uri}/fcr:metadata>; rel="describedby"'
     else:
         rsp_code = 204
@@ -410,7 +375,7 @@ def patch_resource(uid, is_metadata=False):
     if cond_ret:
         return cond_ret
 
-    handling, _ = set_post_put_params()
+    handling, _ = _set_post_put_params()
 
     rsp_headers = {'Content-Type' : 'text/plain; charset=utf-8'}
     if request.mimetype != 'application/sparql-update':
@@ -581,13 +546,30 @@ def _negotiate_content(gr, rdf_mimetype, headers=None, **vw_kwargs):
                 mimetype=rdf_mimetype)
 
 
-def _bistream_from_req():
+def _create_args_from_req(uid):
     """
-    Find how a binary file and its MIMEtype were uploaded in the request.
+    Set API creation method arguments from request parameters.
+
+    The ``kwargs`` variable returned has two keys: either ``rdf_data`` and
+    ``rdf_fmt`` for LDP-RS or ``stream`` and ``mimetype`` for LDP-NR.
+
+    :rtype: dict
     """
     #logger.debug('Content type: {}'.format(request.mimetype))
     #logger.debug('files: {}'.format(request.files))
     #logger.debug('stream: {}'.format(request.stream))
+    #pdb.set_trace()
+
+    kwargs = {}
+    kwargs['handling'], kwargs['disposition'] = _set_post_put_params()
+
+    link_hdr = request.headers.get('Link')
+    if link_hdr:
+        force_ldpnr = (
+                nsc['ldp']['NonRDFSource'] in link_hdr
+                and 'rel="type"' in link_hdr)
+    else:
+        force_ldpnr = False
 
     if request.mimetype == 'multipart/form-data':
         # This seems the "right" way to upload a binary file, with a
@@ -606,13 +588,28 @@ def _bistream_from_req():
         # @FIXME Must decide what to do with this.
         mimetype = request.mimetype
 
-    if mimetype == '' or mimetype == 'application/x-www-form-urlencoded':
-        if getattr(stream, 'limit', 0) == 0:
-            stream = mimetype = None
-        else:
-            mimetype = 'application/octet-stream'
+        if mimetype == 'application/x-www-form-urlencoded':
+            mimetype = None
 
-    return stream, mimetype
+    if mimetype in rdf_parsable_mimetypes and not force_ldpnr:
+        # If the content is RDF, localize in-repo URIs.
+        global_rdf = stream.read()
+        kwargs['rdf_data'] = g.tbox.localize_payload(global_rdf)
+        kwargs['rdf_fmt'] = mimetype
+    else:
+        # Unspecified mimetype or force_ldpnr creates a LDP-NR.
+        kwargs['stream'] = stream or BytesIO(b'')
+        kwargs['mimetype'] = mimetype or 'application/octet-stream'
+        # Check digest if requested.
+        if 'digest' in request.headers:
+            try:
+                kwargs['prov_cksum_algo'], kwargs['prov_cksum'] = (
+                    request.headers['digest'].split('=')
+                )
+            except ValueError:
+                raise IndigestibleError(uid)
+
+    return kwargs
 
 
 def _tombstone_response(e, uid):
@@ -622,7 +619,7 @@ def _tombstone_response(e, uid):
     return str(e), 410, headers
 
 
-def set_post_put_params():
+def _set_post_put_params():
     """
     Sets handling and content disposition for POST and PUT by parsing headers.
     """

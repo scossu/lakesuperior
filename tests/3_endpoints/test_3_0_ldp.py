@@ -9,6 +9,7 @@ from uuid import uuid4
 from werkzeug.http import http_date
 
 import arrow
+import requests
 
 from flask import g
 from rdflib import Graph
@@ -48,35 +49,126 @@ class TestLdp:
         assert rest_resp.status_code == 200
 
 
-    def test_put_empty_resource(self, random_uuid):
+    def test_put_empty_ldpr(self):
         """
         Check response headers for a PUT operation with empty payload.
         """
-        resp = self.client.put('/ldp/new_resource')
-        assert resp.status_code == 201
-        assert resp.data == bytes(
-                '{}/new_resource'.format(g.webroot), 'utf-8')
+        url = f'/ldp/empty-{uuid4()}'
+        rsp = self.client.put(url)
+        assert rsp.status_code == 201
+        assert rsp.data == bytes(url.replace('/ldp', g.webroot), 'utf-8')
 
 
-    def test_put_existing_resource(self, random_uuid):
+    def test_put_empty_ldpnr(self):
         """
-        Trying to PUT an existing resource should return a 204 if the payload
-        is empty.
+        Check response headers for a PUT operation with empty payload.
+
+        Without specifying a MIME type, an LDP-NR should be created.
         """
-        path = '/ldp/nonidempotent01'
-        put1_resp = self.client.put(path)
-        assert put1_resp.status_code == 201
+        url = f'/ldp/empty-{uuid4()}'
+        rsp = self.client.put(url)
 
-        assert self.client.get(path).status_code == 200
+        get_rsp = self.client.get(url)
 
-        put2_resp = self.client.put(path)
+        assert 'application/octet-stream' in get_rsp.content_type
+        assert (
+                '<http://www.w3.org/ns/ldp#NonRDFSource>;rel="type"'
+                in get_rsp.headers.get_all('link'))
+
+
+    def test_put_empty_ldprs(self):
+        """
+        Check response headers for a PUT operation with empty payload.
+
+        Specify MIME type to force LDPC creation.
+        """
+        url = f'/ldp/empty-{uuid4()}'
+        rsp = self.client.put(url, content_type='text/turtle')
+
+        get_rsp = self.client.get(url)
+
+        assert 'text/turtle' in get_rsp.content_type
+        assert (
+                '<http://www.w3.org/ns/ldp#RDFSource>;rel="type"'
+                in get_rsp.headers.get_all('link'))
+
+
+    def test_put_existing_ldpnr_empty(self):
+        """
+        Trying to PUT an existing LDP-NR should return a 204 if the LDP
+        interaction type is the same.
+        """
+        url = f'/ldp/overwrite-{uuid4()}'
+        self.client.put(url)
+
+        put2_resp = self.client.put(url)
+        assert put2_resp.status_code == 204
+
+
+    def test_put_existing_ldprs_empty(self):
+        """
+        Trying to PUT an existing LDP-RS should return a 204 if the LDP
+        interaction type is the same.
+        """
+        url = f'/ldp/overwrite-{uuid4()}'
+        self.client.put(url, content_type='text/turtle')
+
+        put2_resp = self.client.put(url, content_type='text/turtle')
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
             put2_resp = self.client.put(
-                    path, data=f, content_type='text/turtle')
+                    url, data=f, content_type='text/turtle')
         assert put2_resp.status_code == 204
 
-        put2_resp = self.client.put(path)
-        assert put2_resp.status_code == 204
+
+    def test_put_existing_ldpnr_conflict(self):
+        """
+        Trying to PUT an existing LDP-RS should return a 415 if the LDP
+        interaction type is different.
+        """
+        url = f'/ldp/overwrite-{uuid4()}'
+        put1_resp = self.client.put(url)
+        assert put1_resp.status_code == 201
+
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            put2_resp = self.client.put(
+                    url, data=f, content_type='text/turtle')
+        assert put2_resp.status_code == 415
+
+
+    def test_put_existing_ldpnr_conflict(self):
+        """
+        Trying to PUT an existing LDP-RS should return a 415 if the LDP
+        interaction type is different.
+        """
+        url = f'/ldp/overwrite-{uuid4()}'
+        put1_resp = self.client.put(url, content_type='text/turtle')
+
+        put2_resp = self.client.put(url, data=b'hello')
+        assert put2_resp.status_code == 415
+
+
+    def test_put_force_ldpnr(self):
+        """
+        Test forcing LDP-NR creation even with an RDF content type.
+        """
+        url = f'/ldp/force_ldpnr-{uuid4()}'
+        with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
+            rsp = self.client.put(
+                    url, data=f, content_type='text/turtle',
+                    headers={
+                        'link': '<http://www.w3.org/ns/ldp#NonRDFSource>;rel="type"'
+                    })
+            f.seek(0)
+            data = f.read()
+
+        get_rsp = self.client.get(url)
+
+        assert 'text/turtle' in get_rsp.content_type
+        assert (
+                '<http://www.w3.org/ns/ldp#NonRDFSource>;rel="type"'
+                in get_rsp.headers.get_all('link'))
+        assert get_rsp.data == data
+
 
 
     def test_put_tree(self, client):
@@ -92,7 +184,9 @@ class TestLdp:
         assert self.client.get(path).status_code == 200
         assert self.client.get('/ldp/test_tree/a/b/c').status_code == 200
 
-        assert self.client.post('/ldp/test_tree/a/b').status_code == 201
+        assert self.client.post(
+                '/ldp/test_tree/a/b',
+                content_type='text/turtle').status_code == 201
         with open('tests/data/marcel_duchamp_single_subject.ttl', 'rb') as f:
             put_int_resp = self.client.put(
                     'ldp/test_tree/a', data=f, content_type='text/turtle')
@@ -113,14 +207,14 @@ class TestLdp:
         path1 = '/ldp/' + uuid1
         path2 = '/ldp/' + uuid2
 
-        self.client.put(path1)
+        self.client.put(path1, content_type='text/turtle')
 
         cont1_data = self.client.get('/ldp').data
         gr1 = Graph().parse(data=cont1_data, format='turtle')
         assert gr1[ URIRef(g.webroot + '/') : nsc['ldp'].contains : \
                 URIRef(g.webroot + '/test_nested_tree') ]
 
-        self.client.put(path2)
+        self.client.put(path2, content_type='text/turtle')
 
         cont2_data = self.client.get(path1).data
         gr2 = Graph().parse(data=cont2_data, format='turtle')
@@ -392,7 +486,7 @@ class TestLdp:
         Test patching a resource.
         """
         path = '/ldp/test_patch01'
-        self.client.put(path)
+        self.client.put(path, content_type='text/turtle')
 
         uri = g.webroot + '/test_patch01'
 
@@ -421,7 +515,7 @@ class TestLdp:
         Test patching a resource violating the single-subject rule.
         """
         path = '/ldp/test_patch_ssr'
-        self.client.put(path)
+        self.client.put(path, content_type='text/turtle')
 
         uri = g.webroot + '/test_patch_ssr'
 
@@ -496,7 +590,8 @@ class TestLdp:
         Verify that a PATCH using anything other than an
         `application/sparql-update` MIME type results in an error.
         """
-        self.client.put('/ldp/test_patch_invalid_mimetype')
+        self.client.put(
+                '/ldp/test_patch_invalid_mimetype', content_type='text/turtle')
         rnd_img['content'].seek(0)
         ldpnr_resp = self.client.patch('/ldp/ldpnr01/fcr:metadata',
                 data=rnd_img,
@@ -515,8 +610,8 @@ class TestLdp:
         """
         uid = '/test_patch_sm_pred'
         path = f'/ldp{uid}'
-        self.client.put(path)
-        self.client.put(path + '/child1')
+        self.client.put(path, content_type='text/turtle')
+        self.client.put(path + '/child1', content_type='text/turtle')
 
         uri = g.webroot + uid
 
@@ -666,12 +761,7 @@ class TestLdp:
         """
         with open('tests/data/fragments.ttl', 'rb') as f:
             self.client.put(
-                '/ldp/test_fragment01',
-                headers={
-                    'Content-Type' : 'text/turtle',
-                },
-                data=f
-            )
+                '/ldp/test_fragment01', content_type='text/turtle', data=f)
 
         rsp = self.client.get('/ldp/test_fragment01')
         gr = Graph().parse(data=rsp.data, format='text/turtle')
@@ -684,16 +774,12 @@ class TestLdp:
         """
         Test the correct handling of fragment URIs on PATCH.
         """
-        self.client.put('/ldp/test_fragment_patch')
+        self.client.put('/ldp/test_fragment_patch', content_type='text/turtle')
 
         with open('tests/data/fragments_insert.sparql', 'rb') as f:
             self.client.patch(
-                '/ldp/test_fragment_patch',
-                headers={
-                    'Content-Type' : 'application/sparql-update',
-                },
-                data=f
-            )
+                    '/ldp/test_fragment_patch',
+                    content_type='application/sparql-update', data=f)
         ins_rsp = self.client.get('/ldp/test_fragment_patch')
         ins_gr = Graph().parse(data=ins_rsp.data, format='text/turtle')
         assert ins_gr[
@@ -769,8 +855,8 @@ class TestMimeType:
         }
         for mimetype in test_list:
             rdf_data = gr.serialize(format=mimetype)
-            self.client.put('/ldp/test_mimetype', data=rdf_data, headers={
-                'content-type': mimetype})
+            self.client.put(
+                    '/ldp/test_mimetype', data=rdf_data, content_type=mimetype)
 
             rsp = self.client.get('/ldp/test_mimetype')
             rsp_gr = Graph(identifier=g.webroot + '/test_mimetype').parse(
@@ -800,7 +886,7 @@ class TestDigestHeaders:
         content_cksum = hashlib.new(digest_algo, content)
 
         put_rsp = self.client.put(
-            path, data=content, headers={'content-type': 'text/plain'})
+                path, data=content, content_type='text/plain')
 
         assert content_cksum.hexdigest() in \
             put_rsp.headers.get('etag').split(',')
@@ -825,10 +911,8 @@ class TestDigestHeaders:
         content = uuid4().bytes
         content_cksum = hashlib.new(digest_algo, content)
 
-        self.client.put(
-            path1, data=content, headers={'content-type': 'text/plain'})
-        self.client.put(
-            path2, data=content, headers={'content-type': 'text/plain'})
+        self.client.put(path1, data=content, content_type='text/plain')
+        self.client.put(path2, data=content, content_type='text/plain')
 
         get_rsp1 = self.client.get(path1)
         get_rsp2 = self.client.get(path2)
@@ -849,10 +933,8 @@ class TestDigestHeaders:
         content2 = b'Some great content.'
         content_cksum2 = hashlib.new(digest_algo, content2)
 
-        self.client.put(
-            path1, data=content1, headers={'content-type': 'text/plain'})
-        self.client.put(
-            path2, data=content2, headers={'content-type': 'text/plain'})
+        self.client.put(path1, data=content1, content_type='text/plain')
+        self.client.put(path2, data=content2, content_type='text/plain')
 
         get_rsp1 = self.client.get(path1)
         get_rsp2 = self.client.get(path2)
@@ -874,8 +956,7 @@ class TestDigestHeaders:
         content2 = uuid4().bytes
         content_cksum2 = hashlib.new(digest_algo, content2)
 
-        self.client.put(
-            path, data=content1, headers={'content-type': 'text/plain'})
+        self.client.put(path, data=content1, content_type='text/plain')
         get_rsp = self.client.get(path)
 
         assert content_cksum1.hexdigest() == \
@@ -884,7 +965,7 @@ class TestDigestHeaders:
             f'{digest_algo.upper()}=' + b64encode(content_cksum1.digest()).decode()
 
         put_rsp = self.client.put(
-            path, data=content2, headers={'content-type': 'text/plain'})
+                path, data=content2, content_type='text/plain')
 
         assert content_cksum2.hexdigest() == \
             put_rsp.headers.get('etag').strip('"')
@@ -908,7 +989,7 @@ class TestDigestHeaders:
         """
         path = f'/ldp/{uuid4()}'
 
-        put_rsp = self.client.put(path)
+        put_rsp = self.client.put(path, content_type='text/turtle')
         assert not put_rsp.headers.get('etag')
         assert not put_rsp.headers.get('digest')
 
@@ -1497,10 +1578,10 @@ class TestPrefHeader:
         Create a container structure to be used for subsequent requests.
         """
         parent_path = '/ldp/test_parent'
-        self.client.put(parent_path)
-        self.client.put(parent_path + '/child1')
-        self.client.put(parent_path + '/child2')
-        self.client.put(parent_path + '/child3')
+        self.client.put(parent_path, content_type='text/turtle')
+        self.client.put(parent_path + '/child1', content_type='text/turtle')
+        self.client.put(parent_path + '/child2', content_type='text/turtle')
+        self.client.put(parent_path + '/child3', content_type='text/turtle')
 
         return {
             'path' : parent_path,
@@ -1520,9 +1601,9 @@ class TestPrefHeader:
           or not set.
         """
         path = '/ldp/put_pref_header01'
-        assert self.client.put(path).status_code == 201
+        assert self.client.put(path, content_type='text/turtle').status_code == 201
         assert self.client.get(path).status_code == 200
-        assert self.client.put(path).status_code == 204
+        assert self.client.put(path, content_type='text/turtle').status_code == 204
 
         # Default handling is strict.
         with open('tests/data/rdf_payload_w_srv_mgd_trp.ttl', 'rb') as f:
@@ -1631,7 +1712,7 @@ class TestPrefHeader:
         """
         verify the "inbound relationships" prefer header.
         """
-        self.client.put('/ldp/test_target')
+        self.client.put('/ldp/test_target', content_type='text/turtle')
         data = '<> <http://ex.org/ns#shoots> <{}> .'.format(
                 g.webroot + '/test_target')
         self.client.put('/ldp/test_shooter', data=data,
@@ -1797,7 +1878,7 @@ class TestVersion:
         Test that POSTing multiple times to fcr:versions creates the
         'hasVersions' triple and yields multiple version snapshots.
         """
-        self.client.put('/ldp/test_version')
+        self.client.put('/ldp/test_version', content_type='text/turtle')
         create_rsp = self.client.post('/ldp/test_version/fcr:versions')
 
         assert create_rsp.status_code == 201
@@ -1822,7 +1903,7 @@ class TestVersion:
         """
         Test a version with a slug.
         """
-        self.client.put('/ldp/test_version_slug')
+        self.client.put('/ldp/test_version_slug', content_type='text/turtle')
         create_rsp = self.client.post('/ldp/test_version_slug/fcr:versions',
             headers={'slug' : 'v1'})
         new_ver_uri = create_rsp.headers['Location']
@@ -1842,7 +1923,7 @@ class TestVersion:
         versions.
         """
         path = '/ldp/test_duplicate_slug'
-        self.client.put(path)
+        self.client.put(path, content_type='text/turtle')
         v1_rsp = self.client.post(path + '/fcr:versions',
             headers={'slug' : 'v1'})
         v1_uri = v1_rsp.headers['Location']
@@ -1905,7 +1986,7 @@ class TestVersion:
         Make sure that the resource is resurrected to the latest version.
         """
         path = '/ldp/test_lazarus'
-        self.client.put(path)
+        self.client.put(path, content_type='text/turtle')
 
         self.client.post(path + '/fcr:versions', headers={'slug': 'v1'})
         self.client.put(
