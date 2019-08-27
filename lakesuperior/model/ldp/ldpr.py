@@ -155,13 +155,13 @@ class Ldpr(metaclass=ABCMeta):
         Instantiate an in-memory LDP resource.
 
         :param str uid: uid of the resource. If None (must be explicitly
-        set) it refers to the root node. It can also be the full URI or URN,
-        in which case it will be converted.
+            set) it refers to the root node. It can also be the full URI or
+            URN, in which case it will be converted.
         :param dict repr_opts: Options used to retrieve the IMR. See
-        `parse_rfc7240` for format details.
+            `parse_rfc7240` for format details.
         :param str provided_imr: RDF data provided by the client in
-        operations such as `PUT` or `POST`, serialized as a string. This sets
-        the `provided_imr` property.
+            operations such as `PUT` or `POST`, serialized as a string. This
+            sets the `provided_imr` property.
         """
         self.uid = (
             rdfly.uri_to_uid(uid) if isinstance(uid, URIRef) else uid)
@@ -488,13 +488,14 @@ class Ldpr(metaclass=ABCMeta):
         return RES_DELETED
 
 
-    def forget(self, inbound=True):
+    @staticmethod
+    def forget(uid, inbound=True):
         """
         Remove all traces of a resource and versions.
         """
-        logger.info('Forgetting resource {}'.format(self.uid))
+        logger.info('Forgetting resource {}'.format(uid))
 
-        rdfly.forget_rsrc(self.uid, inbound)
+        rdfly.forget_rsrc(uid, inbound)
 
         return RES_DELETED
 
