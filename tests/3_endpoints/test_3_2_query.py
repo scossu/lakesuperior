@@ -116,9 +116,9 @@ class TestTermSearch:
             '/query/term_search', data=json.dumps({
                 'logic': 'and',
                 'terms': [{
-                    'pred': '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ',
+                    'pred': f'<{nsc["rdf"].type}> ',
                     'op': '_id',
-                    'val': '<http://fedora.info/definitions/v4/repository#RepositoryRoot>',
+                    'val': f'<{nsc["fcrepo"].RepositoryRoot}>',
                 }],
             }), content_type='application/json')
 
