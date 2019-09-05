@@ -269,6 +269,8 @@ def post_resource(parent_uid):
     try:
         kwargs = _create_args_from_req(slug)
         rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
+    except exc.RdfParsingError as e:
+        return str(e), 400
     except exc.IndigestibleError:
         return (
             f'Unable to parse digest header: {request.headers["digest"]}'
@@ -318,6 +320,8 @@ def put_resource(uid):
     try:
         kwargs = _create_args_from_req(uid)
         evt, rsrc = rsrc_api.create_or_replace(uid, **kwargs)
+    except exc.RdfParsingError as e:
+        return str(e), 400
     except exc.IndigestibleError:
         return (
                 f'Unable to parse digest header: {request.headers["digest"]}',

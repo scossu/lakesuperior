@@ -99,10 +99,13 @@ class LdpFactory:
         """
         uri = nsc['fcres'][uid]
         if rdf_data:
-            provided_imr = from_rdf(
-                uri=uri, data=rdf_data,
-                format=rdf_fmt, publicID=nsc['fcres'][uid]
-            )
+            try:
+                provided_imr = from_rdf(
+                        uri=uri, data=rdf_data,
+                        format=rdf_fmt, publicID=nsc['fcres'][uid])
+            except Exception as e:
+                raise exc.RdfParsingError(rdf_fmt, str(e))
+
         elif graph:
             provided_imr = Graph(
                 uri=uri, data={

@@ -128,7 +128,20 @@ class ServerManagedTermError(RuntimeError):
 
 
 
-class InvalidTripleError(RuntimeError):
+class RdfParsingError(ValueError):
+    """
+    Raised when a string cannot be parsed as RDF in the given format.
+    """
+    def __init__(self, fmt, parser_msg=''):
+        self.fmt = fmt
+        self.parser_msg = parser_msg
+
+    def __str__(self):
+        return (f'Error parsing RDF in {self.fmt} format: {self.parser_msg}')
+
+
+
+class InvalidTripleError(ValueError):
     '''
     Raised when a triple in a delta is not valid.
 
