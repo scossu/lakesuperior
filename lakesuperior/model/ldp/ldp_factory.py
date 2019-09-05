@@ -7,14 +7,12 @@ from rdflib.resource import Resource
 from rdflib.namespace import RDF
 
 from lakesuperior import env
+from lakesuperior import exceptions as exc
 from lakesuperior.model.ldp.ldpr import Ldpr
 from lakesuperior.model.ldp.ldp_nr import LdpNr
 from lakesuperior.model.ldp.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
 from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.exceptions import (
-        IncompatibleLdpTypeError, InvalidResourceError, ResourceExistsError,
-        ResourceNotExistsError, TombstoneError)
 from lakesuperior.model.rdf.graph import Graph, from_rdf
 from lakesuperior.util.toolbox import rel_uri_to_urn
 
@@ -34,9 +32,9 @@ class LdpFactory:
     @staticmethod
     def new_container(uid):
         if not uid.startswith('/') or uid == '/':
-            raise InvalidResourceError(uid)
+            raise exc.InvalidResourceError(uid)
         if rdfly.ask_rsrc_exists(uid):
-            raise ResourceExistsError(uid)
+            raise exc.ResourceExistsError(uid)
         rsrc = Ldpc(uid, provided_imr=Graph(uri=nsc['fcres'][uid]))
 
         return rsrc
@@ -66,7 +64,7 @@ class LdpFactory:
             logger.info('Resource is a LDP-RS.')
             cls = LdpRs
         else:
-            raise ResourceNotExistsError(uid)
+            raise exc.ResourceNotExistsError(uid)
 
         rsrc = cls(uid, repr_opts, **kwargs)
         # Sneak in the already extracted metadata to save a query.
@@ -136,7 +134,7 @@ class LdpFactory:
 
             # Make sure we are not updating an LDP-NR with an LDP-RS.
             if inst.is_stored and LDP_NR_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uid, mimetype)
+                raise exc.IncompatibleLdpTypeError(uid, mimetype)
 
             if kwargs.get('handling', 'strict') != 'none':
                 inst.check_mgd_terms(inst.provided_imr)
@@ -151,7 +149,7 @@ class LdpFactory:
 
             # Make sure we are not updating an LDP-RS with an LDP-NR.
             if inst.is_stored and LDP_RS_TYPE in inst.ldp_types:
-                raise IncompatibleLdpTypeError(uid, mimetype)
+                raise exc.IncompatibleLdpTypeError(uid, mimetype)
 
         logger.debug('Creating resource of type: {}'.format(
                 inst.__class__.__name__))
@@ -189,7 +187,7 @@ class LdpFactory:
 
         parent = LdpFactory.from_stored(parent_uid)
         if nsc['ldp'].Container not in parent.types:
-            raise InvalidResourceError(parent_uid,
+            raise exc.InvalidResourceError(parent_uid,
                     'Parent {} is not a container.')
 
         pfx = parent_uid.rstrip('/') + '/'

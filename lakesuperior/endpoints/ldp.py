@@ -17,14 +17,10 @@ from rdflib import Graph, plugin, parser#, serializer
 from werkzeug.http import parse_date
 
 from lakesuperior import env
+from lakesuperior import exceptions as exc
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.exceptions import (
-        ChecksumValidationError, ResourceNotExistsError, TombstoneError,
-        ServerManagedTermError, InvalidResourceError, SingleSubjectError,
-        ResourceExistsError, IncompatibleLdpTypeError,
-        IndigestibleError)
 from lakesuperior.globals import RES_CREATED
 from lakesuperior.model.ldp.ldp_factory import LdpFactory
 from lakesuperior.model.ldp.ldp_nr import LdpNr
@@ -152,7 +148,7 @@ def get_resource(uid, out_fmt=None):
     try:
         if not rsrc_api.exists(uid):
             return '', 404
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
 
     # Then process the condition headers.
@@ -225,11 +221,11 @@ def get_version_info(uid):
     rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
         imr = rsrc_api.get_version_info(uid)
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
-    except InvalidResourceError as e:
+    except exc.InvalidResourceError as e:
         return str(e), 409
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
         with store.txn_ctx():
@@ -247,11 +243,11 @@ def get_version(uid, ver_uid):
     rdf_mimetype = _best_rdf_mimetype() or DEFAULT_RDF_MIMETYPE
     try:
         imr = rsrc_api.get_version(uid, ver_uid)
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
-    except InvalidResourceError as e:
+    except exc.InvalidResourceError as e:
         return str(e), 409
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
         with store.txn_ctx():
@@ -273,17 +269,17 @@ def post_resource(parent_uid):
     try:
         kwargs = _create_args_from_req(slug)
         rsrc = rsrc_api.create(parent_uid, slug, **kwargs)
-    except IndigestibleError:
+    except exc.IndigestibleError:
         return (
             f'Unable to parse digest header: {request.headers["digest"]}'
         ), 400
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
-    except (InvalidResourceError, ChecksumValidationError) as e:
+    except (exc.InvalidResourceError, exc.ChecksumValidationError) as e:
         return str(e), 409
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
-    except ServerManagedTermError as e:
+    except exc.ServerManagedTermError as e:
         rsp_headers['Link'] = (
             f'<{uri}>; rel="{nsc["ldp"].constrainedBy}"; '
             f'{g.webroot}/info/ldp_constraints"'
@@ -322,19 +318,19 @@ def put_resource(uid):
     try:
         kwargs = _create_args_from_req(uid)
         evt, rsrc = rsrc_api.create_or_replace(uid, **kwargs)
-    except IndigestibleError:
+    except exc.IndigestibleError:
         return (
-            f'Unable to parse digest header: {request.headers["digest"]}'
-        ), 400
+                f'Unable to parse digest header: {request.headers["digest"]}',
+                 400)
     except (
-            InvalidResourceError, ChecksumValidationError,
-            ResourceExistsError) as e:
+            exc.InvalidResourceError, exc.ChecksumValidationError,
+            exc.ResourceExistsError) as e:
         return str(e), 409
-    except (ServerManagedTermError, SingleSubjectError) as e:
+    except (exc.ServerManagedTermError, exc.SingleSubjectError) as e:
         return str(e), 412
-    except IncompatibleLdpTypeError as e:
+    except exc.IncompatibleLdpTypeError as e:
         return str(e), 415
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
 
     with store.txn_ctx():
@@ -367,7 +363,7 @@ def patch_resource(uid, is_metadata=False):
     try:
         if not rsrc_api.exists(uid):
             return '', 404
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
 
     # Then process the condition headers.
@@ -386,9 +382,9 @@ def patch_resource(uid, is_metadata=False):
     local_update_str = g.tbox.localize_ext_str(update_str, nsc['fcres'][uid])
     try:
         rsrc = rsrc_api.update(uid, local_update_str, is_metadata, handling)
-    except (ServerManagedTermError, SingleSubjectError) as e:
+    except (exc.ServerManagedTermError, exc.SingleSubjectError) as e:
         return str(e), 412
-    except InvalidResourceError as e:
+    except exc.InvalidResourceError as e:
         return str(e), 415
     else:
         with store.txn_ctx():
@@ -419,7 +415,7 @@ def delete_resource(uid):
     try:
         if not rsrc_api.exists(uid):
             return '', 404
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
 
     # Then process the condition headers.
@@ -451,7 +447,7 @@ def tombstone(uid):
     """
     try:
         rsrc_api.get(uid)
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         if request.method == 'DELETE':
             if e.uid == uid:
                 rsrc_api.delete(uid, False)
@@ -467,7 +463,7 @@ def tombstone(uid):
                 return _tombstone_response(e, uid)
         else:
             return 'Method Not Allowed.', 405
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
     else:
         return '', 404
@@ -484,11 +480,11 @@ def post_version(uid):
 
     try:
         ver_uid = rsrc_api.create_version(uid, ver_uid)
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
-    except InvalidResourceError as e:
+    except exc.InvalidResourceError as e:
         return str(e), 409
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
         return '', 201, {'Location': g.tbox.uid_to_uri(ver_uid)}
@@ -506,11 +502,11 @@ def patch_version(uid, ver_uid):
     """
     try:
         rsrc_api.revert_to_version(uid, ver_uid)
-    except ResourceNotExistsError as e:
+    except exc.ResourceNotExistsError as e:
         return str(e), 404
-    except InvalidResourceError as e:
+    except exc.InvalidResourceError as e:
         return str(e), 409
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
     else:
         return '', 204
@@ -607,7 +603,7 @@ def _create_args_from_req(uid):
                     request.headers['digest'].split('=')
                 )
             except ValueError:
-                raise IndigestibleError(uid)
+                raise exc.IndigestibleError(uid)
 
     return kwargs
 
@@ -794,7 +790,7 @@ def _condition_hdr_match(uid, headers, safe=True):
         with store.txn_ctx():
             try:
                 rsrc_meta = rsrc_api.get_metadata(uid)
-            except ResourceNotExistsError:
+            except exc.ResourceNotExistsError:
                 rsrc_meta = Graph(uri=nsc['fcres'][uid])
 
             digest_prop = rsrc_meta.value(nsc['premis'].hasMessageDigest)
@@ -816,7 +812,7 @@ def _condition_hdr_match(uid, headers, safe=True):
 
         try:
             rsrc_meta = rsrc_api.get_metadata(uid)
-        except ResourceNotExistsError:
+        except exc.ResourceNotExistsError:
             return {
                 'if-modified-since': False,
                 'if-unmodified-since': False
@@ -857,7 +853,7 @@ def _process_cond_headers(uid, headers, safe=True):
     """
     try:
         cond_match = _condition_hdr_match(uid, headers, safe)
-    except TombstoneError as e:
+    except exc.TombstoneError as e:
         return _tombstone_response(e, uid)
 
     if cond_match:
