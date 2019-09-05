@@ -12,7 +12,7 @@ core_namespaces = {
     'dcterms' : rdflib.namespace.DCTERMS,
     'ebucore' : Namespace(
         'http://www.ebu.ch/metadata/ontologies/ebucore/ebucore#'),
-    'fcrepo' : Namespace('http://fedora.info/definitions/v4/repository#'),
+    'fcrepo' : Namespace('http://fedora.info/definitions/fcrepo#'),
     'fcadmin' : Namespace('info:fcsystem/graph/admin'),
     'fcres' : Namespace('info:fcres'),
     'fcmain' : Namespace('info:fcsystem/graph/userdata/_main'),
