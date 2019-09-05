@@ -1,5 +1,5 @@
 @prefix dc: <http://purl.org/dc/elements/1.1/> .
-@prefix fcrepo: <http://fedora.info/definitions/v4/repository#> .
+@prefix fcrepo: <http://fedora.info/definitions/fcrepo#> .
 @prefix ns: <http://example.edu/ns#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
