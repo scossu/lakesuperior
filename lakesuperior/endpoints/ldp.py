@@ -186,26 +186,30 @@ def get_resource(uid, out_fmt=None):
                 rdf_mimetype = DEFAULT_RDF_MIMETYPE
             ggr = g.tbox.globalize_imr(rsrc.out_graph)
             ggr.namespace_manager = nsm
-            return _negotiate_content(
+            rsp = _negotiate_content(
                     ggr, rdf_mimetype, out_headers, uid=uid, uri=uri)
+            if isinstance(rsrc, LdpNr):
+                rsp.headers.add(
+                        'Link', f'<{g.tbox.uid_to_uri(uid)}>', rel='describes')
+
+            return rsp
 
         # Datastream.
-        else:
-            if not getattr(rsrc, 'local_path', False):
-                return ('{} has no binary content.'.format(rsrc.uid), 404)
+        if not getattr(rsrc, 'local_path', False):
+            return ('{} has no binary content.'.format(rsrc.uid), 404)
 
-            logger.debug('Streaming out binary content.')
-            if request.range and request.range.units == 'bytes':
-                # Stream partial response.
-                # This is only true if the header is well-formed. Thanks, Werkzeug.
-                rsp = _parse_range_header(
-                    request.range.ranges, rsrc, out_headers
-                )
-            else:
-                rsp = make_response(send_file(
-                        rsrc.local_path, as_attachment=True,
-                        attachment_filename=rsrc.filename,
-                        mimetype=rsrc.mimetype), 200, out_headers)
+        logger.debug('Streaming out binary content.')
+        if request.range and request.range.units == 'bytes':
+            # Stream partial response.
+            # This is only true if the header is well-formed. Thanks, Werkzeug.
+            rsp = _parse_range_header(
+                request.range.ranges, rsrc, out_headers
+            )
+        else:
+            rsp = make_response(send_file(
+                    rsrc.local_path, as_attachment=True,
+                    attachment_filename=rsrc.filename,
+                    mimetype=rsrc.mimetype), 200, out_headers)
 
         # This seems necessary to prevent Flask from setting an
         # additional ETag.
