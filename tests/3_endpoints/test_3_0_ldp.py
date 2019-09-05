@@ -364,6 +364,19 @@ class TestLdp:
             assert rsp_ok.status_code == 201
 
 
+    def test_metadata_describe_header(self):
+        """
+        Verify that a "describe" Link header is presented for LDP-NR metadata.
+        """
+        uid = f'/{uuid4()}'
+        self.client.put(f'/ldp{uid}', data=b'ciao')
+
+        md_rsp = self.client.get(f'/ldp{uid}/fcr:metadata')
+        assert (
+                f'<{g.tbox.uid_to_uri(uid)}>; rel=describes'
+                in md_rsp.headers.get_all('Link'))
+
+
     def test_put_mismatched_ldp_rs(self, rnd_img):
         """
         Verify MIME type / LDP mismatch.
