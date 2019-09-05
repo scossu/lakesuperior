@@ -318,6 +318,52 @@ class TestLdp:
         assert isomorphic(gr1, gr2)
 
 
+    def test_put_ldprs_invalid_rdf(self):
+        """
+        Verify that PUTting invalid RDF body returns HTTP 400.
+
+        However, when forcing LDP-RS, invalid RDF is always accepted.
+        """
+        from lakesuperior.endpoints.ldp import rdf_serializable_mimetypes
+
+        rdfstr = b'This is valid RDF because it ends with a period.'
+        for mt in rdf_serializable_mimetypes:
+            rsp_notok = self.client.put(
+                    f'/ldp/{uuid4()}', data=rdfstr, content_type=mt)
+            assert rsp_notok.status_code == 400
+
+            rsp_ok = self.client.put(
+                f'/ldp/{uuid4()}', data=rdfstr, content_type=mt,
+                headers={
+                    'link': '<http://www.w3.org/ns/ldp#NonRDFSource>;rel="type"'
+                }
+            )
+            assert rsp_ok.status_code == 201
+
+
+    def test_post_ldprs_invalid_rdf(self):
+        """
+        Verify that POSTing invalid RDF body returns HTTP 400.
+
+        However, when forcing LDP-RS, invalid RDF is always accepted.
+        """
+        from lakesuperior.endpoints.ldp import rdf_serializable_mimetypes
+
+        rdfstr = b'This is valid RDF because it ends with a period.'
+        for mt in rdf_serializable_mimetypes:
+            rsp_notok = self.client.post(
+                    f'/ldp', data=rdfstr, content_type=mt)
+            assert rsp_notok.status_code == 400
+
+            rsp_ok = self.client.post(
+                f'/ldp', data=rdfstr, content_type=mt,
+                headers={
+                    'link': '<http://www.w3.org/ns/ldp#NonRDFSource>;rel="type"'
+                }
+            )
+            assert rsp_ok.status_code == 201
+
+
     def test_metadata_describe_header(self):
         """
         Verify that a "describe" Link header is presented for LDP-NR metadata.
