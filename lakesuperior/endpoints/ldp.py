@@ -686,9 +686,10 @@ def parse_repr_options(retr_opts, out_headers):
                 include = list()
                 omit = list()
                 for k, v in pref_imr_options.items():
-                    # pref_imr_options only contains requested preferences, override the defaults for those.
+                    # pref_imr_options only contains requested preferences,
+                    # override the defaults for those.
                     imr_options[k] = v
-                    # This creates Preference-Applied headers for those things we support.
+                    # This creates Preference-Applied headers.
                     if v:
                         list_holder = include
                     else:
@@ -700,7 +701,8 @@ def parse_repr_options(retr_opts, out_headers):
                 if len(omit) > 0:
                     header_output += ' omit="' + ' '.join(omit) + '";'
                 if len(header_output) > 0:
-                    out_headers['Preference-Applied'] = 'return=representation;' + header_output
+                    out_headers['Preference-Applied'] = 'return=representation;'\
+                                                        + header_output
             except KeyError:
                 # Invalid Prefer header so we disregard the entire thing.
                 pass
