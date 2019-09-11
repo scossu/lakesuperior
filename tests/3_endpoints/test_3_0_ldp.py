@@ -21,6 +21,7 @@ from lakesuperior import env
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.ldp.ldpr import Ldpr
 
+from lakesuperior.util import toolbox
 
 digest_algo = env.app_globals.config['application']['uuid']['algo']
 
@@ -1715,10 +1716,21 @@ class TestPrefHeader:
             'Prefer' : 'return=representation; include={}'\
                     .format(Ldpr.EMBED_CHILD_RES_URI),
         })
+
+        assert 'Preference-Applied' in incl_embed_children_resp.headers
+        incl_headers = toolbox.parse_rfc7240(incl_embed_children_resp.headers['Preference-Applied'])
+        assert incl_headers['return']['value'] == 'representation'
+        assert incl_headers['return']['parameters']['include'] == str(Ldpr.EMBED_CHILD_RES_URI)
+
         omit_embed_children_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; omit={}'\
                     .format(Ldpr.EMBED_CHILD_RES_URI),
         })
+
+        assert 'Preference-Applied' in omit_embed_children_resp.headers
+        omit_headers = toolbox.parse_rfc7240(omit_embed_children_resp.headers['Preference-Applied'])
+        assert omit_headers['return']['value'] == 'representation'
+        assert omit_headers['return']['parameters']['include'] == str(Ldpr.EMBED_CHILD_RES_URI)
 
         default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(
