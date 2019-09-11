@@ -1717,20 +1717,13 @@ class TestPrefHeader:
                     .format(Ldpr.EMBED_CHILD_RES_URI),
         })
 
-        assert 'Preference-Applied' in incl_embed_children_resp.headers
-        incl_headers = toolbox.parse_rfc7240(incl_embed_children_resp.headers['Preference-Applied'])
-        assert incl_headers['return']['value'] == 'representation'
-        assert incl_headers['return']['parameters']['include'] == str(Ldpr.EMBED_CHILD_RES_URI)
-
         omit_embed_children_resp = self.client.get(parent_path, headers={
             'Prefer' : 'return=representation; omit={}'\
                     .format(Ldpr.EMBED_CHILD_RES_URI),
         })
 
-        assert 'Preference-Applied' in omit_embed_children_resp.headers
-        omit_headers = toolbox.parse_rfc7240(omit_embed_children_resp.headers['Preference-Applied'])
-        assert omit_headers['return']['value'] == 'representation'
-        assert omit_headers['return']['parameters']['include'] == str(Ldpr.EMBED_CHILD_RES_URI)
+        self._assert_pref_applied(incl_embed_children_resp, include=[Ldpr.EMBED_CHILD_RES_URI])
+        self._assert_pref_applied(omit_embed_children_resp, omit=[Ldpr.EMBED_CHILD_RES_URI])
 
         default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(
@@ -1767,6 +1760,9 @@ class TestPrefHeader:
                     .format(Ldpr.RETURN_CHILD_RES_URI),
         })
 
+        self._assert_pref_applied(incl_children_resp, include=[Ldpr.RETURN_CHILD_RES_URI])
+        self._assert_pref_applied(omit_children_resp, omit=[Ldpr.RETURN_CHILD_RES_URI])
+
         default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_children_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_children_resp.data, format='turtle')
@@ -1798,6 +1794,9 @@ class TestPrefHeader:
                     .format(Ldpr.RETURN_INBOUND_REF_URI),
         })
 
+        self._assert_pref_applied(incl_inbound_resp, include=[Ldpr.RETURN_INBOUND_REF_URI])
+        self._assert_pref_applied(omit_inbound_resp, omit=[Ldpr.RETURN_INBOUND_REF_URI])
+
         default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_inbound_resp.data, format='turtle')
         omit_gr = Graph().parse(data=omit_inbound_resp.data, format='turtle')
@@ -1828,6 +1827,9 @@ class TestPrefHeader:
             'Prefer' : 'return=representation; omit={}'\
                     .format(Ldpr.RETURN_SRV_MGD_RES_URI),
         })
+
+        self._assert_pref_applied(incl_srv_mgd_resp, include=[Ldpr.RETURN_SRV_MGD_RES_URI])
+        self._assert_pref_applied(omit_srv_mgd_resp, omit=[Ldpr.RETURN_SRV_MGD_RES_URI])
 
         default_gr = Graph().parse(data=cont_resp.data, format='turtle')
         incl_gr = Graph().parse(data=incl_srv_mgd_resp.data, format='turtle')
@@ -1871,6 +1873,87 @@ class TestPrefHeader:
         child_resp = self.client.get('/ldp/test_delete_no_tstone01/a')
         assert child_resp.status_code == 404
 
+    def test_contradicting_prefs(self):
+        """
+        Test include and omit the same preference.
+        """
+        self.client.put('/ldp/test_contradicting_prefs01', content_type='text/turtle')
+
+        resp1 = self.client.get('/ldp/test_contradicting_prefs01', headers={
+            'prefer': 'return=representation; include={0}; omit={0}'.format(Ldpr.RETURN_CHILD_RES_URI)
+        })
+        assert resp1.status_code == 200
+        self._assert_pref_applied(resp1)
+
+        resp2 = self.client.get('/ldp/test_contradicting_prefs01', headers={
+            'prefer': 'return=representation; include=\"{0} {1}\"; omit={0}'.format(Ldpr.RETURN_CHILD_RES_URI,
+                                                                                    Ldpr.RETURN_SRV_MGD_RES_URI)
+        })
+        assert resp2.status_code == 200
+        self._assert_pref_applied(resp2, include=[Ldpr.RETURN_SRV_MGD_RES_URI])
+
+        resp3 = self.client.get('/ldp/test_contradicting_prefs01', headers={
+            'prefer': 'return=representation; include=\"{0} {1}\"; omit=\"{0} {2}\"'.format(Ldpr.EMBED_CHILD_RES_URI,
+                                                                                            Ldpr.RETURN_SRV_MGD_RES_URI,
+                                                                                            Ldpr.RETURN_INBOUND_REF_URI)
+        })
+        assert resp3.status_code == 200
+        self._assert_pref_applied(resp3, include=[str(Ldpr.RETURN_SRV_MGD_RES_URI)], omit=[str(Ldpr.RETURN_INBOUND_REF_URI)])
+
+    def test_multiple_preferences(self):
+        """
+        Test multiple include and/or omit preferences.
+        """
+        self.client.put('/ldp/test_multiple_preferences01', content_type='text/turtle')
+
+        resp1 = self.client.get('/ldp/test_multiple_preferences01', headers={
+            'prefer': 'return=representation; include=\"{0} {1}\"; omit=\"{2}\"'.format(Ldpr.RETURN_CHILD_RES_URI,
+                                                                                        Ldpr.EMBED_CHILD_RES_URI,
+                                                                                        Ldpr.RETURN_SRV_MGD_RES_URI)
+        })
+        assert resp1.status_code == 200
+        self._assert_pref_applied(resp1, include=[Ldpr.RETURN_CHILD_RES_URI, Ldpr.EMBED_CHILD_RES_URI],
+                                  omit=[Ldpr.RETURN_SRV_MGD_RES_URI])
+
+    def _assert_pref_applied(self, response, value='representation', include=None, omit=None):
+        """
+        Utility to test a response for a Preference-Applied header with the include or omit lists.
+        :param response:: The client response.
+        :param value:: The return=<value>.
+        :param include:: The list of include URIs.
+        :param omit:: The list of omit URIs.
+        :return:
+        """
+        if include is None and omit is None:
+            assert 'Preference-Applied' not in response.headers
+        else:
+            if include is None:
+                include = []
+            if omit is None:
+                omit = []
+            assert 'Preference-Applied' in response.headers
+            headers = toolbox.parse_rfc7240(response.headers['Preference-Applied'])
+            assert headers['return']['value'] == value
+            if value == 'representation':
+                self._assert_pref_header_exists(include, headers['return'], 'include')
+                self._assert_pref_header_exists(omit, headers['return'], 'omit')
+
+    def _assert_pref_header_exists(self, expected, returned, type='include'):
+        """
+        Utility function to compare a list of expected preferences to an include or omit string.
+        :param self:
+        :param expected:
+        :param returned:
+        :return:
+        """
+        if len(expected) > 0:
+            expected = [str(k) for k in expected]
+            assert type in returned['parameters'] and len(returned['parameters'][type]) > 0
+            received_prefs = returned['parameters'][type].split(' ')
+            for pref in received_prefs:
+                assert pref in expected
+        else:
+            assert type not in returned['parameters']
 
 
 #@pytest.mark.usefixtures('client_class')
