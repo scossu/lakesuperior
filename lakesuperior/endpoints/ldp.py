@@ -73,6 +73,13 @@ std_headers = {
 vw_blacklist = {
 }
 
+"""Prefer representations currently supported"""
+option_to_uri = {
+    'embed_children': Ldpr.EMBED_CHILD_RES_URI,
+    'incl_children': Ldpr.RETURN_CHILD_RES_URI,
+    'incl_inbound': Ldpr.RETURN_INBOUND_REF_URI,
+    'incl_srv_mgd': Ldpr.RETURN_SRV_MGD_RES_URI
+}
 
 ldp = Blueprint(
         'ldp', __name__, template_folder='templates',
@@ -162,7 +169,7 @@ def get_resource(uid, out_fmt=None):
         prefer = toolbox.parse_rfc7240(request.headers['prefer'])
         logger.debug('Parsed Prefer header: {}'.format(pformat(prefer)))
         if 'return' in prefer:
-            repr_options = parse_repr_options(prefer['return'])
+            repr_options = parse_repr_options(prefer['return'], out_headers)
 
     rsrc = rsrc_api.get(uid, repr_options)
 
@@ -643,7 +650,7 @@ def _set_post_put_params():
     return handling, disposition
 
 
-def parse_repr_options(retr_opts):
+def parse_repr_options(retr_opts, out_headers):
     """
     Set options to retrieve IMR.
 
@@ -651,9 +658,9 @@ def parse_repr_options(retr_opts):
     are set once in the `imr()` property.
 
     :param dict retr_opts:: Options parsed from `Prefer` header.
+    :param dict out_headers:: Response headers.
     """
     logger.debug('Parsing retrieval options: {}'.format(retr_opts))
-    imr_options = {}
 
     if retr_opts.get('value') == 'minimal':
         imr_options = {
@@ -662,6 +669,7 @@ def parse_repr_options(retr_opts):
             'incl_inbound' : False,
             'incl_srv_mgd' : False,
         }
+        out_headers['Preference-Applied'] = 'return="minimal"'
     else:
         # Default.
         imr_options = {
@@ -673,24 +681,81 @@ def parse_repr_options(retr_opts):
 
         # Override defaults.
         if 'parameters' in retr_opts:
-            include = retr_opts['parameters']['include'].split(' ') \
-                    if 'include' in retr_opts['parameters'] else []
-            omit = retr_opts['parameters']['omit'].split(' ') \
-                    if 'omit' in retr_opts['parameters'] else []
-
-            logger.debug('Include: {}'.format(include))
-            logger.debug('Omit: {}'.format(omit))
-
-            if str(Ldpr.EMBED_CHILD_RES_URI) in include:
-                    imr_options['embed_children'] = True
-            if str(Ldpr.RETURN_CHILD_RES_URI) in omit:
-                    imr_options['incl_children'] = False
-            if str(Ldpr.RETURN_INBOUND_REF_URI) in include:
-                    imr_options['incl_inbound'] = True
-            if str(Ldpr.RETURN_SRV_MGD_RES_URI) in omit:
-                    imr_options['incl_srv_mgd'] = False
+            try:
+                pref_imr_options = _valid_preferences(retr_opts)
+                include = list()
+                omit = list()
+                for k, v in pref_imr_options.items():
+                    # pref_imr_options only contains requested preferences,
+                    # override the defaults for those.
+                    imr_options[k] = v
+                    # This creates Preference-Applied headers.
+                    if v:
+                        list_holder = include
+                    else:
+                        list_holder = omit
+                    list_holder.append(str(option_to_uri[k]))
+                header_output = ''
+                if len(include) > 0:
+                    header_output += ' include="' + ' '.join(include) + '";'
+                if len(omit) > 0:
+                    header_output += ' omit="' + ' '.join(omit) + '";'
+                if len(header_output) > 0:
+                    out_headers['Preference-Applied'] = 'return=representation;'\
+                                                        + header_output
+            except KeyError:
+                # Invalid Prefer header so we disregard the entire thing.
+                pass
 
     logger.debug('Retrieval options: {}'.format(pformat(imr_options)))
+
+    return imr_options
+
+
+def _preference_decision(include, omit, header):
+    """
+    Determine whether a header is in include or omit but not both.
+
+    :param include:: list of include preference uris
+    :param omit:: list of omit preference uris
+    :param header:: the uri to look for
+    :return: True if in include only or false if in omit only.
+    """
+    if str(header) in include or str(header) in omit:
+        if str(header) in include and str(header) in omit:
+            # You can't include and omit, so ignore it.
+            raise KeyError('Can\'t include and omit same preference')
+        else:
+            return str(header) in include
+    return None
+
+
+def _valid_preferences(retr_opts):
+    """
+    Parse the Preference header to determine which we are applying.
+
+    Re-used for response Preference-Applied header.
+
+    :param retr_opts: The incoming Preference header.
+    :return: list of options being applied.
+    """
+    imr_options = dict()
+    include = retr_opts['parameters']['include'].split(' ') \
+        if 'include' in retr_opts['parameters'] else []
+    omit = retr_opts['parameters']['omit'].split(' ') \
+        if 'omit' in retr_opts['parameters'] else []
+
+    logger.debug('Include: {}'.format(include))
+    logger.debug('Omit: {}'.format(omit))
+
+    distinct_representations = include.copy()
+    distinct_representations.extend(omit)
+    distinct_representations = set(distinct_representations)
+    uri_to_option = {str(v): k for k, v in option_to_uri.items()}
+    for uri in distinct_representations:
+        # Throws KeyError if we don't support the header
+        option = uri_to_option[uri]
+        imr_options[option] = _preference_decision(include, omit, uri)
 
     return imr_options
 
