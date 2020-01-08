@@ -520,7 +520,7 @@ cdef class Graph:
         This function converts RDFLib terms into the serialized format stored
         in the graph's internal structure and compares them bytewise.
 
-        Any and all of the lookup terms msy be ``None``.
+        Any and all of the lookup terms may be ``None``.
 
         :rtype: Graph
         :return: New Graph instance with matching triples.
