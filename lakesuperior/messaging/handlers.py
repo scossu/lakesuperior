@@ -24,7 +24,6 @@ class StompHandler(logging.Handler):
             conn_cls = stomp.Connection10
 
         self.conn = conn_cls([(self.conf['host'], self.conf['port'])])
-        self.conn.start()
         try:
             self.conn.connect(
                 username=self.conf['username'],
