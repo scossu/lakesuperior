@@ -122,6 +122,44 @@ class TestResourceCRUD:
                     rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
 
+    def test_create_ldp_rs_literals(self):
+        """
+        Create an RDF resource (LDP-RS) containing different literal types.
+        """
+        uid = f'/{uuid4()}'
+        uri = nsc['fcres'][uid]
+        with env.app_globals.rdf_store.txn_ctx():
+            gr = from_rdf(
+                data = '''
+                <>
+                  <urn:p:1> 1 ;
+                  <urn:p:2> "Untyped Literal" ;
+                  <urn:p:3> "Typed Literal"^^<http://www.w3.org/2001/XMLSchema#string> ;
+                  <urn:p:4> "2019-09-26"^^<http://www.w3.org/2001/XMLSchema#date> ;
+                  <urn:p:5> "Lang-tagged Literal"@en-US ;
+                  .
+                ''', format='turtle',
+                publicID=uri)
+        evt, _ = rsrc_api.create_or_replace(uid, graph=gr)
+
+        rsrc = rsrc_api.get(uid)
+        with env.app_globals.rdf_store.txn_ctx():
+            assert rsrc.imr[
+                    rsrc.uri : URIRef('urn:p:1') :
+                    Literal('1', datatype=nsc['xsd'].integer)]
+            assert rsrc.imr[
+                    rsrc.uri : URIRef('urn:p:2') : Literal('Untyped Literal')]
+            assert rsrc.imr[
+                    rsrc.uri : URIRef('urn:p:3') :
+                    Literal('Typed Literal', datatype=nsc['xsd'].string)]
+            assert rsrc.imr[
+                    rsrc.uri : URIRef('urn:p:4') :
+                    Literal('2019-09-26', datatype=nsc['xsd'].date)]
+            assert rsrc.imr[
+                    rsrc.uri : URIRef('urn:p:5') :
+                    Literal('Lang-tagged Literal', lang='en-US')]
+
+
     def test_create_ldp_nr(self):
         """
         Create a non-RDF resource (LDP-NR).

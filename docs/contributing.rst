@@ -33,7 +33,7 @@ Modifying Cython Modules
 Cython files must be recompiled into C files and then into binary files every
 time they are changed. To recompile Lakesuperior modules, run::
 
-    python setup.py --build_ext --inplace
+    python setup.py build_ext --inplace
 
 For a faster compilation while testing, the environment variable ``CFLAGS``
 can set to ``-O0`` to turn off compiler optimization. The runtime code may run

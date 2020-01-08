@@ -17,6 +17,12 @@ referenced or copied with a known path relative to the package root.
 """
 
 class Env:
+    """
+    Lakesuperior environment.
+
+    Instances of this class contain the environment necessary to run a
+    self-standing instance of Lakesuperior in a Python environment.
+    """
     pass
 
 env = Env()

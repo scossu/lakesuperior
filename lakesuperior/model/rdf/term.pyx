@@ -8,6 +8,7 @@ from libc.stdlib cimport free
 from libc.string cimport memcpy
 
 from lakesuperior.cy_include cimport cytpl as tpl
+from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.base cimport Buffer, buffer_dump
 
 
@@ -20,6 +21,7 @@ DEF LSUP_TERM_STRUCT_PK_FMT = b'S(' + LSUP_TERM_PK_FMT + b')'
 #DEF URI_REGEX_STR = (
 #    b'^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?'
 #)
+
 
 __doc__ = """
 Term model.
@@ -76,9 +78,9 @@ cdef int deserialize(const Buffer *data, Term *term) except -1:
     """
     #print(f'Deserializing: {buffer_dump(data)}')
     _pk = tpl.tpl_peek(
-            tpl.TPL_MEM | tpl.TPL_DATAPEEK, data[0].addr, data[0].sz,
-            LSUP_TERM_PK_FMT, &(term[0].type), &(term[0].data),
-            &(term[0].datatype), &(term[0].lang))
+            tpl.TPL_MEM | tpl.TPL_DATAPEEK, data.addr, data.sz,
+            LSUP_TERM_PK_FMT, &(term.type), &(term.data),
+            &(term.datatype), &(term.lang))
 
     if _pk is NULL:
         raise MemoryError('Error deserializing term.')
@@ -91,21 +93,25 @@ cdef int from_rdflib(term_obj, Term *term) except -1:
     Return a Term struct obtained from a Python/RDFLib term.
     """
     _data = str(term_obj).encode()
-    term[0].data = _data
+    term.data = _data
+    term.datatype = NULL
+    term.lang = NULL
 
     if isinstance(term_obj, Literal):
-        _datatype = (getattr(term_obj, 'datatype') or '').encode()
-        _lang = (getattr(term_obj, 'language') or '').encode()
-        term[0].type = LSUP_TERM_TYPE_LITERAL
-        term[0].datatype = _datatype
-        term[0].lang = _lang
+        _datatype = getattr(term_obj, 'datatype', None)
+        _lang = getattr(term_obj, 'language', None)
+        term.type = LSUP_TERM_TYPE_LITERAL
+        if _datatype:
+            _datatype = _datatype.encode()
+            term.datatype = _datatype
+        if _lang:
+            _lang = _lang.encode()
+            term.lang = _lang
     else:
-        term[0].datatype = NULL
-        term[0].lang = NULL
         if isinstance(term_obj, URIRef):
-            term[0].type = LSUP_TERM_TYPE_URIREF
+            term.type = LSUP_TERM_TYPE_URIREF
         elif isinstance(term_obj, BNode):
-            term[0].type = LSUP_TERM_TYPE_BNODE
+            term.type = LSUP_TERM_TYPE_BNODE
         else:
             raise ValueError(f'Unsupported term type: {type(term_obj)}')
 
@@ -120,28 +126,7 @@ cdef int serialize_from_rdflib(term_obj, Buffer *data) except -1:
         void *addr
         size_t sz
 
-    # From RDFlib
-    _data = str(term_obj).encode()
-    _term.data = _data
-
-    if isinstance(term_obj, Literal):
-        _datatype = (getattr(term_obj, 'datatype') or '').encode()
-        _lang = (getattr(term_obj, 'language') or '').encode()
-        _term.type = LSUP_TERM_TYPE_LITERAL
-        _term.datatype = _datatype
-        _term.lang = _lang
-    else:
-        _term.datatype = NULL
-        _term.lang = NULL
-        if isinstance(term_obj, URIRef):
-            _term.type = LSUP_TERM_TYPE_URIREF
-        elif isinstance(term_obj, BNode):
-            _term.type = LSUP_TERM_TYPE_BNODE
-        else:
-            raise ValueError(
-                f'Unsupported term type: {term_obj} {type(term_obj)}'
-            )
-
+    from_rdflib(term_obj, &_term)
     serialize(&_term, data)
 
 
@@ -150,12 +135,14 @@ cdef object to_rdflib(const Term *term):
     Return an RDFLib term.
     """
     cdef str data = (<bytes>term.data).decode()
-    if term[0].type == LSUP_TERM_TYPE_LITERAL:
-        return Literal(
-            data,
-            datatype=term.datatype if not term.lang else None,
-            lang=term.lang or None
-        )
+    if term.type == LSUP_TERM_TYPE_LITERAL:
+        if term.lang:
+            params = {'lang': (<bytes>term.lang).decode()}
+        elif term.datatype:
+            params = {'datatype': (<bytes>term.datatype).decode()}
+        else:
+            params = {}
+        return Literal(data, **params)
     else:
         if term.type == LSUP_TERM_TYPE_URIREF:
             return URIRef(data)
