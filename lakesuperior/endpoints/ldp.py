@@ -546,15 +546,19 @@ def _negotiate_content(gr, rdf_mimetype, headers=None, **vw_kwargs):
     Return HTML or serialized RDF depending on accept headers.
     """
     if request.accept_mimetypes.best == 'text/html':
-        return render_template(
+        rsp = render_template(
                 'resource.html', gr=gr, nsc=nsc, nsm=nsm,
                 blacklist=vw_blacklist, arrow=arrow, **vw_kwargs)
+        mimetype = 'text/html'
+
     else:
         for p in vw_blacklist:
             gr.remove((None, p, None))
-        return Response(
-                gr.serialize(format=rdf_mimetype), 200, headers,
-                mimetype=rdf_mimetype)
+
+        rsp = gr.serialize(format=rdf_mimetype)
+        mimetype = rdf_mimetype
+
+    return Response(rsp, 200, headers, mimetype=mimetype)
 
 
 def _create_args_from_req(uid):
