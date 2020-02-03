@@ -572,7 +572,6 @@ class TestResourceCRUD:
         '''
         Verify that only user-defined data are in user_data.
         '''
-        import pdb; pdb.set_trace()
         data = b'''
         <> a <urn:t:1> ;
             <urn:p:1> "Property 1" ;
