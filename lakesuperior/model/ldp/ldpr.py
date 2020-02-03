@@ -158,10 +158,11 @@ class Ldpr(metaclass=ABCMeta):
             set) it refers to the root node. It can also be the full URI or
             URN, in which case it will be converted.
         :param dict repr_opts: Options used to retrieve the IMR. See
-            `parse_rfc7240` for format details.
+            :py:meth:`~lakesuperior.endpoints.ldp.parse_repr_options` for
+            format details.
         :param str provided_imr: RDF data provided by the client in
             operations such as `PUT` or `POST`, serialized as a string. This
-            sets the `provided_imr` property.
+            sets the :py:data:`~Ldpr.provided_imr` property.
         """
         self.uid = (
             rdfly.uri_to_uid(uid) if isinstance(uid, URIRef) else uid)
