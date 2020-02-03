@@ -661,6 +661,18 @@ def parse_repr_options(retr_opts, out_headers):
     Ideally, IMR retrieval is done once per request, so all the options
     are set once in the `imr()` property.
 
+    Representation options include:
+
+    - ``embed_children``: include full resource representation of all resource
+        children in the resource graph.
+    - ``incl_children``: TODO
+    - ``incl_inbound``: include inbound triples (triples whose object is
+      this resource).
+    - ``incl_srv_mgd``: include server-managed triples.
+
+    All options above are ``False`` by default except for ``incl_srv_mgd``
+    which is only ``False`` if the ``return`` representation is ``minimal``.
+
     :param dict retr_opts:: Options parsed from `Prefer` header.
     :param dict out_headers:: Response headers.
     """
