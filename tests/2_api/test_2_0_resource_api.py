@@ -568,6 +568,61 @@ class TestResourceCRUD:
     #                top_cont_rsrc.uri: nsc['dcterms'].relation:
     #                nsc['fcres'][target_uid]]
 
+    def test_user_data(self):
+        '''
+        Verify that only user-defined data are in user_data.
+        '''
+        import pdb; pdb.set_trace()
+        data = b'''
+        <> a <urn:t:1> ;
+            <urn:p:1> "Property 1" ;
+            <urn:p:2> <urn:o:2> .
+        '''
+        uid = f'/{uuid4()}'
+        uri = nsc['fcres'][uid]
+
+        rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            ud_data = rsrc.user_data
+
+            assert ud_data[uri: nsc['rdf'].type: URIRef('urn:t:1')]
+            assert ud_data[uri: URIRef('urn:p:1'): Literal('Property 1')]
+            assert ud_data[uri: URIRef('urn:p:2'): URIRef('urn:o:2')]
+            assert not ud_data[uri: nsc['rdf'].type: nsc['ldp'].Resource]
+
+
+    def test_types(self):
+        '''
+        Test server-managed and user-defined RDF types.
+        '''
+        data = b'''
+        <> a <urn:t:1> , <urn:t:2> .
+        '''
+        uid = f'/{uuid4()}'
+        uri = nsc['fcres'][uid]
+
+        rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
+        rsrc = rsrc_api.get(uid)
+
+        with env.app_globals.rdf_store.txn_ctx():
+            assert URIRef('urn:t:1') in rsrc.types
+            assert URIRef('urn:t:1') in rsrc.user_types
+            assert URIRef('urn:t:1') not in rsrc.ldp_types
+
+            assert URIRef('urn:t:2') in rsrc.types
+            assert URIRef('urn:t:2') in rsrc.user_types
+            assert URIRef('urn:t:2') not in rsrc.ldp_types
+
+            assert nsc['ldp'].Resource in rsrc.types
+            assert nsc['ldp'].Resource not in rsrc.user_types
+            assert nsc['ldp'].Resource in rsrc.ldp_types
+
+            assert nsc['ldp'].Container in rsrc.types
+            assert nsc['ldp'].Container not in rsrc.user_types
+            assert nsc['ldp'].Container in rsrc.ldp_types
+
 
 
 @pytest.mark.usefixtures('db')

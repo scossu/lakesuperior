@@ -265,6 +265,17 @@ class Ldpr(metaclass=ABCMeta):
         return self._metadata
 
 
+    @property
+    def user_data(self):
+        """
+        User-defined triples.
+        """
+        if not hasattr(self, '_user_data'):
+            self._user_data = rdfly.get_user_data(self.uid)
+
+        return self._user_data
+
+
     @metadata.setter
     def metadata(self, rsrc):
         """
@@ -340,7 +351,8 @@ class Ldpr(metaclass=ABCMeta):
 
     @property
     def types(self):
-        """All RDF types.
+        """
+        All RDF types, both server-managed and user-defined.
 
         :rtype: set(rdflib.term.URIRef)
         """
@@ -353,7 +365,7 @@ class Ldpr(metaclass=ABCMeta):
             else:
                 return set()
 
-            self._types = set(metadata[self.uri: RDF.type])
+            self._types = set(metadata[self.uri: RDF.type]) | self.user_types
 
         return self._types
 
@@ -368,6 +380,18 @@ class Ldpr(metaclass=ABCMeta):
             self._ldp_types = {t for t in self.types if nsc['ldp'] in t}
 
         return self._ldp_types
+
+
+    @property
+    def user_types(self):
+        """User-defined types.
+
+        :rtype: set(rdflib.term.URIRef)
+        """
+        if not hasattr(self, '_ud_types'):
+            self._ud_types = self.user_data[self.uri: RDF.type]
+
+        return self._ud_types
 
 
     ## LDP METHODS ##
