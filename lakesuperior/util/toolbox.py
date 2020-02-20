@@ -9,7 +9,7 @@ from rdflib import Graph
 from rdflib.term import URIRef, Variable
 
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.globals import ROOT_RSRC_URI
+from lakesuperior.store.ldp_rs import ROOT_RSRC_URI
 
 
 logger = logging.getLogger(__name__)

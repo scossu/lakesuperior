@@ -124,7 +124,8 @@ def run(
         requests.put(parent)
 
     elif mode == 'python':
-        from lakesuperior import env_setup
+        from lakesuperior import env
+        env.setup()
         from lakesuperior.api import resource as rsrc_api
 
         if delete_container:

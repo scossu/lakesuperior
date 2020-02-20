@@ -2,12 +2,9 @@ import hashlib
 import logging
 
 from lakesuperior import env
-from lakesuperior.config_parser import parse_config
-from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         ChecksumValidationError, IncompatibleLdpTypeError)
 from lakesuperior.migrator import Migrator
-from lakesuperior.store.ldp_nr.default_layout import DefaultLayout as FileLayout
 
 __doc__ = """
 Admin API.
@@ -25,7 +22,7 @@ def stats():
     :rtype: dict
     :return: Store statistics, resource statistics.
     """
-    import lakesuperior.env_setup
+    env.setup()
     with env.app_globals.rdf_store.txn_ctx():
         repo_stats = {
             'rsrc_stats': env.app_globals.rdfly.count_rsrc(),
@@ -62,6 +59,7 @@ def integrity_check():
     At the moment this is limited to referential integrity. Other checks can
     be added and triggered by different argument flags.
     """
+    env.setup()
     with env.app_globals.rdfly.store.txn_ctx():
         return set(env.app_globals.rdfly.find_refint_violations())
 
@@ -82,7 +80,9 @@ def fixity_check(uid):
     :raises: lakesuperior.exceptions.IncompatibleLdpTypeError: if the
         resource is not an LDP-NR.
     """
+    env.setup()
     from lakesuperior.api import resource as rsrc_api
+    from lakesuperior.dictionaries.namespaces import ns_collection as nsc
     from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE
 
     rsrc = rsrc_api.get(uid)

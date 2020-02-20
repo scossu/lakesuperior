@@ -4,7 +4,7 @@ import uuid
 
 from abc import ABCMeta, abstractmethod
 
-from lakesuperior.globals import RES_CREATED, RES_DELETED, RES_UPDATED
+from lakesuperior.model.ldp.ldpr import RES_CREATED, RES_DELETED, RES_UPDATED
 
 
 class BaseASFormatter(metaclass=ABCMeta):

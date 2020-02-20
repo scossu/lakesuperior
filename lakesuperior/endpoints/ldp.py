@@ -21,11 +21,10 @@ from lakesuperior import exceptions as exc
 from lakesuperior.api import resource as rsrc_api
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.namespaces import ns_mgr as nsm
-from lakesuperior.globals import RES_CREATED
 from lakesuperior.model.ldp.ldp_factory import LdpFactory
 from lakesuperior.model.ldp.ldp_nr import LdpNr
 from lakesuperior.model.ldp.ldp_rs import LdpRs
-from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldpr import RES_CREATED, Ldpr
 from lakesuperior.util import toolbox
 from lakesuperior.util.toolbox import RequestUtils
 

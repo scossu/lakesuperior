@@ -10,10 +10,10 @@ from os import getcwd, path
 import arrow
 
 from lakesuperior import env
-from lakesuperior.api import admin as admin_api
-from lakesuperior.config_parser import config
+# Do not set up environment yet. Some methods need special setup folders.
+# As a consequence, API modules must be imported inside each function after
+# setup.
 from lakesuperior.exceptions import ChecksumValidationError
-from lakesuperior.globals import AppGlobals
 
 __doc__="""
 Utility to perform core maintenance tasks via console command-line.
@@ -44,7 +44,7 @@ def bootstrap():
 
     Additional scaffolding files may be parsed to create initial contents.
     """
-    import lakesuperior.env_setup
+    env.setup()
 
     rdfly = env.app_globals.rdfly
     nonrdfly = env.app_globals.nonrdfly
@@ -81,6 +81,8 @@ def stats(human=False):
     @param human (bool) Whether to output the data in human-readable
     format.
     """
+    env.setup()
+    from lakesuperior.api import admin as admin_api
     stat_data = admin_api.stats()
     if human:
         click.echo(
@@ -96,7 +98,8 @@ def check_fixity(uid):
     """
     Check the fixity of a resource.
     """
-    import lakesuperior.env_setup
+    env.setup()
+    from lakesuperior.api import admin as admin_api
 
     try:
         admin_api.fixity_check(uid)
@@ -132,10 +135,8 @@ def check_refint(config_folder=None, output=None):
     Note: this check can be run regardless of whether the repository enforces
     referential integrity.
     """
-    if config_folder:
-        env.app_globals = AppGlobals(parse_config(config_dir))
-    else:
-        import lakesuperior.env_setup
+    env.setup(config_folder)
+    from lakesuperior.api import admin as admin_api
 
     check_results = admin_api.integrity_check()
 
@@ -211,6 +212,9 @@ def migrate(src, dest, auth, start, list_file, zero_binaries, skip_errors):
     configuration directory. The new repository can be immediately started
     from this location.
     """
+    env.setup()
+    from lakesuperior.api import admin as admin_api
+
     logger.info('Migrating {} into a new repository on {}.'.format(
             src, dest))
     src_auth = tuple(auth.split(':')) if auth else None

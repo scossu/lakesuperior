@@ -12,8 +12,7 @@ from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         IncompatibleLdpTypeError, InvalidResourceError, ResourceNotExistsError,
         TombstoneError)
-from lakesuperior.globals import RES_CREATED, RES_UPDATED
-from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldpr import Ldpr, RES_CREATED, RES_UPDATED
 from lakesuperior.model.rdf.graph import Graph, from_rdf
 
 

@@ -178,7 +178,6 @@ extensions = [
 install_requires = [
     'CoilMQ',
     'Flask',
-    'HiYaPyCo',
     'PyYAML',
     'arrow',
     'click',

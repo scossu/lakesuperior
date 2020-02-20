@@ -3,8 +3,7 @@ import os
 import yaml
 
 # DO NOT load env_setup here. It must be loaded after workers have been forked.
-from lakesuperior.config_parser import (
-        config as main_config, default_config_dir)
+from lakesuperior.config_parser import default_config_dir, parse_config
 
 
 __doc__ = """
@@ -41,6 +40,7 @@ Not sure if this does anything—GUnicorn doesn't seem to use ``import *``—but
 at least good for maintainers of this code.
 """
 
+main_config = parse_config()
 
 class __Defaults:
     """

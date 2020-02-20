@@ -3,9 +3,8 @@ import logging
 from rdflib import Graph
 
 from lakesuperior import env
-from lakesuperior.globals import RES_UPDATED
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
-from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldpr import RES_UPDATED, Ldpr
 
 
 logger = logging.getLogger(__name__)

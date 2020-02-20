@@ -82,7 +82,8 @@ cdef class Graph:
         opened::
 
             >>> from rdflib import URIRef
-            >>> from lakesuperior import env_setup, env
+            >>> from lakesuperior import env
+            >>> env.setup()
             >>> store = env.app_globals.rdf_store
             >>> # Or alternatively:
             >>> # from lakesuperior.store.ldp_rs.lmdb_store import LmdbStore
