@@ -40,7 +40,7 @@ class LdpFactory:
 
 
     @staticmethod
-    def from_stored(uid, ver_label=None, repr_opts={}, strict=True, **kwargs):
+    def from_stored(uid, ver_label=None, repr_options={}, strict=True, **kwargs):
         """
         Create an instance for retrieval purposes.
 
@@ -65,7 +65,7 @@ class LdpFactory:
         else:
             raise exc.ResourceNotExistsError(uid)
 
-        rsrc = cls(uid, repr_opts, **kwargs)
+        rsrc = cls(uid, repr_options, **kwargs)
         # Sneak in the already extracted metadata to save a query.
         rsrc._metadata = rsrc_meta
 

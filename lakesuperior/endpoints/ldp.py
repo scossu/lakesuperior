@@ -574,8 +574,10 @@ def _create_args_from_req(uid):
     #logger.debug('stream: {}'.format(request.stream))
     #pdb.set_trace()
 
-    kwargs = {}
-    kwargs['handling'], kwargs['disposition'] = _set_post_put_params()
+    handling, disposition = _set_post_put_params()
+    kwargs = {'handling': handling}
+    if disposition:
+        kwargs['disposition'] = disposition
 
     link_hdr = request.headers.get('Link')
     if link_hdr:
@@ -653,7 +655,7 @@ def _set_post_put_params():
     return handling, disposition
 
 
-def parse_repr_options(retr_opts, out_headers):
+def parse_repr_options(repr_options, out_headers):
     """
     Set options to retrieve IMR.
 
@@ -672,12 +674,12 @@ def parse_repr_options(retr_opts, out_headers):
     All options above are ``False`` by default except for ``incl_srv_mgd``
     which is only ``False`` if the ``return`` representation is ``minimal``.
 
-    :param dict retr_opts:: Options parsed from `Prefer` header.
+    :param dict repr_options:: Options parsed from `Prefer` header.
     :param dict out_headers:: Response headers.
     """
-    logger.debug('Parsing retrieval options: {}'.format(retr_opts))
+    logger.debug('Parsing retrieval options: {}'.format(repr_options))
 
-    if retr_opts.get('value') == 'minimal':
+    if repr_options.get('value') == 'minimal':
         imr_options = {
             'embed_children' : False,
             'incl_children' : False,
@@ -695,9 +697,9 @@ def parse_repr_options(retr_opts, out_headers):
         }
 
         # Override defaults.
-        if 'parameters' in retr_opts:
+        if 'parameters' in repr_options:
             try:
-                pref_imr_options = _valid_preferences(retr_opts)
+                pref_imr_options = _valid_preferences(repr_options)
                 include = list()
                 omit = list()
                 for k, v in pref_imr_options.items():
@@ -745,20 +747,20 @@ def _preference_decision(include, omit, header):
     return None
 
 
-def _valid_preferences(retr_opts):
+def _valid_preferences(repr_options):
     """
     Parse the Preference header to determine which we are applying.
 
     Re-used for response Preference-Applied header.
 
-    :param retr_opts: The incoming Preference header.
+    :param repr_options: The incoming Preference header.
     :return: list of options being applied.
     """
     imr_options = dict()
-    include = retr_opts['parameters']['include'].split(' ') \
-        if 'include' in retr_opts['parameters'] else []
-    omit = retr_opts['parameters']['omit'].split(' ') \
-        if 'omit' in retr_opts['parameters'] else []
+    include = repr_options['parameters']['include'].split(' ') \
+        if 'include' in repr_options['parameters'] else []
+    omit = repr_options['parameters']['omit'].split(' ') \
+        if 'omit' in repr_options['parameters'] else []
 
     logger.debug('Include: {}'.format(include))
     logger.debug('Omit: {}'.format(omit))

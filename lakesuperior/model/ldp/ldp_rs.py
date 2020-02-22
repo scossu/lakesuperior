@@ -16,37 +16,24 @@ class LdpRs(Ldpr):
 
     https://www.w3.org/TR/ldp/#ldprs
     """
-    def __init__(self, uuid, repr_opts={}, handling='lenient', **kwargs):
-        """
-        Extends :meth:`Ldpr.__init__`by adding LDP-RS specific parameters.
 
-        :param str handling: One of ``strict``, ``lenient`` (the default) or
-        ``none``. ``strict`` raises an error if a server-managed term is in the
-        graph. ``lenient`` removes all sever-managed triples encountered.
-        ``none`` skips all server-managed checks. It is used for internal
-        modifications.
+    def __init__(self, *args, **kwargs):
         """
-        super().__init__(uuid, **kwargs)
+        Extends :meth:`lakesuperior.model.Ldpr.__init__` by adding LDP-RS
+        specific parameters.
+        """
+        super().__init__(*args, **kwargs)
+
         self.base_types = super().base_types | {
-            nsc['fcrepo'].Container,
-            nsc['ldp'].Container,
+            nsc['ldp'].RDFSource,
         }
-
-        # provided_imr can be empty. If None, it is an outbound resource.
-        if self.provided_imr is not None:
-            self.workflow = self.WRKF_INBOUND
-        else:
-            self.workflow = self.WRKF_OUTBOUND
-            self._imr_options = repr_opts
-
-        self.handling = handling
 
 
 
 class Ldpc(LdpRs):
     """LDPC (LDP Container)."""
-    def __init__(self, uuid, *args, **kwargs):
-        super().__init__(uuid, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.base_types |= {
             nsc['fcrepo'].Container,
             nsc['ldp'].Container,
@@ -56,8 +43,8 @@ class Ldpc(LdpRs):
 
 class LdpBc(Ldpc):
     """LDP-BC (LDP Basic Container)."""
-    def __init__(self, uuid, *args, **kwargs):
-        super().__init__(uuid, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.base_types |= {
             nsc['ldp'].BasicContainer,
         }
@@ -66,8 +53,8 @@ class LdpBc(Ldpc):
 
 class LdpDc(Ldpc):
     """LDP-DC (LDP Direct Container)."""
-    def __init__(self, uuid, *args, **kwargs):
-        super().__init__(uuid, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.base_types |= {
             nsc['ldp'].DirectContainer,
         }
@@ -76,8 +63,8 @@ class LdpDc(Ldpc):
 
 class LdpIc(Ldpc):
     """LDP-IC (LDP Indirect Container)."""
-    def __init__(self, uuid, *args, **kwargs):
-        super().__init__(uuid, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.base_types |= {
             nsc['ldp'].IndirectContainer,
         }
