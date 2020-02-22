@@ -88,7 +88,6 @@ class Ldpr(metaclass=ABCMeta):
     base_types = {
         nsc['fcrepo'].Resource,
         nsc['ldp'].Resource,
-        nsc['ldp'].RDFSource,
     }
     """RDF Types that populate a new resource."""
 
@@ -155,21 +154,30 @@ class Ldpr(metaclass=ABCMeta):
     These are used by setters and can be cleared with :py:meth:`_clear_cache`.
     """
 
+    # This gets overridden by LDP-NR.
+    mimetype = None
+
     ## MAGIC METHODS ##
 
-    def __init__(self, uid, repr_opts={}, provided_imr=None, **kwargs):
+    def __init__(
+            self, uid, repr_options={}, provided_imr=None, handling='lenient'):
         """
         Instantiate an in-memory LDP resource.
 
         :param str uid: uid of the resource. If None (must be explicitly
             set) it refers to the root node. It can also be the full URI or
             URN, in which case it will be converted.
-        :param dict repr_opts: Options used to retrieve the IMR. See
+        :param dict repr_options: Options used to retrieve the IMR. See
             :py:meth:`~lakesuperior.endpoints.ldp.parse_repr_options` for
             format details.
         :param str provided_imr: RDF data provided by the client in
             operations such as `PUT` or `POST`, serialized as a string. This
             sets the :py:data:`~Ldpr.provided_imr` property.
+        :param str handling: One of ``strict``, ``lenient`` (the default) or
+            ``none``. ``strict`` raises an error if a server-managed term is in
+            the graph. ``lenient`` removes all sever-managed triples
+            encountered.  ``none`` skips all server-managed checks. It is used
+            for internal modifications.
         """
         self.uid = (
             rdfly.uri_to_uid(uid) if isinstance(uid, URIRef) else uid)
@@ -179,10 +187,8 @@ class Ldpr(metaclass=ABCMeta):
 
         self.provided_imr = provided_imr
 
-        # This gets overridden by LDP-NR.
-        self.mimetype = None
-
-        # Disable all internal checks e.g. for raw I/O.
+        self._imr_options = repr_options
+        self.handling = handling
 
 
     #@property
@@ -224,12 +230,9 @@ class Ldpr(metaclass=ABCMeta):
             is not stored (yet).
         """
         if not hasattr(self, '_imr'):
-            if hasattr(self, '_imr_options'):
-                logger.debug(
-                    'Getting RDF triples for resource {}'.format(self.uid))
-                imr_options = self._imr_options
-            else:
-                imr_options = {}
+            logger.debug(
+                'Getting RDF triples for resource {}'.format(self.uid))
+            imr_options = getattr(self, '_imr_options', {})
             options = dict(imr_options, strict=True)
             self._imr = rdfly.get_imr(self.uid, **options)
 
@@ -501,7 +504,7 @@ class Ldpr(metaclass=ABCMeta):
             try:
                 desc_rsrc = LdpFactory.from_stored(
                     env.app_globals.rdfly.uri_to_uid(desc_uri),
-                    repr_opts={'incl_children' : False})
+                    repr_options={'incl_children' : False})
             except (TombstoneError, ResourceNotExistsError):
                 continue
             desc_rsrc.bury(inbound, tstone_pointer=self.uri)
@@ -924,7 +927,7 @@ class Ldpr(metaclass=ABCMeta):
             parent_uid = ROOT_UID
 
         parent_rsrc = LdpFactory.from_stored(
-            parent_uid, repr_opts={'incl_children': False}, handling='none')
+            parent_uid, repr_options={'incl_children': False}, handling='none')
 
         # Only update parent if the resource is new.
         if create:

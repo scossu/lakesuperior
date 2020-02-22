@@ -166,7 +166,7 @@ def get(uid, repr_options={}):
     - incl_children: include children URIs. Default: True.
     - embed_children: Embed full graph of all child resources. Default: False
     """
-    rsrc = LdpFactory.from_stored(uid, repr_opts=repr_options)
+    rsrc = LdpFactory.from_stored(uid, repr_options=repr_options)
     # Load graph before leaving the transaction.
     rsrc.imr
 
@@ -327,8 +327,8 @@ def delete(uid, soft=True, inbound=True):
     inbound = True if refint else inbound
 
     if soft:
-        repr_opts = {'incl_inbound' : True} if inbound else {}
-        rsrc = LdpFactory.from_stored(uid, repr_opts)
+        repr_options = {'incl_inbound' : True} if inbound else {}
+        rsrc = LdpFactory.from_stored(uid, repr_options)
         return rsrc.bury(inbound)
     else:
         Ldpr.forget(uid, inbound)

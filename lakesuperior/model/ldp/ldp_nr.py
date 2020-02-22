@@ -22,28 +22,20 @@ class LdpNr(Ldpr):
     Definition: https://www.w3.org/TR/ldp/#ldpnr
     """
 
-    base_types = {
-        nsc['fcrepo'].Binary,
-        nsc['fcrepo'].Resource,
-        nsc['ldp'].Resource,
-        nsc['ldp'].NonRDFSource,
-    }
-
-    def __init__(self, uuid, stream=None, mimetype=None,
-            disposition=None, prov_cksum_algo=None, prov_cksum=None,
-            **kwargs):
+    def __init__(self, *args, stream=None, mimetype=None, disposition=None,
+            prov_cksum_algo=None, prov_cksum=None, **kwargs):
         """
-        Extends Ldpr.__init__ by adding LDP-NR specific parameters.
+        Extends :meth:`lakesuperior.model.Ldpr.__init__` by adding LDP-NR
+        specific parameters.
         """
-        super().__init__(uuid, **kwargs)
+        super().__init__(*args, **kwargs)
 
-        self._imr_options = {}
-        if stream:
-            self.workflow = self.WRKF_INBOUND
-            self.stream = stream
-        else:
-            self.workflow = self.WRKF_OUTBOUND
+        self.base_types = super().base_types | {
+            nsc['fcrepo'].Binary,
+            nsc['ldp'].NonRDFSource,
+        }
 
+        self.stream = stream
         if mimetype:
             self.mimetype = mimetype
         else:
@@ -52,9 +44,9 @@ class LdpNr(Ldpr):
                     if self.is_stored
                     else 'application/octet-stream')
 
+        self.disposition = disposition
         self.prov_cksum_algo = prov_cksum_algo
         self.prov_cksum = prov_cksum
-        self.disposition = disposition
 
 
     @property

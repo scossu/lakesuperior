@@ -15,6 +15,8 @@ from lakesuperior.exceptions import (
 from lakesuperior.model.ldp.ldpr import Ldpr, RES_CREATED, RES_UPDATED
 from lakesuperior.model.rdf.graph import Graph, from_rdf
 
+txn_ctx = env.app_globals.rdf_store.txn_ctx
+
 
 @pytest.fixture(scope='module')
 def random_uuid():
@@ -70,7 +72,7 @@ class TestResourceCRUD:
         gr = rsrc_api.get_metadata('/')
         assert isinstance(gr, Graph)
         assert len(gr) == 9
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
             assert not gr[
                 gr.uri : nsc['dcterms'].title : Literal("Repository Root")
@@ -87,7 +89,7 @@ class TestResourceCRUD:
         assert isinstance(rsrc, Ldpr)
         gr = rsrc.imr
         assert len(gr) == 10
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert gr[gr.uri : nsc['rdf'].type : nsc['ldp'].Resource ]
             assert gr[
                 gr.uri : nsc['dcterms'].title : Literal('Repository Root')]
@@ -107,14 +109,14 @@ class TestResourceCRUD:
         """
         uid = '/rsrc_from_graph'
         uri = nsc['fcres'][uid]
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr = from_rdf(
                 data='<> a <http://ex.org/type#A> .', format='turtle',
                 publicID=uri)
         evt, _ = rsrc_api.create_or_replace(uid, graph=gr)
 
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
             assert rsrc.imr[
@@ -127,7 +129,7 @@ class TestResourceCRUD:
         """
         uid = f'/{uuid4()}'
         uri = nsc['fcres'][uid]
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr = from_rdf(
                 data = '''
                 <>
@@ -142,7 +144,7 @@ class TestResourceCRUD:
         evt, _ = rsrc_api.create_or_replace(uid, graph=gr)
 
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                     rsrc.uri : URIRef('urn:p:1') :
                     Literal('1', datatype=nsc['xsd'].integer)]
@@ -176,7 +178,7 @@ class TestResourceCRUD:
     def test_replace_rsrc(self):
         uid = '/test_replace'
         uri = nsc['fcres'][uid]
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr1 = from_rdf(
                 data='<> a <http://ex.org/type#A> .', format='turtle',
                 publicID=uri
@@ -185,13 +187,13 @@ class TestResourceCRUD:
         assert evt == RES_CREATED
 
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
             assert rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : nsc['ldp'].RDFSource]
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr2 = from_rdf(
                 data='<> a <http://ex.org/type#B> .', format='turtle',
                 publicID=uri
@@ -201,7 +203,7 @@ class TestResourceCRUD:
         assert evt == RES_UPDATED
 
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert not rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : URIRef('http://ex.org/type#A')]
             assert rsrc.imr[
@@ -219,7 +221,7 @@ class TestResourceCRUD:
         uid_rs = '/test_incomp_rs'
         uid_nr = '/test_incomp_nr'
         data = b'mock binary content'
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr = from_rdf(
                 data='<> a <http://ex.org/type#A> .', format='turtle',
                 publicID=nsc['fcres'][uid_rs]
@@ -257,13 +259,13 @@ class TestResourceCRUD:
             (URIRef(uri), nsc['rdf'].type, nsc['foaf'].Organization),
         }
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr = Graph(data=init_trp)
         rsrc_api.create_or_replace(uid, graph=gr)
         rsrc_api.update_delta(uid, remove_trp, add_trp)
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : nsc['foaf'].Organization]
             assert rsrc.imr[rsrc.uri : nsc['foaf'].name : Literal('Joe Bob')]
@@ -290,13 +292,13 @@ class TestResourceCRUD:
             (URIRef(uri), nsc['foaf'].name, Literal('Joan Knob')),
         }
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr = Graph(data=init_trp)
         rsrc_api.create_or_replace(uid, graph=gr)
         rsrc_api.update_delta(uid, remove_trp, add_trp)
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                     rsrc.uri : nsc['rdf'].type : nsc['foaf'].Person]
             assert rsrc.imr[rsrc.uri : nsc['foaf'].name : Literal('Joan Knob')]
@@ -328,7 +330,7 @@ class TestResourceCRUD:
         ver_uid = rsrc_api.create_version(uid, 'v1').split('fcr:versions/')[-1]
 
         rsrc = rsrc_api.update(uid, update_str)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert (
                 (rsrc.uri, nsc['dcterms'].title, Literal('Original title.'))
                 not in set(rsrc.imr))
@@ -354,7 +356,7 @@ class TestResourceCRUD:
 
         member_rsrc = rsrc_api.get('/member')
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['ldp'].Container in dc_rsrc.ldp_types
             assert nsc['ldp'].DirectContainer in dc_rsrc.ldp_types
 
@@ -369,7 +371,7 @@ class TestResourceCRUD:
 
         member_rsrc = rsrc_api.get('/member')
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['ldp'].Container in dc_rsrc.ldp_types
             assert nsc['ldp'].DirectContainer in dc_rsrc.ldp_types
 
@@ -385,7 +387,7 @@ class TestResourceCRUD:
         child_uid = rsrc_api.create(dc_uid).uid
         member_rsrc = rsrc_api.get('/member')
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert member_rsrc.imr[
                 member_rsrc.uri: nsc['dcterms'].relation: nsc['fcres'][child_uid]]
 
@@ -408,7 +410,7 @@ class TestResourceCRUD:
         child_uid = rsrc_api.create(dc_uid).uid
         member_rsrc = rsrc_api.get('/member')
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert member_rsrc.imr[
                 member_rsrc.uri: nsc['ldp'].member: nsc['fcres'][child_uid]
             ]
@@ -432,7 +434,7 @@ class TestResourceCRUD:
         child_uid = rsrc_api.create(dc_uid).uid
         member_rsrc = rsrc_api.get(dc_uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             #import pdb; pdb.set_trace()
             assert member_rsrc.imr[
                 member_rsrc.uri: nsc['dcterms'].relation:
@@ -456,7 +458,7 @@ class TestResourceCRUD:
         child_uid = rsrc_api.create(dc_uid, None).uid
         member_rsrc = rsrc_api.get(dc_uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert member_rsrc.imr[
                 member_rsrc.uri: nsc['ldp'].member: nsc['fcres'][child_uid]]
 
@@ -480,14 +482,14 @@ class TestResourceCRUD:
                 member_uid, rdf_data=ic_member_rdf, rdf_fmt='turtle')
 
         ic_rsrc = rsrc_api.get(ic_uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['ldp'].Container in ic_rsrc.ldp_types
             assert nsc['ldp'].IndirectContainer in ic_rsrc.ldp_types
             assert nsc['ldp'].DirectContainer not in ic_rsrc.ldp_types
 
         member_rsrc = rsrc_api.get(member_uid)
         top_cont_rsrc = rsrc_api.get(cont_uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert top_cont_rsrc.imr[
                 top_cont_rsrc.uri: nsc['dcterms'].relation:
                 nsc['fcres'][target_uid]]
@@ -554,7 +556,7 @@ class TestResourceCRUD:
     #                member_uid, rdf_data=ic_member_rdf, rdf_fmt='turtle')
 
     #        ic_rsrc = rsrc_api.get(ic_uid)
-    #        with env.app_globals.rdf_store.txn_ctx():
+    #        with txn_ctx():
     #            assert nsc['ldp'].Container in ic_rsrc.ldp_types
     #            assert nsc['ldp'].IndirectContainer in ic_rsrc.ldp_types
 
@@ -562,7 +564,7 @@ class TestResourceCRUD:
 
     #    for i, ic_rdf in enumerate(ic_def_rdf):
     #        member_rsrc = rsrc_api.get(member_uid)
-    #        with env.app_globals.rdf_store.txn_ctx():
+    #        with txn_ctx():
     #            assert top_cont_rsrc.imr[
     #                top_cont_rsrc.uri: nsc['dcterms'].relation:
     #                nsc['fcres'][target_uid]]
@@ -582,7 +584,7 @@ class TestResourceCRUD:
         rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             ud_data = rsrc.user_data
 
             assert ud_data[uri: nsc['rdf'].type: URIRef('urn:t:1')]
@@ -604,7 +606,7 @@ class TestResourceCRUD:
         rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert URIRef('urn:t:1') in rsrc.types
             assert URIRef('urn:t:1') in rsrc.user_types
             assert URIRef('urn:t:1') not in rsrc.ldp_types
@@ -621,6 +623,49 @@ class TestResourceCRUD:
             assert nsc['ldp'].Container not in rsrc.user_types
             assert nsc['ldp'].Container in rsrc.ldp_types
 
+
+    def test_inbound_triples_ldprs(self):
+        """ Test displaying of inbound triples for a LDP_RS. """
+        src_uid = f'/{uuid4()}'
+        src_uri = nsc['fcres'][src_uid]
+        trg_uid = f'/{uuid4()}'
+        trg_uri = nsc['fcres'][trg_uid]
+
+        src_data = f'<> <urn:p:1> <{trg_uri}> .'.encode()
+        trg_data = b'<> <urn:p:2> <urn:o:1> .'
+
+        with txn_ctx(True):
+            rsrc_api.create_or_replace(
+                    trg_uid, rdf_data=trg_data, rdf_fmt='ttl')
+            rsrc_api.create_or_replace(
+                    src_uid, rdf_data=src_data, rdf_fmt='ttl')
+
+        rsrc = rsrc_api.get(trg_uid, repr_options={'incl_inbound': True})
+
+        with txn_ctx():
+            assert (src_uri, URIRef('urn:p:1'), trg_uri) in rsrc.imr
+
+
+    def test_inbound_triples_ldpnr(self):
+        """ Test displaying of inbound triples for a LDP_NR. """
+        src_uid = f'/{uuid4()}'
+        src_uri = nsc['fcres'][src_uid]
+        trg_uid = f'/{uuid4()}'
+        trg_uri = nsc['fcres'][trg_uid]
+
+        src_data = f'<> <urn:p:1> <{trg_uri}> .'.encode()
+        trg_data = b'Some ASCII content.'
+
+        with txn_ctx(True):
+            rsrc_api.create_or_replace(
+                    trg_uid, stream=BytesIO(trg_data), mimetype='text/plain')
+            rsrc_api.create_or_replace(
+                    src_uid, rdf_data=src_data, rdf_fmt='ttl')
+
+        rsrc = rsrc_api.get(trg_uid, repr_options={'incl_inbound': True})
+
+        with txn_ctx():
+            assert (src_uri, URIRef('urn:p:1'), trg_uri) in rsrc.imr
 
 
 @pytest.mark.usefixtures('db')
@@ -641,7 +686,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[uri: nsc['rdf']['type']: URIRef('urn:type:A')]
             assert rsrc.imr[
                 URIRef('http://ex.org/external'): URIRef('urn:pred:x'): uri]
@@ -654,7 +699,7 @@ class TestRelativeUris:
         uid = '/reluri02'
         uri = nsc['fcres'][uid]
         gr = Graph()
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr.add({
                 (URIRef(''), nsc['rdf']['type'], URIRef('urn:type:A')),
                 (
@@ -665,7 +710,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, graph=gr)
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[uri: nsc['rdf']['type']: URIRef('urn:type:A')]
             assert rsrc.imr[
                 URIRef('http://ex.org/external'): URIRef('urn:pred:x'): uri]
@@ -684,7 +729,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                 URIRef(str(uri) + '#hash1'): nsc['rdf'].type:
                 URIRef('urn:type:A')]
@@ -701,7 +746,7 @@ class TestRelativeUris:
         uid = '/reluri04'
         uri = nsc['fcres'][uid]
         gr = Graph()
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr.add({
                 (URIRef('#hash1'), nsc['rdf']['type'], URIRef('urn:type:A')),
                 (
@@ -712,7 +757,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, graph=gr)
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                 URIRef(str(uri) + '#hash1'): nsc['rdf']['type']:
                 URIRef('urn:type:A')]
@@ -735,7 +780,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, rdf_data=data, rdf_fmt='ttl')
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                 URIRef(str(uri) + '/child1'): nsc['rdf'].type:
                 URIRef('urn:type:A')]
@@ -752,7 +797,7 @@ class TestRelativeUris:
         uid = '/reluri06'
         uri = nsc['fcres'][uid]
         gr = Graph()
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             gr.add({
                 (URIRef('child1'), nsc['rdf']['type'], URIRef('urn:type:A')),
                 (
@@ -763,7 +808,7 @@ class TestRelativeUris:
         rsrc_api.create_or_replace(uid, graph=gr)
         rsrc = rsrc_api.get(uid)
 
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert rsrc.imr[
                 URIRef(str(uri) + '/child1'): nsc['rdf'].type:
                 URIRef('urn:type:A')]
@@ -799,7 +844,7 @@ class TestAdvancedDelete:
         rsrc_api.resurrect(uid)
 
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['ldp'].Resource in rsrc.ldp_types
 
 
@@ -844,11 +889,11 @@ class TestAdvancedDelete:
         uid = '/test_soft_delete_children01'
         rsrc_api.resurrect(uid)
         parent_rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['ldp'].Resource in parent_rsrc.ldp_types
         for i in range(3):
             child_rsrc = rsrc_api.get('{}/child{}'.format(uid, i))
-            with env.app_globals.rdf_store.txn_ctx():
+            with txn_ctx():
                 assert nsc['ldp'].Resource in child_rsrc.ldp_types
 
 
@@ -932,7 +977,7 @@ class TestResourceVersioning:
 
         rsrc_api.update(uid, update_str)
         current = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert (
                 (current.uri, nsc['dcterms'].title, Literal('Title #2.'))
                 in current.imr)
@@ -941,7 +986,7 @@ class TestResourceVersioning:
                 not in current.imr)
 
         v1 = rsrc_api.get_version(uid, ver_uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert (
                 (v1.uri, nsc['dcterms'].title, Literal('Original title.'))
                 in set(v1))
@@ -960,7 +1005,7 @@ class TestResourceVersioning:
         ver_uid = 'v1'
         rsrc_api.revert_to_version(uid, ver_uid)
         rev = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert (
                 (rev.uri, nsc['dcterms'].title, Literal('Original title.'))
                 in rev.imr)
@@ -985,19 +1030,19 @@ class TestResourceVersioning:
         rsrc_api.create_or_replace(ch1_uid)
         ver_uid = rsrc_api.create_version(uid, ver_uid).split('fcr:versions/')[-1]
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['fcres'][ch1_uid] in rsrc.imr[
                     rsrc.uri : nsc['ldp'].contains]
 
         rsrc_api.create_or_replace(ch2_uid)
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['fcres'][ch2_uid] in rsrc.imr[
                     rsrc.uri : nsc['ldp'].contains]
 
         rsrc_api.revert_to_version(uid, ver_uid)
         rsrc = rsrc_api.get(uid)
-        with env.app_globals.rdf_store.txn_ctx():
+        with txn_ctx():
             assert nsc['fcres'][ch1_uid] in rsrc.imr[
                     rsrc.uri : nsc['ldp'].contains]
             assert nsc['fcres'][ch2_uid] in rsrc.imr[
