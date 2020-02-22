@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from os import makedirs, path
 from shutil import rmtree
 
-from lakesuperior import env, wsgi
+from lakesuperior import env
 
 from lakesuperior.cy_include cimport cylmdb as lmdb
 
@@ -128,11 +128,6 @@ cdef class BaseLmdbStore:
     :rtype: dict
     """
 
-    readers_mult = 4
-    """
-    Number to multiply WSGI workers by to set the numer of LMDB reader slots.
-    """
-
     ### INIT & TEARDOWN ###
 
     def __init__(self, env_path, open_env=True, create=True):
@@ -210,14 +205,6 @@ cdef class BaseLmdbStore:
         _check(
                 lmdb.mdb_env_set_maxdbs(self.dbenv, max_dbs),
                 'Error setting max. databases: {}')
-
-        # Set max readers.
-        self._readers = self.options.get(
-                'max_spare_txns', wsgi.workers * self.readers_mult)
-        _check(
-                lmdb.mdb_env_set_maxreaders(self.dbenv, self._readers),
-                'Error setting max. readers: {}')
-        logger.debug('Max. readers: {}'.format(self._readers))
 
         # Clear stale readers.
         self._clear_stale_readers()

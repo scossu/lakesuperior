@@ -1,0 +1,22 @@
+# Core namespace prefixes. These add to and override any user-defined prefixes.
+# @TODO Some of these have been copy-pasted from FCREPO4 and may be deprecated.
+
+dc : "http://purl.org/dc/elements/1.1/"
+dcterms : "http://purl.org/dc/terms/"
+ebucore: "http://www.ebu.ch/metadata/ontologies/ebucore/ebucore#"
+fcrepo: "http://fedora.info/definitions/fcrepo#"
+fcadmin: "info:fcsystem/graph/admin"
+fcres: "info:fcres"
+fcmain: "info:fcsystem/graph/userdata/_main"
+fcstruct: "info:fcsystem/graph/structure"
+fcsystem: "info:fcsystem/"
+foaf: "http://xmlns.com/foaf/0.1/"
+iana: "http://www.iana.org/assignments/relation/"
+ldp: "http://www.w3.org/ns/ldp#"
+pcdm: "http://pcdm.org/models#"
+premis: "http://www.loc.gov/premis/rdf/v1#"
+rdf : "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+rdfs : "http://www.w3.org/2000/01/rdf-schema#"
+webac: "http://www.w3.org/ns/auth/acl#"
+xsd : "http://www.w3.org/2001/XMLSchema#"
+

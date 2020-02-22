@@ -11,7 +11,6 @@ from lakesuperior import exceptions as exc
 from lakesuperior.model.ldp.ldpr import Ldpr
 from lakesuperior.model.ldp.ldp_nr import LdpNr
 from lakesuperior.model.ldp.ldp_rs import LdpRs, Ldpc, LdpDc, LdpIc
-from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.model.rdf.graph import Graph, from_rdf
 from lakesuperior.util.toolbox import rel_uri_to_urn

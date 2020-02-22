@@ -3,7 +3,6 @@ import sys
 
 from os import chdir, environ, getcwd, path
 
-import hiyapyco
 import yaml
 
 import lakesuperior
@@ -11,9 +10,7 @@ import lakesuperior
 logger = logging.getLogger(__name__)
 
 default_config_dir = environ.get(
-        'FCREPO_CONFIG_DIR',
-        path.join(
-            path.dirname(path.abspath(lakesuperior.__file__)), 'etc.defaults'))
+        'FCREPO_CONFIG_DIR', path.join(lakesuperior.basedir, 'etc.defaults'))
 """
 Default configuration directory.
 
@@ -24,6 +21,8 @@ This value can still be overridden by custom applications by passing the
 ``config_dir`` value to :func:`parse_config` explicitly.
 """
 
+core_config_dir = path.join(lakesuperior.basedir, 'core_config')
+
 
 def parse_config(config_dir=None):
     """
@@ -31,7 +30,7 @@ def parse_config(config_dir=None):
 
     This is normally called by the standard endpoints (``lsup_admin``, web
     server, etc.) or by a Python client by importing
-    :py:mod:`lakesuperior.env_setup` but an application using a non-default
+    :py:mod:`lakesuperior.env.setup()` but an application using a non-default
     configuration may specify an alternative configuration directory.
 
     The directory must have the same structure as the one provided in
@@ -54,12 +53,12 @@ def parse_config(config_dir=None):
     # This will hold a dict of all configuration values.
     _config = {}
 
-    print('Reading configuration at {}'.format(config_dir))
+    logger.info(f'Reading configuration at {config_dir}')
 
     for cname in configs:
-        file = path.join(config_dir, '{}.yml'.format(cname))
-        with open(file, 'r') as stream:
-            _config[cname] = yaml.load(stream, yaml.SafeLoader)
+        fname = path.join(config_dir, f'{cname}.yml')
+        with open(fname, 'r') as fh:
+            _config[cname] = yaml.load(fh, yaml.SafeLoader)
 
     if not _config['application']['data_dir']:
         _config['application']['data_dir'] = path.join(
@@ -84,8 +83,9 @@ def parse_config(config_dir=None):
     logger.info('Binary store location: {}'.format(
         _config['application']['store']['ldp_nr']['location']))
 
+    # Merge (and if overlapping, override) custom namespaces with core ones
+    with open(path.join(core_config_dir, 'namespaces.yml')) as fh:
+        _config['namespaces'].update(yaml.load(fh, yaml.SafeLoader))
+
+
     return _config
-
-
-# Load default configuration.
-config = parse_config()

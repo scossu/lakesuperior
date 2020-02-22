@@ -7,7 +7,6 @@ from tempfile import gettempdir
 
 from lakesuperior import env
 from lakesuperior.config_parser import parse_config
-from lakesuperior.globals import AppGlobals
 from lakesuperior.util.generators import random_image
 
 
@@ -20,7 +19,7 @@ config['application']['store']['ldp_nr']['location'] = (
 config['application']['store']['ldp_rs']['location'] = (
         path.join(data_dir, 'ldprs_store'))
 
-env.app_globals = AppGlobals(config)
+env.setup(config=config)
 from lakesuperior.app import create_app
 
 

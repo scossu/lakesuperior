@@ -13,8 +13,7 @@ from rdflib import Graph, URIRef
 from lakesuperior import env, basedir
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import InvalidResourceError
-from lakesuperior.globals import AppGlobals, ROOT_UID
-from lakesuperior.config_parser import parse_config
+from lakesuperior.store.ldp_rs import ROOT_UID
 
 
 logger = logging.getLogger(__name__)
@@ -119,7 +118,7 @@ class Migrator:
                     as config_file:
                 config_file.write(yaml.dump(orig_config['application']))
 
-        env.app_globals = AppGlobals(parse_config(self.config_dir))
+        env.setup(self.config_dir)
 
         self.rdfly = env.app_globals.rdfly
         self.nonrdfly = env.app_globals.nonrdfly

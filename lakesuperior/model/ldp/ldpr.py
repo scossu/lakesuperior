@@ -19,8 +19,6 @@ from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF
 
 from lakesuperior import env, thread_env
-from lakesuperior.globals import (
-    RES_CREATED, RES_DELETED, RES_UPDATED, ROOT_UID)
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.dictionaries.srv_mgd_terms import (
     srv_mgd_subjects, srv_mgd_predicates, srv_mgd_types)
@@ -28,9 +26,18 @@ from lakesuperior.exceptions import (
     InvalidResourceError, RefIntViolationError, ResourceNotExistsError,
     ServerManagedTermError, TombstoneError)
 from lakesuperior.model.rdf.graph import Graph
+from lakesuperior.store.ldp_rs import ROOT_UID
 from lakesuperior.store.ldp_rs.rsrc_centric_layout import VERS_CONT_LABEL
 from lakesuperior.util.toolbox import (
         rel_uri_to_urn_string, replace_term_domain)
+
+
+RES_CREATED = '_create_'
+"""A resource was created."""
+RES_DELETED = '_delete_'
+"""A resource was deleted."""
+RES_UPDATED = '_update_'
+"""A resource was updated."""
 
 DEF_MBR_REL_URI = nsc['ldp'].member
 DEF_INS_CNT_REL_URI = nsc['ldp'].memberSubject

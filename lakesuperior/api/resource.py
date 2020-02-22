@@ -10,14 +10,12 @@ import arrow
 from rdflib import Literal
 from rdflib.namespace import XSD
 
-from lakesuperior.config_parser import config
 from lakesuperior.dictionaries.namespaces import ns_collection as nsc
 from lakesuperior.exceptions import (
         InvalidResourceError, ResourceNotExistsError, TombstoneError)
 from lakesuperior import env, thread_env
-from lakesuperior.globals import RES_DELETED, RES_UPDATED
 from lakesuperior.model.ldp.ldp_factory import LDP_NR_TYPE, LdpFactory
-from lakesuperior.model.ldp.ldpr import Ldpr
+from lakesuperior.model.ldp.ldpr import RES_UPDATED, Ldpr
 from lakesuperior.util.toolbox import rel_uri_to_urn
 
 
@@ -29,7 +27,8 @@ Primary API for resource manipulation.
 Quickstart::
 
     >>> # First import default configuration and globals—only done once.
-    >>> import lakesuperior.default_env
+    >>> from lakesuperior import env
+    >>> env.setup()
     >>> from lakesuperior.api import resource
     >>> # Get root resource.
     >>> rsrc = resource.get('/')

@@ -134,18 +134,33 @@ Python API
 Set up the environment
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Before using the API, either do::
+Before importing the API modules or other Lakesuperior modules, the environment
+must be set up. This can be done in several ways. The simplest one is to rely
+on a default configuration directory set up by the ``FCREPO_CONFIG_DIR``
+environment variable::
 
-    >>> import lakesuperior.env_setup
+    >>> from lakesuperior import env
+    >>> env.setup()
+    Reading configuration at /my/default/config_dir
 
-Or, to specify an alternative configuration::
+If ``FCREPO_CONFIG_DIR`` is not set up, the ``etc.defaults`` location under
+the library root is used.
+
+Alternatively, a custom configuration directory can be specified::
+
+    >>> from lakesuperior import env
+    >>> env.setup('/my/config/dir')
+    Reading configuration at /my/custom/config_dir
+
+A configuration can also be loaded and modified before setting up the
+environment::
 
     >>> from lakesuperior import env
     >>> from lakesuperior.config_parser import parse_config
-    >>> from lakesuperior.globals import AppGlobals
-    >>> config = parse_config('/my/custom/config_dir')
+    >>> config = parse_config('/my/config/dir')
     Reading configuration at /my/custom/config_dir
-    >>> env.app_globals = AppGlobals(config)
+    >>> config['application']['data_dir'] = '/data/ext/mystore'
+    >>> env.setup(config=config)
 
 Create and replace resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
