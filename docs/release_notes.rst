@@ -2,6 +2,48 @@
 Release Notes
 =============
 
+1.0 Alpha 22
+------------
+
+*February 23, 2020*
+
+This release cleans out code around configuration loading, as well as the
+instantiation of LDP entities and parameters passed to constructors.
+
+New Features
+~~~~~~~~~~~~
+
+- The Python and REST APIs now may return inbound triples for LDP-NR metadata.
+
+Enhancements
+~~~~~~~~~~~~
+
+- WSGI configuration is not read unless a WSGI server is actually started.
+
+Warnings
+~~~~~~~~
+
+- ``lakesuperior.env_setup`` has been marked as deprecated. It will be removed
+  in a future version (before beta anyway). New Python clients should replace::
+
+    import lakesuperior.ewnv_setup
+
+  with::
+
+    from lakesuperior import env
+    env.setup()
+
+  See :doc:`Usage <usage>` for complete setup options.
+
+
+1.0 Alpha 21 HOTFIX
+-------------------
+
+*April 09, 2019*
+
+Add missing ``__init.py__`` file that left out a module in source distribution.
+
+
 1.0 Alpha 20
 ------------
 
