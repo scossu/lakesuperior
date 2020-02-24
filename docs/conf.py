@@ -22,7 +22,9 @@ import sys
 from os import path
 
 import lakesuperior
-import lakesuperior.env_setup
+
+from lakesuperior import env
+env.setup()
 
 
 # -- General configuration ------------------------------------------------
