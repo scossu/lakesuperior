@@ -49,7 +49,7 @@ class Env:
             manually before passing it to the setup.
         """
         if hasattr(self, 'app_globals'):
-            logger.warning('The environment is already set up.')
+            logger.info('The environment is already set up.')
             return
 
         if not config:

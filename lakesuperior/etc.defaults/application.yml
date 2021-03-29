@@ -126,54 +126,54 @@ messaging:
     #   List of channels to send messages to.
     #
     #   Each channel must define the `endpoint` and the `level` parameters.
-    routes:
+    routes: []
 
         ###
         #   Output handler. Currently only ``StompHandler`` is supported.
-        - handler: StompHandler
+        #- handler: StompHandler
 
-          ###
-          #   Activate this route.
-          #
-          #   If ``False``, no messages will be emitted for this route.
-          active: True
+        #  ###
+        #  #   Activate this route.
+        #  #
+        #  #   If ``False``, no messages will be emitted for this route.
+        #  active: True
 
-          ###
-          #   Protocol version. One of ``10``, ``11`` or ``12``.
-          protocol: '11'
+        #  ###
+        #  #   Protocol version. One of ``10``, ``11`` or ``12``.
+        #  protocol: '12'
 
-          ###
-          #   Host IP address.
-          host: 127.0.0.1
+        #  ###
+        #  #   Host IP address.
+        #  host: 127.0.0.1
 
-          ###
-          #   Host port.
-          port: 61613
+        #  ###
+        #  #   Host port.
+        #  port: 61613
 
-          ###
-          #   User name for authentication.
-          #
-          #   Credentials are optional.
-          username:
+        #  ###
+        #  #   User name for authentication.
+        #  #
+        #  #   Credentials are optional.
+        #  username:
 
-          ###
-          #   Password for authentication.
-          password:
+        #  ###
+        #  #   Password for authentication.
+        #  password:
 
-          ###
-          #   Message topic.
-          destination: '/topic/fcrepo'
+        #  ###
+        #  #   Message topic.
+        #  destination: '/topic/fcrepo'
 
-          ###
-          #   Message format: at the moment the following are supported:
-          #
-          #   - ``ASResourceFormatter``: Sends information about a resource
-          #     being created, updated or deleted, by who and when, with no
-          #     further information about what changed.
-          #
-          #   - ``ASDeltaFormatter``:
-          #     Sends the same information as ``ASResourceFormatter`` with the
-          #     addition of the triples that were added and the ones that were
-          #     removed in the request. This may be used to send rich provenance
-          #     data to a preservation system.
-          formatter: ASResourceFormatter
+        #  ###
+        #  #   Message format: at the moment the following are supported:
+        #  #
+        #  #   - ``ASResourceFormatter``: Sends information about a resource
+        #  #     being created, updated or deleted, by who and when, with no
+        #  #     further information about what changed.
+        #  #
+        #  #   - ``ASDeltaFormatter``:
+        #  #     Sends the same information as ``ASResourceFormatter`` with the
+        #  #     addition of the triples that were added and the ones that were
+        #  #     removed in the request. This may be used to send rich provenance
+        #  #     data to a preservation system.
+        #  formatter: ASResourceFormatter

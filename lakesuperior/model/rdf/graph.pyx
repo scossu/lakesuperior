@@ -74,9 +74,7 @@ cdef class Graph:
         """
         Initialize the graph, optionally from Python/RDFlib data.
 
-        An instance of this class is always tied to an underlying store because
-        it only keeps index keys of the graph terms. This allows for very fast
-        `lookup and manipulation sucha as boolean operations.
+        The data of a Graph object are an in-memory copy from the LMDB store.
 
         When initializing a non-empty Graph, a store transaction must be
         opened::

@@ -53,7 +53,7 @@ def parse_config(config_dir=None):
     # This will hold a dict of all configuration values.
     _config = {}
 
-    logger.info(f'Reading configuration at {config_dir}')
+    print(f'Reading configuration at {config_dir}')
 
     for cname in configs:
         fname = path.join(config_dir, f'{cname}.yml')

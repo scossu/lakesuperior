@@ -49,6 +49,7 @@ INT_DUP_MASK = (
 )
 
 cdef:
+    # Term key to serialized term
     DbLabel DB_T_ST = 't:st___',
     # Joined triple keys to context key
     DbLabel DB_SPO_C = 'spo:c__',
@@ -60,7 +61,7 @@ cdef:
     # Indices
     # Namespace to prefix
     DbLabel DB_NS_PFX = 'ns:pfx_',
-    # Term hash to triple key
+    # Term hash to term key
     DbLabel DB_TH_T = 'th:t___',
     # 1-bound lookups
     DbLabel DB_S_PO = 's:po___',

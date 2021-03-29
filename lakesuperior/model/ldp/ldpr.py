@@ -807,12 +807,14 @@ class Ldpr(metaclass=ABCMeta):
                 elif actor is None and t[1] == nsc['fcrepo'].createdBy:
                     actor = t[2]
 
-        env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
-            'ev_type': ev_type,
-            'timestamp': thread_env.timestamp.format(),
-            'rsrc_type': rsrc_type,
-            'actor': actor,
-        }))
+        # Do not append messages if there are no routes to consume them.
+        if env.app_globals.config['application']['messaging']['routes']:
+            env.app_globals.changelog.append((set(remove_trp), set(add_trp), {
+                'ev_type': ev_type,
+                'timestamp': thread_env.timestamp.format(),
+                'rsrc_type': rsrc_type,
+                'actor': actor,
+            }))
 
 
     def _check_ref_int(self, config):
