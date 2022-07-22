@@ -1,6 +1,10 @@
 Lakesuperior
 ============
 
+**DEPRECATION NOTICE: This project has been discontinued. Development efforts
+in this direction and a complete re-architecting of the project continue on
+on https://git.knowledgetx.com/scossu/lsup_repo**
+
 |build status| |docs| |pypi| |codecov|
 
 Lakesuperior is a Linked Data repository software. It is capable of storing and
